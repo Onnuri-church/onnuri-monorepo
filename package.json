@@ -1,0 +1,21 @@
+{
+  "name": "onnuri-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.34.4",
+  "scripts": {
+    "mobile": "pnpm --filter @onnuri/mobile start",
+    "api": "pnpm --filter @onnuri/api start:dev",
+    "lint": "pnpm -r --if-present run lint",
+    "format": "prettier --write .",
+    "prisma:generate": "pnpm --filter @onnuri/api run prisma:generate",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "prettier": "^3.3.3"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
