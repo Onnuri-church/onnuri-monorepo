@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+node scripts/jira/generate-docs.js
+git add CONTRIBUTING.md

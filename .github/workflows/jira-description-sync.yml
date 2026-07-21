@@ -1,0 +1,31 @@
+name: Jira Description Sync
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  sync-description:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Update Jira issue description
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_BODY: ${{ github.event.pull_request.body }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git log --pretty=%s "$BASE_SHA".."$HEAD_SHA" > /tmp/pr-commit-subjects.txt
+          PR_COMMITS_FILE=/tmp/pr-commit-subjects.txt node scripts/jira/update-description.js
