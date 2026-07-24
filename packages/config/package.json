@@ -1,0 +1,13 @@
+{
+  "name": "@onnuri/config",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.js",
+  "files": [
+    "tsconfig.base.json",
+    "tsconfig.react-native.json",
+    "tsconfig.node.json",
+    "eslint-preset.js",
+    "prettier.js"
+  ]
+}
