@@ -61,13 +61,10 @@ onnuri/
 ├── apps/
 │   ├── mobile/              # 프론트엔드: React Native (Expo)
 │   │   ├── src/
-│   │   │   ├── screens/     # 화면 단위 컴포넌트
-│   │   │   ├── components/  # 재사용 UI 컴포넌트
+│   │   │   ├── features/    # 기능별 폴더 (화면 + 그 화면 전용 코드)
 │   │   │   ├── navigation/  # React Navigation (Stack + Bottom Tab)
-│   │   │   ├── store/       # 전역 상태 (Zustand)
-│   │   │   ├── api/         # API 클라이언트 (Axios / TanStack Query)
-│   │   │   ├── hooks/       # 커스텀 훅
-│   │   │   └── types/       # 프론트 전용 타입
+│   │   │   └── shared/      # 여러 기능이 같이 쓰는 것 (api, store, theme, components, types)
+│   │   ├── DESIGN.md        # 모바일 UI 규칙 (컬러/타이포/네비게이션 등)
 │   │   └── assets/          # 이미지·폰트 등 정적 리소스
 │   │
 │   └── api/                 # 백엔드: NestJS
@@ -87,7 +84,7 @@ onnuri/
 └── scripts/                 # 개발/배포용 스크립트
 ```
 
-> 폴더 골격만 우선 잡아둔 상태이며, 각 워크스페이스의 초기 세팅(Expo, NestJS, Prisma 등)은 이후 단계에서 진행합니다.
+> 각 워크스페이스(Expo, NestJS, Prisma 등) 초기 세팅은 완료됐습니다. 실제 구현 상태·아키텍처 결정은 [ARCHITECTURE.md](ARCHITECTURE.md)를 참고하세요.
 
 ---
 
@@ -96,8 +93,8 @@ onnuri/
 ### 📱 프론트엔드
 - **프레임워크**: React Native (Expo) — iOS/Android 동시 개발, 빠른 초기 세팅, OTA 업데이트
 - **네비게이션**: React Navigation (Stack + Bottom Tab)
-- **상태관리**: Zustand (또는 Redux Toolkit)
-- **영상 재생**: expo-av / react-native-video
+- **상태관리**: Zustand (또는 Redux Toolkit — Zustand로 확정)
+- **영상 재생**: expo-av / react-native-video (expo-av로 확정)
 - **이미지 뷰어**: react-native-image-zoom-viewer (주보 핀치 줌)
 - **스토리 UI**: react-native-snap-carousel 또는 커스텀 FlatList
 - **라이브 스트림**: react-native-webview + 유튜브/외부 스트림 임베드
