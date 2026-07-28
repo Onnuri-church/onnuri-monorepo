@@ -14,6 +14,7 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 
 - `PrismaService.onModuleInit`은 DB 연결 실패를 삼키고 경고만 로그한다 (서버 부팅이 막히지 않게 하려는 의도적 처리). 이 catch를 제거하지 않는다.
 - `JwtAuthGuard`는 `common/guards`에 있다 — `auth`/`users` 모듈이 서로를 순환 참조하지 않게 하려는 배치다. 다른 모듈 안으로 옮기지 않는다.
+- DI로 주입받는 생성자 파라미터에는 타입 별칭을 쓰지 않는다. `jwt.strategy.ts`처럼 `ConfigService<AppConfig, true>`로 클래스를 직접 쓴다.
 
 ## 응답 포맷
 
