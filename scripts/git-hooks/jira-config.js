@@ -8,13 +8,12 @@ module.exports = {
   // 위 마커가 치환되는 Jira 스마트 커밋 명령. 푸시되면 Jira-GitHub 연동 앱이
   // 이 명령을 읽어 티켓을 In Review로 옮긴다 (REST API를 쓰지 않으므로 토큰 불필요).
   // 스마트 커밋 문법이라 전환 이름의 공백은 하이픈으로 적는다 ("In Review" -> #in-review).
-  // TODO: Jira 워크플로우의 실제 전환 이름 확인 후 수정 (프로젝트 설정 > 워크플로)
   reviewCommand: '#in-review',
 
   // [PR 머지 시] scripts/jira/transition-issues.js가 REST API로 실행할 완료 전환 이름.
   // 위 reviewCommand와 달리 하이픈으로 바꾸지 않고 Jira에 표시된 이름 그대로 적는다.
-  // TODO: Jira 워크플로우의 실제 전환 이름 확인 후 수정
-  doneTransitionName: 'Done',
+  // 이 프로젝트 워크플로우의 전환 이름은 한글이다 (해야 할 일 / 진행 중 / In Review / 완료).
+  doneTransitionName: '완료',
 
   // 커밋 제목 형식: "<티켓키> <타입>: <내용>"
   // 예: SCRUM-12 feat: 로그인 세션 만료 처리 추가
