@@ -8,7 +8,7 @@ import {
   validateSync,
 } from 'class-validator';
 
-class EnvironmentVariables {
+export class EnvironmentVariables {
   @IsInt()
   @Min(1)
   PORT: number;
@@ -38,12 +38,14 @@ class EnvironmentVariables {
   JWT_REFRESH_EXPIRES_IN: string;
 }
 
+let validated: EnvironmentVariables | undefined;
+
 export function validate(config: Record<string, unknown>) {
-  const validated = plainToInstance(EnvironmentVariables, config, {
+  const instance = plainToInstance(EnvironmentVariables, config, {
     enableImplicitConversion: true,
   });
 
-  const errors = validateSync(validated, { skipMissingProperties: false });
+  const errors = validateSync(instance, { skipMissingProperties: false });
 
   if (errors.length > 0) {
     const messages = errors.map((error) => {
@@ -53,5 +55,12 @@ export function validate(config: Record<string, unknown>) {
     throw new Error(`환경변수 검증에 실패했습니다.\n${messages.join('\n')}`);
   }
 
+  validated = instance;
+  return instance;
+}
+
+export function env(): EnvironmentVariables {
+  if (!validated)
+    throw new Error('env()는 ConfigModule 초기화 이후에만 호출할 수 있습니다.');
   return validated;
 }
