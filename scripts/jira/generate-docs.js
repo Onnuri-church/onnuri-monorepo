@@ -4,7 +4,12 @@
 const fs = require('fs');
 const path = require('path');
 
-const { reviewMarker, reviewCommand, doneTransitionName } = require('../git-hooks/jira-config');
+const {
+  reviewMarker,
+  reviewCommand,
+  doneTransitionName,
+  commitTypes,
+} = require('../git-hooks/jira-config');
 const { SECTION_HEADERS } = require('./sections-config');
 
 const CONTRIBUTING_PATH = path.join(__dirname, '..', '..', 'CONTRIBUTING.md');
@@ -17,6 +22,8 @@ function buildBlock() {
   return `${START_MARKER}
 <!-- 이 구간은 scripts/jira/generate-docs.js가 자동으로 생성합니다. 직접 수정하지 마세요. -->
 
+- 커밋 제목 형식: \`<티켓키> <타입>: <내용>\` (예: \`SCRUM-12 feat: 로그인 세션 만료 처리 추가\`)
+- 사용 가능한 타입 (표기 그대로만 통과): ${commitTypes.map((t) => `\`${t}\``).join(', ')}
 - 리뷰 요청 마커: \`${reviewMarker}\` (커밋 메시지에 붙이면 Jira 명령 \`${reviewCommand}\`로 변환되어, push 시 티켓이 리뷰 대기 상태로 이동)
 - 완료 처리: 커밋 마커 없음 — PR이 merge될 때 \`${doneTransitionName}\` 전환이 자동 실행됨
 - PR 본문 섹션 (Jira Description으로 그대로 반영됨):

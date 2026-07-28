@@ -57,6 +57,19 @@ pnpm만 쓴다. npm/yarn 명령어를 쓰지 않는다 (이유는 ARCHITECTURE.m
 - **화면/컴포넌트** (`apps/mobile/src/features/*`, `apps/mobile/src/shared/components/*`): 타입체크 통과, 콘솔 에러 없음 정도면 충분하다. 브라우저에서 클릭해가며 실제 동작까지 깊게 검증할 필요 없다 — 어차피 팀이 다시 손댈 스캐폴드다.
 - **로직/인프라** (인증 가드, API 클라이언트, babel/metro/tailwind 설정 등): 실제로 동작하는지 확인한다. 여기서 생긴 버그는 나중에 찾기 어렵다.
 
+## 커밋
+
+커밋 제목은 `<티켓키> <타입>: <내용>` 형식이어야 하고, `commit-msg` 훅이 검증한다 (예: `SCRUM-12 feat: 로그인 세션 만료 처리 추가`). 타입은 표기 그대로만 통과한다 — 전체 목록과 설명은 [CONTRIBUTING.md](CONTRIBUTING.md) "타입" 표, 값 자체는 [jira-config.js](scripts/git-hooks/jira-config.js)의 `commitTypes`가 단일 소스다.
+
+## PR 열기
+
+PR은 사람이 GitHub UI에서 직접 열지 말고 AI에게 요청한다 — PR 본문 4개 섹션이 그대로 Jira Description이 되므로, 비어 있으면 Jira에 작업 기록이 아무것도 안 남는다 (자세한 동작은 [CONTRIBUTING.md](CONTRIBUTING.md)).
+
+1. `docs/exec-plans/<티켓키>-*.md`가 있으면 그 문서(개요/작업 계획/진행 로그/완료 조건)를 근거로 채운다. 없으면 base 브랜치와의 diff·커밋 메시지에서 뽑는다.
+2. [PR 템플릿](.github/PULL_REQUEST_TEMPLATE.md)의 4개 섹션(개요/기능/작업 내용/완료 조건)을 모두 채운다. 빈 섹션은 Jira에 "(작성되지 않음)"으로 박히므로 남기지 않는다.
+3. 코드에 드러나지 않는 것(왜 이 작업을 하는지, 무엇을 확인해야 끝인지)은 추측해서 쓰지 말고 묻는다.
+4. `gh pr create`로 올린다. PR 제목 맨 앞에 티켓키를 붙인다.
+
 ## 문서 갱신
 
 컨벤션이 바뀌면 코드와 같은 턴에 ARCHITECTURE.md/DESIGN.md도 갱신한다. 같은 규칙을 두 문서에 중복 적지 않는다 — 이미 한쪽에 있으면 다른 쪽에서는 링크만 건다.
