@@ -1,13 +1,19 @@
-name: Jira Description Sync
+name: Jira Sync
 
 on:
   pull_request:
     types: [closed]
 
 jobs:
-  sync-description:
+  sync-jira:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      PR_TITLE: ${{ github.event.pull_request.title }}
+      PR_COMMITS_FILE: /tmp/pr-commit-subjects.txt
     steps:
       - uses: actions/checkout@v4
         with:
@@ -17,15 +23,18 @@ jobs:
         with:
           node-version: 20
 
-      - name: Update Jira issue description
+      - name: Collect PR commit subjects
         env:
-          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
-          JIRA_EMAIL: ${{ secrets.JIRA_EMAIL }}
-          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_BODY: ${{ github.event.pull_request.body }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-        run: |
-          git log --pretty=%s "$BASE_SHA".."$HEAD_SHA" > /tmp/pr-commit-subjects.txt
-          PR_COMMITS_FILE=/tmp/pr-commit-subjects.txt node scripts/jira/update-description.js
+        run: git log --pretty=%s "$BASE_SHA".."$HEAD_SHA" > "$PR_COMMITS_FILE"
+
+      - name: Update Jira issue description
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: node scripts/jira/update-description.js
+
+      # Description을 먼저 채운 뒤 완료 처리한다 — 순서가 반대면 티켓이 잠깐
+      # "내용 없는 완료" 상태로 보인다.
+      - name: Transition Jira issues to done
+        run: node scripts/jira/transition-issues.js

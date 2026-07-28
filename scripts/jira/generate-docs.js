@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const { doneMarker, doneCommand } = require('../git-hooks/jira-config');
+const { reviewMarker, reviewCommand, doneTransitionName } = require('../git-hooks/jira-config');
 const { SECTION_HEADERS } = require('./sections-config');
 
 const CONTRIBUTING_PATH = path.join(__dirname, '..', '..', 'CONTRIBUTING.md');
@@ -17,7 +17,8 @@ function buildBlock() {
   return `${START_MARKER}
 <!-- 이 구간은 scripts/jira/generate-docs.js가 자동으로 생성합니다. 직접 수정하지 마세요. -->
 
-- 완료 마커: \`${doneMarker}\` (커밋 메시지 끝에 붙이면 실제 Jira 명령 \`${doneCommand}\`로 변환됨)
+- 리뷰 요청 마커: \`${reviewMarker}\` (커밋 메시지에 붙이면 Jira 명령 \`${reviewCommand}\`로 변환되어, push 시 티켓이 리뷰 대기 상태로 이동)
+- 완료 처리: 커밋 마커 없음 — PR이 merge될 때 \`${doneTransitionName}\` 전환이 자동 실행됨
 - PR 본문 섹션 (Jira Description으로 그대로 반영됨):
 ${sectionList}
 ${END_MARKER}`;

@@ -32,8 +32,9 @@ pnpm만 쓴다. npm/yarn 명령어를 쓰지 않는다 (이유는 ARCHITECTURE.m
 처음 클론한 뒤의 순서.
 
 1. 루트에서 `pnpm install` (전체 워크스페이스 한 번에 설치됨)
-2. **모바일 작업**: 바로 `pnpm --filter @onnuri/mobile exec expo start`로 시작 가능 (DB 불필요)
-3. **API 작업**:
+2. **커밋 이메일 확인**: `git config user.email`이 본인 Jira 계정 이메일과 일치해야 한다 — 다르면 커밋의 `#review` 마커가 아무 경고 없이 무시된다. 다르면 `git config user.email "<본인 Jira 계정 이메일>"`로 이 저장소에만 설정한다 (전역 설정은 건드리지 않는다). 자세한 배경은 [CONTRIBUTING.md](CONTRIBUTING.md).
+3. **모바일 작업**: 바로 `pnpm --filter @onnuri/mobile exec expo start`로 시작 가능 (DB 불필요)
+4. **API 작업**:
    1. `apps/api/.env.example`을 복사해 `apps/api/.env` 생성 후 값 채우기
    2. 로컬 Postgres 준비 — **아직 팀 차원에서 정해진 방법이 없음** (지금은 프론트 작업이 우선이라 보류 중. API 작업 착수 전 담당자가 방법을 정하고 이 항목을 갱신할 것)
    3. `pnpm --filter @onnuri/api run prisma:migrate`

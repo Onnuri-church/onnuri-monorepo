@@ -8,7 +8,7 @@
 
 const fs = require('fs');
 const { SECTION_HEADERS } = require('./sections-config');
-const TICKET_KEY_PATTERN = /[A-Za-z]{2,10}-\d+/g;
+const { collectIssueKeys } = require('./issue-keys');
 
 function fail(message) {
   console.error(`[jira-description-sync] ${message}`);
@@ -120,12 +120,11 @@ async function main() {
   const commitSubjects = PR_COMMITS_FILE ? fs.readFileSync(PR_COMMITS_FILE, 'utf8') : '';
   const searchText = `${PR_TITLE}\n${commitSubjects}`;
 
-  const matches = searchText.match(TICKET_KEY_PATTERN);
-  if (!matches) {
+  const issueKeys = collectIssueKeys(searchText);
+  if (!issueKeys.length) {
     console.log('[jira-description-sync] PR 제목/커밋에서 티켓키를 찾지 못해 건너뜁니다.');
     return;
   }
-  const issueKeys = [...new Set(matches.map((k) => k.toUpperCase()))];
 
   const sections = parseSections(PR_BODY);
   const description = buildAdfDescription(sections);
