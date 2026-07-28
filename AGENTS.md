@@ -57,6 +57,10 @@ pnpm만 쓴다. npm/yarn 명령어를 쓰지 않는다 (이유는 ARCHITECTURE.m
 - **화면/컴포넌트** (`apps/mobile/src/features/*`, `apps/mobile/src/shared/components/*`): 타입체크 통과, 콘솔 에러 없음 정도면 충분하다. 브라우저에서 클릭해가며 실제 동작까지 깊게 검증할 필요 없다 — 어차피 팀이 다시 손댈 스캐폴드다.
 - **로직/인프라** (인증 가드, API 클라이언트, babel/metro/tailwind 설정 등): 실제로 동작하는지 확인한다. 여기서 생긴 버그는 나중에 찾기 어렵다.
 
+## 커밋
+
+커밋 제목은 `<티켓키> <타입>: <내용>` 형식이어야 하고, `commit-msg` 훅이 검증한다 (예: `SCRUM-12 feat: 로그인 세션 만료 처리 추가`). 타입은 표기 그대로만 통과한다 — 전체 목록과 설명은 [CONTRIBUTING.md](CONTRIBUTING.md) "타입" 표, 값 자체는 [jira-config.js](scripts/git-hooks/jira-config.js)의 `commitTypes`가 단일 소스다.
+
 ## PR 열기
 
 PR은 사람이 GitHub UI에서 직접 열지 말고 AI에게 요청한다 — PR 본문 4개 섹션이 그대로 Jira Description이 되므로, 비어 있으면 Jira에 작업 기록이 아무것도 안 남는다 (자세한 동작은 [CONTRIBUTING.md](CONTRIBUTING.md)).
