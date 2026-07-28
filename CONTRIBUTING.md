@@ -145,7 +145,7 @@ merge가 아니라 **그냥 닫기만 하면 둘 다 실행되지 않습니다.*
 - 커밋 제목 형식: `<티켓키> <타입>: <내용>` (예: `SCRUM-12 feat: 로그인 세션 만료 처리 추가`)
 - 사용 가능한 타입 (표기 그대로만 통과): `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `design`, `comment`, `rename`, `remove`, `!HOTFIX`
 - 리뷰 요청 마커: `#review` (커밋 메시지에 붙이면 Jira 명령 `#in-review`로 변환되어, push 시 티켓이 리뷰 대기 상태로 이동)
-- 완료 처리: 커밋 마커 없음 — PR이 merge될 때 `Done` 전환이 자동 실행됨
+- 완료 처리: 커밋 마커 없음 — PR이 merge될 때 `완료` 전환이 자동 실행됨
 - PR 본문 섹션 (Jira Description으로 그대로 반영됨):
 - 개요
 - 기능
