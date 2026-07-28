@@ -61,6 +61,11 @@ pnpm만 쓴다. npm/yarn 명령어를 쓰지 않는다 (이유는 ARCHITECTURE.m
 
 커밋 제목은 `<티켓키> <타입>: <내용>` 형식이어야 하고, `commit-msg` 훅이 검증한다 (예: `SCRUM-12 feat: 로그인 세션 만료 처리 추가`). 타입은 표기 그대로만 통과한다 — 전체 목록과 설명은 [CONTRIBUTING.md](CONTRIBUTING.md) "타입" 표, 값 자체는 [jira-config.js](scripts/git-hooks/jira-config.js)의 `commitTypes`가 단일 소스다.
 
+## 브랜치
+
+- `dev` — 작업 브랜치이자 저장소 기본 브랜치. 모든 PR의 base다.
+- `main` — 배포용 안정 브랜치. 배포 시점에만 `dev`에서 올린다. 평소에 `dev`보다 뒤처져 있는 것이 정상이며, 이를 "동기화가 안 됐다"고 보고 임의로 맞추지 않는다.
+
 ## PR 열기
 
 PR은 사람이 GitHub UI에서 직접 열지 말고 AI에게 요청한다 — PR 본문 4개 섹션이 그대로 Jira Description이 되므로, 비어 있으면 Jira에 작업 기록이 아무것도 안 남는다 (자세한 동작은 [CONTRIBUTING.md](CONTRIBUTING.md)).
