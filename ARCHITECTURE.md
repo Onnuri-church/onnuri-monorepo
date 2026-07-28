@@ -51,6 +51,12 @@ onnuri-monorepo/
 * **`apps/mobile`** — 화면, 네비게이션, 로컬 상태(세션 등), 서버 상태 캐싱(TanStack Query). 도메인 규칙을 직접 판단하지 않고 API 응답을 그대로 반영한다.
 * **`apps/api`** — 인증, 도메인 API, DB 접근, 트랜잭션. 고객에게 보이는 상태 문구·권한 판단은 프론트가 아니라 여기서 계산해 반환한다.
 
+## Backend Configuration
+
+* 환경변수는 부팅 시 `config/env.validation.ts`가 검증한다. 코드에 기본값을 두지 않으므로 `.env`가 단일 소스다.
+* 환경변수는 `ConfigService`를 쓴다. `env()`는 검증 결과를 `configuration.ts`로 넘기는 다리라 호출처는 그 파일 하나뿐이다.
+* 점 표기에는 `{ infer: true }`가 필요하다 — `config.get('jwt.accessSecret', { infer: true })`.
+
 ## Backend Module Shape
 
 각 도메인 모듈은 아래 구조를 기본으로 가진다 (Repository/Domain 레이어 없이 Service가 Prisma를 직접 씀 — Architecture Decisions에서 Clean/Hexagonal을 기각한 것과 일관됨).
