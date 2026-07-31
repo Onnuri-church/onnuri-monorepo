@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function QtBoardScreen() {
+export function QtBoardScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>큐티나눔</Text>

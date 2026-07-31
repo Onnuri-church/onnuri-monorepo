@@ -18,6 +18,15 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 스펙이 기본 스케일에 맞지 않으면 작업자에게 확인한다. (디바이스 픽셀 이슈로 예외가 필요해 보여도 임의로 처리하지 않는다.)
 * 주보 이미지 뷰어, 영상 플레이어처럼 콘텐츠 비율에 종속되는 영역(예: 16:9, 원본 이미지 비율)은 사이즈 토큰이 아니라 `aspectRatio`로 처리하고 별도 확인 없이 진행 가능.
 
+## export 규칙
+
+**컴포넌트·화면·네비게이터는 named export만 쓴다** (`export function HomeScreen()`). `export default`는 쓰지 않는다.
+
+* 유일한 예외는 진입점 `App.tsx` — `registerRootComponent`가 받는 루트 컴포넌트라 default export를 유지한다.
+* import도 이름을 그대로 쓴다: `import { HomeScreen } from "../features/home/HomeScreen"`. 별칭을 붙이지 않는다.
+* 이유: default export는 import 쪽 이름이 임의라 원본 이름을 바꿔도 조용히 어긋나고, 오타(`HomeScren`)도 타입 에러가 안 난다. named면 rename 리팩터링이 import 사이트까지 따라오고 오타는 즉시 잡힌다.
+* Expo/RN 템플릿과 문서 예제는 대부분 `export default function`이라 복붙하면 섞이기 쉽다. 새 파일을 만들 때 확인한다. (이 프로젝트는 expo-router를 쓰지 않으므로 default export를 강제하는 파일이 없다.)
+
 ## 컴포넌트 props 규칙
 
 Figma variant property를 기준으로 props를 설계하되 두 가지를 구분한다.

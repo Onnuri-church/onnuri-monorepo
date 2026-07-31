@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function SermonScreen() {
+export function SermonScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>주간 말씀 영상</Text>
