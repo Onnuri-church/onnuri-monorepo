@@ -4,7 +4,7 @@ import { Pressable, Text, View } from "react-native";
 
 import type { RootStackParamList } from "../../shared/types/navigation";
 
-export default function HomeScreen() {
+export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return (

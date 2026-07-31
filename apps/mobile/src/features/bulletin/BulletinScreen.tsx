@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function BulletinScreen() {
+export function BulletinScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>주보</Text>

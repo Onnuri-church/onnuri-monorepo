@@ -2,11 +2,11 @@ import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { Pressable, Text } from "react-native";
 
-import BulletinScreen from "../features/bulletin/BulletinScreen";
-import HomeScreen from "../features/home/HomeScreen";
-import MyPageScreen from "../features/my-page/MyPageScreen";
-import SermonScreen from "../features/sermon/SermonScreen";
-import TeamStoryScreen from "../features/team-story/TeamStoryScreen";
+import { BulletinScreen } from "../features/bulletin/BulletinScreen";
+import { HomeScreen } from "../features/home/HomeScreen";
+import { MyPageScreen } from "../features/my-page/MyPageScreen";
+import { SermonScreen } from "../features/sermon/SermonScreen";
+import { TeamStoryScreen } from "../features/team-story/TeamStoryScreen";
 import { Header } from "../shared/components/Header";
 import type { RootTabParamList } from "../shared/types/navigation";
 
@@ -29,7 +29,7 @@ function SermonTabButton({ onPress, accessibilityState }: BottomTabBarButtonProp
   );
 }
 
-export default function BottomTabNavigator() {
+export function BottomTabNavigator() {
   return (
     <Tab.Navigator screenOptions={{ header: () => <Header variant="main" /> }}>
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: "홈" }} />

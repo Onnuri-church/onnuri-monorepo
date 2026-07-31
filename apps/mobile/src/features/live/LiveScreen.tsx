@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function LiveScreen() {
+export function LiveScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>실시간 예배</Text>

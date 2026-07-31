@@ -9,7 +9,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import "./global.css";
 import { queryClient } from "./src/shared/api/queryClient";
 import { pretendardFonts } from "./src/shared/theme/fonts";
-import RootNavigator from "./src/navigation/RootNavigator";
+import { RootNavigator } from "./src/navigation/RootNavigator";
 
 SplashScreen.preventAutoHideAsync();
 

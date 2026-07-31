@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 
-export default function MyPageScreen() {
+export function MyPageScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>마이페이지</Text>
