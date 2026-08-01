@@ -37,26 +37,31 @@ const fontFamily = {
   "pretendard-bold": ["Pretendard-Bold"],
 };
 
-// 타입 스케일(1-2). lh(line-height)는 전부 140%(=폰트 크기의 1.4배, unitless),
+// 타입 스케일(1-2). 사이즈 / 행간 / 자간 / 굵기를 한 클래스로 묶는다 —
+// `text-title` 하나만 쓰면 22px·Bold까지 전부 정해진다. lh(line-height)는 전부 140%(unitless),
 // ls(letter-spacing)는 label-medium/label-small만 -3%고 나머지는 전부 -1% (%→em 변환).
-// 굵기는 각 사이즈 클래스와 아래 폰트 유틸리티를 페어로 사용:
-//   title → font-pretendard-bold, heading-main → font-pretendard-bold
-//   heading-medium → font-pretendard-semibold, heading-small → font-pretendard-semibold
-//   body-main → font-pretendard-semibold, body-medium → font-pretendard-medium, body-small → font-pretendard(regular)
-//   label-medium → font-pretendard-medium, label-small → font-pretendard(regular)
-//   caption-main → font-pretendard-medium, caption-small → font-pretendard-medium
-const fontSize = {
-  title: ["22px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-main": ["20px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-medium": ["20px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-small": ["18px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-main": ["15px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-medium": ["15px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-small": ["13px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "label-medium": ["13px", { lineHeight: "1.4", letterSpacing: "-0.03em" }],
-  "label-small": ["12px", { lineHeight: "1.4", letterSpacing: "-0.03em" }],
-  "caption-main": ["13px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "caption-small": ["10px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
+// [사이즈, 자간, 폰트 파일] 순서.
+const TEXT_STYLE = {
+  title: ["22px", "-0.01em", "Pretendard-Bold"],
+  "heading-main": ["20px", "-0.01em", "Pretendard-Bold"],
+  "heading-medium": ["20px", "-0.01em", "Pretendard-SemiBold"],
+  "heading-small": ["18px", "-0.01em", "Pretendard-SemiBold"],
+  "body-main": ["15px", "-0.01em", "Pretendard-SemiBold"],
+  "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
+  "body-small": ["13px", "-0.01em", "Pretendard-Regular"],
+  "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
+  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
+  "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
+  "caption-small": ["10px", "-0.01em", "Pretendard-Medium"],
 };
 
-module.exports = { colors, fontFamily, fontSize };
+// tailwind.config.js가 components 레이어에 등록한다. utilities 레이어인 font-pretendard-*가
+// 항상 뒤에 오므로, 굵기만 다르게 써야 하는 곳은 클래스를 덧붙여 덮어쓸 수 있다.
+const textStyles = Object.fromEntries(
+  Object.entries(TEXT_STYLE).map(([name, [fontSize, letterSpacing, family]]) => [
+    `.text-${name}`,
+    { fontSize, lineHeight: "1.4", letterSpacing, fontFamily: family },
+  ]),
+);
+
+module.exports = { colors, fontFamily, textStyles };

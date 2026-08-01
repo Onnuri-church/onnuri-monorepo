@@ -1,4 +1,6 @@
-const { colors, fontFamily, fontSize } = require("./src/shared/theme/tokens");
+const plugin = require("tailwindcss/plugin");
+
+const { colors, fontFamily, textStyles } = require("./src/shared/theme/tokens");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -10,11 +12,19 @@ module.exports = {
     // DESIGN.md "semantic 토큰만 사용, 정의되지 않은 기본 팔레트 금지" 규칙을 강제한다.
     // 실제 값은 src/shared/theme/tokens.js가 단일 소스 — 여기서 중복 정의하지 않는다.
     colors,
+    // fontSize는 일부러 교체하지 않는다 — Tailwind 기본 text-xs/sm/base/... 를 살려둔다.
+    // 이미 기본 사이즈로 작성된 코드를 깨지 않기 위해서이고, "등록된 텍스트 스타일만 쓴다"는
+    // 설정이 아니라 규칙으로 지킨다 (DESIGN.md 타이포그래피 규칙).
+    // fontFamily는 통째로 교체 — Tailwind 기본 font-sans/serif/mono를 없앤다.
+    // 남겨두면 등록 안 된 폰트로 렌더링되는데 눈으로는 구분이 잘 안 된다.
+    fontFamily,
     extend: {
       // sizing / spacing / radius는 Tailwind 기본 스케일만 사용 — 여기에 커스텀 값을 추가하지 않는다 (DESIGN.md 사이즈 규칙).
-      fontFamily,
-      fontSize,
     },
   },
-  plugins: [],
+  plugins: [
+    // 텍스트 스타일은 components 레이어. utilities 레이어인 font-pretendard-*가 항상 뒤에 와서
+    // 이기므로, shared/components/base에서 굵기만 바꿔 쓸 때 클래스를 덧붙이면 그대로 덮어써진다.
+    plugin(({ addComponents }) => addComponents(textStyles)),
+  ],
 };
