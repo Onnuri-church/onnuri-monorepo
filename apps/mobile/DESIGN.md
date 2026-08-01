@@ -11,9 +11,17 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 토큰은 `tailwind.config.js` theme(`colors`, extend 아님)에 등록된 것만 인정한다 — 등록 안 된 색은 클래스 자체가 존재하지 않는다.
 * 추측하지 않는다. semantic 토큰에 없으면 코딩을 멈추고 작업자(디자인: 남현지)에게 요청한다.
 
+## 타이포그래피 규칙
+
+* 텍스트 스타일 클래스(`text-title`, `text-body-small` 등)에 사이즈·행간·자간·**굵기**가 전부 묶여 있다. 화면에서는 이 클래스 하나만 쓴다 — `font-pretendard-*`를 같이 붙이지 않는다.
+* 굵기를 다르게 써야 하면 `shared/components/base/`의 베이스 컴포넌트 안에서, 시안 근거가 있을 때만 `font-pretendard-*`를 덧붙여 덮어쓴다. 컴포넌트가 그 결정을 감추므로 화면은 굵기를 고를 일이 없다. (텍스트 스타일은 components 레이어, `font-pretendard-*`는 utilities 레이어라 클래스 순서와 무관하게 덮어쓰기가 보장된다.)
+* **`shared/components/base/` 밖(조합 컴포넌트·화면·기능 코드)에서는 `TEXT_STYLE`에 등록된 텍스트 스타일만 쓴다.** Tailwind 기본 `text-sm`/`text-base` 등은 클래스로 존재하기는 하지만 쓰지 않는다 — 설정으로 막지 않는 건 이미 기본 사이즈로 작성된 코드를 깨지 않기 위해서지, 써도 된다는 뜻이 아니다.
+* 폰트 패밀리는 `tailwind.config.js`가 통째로 교체하므로 `font-sans`/`font-serif`/`font-mono`는 클래스 자체가 없다.
+* 값은 `src/shared/theme/tokens.js`의 `TEXT_STYLE`이 단일 소스. 시안에 없는 조합이 필요하면 추측하지 말고 작업자(디자인: 남현지)에게 요청한다.
+
 ## 사이즈·간격 규칙
 
-* 컬러를 제외한 sizing / gap / padding / radius는 Tailwind 기본 스케일만 쓴다.
+* 컬러·타이포그래피를 제외한 sizing / gap / padding / radius는 Tailwind 기본 스케일만 쓴다.
 * 커스텀 토큰을 만들지 않는다. arbitrary value도 쓰지 않는다.
 * 스펙이 기본 스케일에 맞지 않으면 작업자에게 확인한다. (디바이스 픽셀 이슈로 예외가 필요해 보여도 임의로 처리하지 않는다.)
 * 주보 이미지 뷰어, 영상 플레이어처럼 콘텐츠 비율에 종속되는 영역(예: 16:9, 원본 이미지 비율)은 사이즈 토큰이 아니라 `aspectRatio`로 처리하고 별도 확인 없이 진행 가능.
