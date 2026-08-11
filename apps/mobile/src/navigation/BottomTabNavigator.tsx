@@ -7,7 +7,7 @@ import { HomeScreen } from "../features/home/HomeScreen";
 import { MyPageScreen } from "../features/my-page/MyPageScreen";
 import { SermonScreen } from "../features/sermon/SermonScreen";
 import { TeamStoryScreen } from "../features/team-story/TeamStoryScreen";
-import { Header } from "../shared/components/Header";
+import { Header } from "../shared/components/base/Header";
 import type { RootTabParamList } from "../shared/types/navigation";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();

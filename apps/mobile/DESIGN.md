@@ -26,9 +26,28 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 스펙이 기본 스케일에 맞지 않으면 작업자에게 확인한다. (디바이스 픽셀 이슈로 예외가 필요해 보여도 임의로 처리하지 않는다.)
 * 주보 이미지 뷰어, 영상 플레이어처럼 콘텐츠 비율에 종속되는 영역(예: 16:9, 원본 이미지 비율)은 사이즈 토큰이 아니라 `aspectRatio`로 처리하고 별도 확인 없이 진행 가능.
 
+## 아이콘 규칙
+
+아이콘 팩(라이브러리)을 설치하지 않는다 — 쓰는 아이콘이 30개 안팎이고 출처가 여러 곳이라, SVG를 직접 모아서 자체 세트로 관리한다. 원본은 `src/shared/assets/icons/`.
+
+* **화면에서 SVG 파일을 직접 import하지 않는다.** `shared/components/base/Icon.tsx`의 `<Icon name="bell" />`만 쓴다 — 아이콘을 교체하거나 나중에 팩으로 갈아타도 사용처를 안 건드리기 위해서다.
+* 새 SVG는 `assets/icons/`에 넣고 `Icon.tsx`의 `ICONS` 맵에 한 줄 등록한다. 등록 안 하면 `name` 타입에 없어서 컴파일에서 막힌다.
+* 파일명은 소문자 케밥(`chevron-left.svg`). **공백·대문자·언더스코어 금지** — import가 깨진다. 채운 버전은 `-active`/`-fill` 접미사로 구분한다(`bookmark.svg` / `bookmark-active.svg`).
+* **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다.
+* 크기는 `size` prop(기본 24). 원본 viewBox가 16/24/28로 섞여 있어 같은 `size`라도 획 굵기가 미세하게 달라 보일 수 있다 — 거슬리면 코드에서 보정하지 말고 Figma에서 그리드를 맞춰 다시 export한다.
+* SVG→컴포넌트 변환은 `react-native-svg-transformer`가 하고 `metro.config.js`에서 설정한다. NativeWind가 `transformerPath`를 자기 것으로 교체하며 기존 값을 체이닝하므로, **SVG 설정은 반드시 `withNativeWind()` 호출 전에** 둔다. 순서가 뒤집히면 변환이 통째로 무시된다.
+
+## 컴포넌트 배치 규칙
+
+컴포넌트가 **도메인을 아는지**로 나눈다. 재사용 횟수가 아니라 이 기준이다.
+
+* `shared/components/base/` — 베이스 컴포넌트. 도메인을 모르고 props로만 동작한다 (`Chip`은 "SNS팀"이 뭔지 모르고 색과 텍스트만 받는다). 어느 화면에 갖다 놔도 말이 되면 여기. 위 타이포그래피 규칙의 굵기 덮어쓰기 예외가 적용되는 유일한 위치다.
+* `features/<기능>/components/` — 베이스를 조합한 컴포넌트. 도메인을 안다 (게시글 카드는 게시글에 작성자·작성일이 있다는 걸 안다). 특정 화면 맥락에서만 말이 되면 여기.
+* 두 번째 기능이 실제로 같은 조합 컴포넌트를 필요로 하면 그때 `shared/components/composed/`로 올린다. 미리 올리지 않는다 — 두 화면의 공통점을 보기 전에 설계하면 안 쓰는 유연성이 붙는다.
+
 ## export 규칙
 
-**컴포넌트·화면·네비게이터는 named export만 쓴다** (`export function HomeScreen()`). `export default`는 쓰지 않는다.
+**컴포넌트·화면·네비게이터는 named export만 쓴다** (`export function Chip()`). `export default`는 쓰지 않는다.
 
 * 유일한 예외는 진입점 `App.tsx` — `registerRootComponent`가 받는 루트 컴포넌트라 default export를 유지한다.
 * import도 이름을 그대로 쓴다: `import { HomeScreen } from "../features/home/HomeScreen"`. 별칭을 붙이지 않는다.
@@ -66,12 +85,12 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
   * 서브(루트/각 탭 내부 `Stack`에서 push, BottomNav 없음): 위 큐티나눔·실시간예배 외에 말씀 영상 상세, 주보 상세, 큐티나눔 작성, 기도요청 작성/상세, 팀 게시판 상세, 소그룹 모임 상세, 로그인/회원가입 등
   * 웹 버전의 `(main)/`, `(sub)` route group 구분과 동일한 개념을 폴더 대신 Navigator 등록 위치로 표현.
 * BottomNav 활성 탭은 React Navigation이 관리하는 상태(`useNavigationState` 또는 tab navigator의 `focused` prop)로 결정한다. Zustand로 별도 복제하지 않는다 — Zustand는 이 프로젝트에서 다른 전역 상태(로그인 세션, 유저 프로필 등)에는 쓰되, 내비게이션이 이미 소유한 상태를 중복 관리하지 않는다는 원칙은 유지.
-* Header는 `shared/components/Header.tsx`에 구현, 두 variant로 나뉜다 (Figma 확정):
+* Header는 `shared/components/base/Header.tsx`에 구현, 두 variant로 나뉜다 (Figma 확정):
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
   * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 더보기(⋮) 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
-  * 아이콘 라이브러리 미정이라 알림/설정/뒤로가기/더보기는 전부 텍스트/기호로 임시 대체 중.
+  * 알림·설정·뒤로가기·더보기 버튼은 `Icon` 컴포넌트로 렌더한다 (`size={28}`, `color={colors.icon.strong}` — 원본 SVG가 28 그리드에 `#444444`로 그려져 있다). 아래 아이콘 규칙 참고.
 * **모든 화면이 로그인을 요구한다** (예외 없음). `RootNavigator`가 `useAuthStore`의 `accessToken` 유무로 트리 전체를 분기한다 — 세션 있으면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, 없으면 `Login`만 있는 `AuthStack`. 개별 화면에서 세션 체크 후 조건부 push하지 않는다.
-* 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppModal` · `AppSheet`(`src/shared/components/`에 위치)는 store 구독과 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
+* 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppModal` · `AppSheet`(`src/shared/components/base/`에 위치)는 store 구독과 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
 * OTA 업데이트(Expo EAS Update)로 UI 수정 배포 시 스토어 심사 없이 반영 가능 — 단, 네이티브 코드 변경(새 라이브러리 추가 등)은 빌드 필요.
 
 ## 미디어 컴포넌트 규칙
@@ -83,3 +102,4 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 ## 오픈 이슈 (TBD)
 
 * 태블릿/포인터 입력 대응 여부 — 필요 시 hover/focus 규칙 별도 정의
+* 아이콘 원본에만 있던 색 3건을 `icon.strongest`(`#111111`) · `icon.danger`(`#EF4444`) · `icon.accent`(`#436E5D`)로 토큰에 올렸다. 다만 이 값들이 의도된 별도 색인지, 아니면 원본 SVG의 불일치인지는 미확인이다 — `strongest`는 `text.normal`(`#000000`)과, `accent`는 `primary.normal`(`#276E4C`)과 미묘하게 다르다. 별도 색이 아니라면 기존 토큰으로 접고 이 셋을 지운다.

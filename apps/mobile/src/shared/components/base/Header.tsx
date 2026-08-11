@@ -2,7 +2,9 @@ import { useNavigation } from "@react-navigation/native";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-// 아이콘 라이브러리 미확정이라 텍스트/기호로 임시 대체 (DESIGN.md 오픈 이슈 참고).
+import { colors } from "../../theme/tokens";
+import { Icon } from "./Icon";
+
 interface MainHeaderProps {
   variant: "main";
   onPressNotification?: () => void;
@@ -33,22 +35,22 @@ export function Header(props: HeaderProps) {
             <Text className="text-caption-small text-text-alternative">온누리교회 청년부</Text>
           </View>
           <View className="flex-row items-center gap-4">
-            <Pressable onPress={props.onPressNotification}>
-              <Text className="text-body-small">알림</Text>
+            <Pressable onPress={props.onPressNotification} hitSlop={8}>
+              <Icon name="bell" size={28} color={colors.icon.strong} />
             </Pressable>
-            <Pressable onPress={props.onPressSettings}>
-              <Text className="text-body-small">설정</Text>
+            <Pressable onPress={props.onPressSettings} hitSlop={8}>
+              <Icon name="setting" size={28} color={colors.icon.strong} />
             </Pressable>
           </View>
         </>
       ) : (
         <>
           <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-            <Text className="text-heading-small">‹</Text>
+            <Icon name="back" size={28} color={colors.icon.strong} />
           </Pressable>
           <Text className="font-pretendard-semibold text-heading-small">{props.title}</Text>
           <Pressable onPress={props.onPressMore} hitSlop={8}>
-            <Text className="text-heading-small">⋮</Text>
+            <Icon name="more" size={28} color={colors.icon.strong} />
           </Pressable>
         </>
       )}

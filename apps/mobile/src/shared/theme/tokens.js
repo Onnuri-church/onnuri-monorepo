@@ -22,9 +22,15 @@ const colors = {
     assistive: "#D9D9D9",
     disable: "#FFFFFF",
   },
+  // strongest / danger / accent는 아이콘 원본 SVG에만 있던 색을 토큰으로 올린 것.
+  // 기존 색과 미묘하게 다른데(strongest≠text.normal, accent≠primary.normal) 의도인지
+  // 원본 불일치인지 미확인 — DESIGN.md 오픈 이슈 참고.
   icon: {
     normal: "#888888",
     strong: "#444444",
+    strongest: "#111111",
+    danger: "#EF4444",
+    accent: "#436E5D",
     disable: "#FFFFFF",
   },
 };
