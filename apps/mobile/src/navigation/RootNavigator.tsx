@@ -4,7 +4,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
-import { Header } from "../shared/components/Header";
+import { Header } from "../shared/components/base/Header";
 import { useAuthStore } from "../shared/store/useAuthStore";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
