@@ -2,6 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
+import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { Header } from "../shared/components/base/Header";
@@ -31,6 +32,14 @@ export function RootNavigator() {
             name="Live"
             component={LiveScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
+          />
+          <Stack.Screen
+            name="DepartmentActivity"
+            component={DepartmentActivityScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="부서활동 게시판" />,
+            }}
           />
         </Stack.Navigator>
       ) : (
