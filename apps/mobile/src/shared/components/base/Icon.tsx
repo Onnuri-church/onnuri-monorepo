@@ -29,6 +29,7 @@ import TrashCan from "../../assets/icons/trash-can.svg";
 import User from "../../assets/icons/user.svg";
 import Video from "../../assets/icons/video.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
+import Write from "../../assets/icons/write.svg";
 import { colors } from "../../theme/tokens";
 
 // 아이콘은 여러 곳에서 가져온 SVG를 직접 모아서 쓴다 (팩 미설치).
@@ -66,6 +67,7 @@ const ICONS = {
   user: User,
   video: Video,
   "view-light": ViewLight,
+  write: Write,
 } as const;
 
 interface IconProps {

@@ -42,7 +42,7 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * **화면에서 SVG 파일을 직접 import하지 않는다.** `shared/components/base/Icon.tsx`의 `<Icon name="bell" />`만 쓴다 — 아이콘을 교체하거나 나중에 팩으로 갈아타도 사용처를 안 건드리기 위해서다.
 * 새 SVG는 `assets/icons/`에 넣고 `Icon.tsx`의 `ICONS` 맵에 한 줄 등록한다. 등록 안 하면 `name` 타입에 없어서 컴파일에서 막힌다.
 * 파일명은 소문자 케밥(`chevron-left.svg`). **공백·대문자·언더스코어 금지** — import가 깨진다. 채운 버전은 `-active`/`-fill` 접미사로 구분한다(`bookmark.svg` / `bookmark-active.svg`).
-* **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다.
+* **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다. 이때 **표기가 글자 단위로 일치해야 한다** — `white`·`#FFFFFF`·`#ffffff`·`#FFF`가 전부 다른 값으로 취급되므로, SVG 쪽을 목록의 표기(대문자 6자리 hex)에 맞춘다.
 * 크기는 `size` prop(기본 24). 원본 viewBox가 16/24/28로 섞여 있어 같은 `size`라도 획 굵기가 미세하게 달라 보일 수 있다 — 거슬리면 코드에서 보정하지 말고 Figma에서 그리드를 맞춰 다시 export한다.
 * SVG→컴포넌트 변환은 `react-native-svg-transformer`가 하고 `metro.config.js`에서 설정한다. NativeWind가 `transformerPath`를 자기 것으로 교체하며 기존 값을 체이닝하므로, **SVG 설정은 반드시 `withNativeWind()` 호출 전에** 둔다. 순서가 뒤집히면 변환이 통째로 무시된다.
 
