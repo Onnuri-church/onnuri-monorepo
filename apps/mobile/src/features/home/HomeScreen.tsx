@@ -19,6 +19,9 @@ export function HomeScreen() {
       <Pressable onPress={() => navigation.navigate("DepartmentActivity")}>
         <Text className="text-body-main font-pretendard-semibold">부서활동 게시판 보기</Text>
       </Pressable>
+      <Pressable onPress={() => navigation.navigate("GroupMeeting")}>
+        <Text className="text-body-main font-pretendard-semibold">취향 소그룹 보기</Text>
+      </Pressable>
     </View>
   );
 }

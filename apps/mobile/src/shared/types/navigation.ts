@@ -13,6 +13,7 @@ export type RootStackParamList = {
   QtBoard: undefined;
   Live: undefined;
   DepartmentActivity: undefined;
+  GroupMeeting: undefined;
 };
 
 // 비로그인 상태일 때 마운트되는 스택. 모든 화면이 로그인을 요구하므로 Login만 있다.
