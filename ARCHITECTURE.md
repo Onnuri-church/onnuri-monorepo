@@ -98,7 +98,7 @@ features/<name>/
 
 ```
 apps/mobile/src/
-├── features/       auth/ bulletin/ home/ live/ my-page/ qt-board/ sermon/ team-story/
+├── features/       auth/ bulletin/ home/ live/ my-page/ qt-board/ sermon/ splash/ team-story/
 ├── navigation/     RootNavigator(인증 분기 Stack), BottomTabNavigator
 └── shared/
     ├── api/        axios client (요청 인터셉터: 토큰 첨부 / 응답 인터셉터: 401 처리)
@@ -106,7 +106,7 @@ apps/mobile/src/
     ├── store/      Zustand (useAuthStore: user, accessToken)
     ├── theme/      tokens.js(컬러·타입스케일 단일 소스), fonts.ts(폰트 로딩용 require 맵)
     ├── types/      navigation.ts (RootStackParamList, RootTabParamList, AuthStackParamList)
-    └── hooks/      (아직 비어있음)
+    └── hooks/      useAppBootstrap(앱 부팅 시 준비 작업 → status 확정)
 ```
 
 스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-av`/`react-native-image-zoom-viewer`/`react-native-webview`.
@@ -119,9 +119,11 @@ apps/mobile/src/
 @UseGuards(JwtAuthGuard)   # users.controller.ts의 /users/me 등
 ```
 
-* 모든 화면이 로그인을 요구한다 (예외 없음). 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `accessToken` 유무로 트리 전체를 분기해서 처리한다.
-  * 세션 있음 → `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live`)
-  * 세션 없음 → `AuthStack`(`Login`만)
+* 모든 화면이 로그인을 요구한다 (예외 없음). 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
+  * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
+  * `authenticated` → `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live`)
+  * `unauthenticated` → `AuthStack`(`Login`만)
+* 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
 * API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 Alert → 확인 누르면 `clearSession()` → `accessToken`이 null이 되는 순간 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음).
 * 유저 등급이 추가되면(향후) capability 기반 가드 조합(`@UseGuards(AuthGuard, XGuard)`)으로 확장하고, 리소스 소유권 검증(예: 내 글만 수정 가능)을 role 체크와 별도로 반드시 추가한다.
 

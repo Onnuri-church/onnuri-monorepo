@@ -44,6 +44,8 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 파일명은 소문자 케밥(`chevron-left.svg`). **공백·대문자·언더스코어 금지** — import가 깨진다. 채운 버전은 `-active`/`-fill` 접미사로 구분한다(`bookmark.svg` / `bookmark-active.svg`).
 * **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다. 이때 **표기가 글자 단위로 일치해야 한다** — `white`·`#FFFFFF`·`#ffffff`·`#FFF`가 전부 다른 값으로 취급되므로, SVG 쪽을 목록의 표기(대문자 6자리 hex)에 맞춘다.
 * 크기는 `size` prop(기본 24). 원본 viewBox가 16/24/28로 섞여 있어 같은 `size`라도 획 굵기가 미세하게 달라 보일 수 있다 — 거슬리면 코드에서 보정하지 말고 Figma에서 그리드를 맞춰 다시 export한다.
+* **로고는 아이콘이 아니다.** 색이 고정된 다색 브랜드 자산은 `src/shared/assets/logo/`에 두고 `shared/components/base/Logo.tsx`로 쓴다 — `Icon`은 정사각형(`width=height=size`)을 강제하는데 로고는 222×46이고, 흰색+`#436E5D` 2색이 시안 확정값이라 `currentColor` 치환과도 맞지 않는다. `Logo`에는 `color` prop을 두지 않는다.
+  * **치환을 피하려고 위 목록에 없는 표기(`white` 키워드, 소문자 hex)를 의도적으로 쓴다.** `assets/logo/`의 색 표기는 위의 "대문자 6자리 hex에 맞춘다" 규칙을 적용하지 않는다 — 정규화하면 로고가 한 색으로 뭉개진다.
 * SVG→컴포넌트 변환은 `react-native-svg-transformer`가 하고 `metro.config.js`에서 설정한다. NativeWind가 `transformerPath`를 자기 것으로 교체하며 기존 값을 체이닝하므로, **SVG 설정은 반드시 `withNativeWind()` 호출 전에** 둔다. 순서가 뒤집히면 변환이 통째로 무시된다.
 
 ## 컴포넌트 배치 규칙
@@ -98,7 +100,10 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
   * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 더보기(⋮) 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
   * 알림·설정·뒤로가기·더보기 버튼은 `Icon` 컴포넌트로 렌더한다 (`size={28}`, `color={colors.icon.strong}` — 원본 SVG가 28 그리드에 `#444444`로 그려져 있다). 아래 아이콘 규칙 참고.
-* **모든 화면이 로그인을 요구한다** (예외 없음). `RootNavigator`가 `useAuthStore`의 `accessToken` 유무로 트리 전체를 분기한다 — 세션 있으면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, 없으면 `Login`만 있는 `AuthStack`. 개별 화면에서 세션 체크 후 조건부 push하지 않는다.
+* **모든 화면이 로그인을 요구한다** (예외 없음). `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기한다 — `authenticated`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`만 있는 `AuthStack`. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의는 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
+  * 준비가 끝나기 전(`loading`)에는 스플래시가 `NavigationContainer` **바깥에서** 트리를 통째로 대신한다. 스크린으로 등록하지 않는다 — 뒤로가기 대상이 되면 안 되고 네비게이션도 쓰지 않기 때문이다. 온보딩처럼 화면이 여러 장 붙으면 그때 별도 `Stack`으로 올린다.
+  * 준비 작업(최소 노출 시간, 향후 세션 복원 등)은 `shared/hooks/useAppBootstrap.ts`가 맡고, 스플래시 화면은 상태만 받아 렌더링한다.
+  * 스플래시 배경은 `SafeAreaView`로 감싸지 않는다 — 네이티브 스플래시가 화면 전체를 덮으므로, inset에서 배경이 끊기면 전환 순간 노치·홈 인디케이터 영역에 흰 띠가 보인다.
 * 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppModal` · `AppSheet`(`src/shared/components/base/`에 위치)는 store 구독과 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
 * OTA 업데이트(Expo EAS Update)로 UI 수정 배포 시 스토어 심사 없이 반영 가능 — 단, 네이티브 코드 변경(새 라이브러리 추가 등)은 빌드 필요.
 

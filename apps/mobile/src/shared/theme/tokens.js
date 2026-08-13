@@ -1,5 +1,6 @@
 // 디자인 토큰의 단일 소스. tailwind.config.js가 이 파일을 참조하고,
 // className을 못 쓰는 곳(React Navigation 옵션, StatusBar 등)에서도 여기서 직접 import해서 쓴다.
+// 네이티브 스플래시 배경색이 필요한 app.config.js도 여기서 가져간다.
 // 값을 두 군데(여기 + 어딘가의 컴포넌트)에 따로 적지 않는다.
 
 // DESIGN.md 컬러 규칙: semantic 토큰만 사용 (primitive 원시 스케일 없음 — 앞으로도 안 씀, 확인됨).
@@ -68,6 +69,9 @@ const elevation = {
 // 기본 스케일에 18이 없어서(...12, 14, 16, 20...) 시안의 72px을 표현할 방법이 없다.
 // 시안 확정값이라 예외로 추가한다 — rem이 아니라 px로 적는 이유는 아래 "rem 주의" 참고.
 const spacing = {
+  // 스플래시 로고를 화면 정중앙에서 34px 위로 올리기 위한 값. justify-center 컨테이너에서
+  // padding/margin은 중심을 그 절반만큼만 옮기므로 34가 아니라 2배인 68이다. 34로 고치지 말 것.
+  17: "68px",
   18: "72px",
 };
 

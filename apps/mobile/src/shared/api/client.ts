@@ -8,15 +8,15 @@ export const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = useAuthStore.getState().accessToken;
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const { session } = useAuthStore.getState();
+  if (session.status === "authenticated") {
+    config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
   return config;
 });
 
 // 세션 만료 등으로 401을 받으면 알림을 띄우고, 확인을 눌렀을 때만 세션을 지운다.
-// RootNavigator가 accessToken 유무로 화면을 분기하므로, clearSession 호출 자체가 로그인 화면 전환을 트리거한다.
+// RootNavigator가 session.status로 화면을 분기하므로, clearSession 호출 자체가 로그인 화면 전환을 트리거한다.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
