@@ -7,6 +7,10 @@
 // `white` / `#FFFFFF` / `#ffffff` / `#FFF`는 전부 다른 값이다. 새 SVG를 추가할 때는
 // 아래 목록의 표기(대문자 6자리 hex)에 파일 쪽을 맞춘다.
 //
+// 예외: 로고처럼 색이 고정된 다색 브랜드 자산(src/shared/assets/logo/)은 치환되면 안 되므로
+// 일부러 목록에 없는 표기(`white` 키워드, 소문자 hex)를 쓴다. 그 파일들의 색 표기를 이 목록에
+// 맞춰 "정리"하면 로고가 한 색으로 뭉개진다 — DESIGN.md 아이콘 규칙의 로고 예외 조항 참고.
+//
 // svgoConfig는 여기서 건드리지 않는다 — 지정하는 순간 transformer의 기본값을
 // 통째로 덮어써서 removeViewBox: false가 풀리고, viewBox가 사라지면 아이콘이 스케일되지 않는다.
 // (기본값의 convertColors: false도 같이 풀리는데, 그러면 SVGO가 #888888을 #888로 줄여버려서
