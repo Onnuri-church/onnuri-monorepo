@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
+import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -19,6 +20,7 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     UsersModule,
     AuthModule,
+    GroupMeetingsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
