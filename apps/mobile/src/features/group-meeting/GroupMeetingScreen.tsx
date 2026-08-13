@@ -1,0 +1,132 @@
+import type { GroupMeeting, GroupMeetingStatus } from "@onnuri/shared";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { ScrollView, Text, View, useWindowDimensions } from "react-native";
+
+import { apiClient } from "../../shared/api/client";
+import { Card } from "../../shared/components/base/Card";
+import { Chip } from "../../shared/components/base/Chip";
+import { Skeleton } from "../../shared/components/base/Skeleton";
+import { FilterChip } from "./components/FilterChip";
+
+type Filter = "all" | GroupMeetingStatus;
+
+const FILTERS: { value: Filter; label: string }[] = [
+  { value: "all", label: "전체" },
+  { value: "open", label: "모집중" },
+  { value: "closed", label: "마감" },
+];
+
+// 카드 크기는 고정값이 아니라 이 규칙에서 계산한다 — 시안의 173×214는 390pt 프레임에
+// 이 규칙(좌우 16 / 간격 12 / 2열)을 적용한 결과값이다. 폭을 고정하면 360·375pt 기기에서
+// 2열이 안 들어가 1열로 접힌다. 값은 px-4(16)·gap-3(12) 클래스와 짝이 맞아야 한다.
+const LIST_PADDING = 16;
+const CARD_GAP = 12;
+const MIN_CARD_WIDTH = 173;
+
+function getCardWidth(screenWidth: number): number {
+  const available = screenWidth - LIST_PADDING * 2;
+  // 최소 폭 기준으로 최대 몇 열이 들어가는지 (좁은 화면에서도 2열은 유지)
+  const columns = Math.max(2, Math.floor((available + CARD_GAP) / (MIN_CARD_WIDTH + CARD_GAP)));
+  return (available - CARD_GAP * (columns - 1)) / columns;
+}
+
+// "2026-07-31" → "~7/31"
+function formatDeadline(deadline: string): string {
+  const date = new Date(deadline);
+  return `~${date.getMonth() + 1}/${date.getDate()}`;
+}
+
+// 참여자 아바타 자리 표시 (최대 3개) — 실제 프로필 이미지가 생기면 교체한다.
+function ParticipantDots({ count }: { count: number }) {
+  return (
+    <View className="flex-row">
+      {Array.from({ length: Math.min(count, 3) }).map((_, index) => (
+        <View
+          key={index}
+          className={
+            index === 0
+              ? "h-6 w-6 rounded-full bg-text-assistive"
+              : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
+          }
+        />
+      ))}
+    </View>
+  );
+}
+
+export function GroupMeetingScreen() {
+  const [filter, setFilter] = useState<Filter>("all");
+  const { width } = useWindowDimensions();
+  const cardWidth = getCardWidth(width);
+
+  const {
+    data: meetings,
+    isPending,
+    isError,
+  } = useQuery({
+    queryKey: ["group-meetings"],
+    queryFn: async () => (await apiClient.get<GroupMeeting[]>("/group-meetings")).data,
+  });
+
+  const filterRow = (
+    <View className="flex-row gap-2 px-4 py-3">
+      {FILTERS.map(({ value, label }) => (
+        <FilterChip
+          key={value}
+          label={label}
+          selected={filter === value}
+          onPress={() => setFilter(value)}
+        />
+      ))}
+    </View>
+  );
+
+  if (isPending) {
+    return (
+      <View>
+        {filterRow}
+        <View className="flex-row flex-wrap gap-3 px-4">
+          <Skeleton className="h-52 w-44 rounded-2xl" />
+          <Skeleton className="h-52 w-44 rounded-2xl" />
+        </View>
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View className="flex-1 items-center justify-center">
+        <Text className="text-body-medium text-text-alternative">모임을 불러오지 못했어요</Text>
+      </View>
+    );
+  }
+
+  const visible = filter === "all" ? meetings : meetings.filter((m) => m.status === filter);
+
+  return (
+    <View className="flex-1 bg-background-normal">
+      {filterRow}
+      <ScrollView contentContainerClassName="flex-row flex-wrap gap-3 px-4 pb-6">
+        {visible.map((meeting) => (
+          <Card
+            key={meeting.id}
+            style={{ width: cardWidth }}
+            imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
+            badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
+            dimmed={meeting.status === "closed"}
+          >
+            <Text className="text-label-small text-text-alternative">{meeting.category}</Text>
+            <Text className="text-body-main text-text-normal">{meeting.title}</Text>
+            <View className="mt-auto flex-row items-center justify-between pt-4">
+              <Text className="text-label-small text-text-neutral">
+                {formatDeadline(meeting.deadline)}
+              </Text>
+              <ParticipantDots count={meeting.participantCount} />
+            </View>
+          </Card>
+        ))}
+      </ScrollView>
+    </View>
+  );
+}

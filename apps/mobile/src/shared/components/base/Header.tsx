@@ -14,6 +14,8 @@ interface MainHeaderProps {
 interface SubHeaderProps {
   variant: "sub";
   title: string;
+  /** 우측 버튼. "home"이면 메인 탭으로 돌아간다. 기본값은 더보기(⋮). */
+  rightAction?: "more" | "home";
   onPressMore?: () => void;
 }
 
@@ -49,9 +51,15 @@ export function Header(props: HeaderProps) {
             <Icon name="back" size={28} color={colors.icon.strong} />
           </Pressable>
           <Text className="font-pretendard-semibold text-heading-small">{props.title}</Text>
-          <Pressable onPress={props.onPressMore} hitSlop={8}>
-            <Icon name="more" size={28} color={colors.icon.strong} />
-          </Pressable>
+          {props.rightAction === "home" ? (
+            <Pressable onPress={() => navigation.navigate("Main" as never)} hitSlop={8}>
+              <Icon name="home" size={28} color={colors.icon.strong} />
+            </Pressable>
+          ) : (
+            <Pressable onPress={props.onPressMore} hitSlop={8}>
+              <Icon name="more" size={28} color={colors.icon.strong} />
+            </Pressable>
+          )}
         </>
       )}
     </View>
