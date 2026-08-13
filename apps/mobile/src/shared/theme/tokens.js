@@ -33,6 +33,42 @@ const colors = {
     accent: "#436E5D",
     disable: "#FFFFFF",
   },
+  // chip. 구분용 팔레트(purple~indigo)는 배경(bg)이 공통이고 글자색만 다르고,
+  // 모집 상태(open/closed)는 반대로 글자가 흰색이고 배경이 상태별로 다르다.
+  // 이름이 부서명이 아닌 이유와 부서→색 매핑을 두는 위치는 DESIGN.md 컬러 규칙 참고.
+  chip: {
+    bg: "#ECECEC",
+    open: "#444444",
+    closed: "#888888",
+    purple: "#8C00BF",
+    blue: "#0086BF",
+    red: "#BF0000",
+    yellow: "#BFA200",
+    green: "#33BF00",
+    orange: "#D16900",
+    indigo: "#3400D1",
+  },
+};
+
+// 그림자. NativeWind는 shadow-*를 RN의 shadowColor/shadowOffset/shadowRadius로 변환하면서
+// shadowOpacity를 1로 고정하므로, 투명도는 색의 알파(#RRGGBBAA)에 넣어야 한다.
+// spread(4번째 값)는 RN에 대응이 없어 무시된다 — 0이 아닌 값이 필요하면 시안을 다시 확인한다.
+// card = primary.normal(#276E4C) 10%.
+const boxShadow = {
+  card: "0px 1px 20px 0px #276E4C1A",
+};
+
+// 안드로이드 전용 그림자 깊이. 키 이름을 boxShadow와 맞춰야 짝이 맞는다.
+// 지정하지 않으면 NativeWind가 blur(20)를 그대로 elevation으로 쓰는데 카드에는 과하다.
+const elevation = {
+  card: 2,
+};
+
+// 사이즈 스케일 예외. DESIGN.md 사이즈 규칙은 Tailwind 기본 스케일만 쓰도록 하고 있는데,
+// 기본 스케일에 18이 없어서(...12, 14, 16, 20...) 시안의 72px을 표현할 방법이 없다.
+// 시안 확정값이라 예외로 추가한다 — rem이 아니라 px로 적는 이유는 아래 "rem 주의" 참고.
+const spacing = {
+  18: "72px",
 };
 
 // 폰트 패밀리(1-1): 한글/영문·숫자 모두 Pretendard.
@@ -70,4 +106,4 @@ const textStyles = Object.fromEntries(
   ]),
 );
 
-module.exports = { colors, fontFamily, textStyles };
+module.exports = { colors, fontFamily, textStyles, boxShadow, elevation, spacing };

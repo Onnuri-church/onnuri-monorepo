@@ -1,6 +1,13 @@
 const plugin = require("tailwindcss/plugin");
 
-const { colors, fontFamily, textStyles } = require("./src/shared/theme/tokens");
+const {
+  colors,
+  fontFamily,
+  textStyles,
+  boxShadow,
+  elevation,
+  spacing,
+} = require("./src/shared/theme/tokens");
 
 /** @type {import('tailwindcss').Config} */
 module.exports = {
@@ -19,7 +26,13 @@ module.exports = {
     // 남겨두면 등록 안 된 폰트로 렌더링되는데 눈으로는 구분이 잘 안 된다.
     fontFamily,
     extend: {
-      // sizing / spacing / radius는 Tailwind 기본 스케일만 사용 — 여기에 커스텀 값을 추가하지 않는다 (DESIGN.md 사이즈 규칙).
+      // sizing / spacing / radius는 Tailwind 기본 스케일만 사용 — 기본 스케일로 표현 못 하는 시안 확정값만
+      // tokens.js의 spacing에 예외로 등록한다 (DESIGN.md 사이즈 규칙의 예외 절차 참고).
+      // 그림자는 Tailwind 기본값(shadow-sm/md/...)을 남겨둔 채 시안 토큰만 더한다.
+      spacing,
+      // elevation은 Tailwind 표준 키가 아니라 NativeWind가 안드로이드에서 읽는 키다.
+      boxShadow,
+      elevation,
     },
   },
   plugins: [

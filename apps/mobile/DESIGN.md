@@ -22,9 +22,18 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 ## 사이즈·간격 규칙
 
 * 컬러·타이포그래피를 제외한 sizing / gap / padding / radius는 Tailwind 기본 스케일만 쓴다.
-* 커스텀 토큰을 만들지 않는다. arbitrary value도 쓰지 않는다.
+* arbitrary value(`w-[72px]`)는 쓰지 않는다.
 * 스펙이 기본 스케일에 맞지 않으면 작업자에게 확인한다. (디바이스 픽셀 이슈로 예외가 필요해 보여도 임의로 처리하지 않는다.)
+* **확인 결과 시안 확정값이면** `tokens.js`의 `spacing`에 등록한다. 확인 없이 추가하지 않는다 — 이 예외를 열어둔 건 기본 스케일에 없는 값(예: 72px은 `...12, 14, 16, 20...` 사이에 없다)을 표현할 방법이 아예 없기 때문이지, 편할 때 쓰라는 뜻이 아니다.
+* **rem 주의 — `spacing`에는 rem이 아니라 px로 적는다.** NativeWind의 `inlineRem`이 기본값 14라 네이티브에서 `1rem = 14px`다. Tailwind 기본 스케일은 rem 기반이므로 `w-16`은 64px이 아니라 56px, `w-20`은 70px이다. rem으로 적으면 시안 px과 어긋난다.
 * 주보 이미지 뷰어, 영상 플레이어처럼 콘텐츠 비율에 종속되는 영역(예: 16:9, 원본 이미지 비율)은 사이즈 토큰이 아니라 `aspectRatio`로 처리하고 별도 확인 없이 진행 가능.
+
+## 그림자 규칙
+
+* `tokens.js`의 `boxShadow`에 등록된 토큰만 쓴다(`shadow-card`). Tailwind 기본 `shadow-sm`/`shadow-md`나 arbitrary value는 쓰지 않는다 — 컬러·타이포와 같은 이유로, 시안에 없는 그림자를 만들지 않기 위해서다.
+* **투명도는 색의 알파에 넣는다**(`#276E4C1A`). NativeWind가 `shadowOpacity`를 1로 고정하므로 별도 투명도 값을 줄 방법이 없다.
+* **`boxShadow` 토큰 하나당 같은 이름의 `elevation` 토큰을 함께 정의한다.** 안드로이드는 그림자를 elevation으로 그리는데, 없으면 NativeWind가 blur 값을 그대로 elevation으로 써버려서(20px → elevation 20) iOS보다 훨씬 진하게 나온다.
+* CSS `box-shadow`의 spread(4번째 값)는 RN에 대응이 없어 무시되고, 그림자를 여러 겹 겹친 값은 **첫 번째 레이어만** 적용된다. 시안이 두 겹이면 임의로 합치지 말고 작업자(디자인: 남현지)에게 어느 쪽을 살릴지 확인한다.
 
 ## 아이콘 규칙
 
@@ -33,7 +42,7 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * **화면에서 SVG 파일을 직접 import하지 않는다.** `shared/components/base/Icon.tsx`의 `<Icon name="bell" />`만 쓴다 — 아이콘을 교체하거나 나중에 팩으로 갈아타도 사용처를 안 건드리기 위해서다.
 * 새 SVG는 `assets/icons/`에 넣고 `Icon.tsx`의 `ICONS` 맵에 한 줄 등록한다. 등록 안 하면 `name` 타입에 없어서 컴파일에서 막힌다.
 * 파일명은 소문자 케밥(`chevron-left.svg`). **공백·대문자·언더스코어 금지** — import가 깨진다. 채운 버전은 `-active`/`-fill` 접미사로 구분한다(`bookmark.svg` / `bookmark-active.svg`).
-* **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다.
+* **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다. 이때 **표기가 글자 단위로 일치해야 한다** — `white`·`#FFFFFF`·`#ffffff`·`#FFF`가 전부 다른 값으로 취급되므로, SVG 쪽을 목록의 표기(대문자 6자리 hex)에 맞춘다.
 * 크기는 `size` prop(기본 24). 원본 viewBox가 16/24/28로 섞여 있어 같은 `size`라도 획 굵기가 미세하게 달라 보일 수 있다 — 거슬리면 코드에서 보정하지 말고 Figma에서 그리드를 맞춰 다시 export한다.
 * SVG→컴포넌트 변환은 `react-native-svg-transformer`가 하고 `metro.config.js`에서 설정한다. NativeWind가 `transformerPath`를 자기 것으로 교체하며 기존 값을 체이닝하므로, **SVG 설정은 반드시 `withNativeWind()` 호출 전에** 둔다. 순서가 뒤집히면 변환이 통째로 무시된다.
 
