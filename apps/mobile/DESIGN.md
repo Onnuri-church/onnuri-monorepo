@@ -10,6 +10,7 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 원시 hex, 정의되지 않은 Tailwind 기본 팔레트는 사용하지 않는다.
 * 토큰은 `tailwind.config.js` theme(`colors`, extend 아님)에 등록된 것만 인정한다 — 등록 안 된 색은 클래스 자체가 존재하지 않는다.
 * 추측하지 않는다. semantic 토큰에 없으면 코딩을 멈추고 작업자(디자인: 남현지)에게 요청한다.
+* **예외: 브랜드 자산의 색.** 카카오 노랑(`#FEE500`)처럼 남의 브랜딩 가이드가 고정한 색은 토큰으로 만들지 않는다 — 토큰은 우리가 바꿀 수 있는 색을 위한 것인데 이 색들은 바꾸면 안 되기 때문이다. 대신 그 자산을 감싼 컴포넌트(`features/auth/components/SocialLoginButton.tsx` 등) 안에서만 `style`로 직접 쓰고, 사용처는 색을 모른다. 아래 아이콘 규칙의 로고 예외와 같은 취급이다.
 
 ## 타이포그래피 규칙
 
@@ -27,6 +28,7 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * **확인 결과 시안 확정값이면** `tokens.js`의 `spacing`에 등록한다. 확인 없이 추가하지 않는다 — 이 예외를 열어둔 건 기본 스케일에 없는 값(예: 72px은 `...12, 14, 16, 20...` 사이에 없다)을 표현할 방법이 아예 없기 때문이지, 편할 때 쓰라는 뜻이 아니다.
 * **스케일 한 칸은 4px다.** Tailwind 기본 스케일은 rem 기반(`1` = `0.25rem`)이고, NativeWind는 네이티브에 rem이 없어서 빌드할 때 `inlineRem` 값으로 px 환산한다. 이 기본값이 14(= RN 기본 폰트 크기)라 그대로 두면 한 칸이 3.5px이 되므로, `metro.config.js`에서 웹과 같은 `inlineRem: 16`으로 맞춰뒀다. 그래서 `p-4`는 16px, `w-12`는 48px로 시안 px과 그대로 맞는다. **이 값을 바꾸면 앱 전체의 여백·사이즈가 한꺼번에 움직인다.**
 * **`spacing`에는 rem이 아니라 px로 적는다.** 위 환산은 Tailwind 기본 스케일에만 적용되고 `spacing`에 직접 적은 값은 그대로 쓰이므로, px으로 적어야 시안 값이 보존된다. 키 번호는 `키 × 4 = px`에 맞춘다 — `17: "68px"`처럼 기본 스케일의 규칙과 어긋나지 않게 한다.
+* radius도 같은 절차·같은 키 규칙을 따르되 `spacing`이 아니라 `borderRadius`에 등록한다 (`rounded-5` = 20px). Tailwind 기본 radius 스케일은 `rounded-2xl`(16px)에서 `rounded-3xl`(24px)로 건너뛰어서 그 사이 값이 없다.
 * 주보 이미지 뷰어, 영상 플레이어처럼 콘텐츠 비율에 종속되는 영역(예: 16:9, 원본 이미지 비율)은 사이즈 토큰이 아니라 `aspectRatio`로 처리하고 별도 확인 없이 진행 가능.
 
 ## 그림자 규칙
@@ -45,8 +47,9 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * 파일명은 소문자 케밥(`chevron-left.svg`). **공백·대문자·언더스코어 금지** — import가 깨진다. 채운 버전은 `-active`/`-fill` 접미사로 구분한다(`bookmark.svg` / `bookmark-active.svg`).
 * **색은 SVG에 넣지 않는다.** `svgr.config.js`가 파일에 박힌 hex를 전부 `currentColor`로 치환하고, 실제 색은 `Icon`의 `color` prop으로 위 컬러 규칙의 semantic 토큰을 넘겨서 정한다 (기본값 `icon.normal`). 새로 추가한 SVG에 아직 등록되지 않은 hex가 있으면 `svgr.config.js`에도 추가해야 치환된다. 이때 **표기가 글자 단위로 일치해야 한다** — `white`·`#FFFFFF`·`#ffffff`·`#FFF`가 전부 다른 값으로 취급되므로, SVG 쪽을 목록의 표기(대문자 6자리 hex)에 맞춘다.
 * 크기는 `size` prop(기본 24). 원본 viewBox가 16/24/28로 섞여 있어 같은 `size`라도 획 굵기가 미세하게 달라 보일 수 있다 — 거슬리면 코드에서 보정하지 말고 Figma에서 그리드를 맞춰 다시 export한다.
-* **로고는 아이콘이 아니다.** 색이 고정된 다색 브랜드 자산은 `src/shared/assets/logo/`에 두고 `shared/components/base/Logo.tsx`로 쓴다 — `Icon`은 정사각형(`width=height=size`)을 강제하는데 로고는 222×46이고, 흰색+`#436E5D` 2색이 시안 확정값이라 `currentColor` 치환과도 맞지 않는다. `Logo`에는 `color` prop을 두지 않는다.
-  * **치환을 피하려고 위 목록에 없는 표기(`white` 키워드, 소문자 hex)를 의도적으로 쓴다.** `assets/logo/`의 색 표기는 위의 "대문자 6자리 hex에 맞춘다" 규칙을 적용하지 않는다 — 정규화하면 로고가 한 색으로 뭉개진다.
+* **로고는 아이콘이 아니다.** 색이 고정된 브랜드 자산은 `src/shared/assets/logo/`에 두고 `shared/components/base/Logo.tsx`로 쓴다 — `Icon`은 정사각형(`width=height=size`)을 강제하는데 로고는 222×46이고, 흰색+`#436E5D` 2색이 시안 확정값이라 `currentColor` 치환과도 맞지 않는다. `Logo`에는 `color` prop을 두지 않고, 자산이 늘어나면 `variant`로 받는다(`horizontal` 가로형 · `symbol` 정사각 심볼 · `wordmark` 타이틀). 심볼만 PNG(1024×1024)라 `Image`로 그린다 — SVG를 받으면 `Logo.tsx`만 고치면 된다.
+  * **치환을 피하려고 위 목록에 없는 표기(`white` 키워드, 소문자 hex)를 의도적으로 쓴다.** `assets/logo/`의 색 표기는 위의 "대문자 6자리 hex에 맞춘다" 규칙을 적용하지 않는다 — 정규화하면 로고가 한 색으로 뭉개진다. (`wordmark-title.svg`의 `#276e4c`가 그 예다. 대문자로 "정리"하면 초록이 사라진다.)
+  * 카카오·구글 같은 **제3자 브랜드 마크도 같은 폴더**에 둔다. 다만 `Logo`가 아니라 그 마크를 쓰는 컴포넌트(`SocialLoginButton`)에서만 import한다 — 우리 로고가 아니라서 `Logo`의 variant로 섞으면 앱 로고와 구분이 안 된다. 색은 위 컬러 규칙의 브랜드 자산 예외를 따른다.
 * SVG→컴포넌트 변환은 `react-native-svg-transformer`가 하고 `metro.config.js`에서 설정한다. NativeWind가 `transformerPath`를 자기 것으로 교체하며 기존 값을 체이닝하므로, **SVG 설정은 반드시 `withNativeWind()` 호출 전에** 둔다. 순서가 뒤집히면 변환이 통째로 무시된다.
 
 ## 컴포넌트 배치 규칙
@@ -101,7 +104,7 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
   * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 더보기(⋮) 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
   * 알림·설정·뒤로가기·더보기 버튼은 `Icon` 컴포넌트로 렌더한다 (`size={28}`, `color={colors.icon.strong}` — 원본 SVG가 28 그리드에 `#444444`로 그려져 있다). 아래 아이콘 규칙 참고.
-* **모든 화면이 로그인을 요구한다** (예외 없음). `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기한다 — `authenticated`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`만 있는 `AuthStack`. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의는 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
+* **화면 트리는 `RootNavigator` 한 곳에서만 분기한다.** `useAuthStore`의 `session.status`를 보고 `authenticated`·`guest`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`만 있는 `AuthStack`을 그린다. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의와 게스트가 못 하는 동작은 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
   * 준비가 끝나기 전(`loading`)에는 스플래시가 `NavigationContainer` **바깥에서** 트리를 통째로 대신한다. 스크린으로 등록하지 않는다 — 뒤로가기 대상이 되면 안 되고 네비게이션도 쓰지 않기 때문이다. 온보딩처럼 화면이 여러 장 붙으면 그때 별도 `Stack`으로 올린다.
   * 준비 작업(최소 노출 시간, 향후 세션 복원 등)은 `shared/hooks/useAppBootstrap.ts`가 맡고, 스플래시 화면은 상태만 받아 렌더링한다.
   * 스플래시 배경은 `SafeAreaView`로 감싸지 않는다 — 네이티브 스플래시가 화면 전체를 덮으므로, inset에서 배경이 끊기면 전환 순간 노치·홈 인디케이터 영역에 흰 띠가 보인다.

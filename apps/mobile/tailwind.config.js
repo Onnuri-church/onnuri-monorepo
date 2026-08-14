@@ -7,6 +7,7 @@ const {
   boxShadow,
   elevation,
   spacing,
+  borderRadius,
 } = require("./src/shared/theme/tokens");
 
 /** @type {import('tailwindcss').Config} */
@@ -30,6 +31,7 @@ module.exports = {
       // tokens.js의 spacing에 예외로 등록한다 (DESIGN.md 사이즈 규칙의 예외 절차 참고).
       // 그림자는 Tailwind 기본값(shadow-sm/md/...)을 남겨둔 채 시안 토큰만 더한다.
       spacing,
+      borderRadius,
       // elevation은 Tailwind 표준 키가 아니라 NativeWind가 안드로이드에서 읽는 키다.
       boxShadow,
       elevation,

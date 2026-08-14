@@ -113,16 +113,18 @@ apps/mobile/src/
 
 ## Access Model
 
-지금은 단일 등급이다: **`Guest`**(비인증) vs **`User`**(JWT 인증 완료). `Partner`/`Admin` 같은 별도 등급은 아직 없다 — README의 "임원 회의 사항"(유저 등급, 어드민 계정)은 향후 스코프이며 지금 코드에 반영돼 있지 않다.
+지금은 두 등급이다: **`Guest`**(로그인 없이 둘러보기) vs **`User`**(JWT 인증 완료). `Partner`/`Admin` 같은 별도 등급은 아직 없다 — README의 "임원 회의 사항"(유저 등급, 어드민 계정)은 향후 스코프이며 지금 코드에 반영돼 있지 않다.
 
 ```
 @UseGuards(JwtAuthGuard)   # users.controller.ts의 /users/me 등
 ```
 
-* 모든 화면이 로그인을 요구한다 (예외 없음). 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
+* 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
   * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
-  * `authenticated` → `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live`)
+  * `authenticated` / `guest` → 같은 `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live` 등)
   * `unauthenticated` → `AuthStack`(`Login`만)
+* **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
+* 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
 * API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 Alert → 확인 누르면 `clearSession()` → `accessToken`이 null이 되는 순간 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음).
 * 유저 등급이 추가되면(향후) capability 기반 가드 조합(`@UseGuards(AuthGuard, XGuard)`)으로 확장하고, 리소스 소유권 검증(예: 내 글만 수정 가능)을 role 체크와 별도로 반드시 추가한다.
@@ -134,7 +136,7 @@ apps/mobile/src/
 ## Build Order
 
 1. Prisma 마이그레이션 실행 (로컬 Postgres 연결) — 없으면 auth/users API가 실제로 안 돌아감
-2. 로그인 화면 실제 폼 구현 (지금은 placeholder) + Refresh token
+2. 소셜 로그인 실제 연동 + Refresh token — 로그인 화면 UI는 나왔지만 카카오/구글 버튼은 아직 임시 세션에 연결돼 있다. 백엔드에 OAuth 엔드포인트(+`User`에 provider 필드)가 없고, 카카오는 네이티브 SDK라 dev build가 필요하다
 3. 하단 탭 아이콘 라이브러리 결정 및 적용 (디자이너 확인 대기)
 4. 팀 스토리/마이페이지/오늘 주보/말씀 화면 실제 디자인 반영 (Figma 나오는 대로)
 5. 큐티나눔/기도요청 작성, 팀 게시판, 소그룹 모임 등 나머지 MVP 기능 모듈 (`posts`, `teams` 등) 추가

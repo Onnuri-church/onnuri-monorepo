@@ -16,8 +16,11 @@ import { BottomTabNavigator } from "./BottomTabNavigator";
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
-// 모든 화면이 로그인을 요구하므로, 세션 상태로 트리 전체를 분기한다.
-// 세션이 없어지면(로그아웃, 401로 인한 clearSession) 자동으로 로그인 화면으로 전환된다.
+// 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
+// 자동으로 로그인 화면으로 전환된다.
+// 게스트(로그인 없이 둘러보기)는 로그인한 유저와 같은 스택을 본다 — 화면 단위로 트리를 나누지 않고,
+// 게스트가 못 하는 동작(작성·마이페이지 등)은 각 화면이 자기 자리에서 막는다. 자세한 건
+// ARCHITECTURE.md의 Access Model 참고.
 //
 // 준비가 끝나기 전(status: loading)에는 스플래시를 NavigationContainer 바깥에서 그린다 —
 // 스플래시는 뒤로가기로 돌아갈 수 있으면 안 되고 네비게이션도 쓰지 않아서, 스크린으로 등록하는 대신
@@ -33,7 +36,7 @@ export function RootNavigator() {
 
   return (
     <NavigationContainer>
-      {session.status === "authenticated" ? (
+      {session.status === "authenticated" || session.status === "guest" ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
           <Stack.Screen
