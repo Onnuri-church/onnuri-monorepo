@@ -14,3 +14,35 @@ export interface GroupMeeting {
   thumbnailUrl: string | null;
   participantCount: number;
 }
+
+export interface GroupMeetingPhoto {
+  id: string;
+  url: string;
+  /** 사진 위에 겹쳐 보여줄 설명 (예: "여름 수련회 찬양 · 7월") */
+  caption: string | null;
+}
+
+export interface GroupMeetingComment {
+  id: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 화면에 그대로 찍는 표시용 문자열 (예: "2분 전") — 서버가 계산한다 */
+  timeAgo: string;
+  content: string;
+}
+
+// 상세 페이지. 목록(GroupMeeting)에 없는 필드만 더한다.
+export interface GroupMeetingDetail extends GroupMeeting {
+  /** 모집 기간 표시용 (예: "7/1 ~ 7/28") */
+  periodLabel: string;
+  heroImageUrl: string | null;
+  /** 정보 상자에 순서대로 그리는 행 (모임일·장소·비용) */
+  schedule: string;
+  place: string;
+  cost: string;
+  participantAvatarUrls: string[];
+  photos: GroupMeetingPhoto[];
+  /** photos에 다 담기지 않은 것까지 포함한 전체 장수 */
+  photoCount: number;
+  comments: GroupMeetingComment[];
+}

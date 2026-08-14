@@ -19,11 +19,33 @@ interface SubHeaderProps {
   onPressMore?: () => void;
 }
 
-type HeaderProps = MainHeaderProps | SubHeaderProps;
+interface OverlayHeaderProps {
+  variant: "overlay";
+  onPressShare?: () => void;
+}
+
+type HeaderProps = MainHeaderProps | SubHeaderProps | OverlayHeaderProps;
 
 export function Header(props: HeaderProps) {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+
+  // 상세 페이지용. 타이틀·배경·구분선이 없고 히어로 이미지 위에 겹쳐 놓는다.
+  if (props.variant === "overlay") {
+    return (
+      <View
+        className="absolute left-0 right-0 top-0 z-10 flex-row items-center justify-between px-4"
+        style={{ paddingTop: insets.top, height: insets.top + 56 }}
+      >
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+          <Icon name="back" size={28} color={colors.icon.strong} />
+        </Pressable>
+        <Pressable onPress={props.onPressShare} hitSlop={8}>
+          <Icon name="export" size={28} color={colors.icon.strong} />
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View

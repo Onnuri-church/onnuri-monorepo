@@ -1,4 +1,6 @@
 import type { GroupMeeting, GroupMeetingStatus } from "@onnuri/shared";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, Text, View, useWindowDimensions } from "react-native";
@@ -7,6 +9,7 @@ import { apiClient } from "../../shared/api/client";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { FilterChip } from "./components/FilterChip";
 
 type Filter = "all" | GroupMeetingStatus;
@@ -17,11 +20,11 @@ const FILTERS: { value: Filter; label: string }[] = [
   { value: "closed", label: "마감" },
 ];
 
-// 카드 크기는 고정값이 아니라 이 규칙에서 계산한다 — 시안의 173×214는 390pt 프레임에
-// 이 규칙(좌우 16 / 간격 12 / 2열)을 적용한 결과값이다. 폭을 고정하면 360·375pt 기기에서
-// 2열이 안 들어가 1열로 접힌다. 값은 px-4(16)·gap-3(12) 클래스와 짝이 맞아야 한다.
-const LIST_PADDING = 16;
-const CARD_GAP = 12;
+// 카드 폭은 고정값이 아니라 이 규칙에서 계산한다. 시안 확정값은 402pt 프레임 기준으로
+// 좌우 20 / 간격 16 / 카드 173 (20+173+16+173+20 = 402)이고, 폭을 173으로 박으면
+// 360·375pt 기기에서 2열이 안 들어가 1열로 접힌다.
+const LIST_PADDING = 20;
+const CARD_GAP = 16;
 const MIN_CARD_WIDTH = 173;
 
 function getCardWidth(screenWidth: number): number {
@@ -57,6 +60,7 @@ function ParticipantDots({ count }: { count: number }) {
 
 export function GroupMeetingScreen() {
   const [filter, setFilter] = useState<Filter>("all");
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const cardWidth = getCardWidth(width);
 
@@ -70,7 +74,7 @@ export function GroupMeetingScreen() {
   });
 
   const filterRow = (
-    <View className="flex-row gap-2 px-4 py-3">
+    <View className="flex-row gap-2 py-3" style={{ paddingHorizontal: LIST_PADDING }}>
       {FILTERS.map(({ value, label }) => (
         <FilterChip
           key={value}
@@ -86,7 +90,10 @@ export function GroupMeetingScreen() {
     return (
       <View>
         {filterRow}
-        <View className="flex-row flex-wrap gap-3 px-4">
+        <View
+          className="flex-row flex-wrap"
+          style={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
+        >
           <Skeleton className="h-52 w-44 rounded-2xl" />
           <Skeleton className="h-52 w-44 rounded-2xl" />
         </View>
@@ -107,7 +114,10 @@ export function GroupMeetingScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       {filterRow}
-      <ScrollView contentContainerClassName="flex-row flex-wrap gap-3 px-4 pb-6">
+      <ScrollView
+        contentContainerClassName="flex-row flex-wrap pb-6"
+        contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
+      >
         {visible.map((meeting) => (
           <Card
             key={meeting.id}
@@ -115,6 +125,7 @@ export function GroupMeetingScreen() {
             imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
             badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
             dimmed={meeting.status === "closed"}
+            onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
           >
             <Text className="text-label-small text-text-alternative">{meeting.category}</Text>
             <Text className="text-body-main text-text-normal">{meeting.title}</Text>

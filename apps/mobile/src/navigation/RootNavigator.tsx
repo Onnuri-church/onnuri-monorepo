@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
+import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
@@ -64,6 +65,11 @@ export function RootNavigator() {
               headerShown: true,
               header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
             }}
+          />
+          <Stack.Screen
+            name="GroupMeetingDetail"
+            component={GroupMeetingDetailScreen}
+            options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
           />
         </Stack.Navigator>
       ) : (

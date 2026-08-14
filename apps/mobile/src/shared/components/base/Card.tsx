@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   Image,
+  Pressable,
   StyleSheet,
   View,
   type ImageSourcePropType,
@@ -23,10 +24,20 @@ interface CardProps {
   badge?: ReactNode;
   /** 마감 등 비활성 표시 — 카드 전체를 흐리게 한다. */
   dimmed?: boolean;
+  /** 주면 카드 전체가 눌린다 (상세 페이지 이동 등). */
+  onPress?: () => void;
 }
 
 // 도메인을 모르는 카드 컨테이너 — 썸네일·배지·본문의 레이아웃과 표면 처리만 담당한다.
-export function Card({ children, className, style, imageSource, badge, dimmed }: CardProps) {
+export function Card({
+  children,
+  className,
+  style,
+  imageSource,
+  badge,
+  dimmed,
+  onPress,
+}: CardProps) {
   const containerClassName = [
     "overflow-hidden rounded-2xl bg-background-normal shadow-card",
     dimmed && "opacity-50",
@@ -35,8 +46,10 @@ export function Card({ children, className, style, imageSource, badge, dimmed }:
     .filter(Boolean)
     .join(" ");
 
+  const Container = onPress ? Pressable : View;
+
   return (
-    <View className={containerClassName} style={style}>
+    <Container className={containerClassName} style={style} onPress={onPress}>
       {imageSource && (
         <View className="bg-text-assistive" style={{ aspectRatio: IMAGE_ASPECT_RATIO }}>
           {/* 퍼센트 사이즈(h-full)는 웹에서 부모 높이 계산에 따라 어긋날 수 있어 절대 채움으로 고정.
@@ -46,6 +59,6 @@ export function Card({ children, className, style, imageSource, badge, dimmed }:
         </View>
       )}
       <View className="grow p-4">{children}</View>
-    </View>
+    </Container>
   );
 }
