@@ -21,9 +21,9 @@ module.exports = {
     "#444444": "currentColor", // icon.strong
     "#D9D9D9": "currentColor", // text.assistive
     "#276E4C": "currentColor", // primary.normal
-    "#111111": "currentColor", // icon.strongest
+    "#111111": "currentColor", // text.normal
     "#436E5D": "currentColor", // icon.accent
-    "#EF4444": "currentColor", // icon.danger
+    "#EF4444": "currentColor", // semantic.danger
     // 흰색은 hex로만 등록하고 `white` 키워드는 등록하지 않는다 — user.svg가 clipPath 안 마스크에
     // fill="white"를 쓰는데, 그건 화면에 보이는 색이 아니라 치환하면 안 되기 때문이다.
     // (아래 "표기가 정확히 일치해야" 참고: `white`와 `#FFFFFF`는 서로 다른 값으로 취급된다.)
