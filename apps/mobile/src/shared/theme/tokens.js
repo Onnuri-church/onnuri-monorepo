@@ -76,6 +76,13 @@ const spacing = {
   18: "72px",
 };
 
+// 라운드 예외. Tailwind 기본 borderRadius 스케일은 rounded-2xl(16px)에서 rounded-3xl(24px)로 건너뛰어서
+// 시안의 20px(로그인 버튼)을 표현할 방법이 없다. 시안 확정값이라 예외로 추가한다 —
+// 키 번호는 spacing과 같은 규칙(키 × 4 = px)을 따른다.
+const borderRadius = {
+  5: "20px",
+};
+
 // 폰트 패밀리(1-1): 한글/영문·숫자 모두 Pretendard.
 const fontFamily = {
   pretendard: ["Pretendard-Regular"],
@@ -111,4 +118,4 @@ const textStyles = Object.fromEntries(
   ]),
 );
 
-module.exports = { colors, fontFamily, textStyles, boxShadow, elevation, spacing };
+module.exports = { colors, fontFamily, textStyles, boxShadow, elevation, spacing, borderRadius };

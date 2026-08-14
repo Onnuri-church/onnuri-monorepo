@@ -16,7 +16,7 @@ export type RootStackParamList = {
   GroupMeeting: undefined;
 };
 
-// 비로그인 상태일 때 마운트되는 스택. 모든 화면이 로그인을 요구하므로 Login만 있다.
+// 로그인도 게스트도 아닌 상태(unauthenticated)일 때 마운트되는 스택. 지금은 Login만 있다.
 export type AuthStackParamList = {
   Login: undefined;
 };
