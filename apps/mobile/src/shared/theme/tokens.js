@@ -117,8 +117,9 @@ const TEXT_STYLE = {
   "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
   "body-small": ["13px", "-0.01em", "Pretendard-Regular"],
   "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
-  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
   "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
+  "caption-medium": ["13px", "-0.01em", "Pretendard-Regular"],
+  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
   "caption-small": ["10px", "-0.01em", "Pretendard-Medium"],
 };
 

@@ -90,9 +90,9 @@ const handleWritePress = () => {
 
 export function DepartmentActivityScreen() {
   return (
-      <View className="flex-1">
+      <View className="flex-1 bg-background-normal">
           <ScrollView
-              className="flex-1 h-full bg-background-normal"
+              className="flex-1 h-full"
               contentContainerClassName="justify-start pt-14 pb-11 px-5 gap-3"
           >
               {cardInfo.map((post) => (
