@@ -13,12 +13,13 @@ export function FilterChip({ label, selected, onPress }: FilterChipProps) {
   return (
     <Pressable
       onPress={onPress}
+      // 눌림은 active: 변형으로 준다 — className과 함수형 style을 같이 주면 NativeWind가
+      // 함수 style을 무시한다.
       className={
         selected
-          ? "rounded-full border border-primary-normal bg-primary-normal px-3 py-1"
-          : "rounded-full border border-text-assistive bg-background-normal px-3 py-1"
+          ? "rounded-full border border-primary-normal bg-primary-normal px-3 py-1 active:opacity-60"
+          : "rounded-full border border-text-assistive bg-background-normal px-3 py-1 active:opacity-60"
       }
-      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
       <Text
         className={

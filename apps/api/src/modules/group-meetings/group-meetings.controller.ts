@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, Param } from '@nestjs/common';
 
 import { GroupMeetingsService } from './group-meetings.service';
 
@@ -11,5 +11,10 @@ export class GroupMeetingsController {
   @Get()
   findAll() {
     return this.groupMeetingsService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.groupMeetingsService.findOne(id);
   }
 }
