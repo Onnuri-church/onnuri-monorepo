@@ -12,25 +12,31 @@ const colors = {
   primary: {
     normal: "#276E4C",
   },
+  // assistive(#D9D9D9)·muted(#ECECEC)는 각각 text.assistive · chip.bg와 값이 같다.
+  // 용도가 다른 별개 토큰이라 그대로 두고, 한쪽 값이 바뀌면 다른 쪽은 따라가지 않는다.
   background: {
     normal: "#FFFFFF",
     alternative: "#EFF7F3",
+    assistive: "#D9D9D9",
+    muted: "#ECECEC",
+    dark: "#000000",
+    gold: "#F3EAD8",
+    red: "#FBEAE8",
   },
   text: {
-    normal: "#000000",
+    normal: "#111111",
     neutral: "#444444",
     alternative: "#888888",
     assistive: "#D9D9D9",
     disable: "#FFFFFF",
+    brown: "#5C4A2A",
   },
-  // strongest / danger / accent는 아이콘 원본 SVG에만 있던 색을 토큰으로 올린 것.
-  // 기존 색과 미묘하게 다른데(strongest≠text.normal, accent≠primary.normal) 의도인지
-  // 원본 불일치인지 미확인 — DESIGN.md 오픈 이슈 참고.
+  // accent는 아이콘 원본 SVG에만 있던 색을 토큰으로 올린 것으로, 컬러차트에 대응 항목이 없다.
+  // 로고(assets/logo/)에 시안 확정값으로 박힌 색과 같아서, 아이콘용 토큰으로 남길지
+  // 로고 전용으로 접을지 미확인 — DESIGN.md 오픈 이슈 참고.
   icon: {
     normal: "#888888",
     strong: "#444444",
-    strongest: "#111111",
-    danger: "#EF4444",
     accent: "#436E5D",
     disable: "#FFFFFF",
   },
@@ -48,6 +54,13 @@ const colors = {
     green: "#33BF00",
     orange: "#D16900",
     indigo: "#3400D1",
+  },
+  // warning / danger는 진한 전경색이지만 info만 아주 밝은 틴트다 — 셋을 같은 감각으로 쓰면 안 된다.
+  // info를 글자색으로 쓰면 흰 배경에서 사실상 안 보인다 (배경 전용).
+  semantic: {
+    warning: "#A87836",
+    danger: "#EF4444",
+    info: "#E9E9F2",
   },
 };
 
