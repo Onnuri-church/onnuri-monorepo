@@ -14,6 +14,7 @@ import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
 import Edit from "../../assets/icons/edit.svg";
 import Expand from "../../assets/icons/expand.svg";
+import ExpandRight from "../../assets/icons/expand-right.svg";
 import Export from "../../assets/icons/export.svg";
 import EyeOff from "../../assets/icons/eye-off.svg";
 import FavoriteLight from "../../assets/icons/favorite-light.svg";
@@ -52,6 +53,8 @@ const ICONS = {
   "comment-light": CommentLight,
   edit: Edit,
   expand: Expand,
+  // expand의 좌우 반전. 원본이 같은 벡터라 Figma도 scaleX(-1)로 쓰고 있다.
+  "expand-right": ExpandRight,
   export: Export,
   "eye-off": EyeOff,
   "favorite-light": FavoriteLight,
