@@ -43,7 +43,6 @@ const colors = {
   },
   // chip. 구분용 팔레트(purple~indigo)는 배경(bg)이 공통이고 글자색만 다르고,
   // 모집 상태(open/closed)는 반대로 글자가 흰색이고 배경이 상태별로 다르다.
-  // 이름이 부서명이 아닌 이유와 부서→색 매핑을 두는 위치는 DESIGN.md 컬러 규칙 참고.
   chip: {
     bg: "#ECECEC",
     open: "#444444",
@@ -93,6 +92,8 @@ const spacing = {
   // padding/margin은 중심을 그 절반만큼만 옮기므로 34가 아니라 2배인 68이다. 34로 고치지 말 것.
   17: "68px",
   18: "72px",
+  // 부서활동 상세 (시안 확정값). 기본 스케일이 80(320px) → 96(384px)으로 건너뛰어 360px이 없다.
+  90: "360px",
 };
 
 // 라운드 예외. Tailwind 기본 borderRadius 스케일은 rounded-2xl(16px)에서 rounded-3xl(24px)로 건너뛰어서

@@ -14,16 +14,16 @@ export function CommentItem({ authorName, timeAgo, content, avatarUrl }: Comment
   return (
     <View className="flex-row gap-2 py-2">
       {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} className="h-7 w-7 rounded-full" />
+        <Image source={{ uri: avatarUrl }} className="h-9 w-9 rounded-full" />
       ) : (
-        <View className="h-7 w-7 rounded-full bg-text-assistive" />
+        <View className="h-9 w-9 rounded-full bg-text-assistive" />
       )}
-      <View className="flex-1">
+      <View className="flex-1 pt-1.5">
         <View className="flex-row items-center gap-2">
-          <Text className="text-label-medium text-text-normal">{authorName}</Text>
-          <Text className="text-caption-small text-text-alternative">{timeAgo}</Text>
+          <Text className="text-body-main text-text-normal">{authorName}</Text>
+          <Text className="text-body-small text-text-alternative">{timeAgo}</Text>
         </View>
-        <Text className="mt-1 text-body-small text-text-neutral">{content}</Text>
+        <Text className="mt-1 text-body-medium text-text-neutral">{content}</Text>
       </View>
     </View>
   );

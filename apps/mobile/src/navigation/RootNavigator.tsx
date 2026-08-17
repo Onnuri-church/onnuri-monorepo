@@ -2,6 +2,7 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
+import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
@@ -54,6 +55,14 @@ export function RootNavigator() {
           <Stack.Screen
             name="DepartmentActivity"
             component={DepartmentActivityScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="부서활동 게시판" />,
+            }}
+          />
+          <Stack.Screen
+            name="DepartmentActivityDetail"
+            component={DepartmentActivityDetailScreen}
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="부서활동 게시판" />,
