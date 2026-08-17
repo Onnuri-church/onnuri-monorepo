@@ -6,6 +6,7 @@ import { DepartmentActivityScreen } from "../features/department-activity/Depart
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
+import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { Header } from "../shared/components/base/Header";
@@ -75,6 +76,14 @@ export function RootNavigator() {
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           <AuthStack.Screen name="Login" component={LoginScreen} />
+          <AuthStack.Screen
+            name="ProfileSetup"
+            component={ProfileSetupScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="프로필 설정" rightAction="none" />,
+            }}
+          />
         </AuthStack.Navigator>
       )}
     </NavigationContainer>
