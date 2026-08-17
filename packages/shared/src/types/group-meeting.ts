@@ -13,6 +13,8 @@ export interface GroupMeeting {
   statusLabel: string;
   thumbnailUrl: string | null;
   participantCount: number;
+  /** 카드에 겹쳐 보여줄 참여자 프로필. 전체가 아니라 앞쪽 몇 명만 내려준다 (전체 수는 participantCount). */
+  participantAvatarUrls: string[];
 }
 
 export interface GroupMeetingPhoto {
@@ -40,7 +42,6 @@ export interface GroupMeetingDetail extends GroupMeeting {
   schedule: string;
   place: string;
   cost: string;
-  participantAvatarUrls: string[];
   photos: GroupMeetingPhoto[];
   /** photos에 다 담기지 않은 것까지 포함한 전체 장수 */
   photoCount: number;

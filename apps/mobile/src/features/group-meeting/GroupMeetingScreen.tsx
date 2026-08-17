@@ -3,9 +3,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { apiClient } from "../../shared/api/client";
+import { fetchGroupMeetings } from "./api";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
@@ -40,20 +40,31 @@ function formatDeadline(deadline: string): string {
   return `~${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-// 참여자 아바타 자리 표시 (최대 3개) — 실제 프로필 이미지가 생기면 교체한다.
-function ParticipantDots({ count }: { count: number }) {
+// 참여자 프로필을 겹쳐서 최대 3장 보여준다. 사진이 없는 자리는 회색 원으로 남긴다 —
+// 참여자가 있는데 자리가 비면 카드가 깨져 보이므로 개수(count)만큼은 항상 그린다.
+function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: string[] }) {
+  const slots = Array.from({ length: Math.min(count, 3) }, (_, index) => avatarUrls[index]);
+
   return (
     <View className="flex-row">
-      {Array.from({ length: Math.min(count, 3) }).map((_, index) => (
-        <View
-          key={index}
-          className={
-            index === 0
-              ? "h-6 w-6 rounded-full bg-text-assistive"
-              : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
-          }
-        />
-      ))}
+      {slots.map((url, index) =>
+        url ? (
+          <Image
+            key={url}
+            source={{ uri: url }}
+            className={index === 0 ? "h-6 w-6 rounded-full" : "-ml-2 h-6 w-6 rounded-full"}
+          />
+        ) : (
+          <View
+            key={index}
+            className={
+              index === 0
+                ? "h-6 w-6 rounded-full bg-text-assistive"
+                : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
+            }
+          />
+        ),
+      )}
     </View>
   );
 }
@@ -70,7 +81,7 @@ export function GroupMeetingScreen() {
     isError,
   } = useQuery({
     queryKey: ["group-meetings"],
-    queryFn: async () => (await apiClient.get<GroupMeeting[]>("/group-meetings")).data,
+    queryFn: fetchGroupMeetings,
   });
 
   const filterRow = (
@@ -133,7 +144,10 @@ export function GroupMeetingScreen() {
               <Text className="text-label-small text-text-neutral">
                 {formatDeadline(meeting.deadline)}
               </Text>
-              <ParticipantDots count={meeting.participantCount} />
+              <ParticipantAvatars
+                count={meeting.participantCount}
+                avatarUrls={meeting.participantAvatarUrls}
+              />
             </View>
           </Card>
         ))}

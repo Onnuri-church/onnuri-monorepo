@@ -1,7 +1,7 @@
 import { Image, Pressable, TextInput, View } from "react-native";
 
-import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { Icon } from "../base/Icon";
+import { colors } from "../../theme/tokens";
 
 interface CommentInputProps {
   value: string;
@@ -14,7 +14,8 @@ interface CommentInputProps {
 
 // 시안 확정값(402pt 프레임): 줄 전체 362, 입력창 262x36.
 // 36(아바타 h-9) + 14(gap-3.5) + 입력창 + 14 + 36(전송 h-9) = 362 → 입력창만 flex로 남는 폭을 먹는다.
-// 댓글 입력 줄. 전송 버튼은 값이 비어 있으면 눌리지 않는다.
+// 댓글 입력 줄. 게시판 종류를 모르고 값과 콜백만 받으므로 여러 게시판이 공용으로 쓴다.
+// 전송 버튼은 값이 비어 있으면 눌리지 않는다.
 export function CommentInput({
   value,
   onChangeText,

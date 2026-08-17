@@ -8,8 +8,8 @@ interface CommentItemProps {
   avatarUrl?: string | null;
 }
 
-// 댓글 한 줄. 댓글에 작성자·시간이 있다는 걸 아는 도메인 컴포넌트라 feature에 둔다
-// (DESIGN.md 컴포넌트 배치 규칙). 다른 게시판이 같은 모양을 쓰게 되면 composed로 올린다.
+// 댓글 한 줄. 댓글에 작성자·시간이 있다는 걸 아는 조합 컴포넌트라 base가 아니라 composed에 둔다.
+// 큐티나눔·기도요청 등 다른 게시판에서도 같은 모양을 쓸 예정이라 처음부터 공용으로 둔다.
 export function CommentItem({ authorName, timeAgo, content, avatarUrl }: CommentItemProps) {
   return (
     <View className="flex-row gap-2 py-2">
