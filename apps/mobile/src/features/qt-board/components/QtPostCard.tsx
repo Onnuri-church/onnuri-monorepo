@@ -1,6 +1,5 @@
 import { Pressable, Text, View } from "react-native";
-import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import {FavoriteButton} from "../../../shared/components/base/FavoriteButton";
 
 
 export interface QtPost {
@@ -15,9 +14,11 @@ export interface QtPost {
 interface QtPostCardProps {
   post: QtPost;
   onPress?: () => void;
+  // 카드 이동과 좋아요는 서로 다른 동작이라 핸들러를 따로 받는다.
+  onFavoritePress?: () => void;
 }
 
-export function QtPostCard({ post, onPress }: QtPostCardProps) {
+export function QtPostCard({ post, onPress, onFavoritePress }: QtPostCardProps) {
   return (
     <Pressable className="p-6 rounded-3xl shadow-card" onPress={onPress}>
       <View className="flex-row items-center gap-3">
@@ -32,12 +33,7 @@ export function QtPostCard({ post, onPress }: QtPostCardProps) {
       <Text className="mt-2 text-body-medium text-text-neutral" numberOfLines={2}>
         {post.description}
       </Text>
-      <View className="mt-1 flex-row items-center justify-end gap-1">
-        <Pressable className="w-7 h-7 flex items-center justify-center border border-semantic-info rounded-full">
-          <Icon name="favorite-light" color={colors.icon.strongest} size={18}/>
-        </Pressable>
-        <Text className="text-body-regular text-text-normal">{post.favorite}</Text>
-      </View>
+        <FavoriteButton className="justify-end mt-1" count={post.favorite} onPress={onFavoritePress}/>
     </Pressable>
   );
 }
