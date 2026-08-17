@@ -17,6 +17,12 @@ interface SubHeaderProps {
   /** 우측 버튼. "home"이면 메인 탭으로 돌아간다. 기본값은 더보기(⋮). */
   rightAction?: "more" | "home";
   onPressMore?: () => void;
+  /**
+   * 홈 버튼 동작. 안 주면 메인 탭으로 돌아간다.
+   * 탭 안에서 쓰는 화면(팀스토리)은 이미 Main에 있어서 기본 동작이 아무 일도 하지 않으므로,
+   * 갈 탭을 아는 쪽에서 직접 넘긴다.
+   */
+  onPressHome?: () => void;
 }
 
 interface OverlayHeaderProps {
@@ -74,7 +80,10 @@ export function Header(props: HeaderProps) {
           </Pressable>
           <Text className="font-pretendard-semibold text-heading-small">{props.title}</Text>
           {props.rightAction === "home" ? (
-            <Pressable onPress={() => navigation.navigate("Main" as never)} hitSlop={8}>
+            <Pressable
+              onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
+              hitSlop={8}
+            >
               <Icon name="home" size={28} color={colors.icon.strong} />
             </Pressable>
           ) : (
