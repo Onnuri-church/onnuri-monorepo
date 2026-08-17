@@ -14,20 +14,28 @@ import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
 import Edit from "../../assets/icons/edit.svg";
 import Expand from "../../assets/icons/expand.svg";
+import ExpandRight from "../../assets/icons/expand-right.svg";
 import Export from "../../assets/icons/export.svg";
 import EyeOff from "../../assets/icons/eye-off.svg";
 import FavoriteLight from "../../assets/icons/favorite-light.svg";
 import Home from "../../assets/icons/home.svg";
 import Jubo from "../../assets/icons/jubo.svg";
+import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
+import Note from "../../assets/icons/note.svg";
+import Palette from "../../assets/icons/palette.svg";
 import Place from "../../assets/icons/place.svg";
+import Pray from "../../assets/icons/pray.svg";
 import Search from "../../assets/icons/search.svg";
 import SendFill from "../../assets/icons/send-fill.svg";
 import Setting from "../../assets/icons/setting.svg";
+import Soccer from "../../assets/icons/soccer.svg";
+import ThumbUp from "../../assets/icons/thumb-up.svg";
 import TrashCan from "../../assets/icons/trash-can.svg";
 import User from "../../assets/icons/user.svg";
 import Video from "../../assets/icons/video.svg";
+import VideoOn from "../../assets/icons/video-on.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
 import Write from "../../assets/icons/write.svg";
 import { colors } from "../../theme/tokens";
@@ -52,20 +60,29 @@ const ICONS = {
   "comment-light": CommentLight,
   edit: Edit,
   expand: Expand,
+  // expand의 좌우 반전. 원본이 같은 벡터라 Figma도 scaleX(-1)로 쓰고 있다.
+  "expand-right": ExpandRight,
   export: Export,
   "eye-off": EyeOff,
   "favorite-light": FavoriteLight,
   home: Home,
   jubo: Jubo,
+  "media-strip": MediaStrip,
   more: More,
   "nav-home": NavHome,
+  note: Note,
+  palette: Palette,
   place: Place,
+  pray: Pray,
   search: Search,
   "send-fill": SendFill,
   setting: Setting,
+  soccer: Soccer,
+  "thumb-up": ThumbUp,
   "trash-can": TrashCan,
   user: User,
   video: Video,
+  "video-on": VideoOn,
   "view-light": ViewLight,
   write: Write,
 } as const;
