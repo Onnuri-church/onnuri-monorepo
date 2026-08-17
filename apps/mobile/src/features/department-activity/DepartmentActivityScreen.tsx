@@ -1,7 +1,10 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { ScrollView, View } from "react-native";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { TeamPost, TeamPostCard } from "./components/TeamPostCard";
 
 // API 연동 전 임시 데이터.
@@ -80,15 +83,17 @@ const cardInfo: TeamPost[] = [
     },
 ]
 
-const handlePress = (id: string) => {
-    console.log("하이", id)
-}
-
-const handleWritePress = () => {
-    console.log("글쓰기")
-}
-
 export function DepartmentActivityScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handlePress = (id: string) => {
+      navigation.navigate("DepartmentActivityDetail", { id })
+  }
+
+    const handleWritePress = () => {
+        console.log("글쓰기")
+    }
+
   return (
       <View className="flex-1 bg-background-normal">
           <ScrollView

@@ -13,6 +13,7 @@ export type RootStackParamList = {
   QtBoard: undefined;
   Live: undefined;
   DepartmentActivity: undefined;
+  DepartmentActivityDetail: { id: string };
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
 };
