@@ -34,7 +34,7 @@ export function QtPostCard({ post, onPress }: QtPostCardProps) {
       </Text>
       <View className="mt-1 flex-row items-center justify-end gap-1">
         <Pressable className="w-7 h-7 flex items-center justify-center border border-semantic-info rounded-full">
-          <Icon name="favorite-light" color={colors.text.normal} size={18}/>
+          <Icon name="favorite-light" color={colors.icon.strongest} size={18}/>
         </Pressable>
         <Text className="text-body-regular text-text-normal">{post.favorite}</Text>
       </View>

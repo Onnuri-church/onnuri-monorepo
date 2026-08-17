@@ -37,6 +37,7 @@ const colors = {
   icon: {
     normal: "#888888",
     strong: "#444444",
+    strongest: "#040509",
     accent: "#436E5D",
     disable: "#FFFFFF",
   },

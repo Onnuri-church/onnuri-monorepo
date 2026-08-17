@@ -19,6 +19,7 @@ module.exports = {
   replaceAttrValues: {
     "#888888": "currentColor", // icon.normal
     "#444444": "currentColor", // icon.strong
+    "#040509": "currentColor", // icon.strongest
     "#D9D9D9": "currentColor", // text.assistive
     "#276E4C": "currentColor", // primary.normal
     "#111111": "currentColor", // text.normal
