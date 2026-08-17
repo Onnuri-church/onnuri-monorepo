@@ -1,32 +1,25 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
 import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { User } from "@onnuri/shared";
-
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
+import type { AuthStackParamList } from "../../shared/types/navigation";
 import { SocialLoginButton } from "./components/SocialLoginButton";
-
-// 카카오·구글 로그인 API가 아직 없어서(백엔드에 소셜 로그인 엔드포인트 미구현) 두 버튼은
-// 화면 확인용 임시 세션으로 들어간다. 실제 연동 시 이 상수와 handleSocialLogin을 통째로 지운다.
-const DEV_USER: User = {
-  id: "dev-user",
-  name: "개발용 계정",
-  cellName: null,
-  teamId: null,
-  role: "member",
-  createdAt: "2026-01-01T00:00:00.000Z",
-};
 
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
 export function LoginScreen() {
-  const setSession = useAuthStore((state) => state.setSession);
   const startGuestSession = useAuthStore((state) => state.startGuestSession);
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
-  const handleSocialLogin = () => setSession(DEV_USER, "dev");
+  // 카카오·구글 로그인 API가 아직 없어서(백엔드에 소셜 로그인 엔드포인트 미구현) 두 버튼은
+  // 프로필 설정 화면으로 바로 넘어간다. 실제로는 로그인 응답에 따라 프로필 설정/홈으로 갈린다 —
+  // 연동할 때 이 함수를 그 분기로 바꾼다. 세션은 프로필 설정 화면의 등록하기에서 만든다.
+  const handleSocialLogin = () => navigation.navigate("ProfileSetup");
 
   return (
     <View

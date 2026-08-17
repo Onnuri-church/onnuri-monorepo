@@ -122,7 +122,7 @@ apps/mobile/src/
 * 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
   * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
   * `authenticated` / `guest` → 같은 `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live` 등)
-  * `unauthenticated` → `AuthStack`(`Login`만)
+  * `unauthenticated` → `AuthStack`(`Login` + `ProfileSetup`). 원래 프로필 설정은 로그인 응답(프로필 입력 여부)에 따라 갈릴 화면인데, 백엔드가 없어서 지금은 소셜 로그인 버튼에서 무조건 push하고 등록하기에서 임시 세션을 만든다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
 * 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.

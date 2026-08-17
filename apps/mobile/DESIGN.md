@@ -104,11 +104,15 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
   * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 더보기(⋮) 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
   * 알림·설정·뒤로가기·더보기 버튼은 `Icon` 컴포넌트로 렌더한다 (`size={28}`, `color={colors.icon.strong}` — 원본 SVG가 28 그리드에 `#444444`로 그려져 있다). 아래 아이콘 규칙 참고.
-* **화면 트리는 `RootNavigator` 한 곳에서만 분기한다.** `useAuthStore`의 `session.status`를 보고 `authenticated`·`guest`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`만 있는 `AuthStack`을 그린다. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의와 게스트가 못 하는 동작은 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
+* **화면 트리는 `RootNavigator` 한 곳에서만 분기한다.** `useAuthStore`의 `session.status`를 보고 `authenticated`·`guest`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`+`ProfileSetup`이 있는 `AuthStack`을 그린다. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의와 게스트가 못 하는 동작은 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
   * 준비가 끝나기 전(`loading`)에는 스플래시가 `NavigationContainer` **바깥에서** 트리를 통째로 대신한다. 스크린으로 등록하지 않는다 — 뒤로가기 대상이 되면 안 되고 네비게이션도 쓰지 않기 때문이다. 온보딩처럼 화면이 여러 장 붙으면 그때 별도 `Stack`으로 올린다.
   * 준비 작업(최소 노출 시간, 향후 세션 복원 등)은 `shared/hooks/useAppBootstrap.ts`가 맡고, 스플래시 화면은 상태만 받아 렌더링한다.
   * 스플래시 배경은 `SafeAreaView`로 감싸지 않는다 — 네이티브 스플래시가 화면 전체를 덮으므로, inset에서 배경이 끊기면 전환 순간 노치·홈 인디케이터 영역에 흰 띠가 보인다.
-* 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppModal` · `AppSheet`(`src/shared/components/base/`에 위치)는 store 구독과 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
+* 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppModal` · `AppSheet`(`src/shared/components/base/`에 위치)는 여닫기 제어와 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
+  * 여닫기는 전역 store가 아니라 `AppSheet`가 노출하는 `ref`(`open`/`close`)로 호출부가 제어한다. 부르는 곳이 늘어나 화면 밖에서 띄울 일이 생기면 그때 store를 얹는다. (`AppToast`·`AppModal`은 아직 없다.)
+  * 시트 높이는 `snapPoints` 고정이 아니라 내용에 맞춘다(dynamic sizing, 상한은 시안 750/874 → 화면의 86%). 고정 높이로 두면 내용이 짧을 때 아래에 빈 공간이 남는데, 그 빈 공간을 없애려고 `flex`로 바닥에 붙이는 방법은 안 통한다 — `BottomSheetView`가 내부에서 `position: absolute`(`top`/`left`/`right`만 지정)를 자기 style 뒤에 붙여서 높이가 내용에 붙어버리기 때문이다.
+  * 시트 내용은 `BottomSheetView`가 아니라 `BottomSheetScrollView`로 받는다 — 목록이 상한을 넘을 때 잘리지 않고 스크롤된다.
+  * 스크롤과 무관하게 시트 바닥에 붙어 있어야 하는 것(취소 버튼 등)은 `AppSheet`의 `footer` prop으로 넘긴다 — 내용 안에 두면 같이 스크롤돼서 올라간다. 푸터는 내용 위에 떠 있으므로 배경색을 직접 칠한다.
 * OTA 업데이트(Expo EAS Update)로 UI 수정 배포 시 스토어 심사 없이 반영 가능 — 단, 네이티브 코드 변경(새 라이브러리 추가 등)은 빌드 필요.
 
 ## 미디어 컴포넌트 규칙
