@@ -26,7 +26,7 @@ export function CommentInput({
   const canSubmit = value.trim().length > 0;
 
   return (
-    <View className="flex-row items-center gap-3.5">
+    <View className="flex-row items-center gap-2">
       {avatarUrl ? (
         <Image source={{ uri: avatarUrl }} className="h-9 w-9 rounded-full" />
       ) : (
