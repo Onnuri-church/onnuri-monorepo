@@ -1,22 +1,8 @@
-import {ComponentProps} from "react";
 import {Pressable, Text, View} from "react-native";
 import {Chip} from "../../../shared/components/base/Chip";
 import {Icon} from "../../../shared/components/base/Icon";
-
-type ChipColor = ComponentProps<typeof Chip>["color"];
-
-const DEPARTMENT_COLOR: Record<string, ChipColor> = {
-    sns: "purple",
-    praise: "blue",
-    broadcast: "red",
-    futsal: "yellow",
-    design: "green",
-    intercession: "orange",
-    video: "indigo",
-};
-
-// 서버에 새 부서가 생겨도 칩이 안 죽게 하는 폴백.
-const FALLBACK_COLOR: ChipColor = "purple";
+import {colors} from "../../../shared/theme/tokens";
+import {getDepartmentColor} from "../departmentColor";
 
 export interface TeamPost {
     id: string;
@@ -41,7 +27,7 @@ export function TeamPostCard({post, onPress}: TeamPostCardProps) {
     return (
         <Pressable className="bg-background-normal p-6 shadow-card" onPress={onPress}>
             <View className="items-center justify-start row-auto flex-row gap-1">
-                <Chip color={DEPARTMENT_COLOR[post.department] ?? FALLBACK_COLOR} text={post.categoryName}/>
+                <Chip color={getDepartmentColor(post.department)} text={post.categoryName}/>
                 <Text className="text-caption-main text-text-alternative">{post.date}</Text>
             </View>
             <Text className="mt-1 text-heading-main">{post.title}</Text>
@@ -58,7 +44,7 @@ export function TeamPostCard({post, onPress}: TeamPostCardProps) {
                         <Text className="text-caption-main text-text-alternative">{post.comments}</Text>
                     </View>
                     <View className="flex justify-end items-center flex-row gap-0.5">
-                        <Icon name="favorite-light"/>
+                        <Icon name="favorite-light" color={colors.icon.normal} size={20}/>
                         <Text className="text-caption-main text-text-alternative">{post.favorite}</Text>
                     </View>
                 </View>
