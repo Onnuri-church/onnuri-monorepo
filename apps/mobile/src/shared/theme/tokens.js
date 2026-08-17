@@ -37,6 +37,7 @@ const colors = {
   icon: {
     normal: "#888888",
     strong: "#444444",
+    strongest: "#040509",
     accent: "#436E5D",
     disable: "#FFFFFF",
   },
@@ -120,10 +121,11 @@ const TEXT_STYLE = {
   "heading-small": ["18px", "-0.01em", "Pretendard-SemiBold"],
   "body-main": ["15px", "-0.01em", "Pretendard-SemiBold"],
   "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
+  "body-regular": ["15px", "-0.01em", "Pretendard-Regular"],
   "body-small": ["13px", "-0.01em", "Pretendard-Regular"],
   "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
-  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
   "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
+  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
   "caption-small": ["10px", "-0.01em", "Pretendard-Medium"],
 };
 

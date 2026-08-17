@@ -120,5 +120,5 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 ## 오픈 이슈 (TBD)
 
 * 태블릿/포인터 입력 대응 여부 — 필요 시 hover/focus 규칙 별도 정의
-* 아이콘 원본에만 있던 색 3건 중 둘은 컬러차트가 정리해줬다 — `icon.strongest`(`#111111`)는 `text.normal`로, `icon.danger`(`#EF4444`)는 `semantic.danger`로 접고 토큰에서 지웠다. 남은 `icon.accent`(`#436E5D`)는 차트에 대응 항목이 없다. 로고(`assets/logo/`)에 시안 확정값으로 박힌 색과 같아서, 아이콘용 semantic 토큰으로 남길지 로고 전용으로 접을지 미확인이다.
+* 아이콘 원본에만 있던 색 3건 중 둘은 컬러차트가 정리해줬다 — `icon.strongest`(`#111111`)는 `text.normal`로, `icon.danger`(`#EF4444`)는 `semantic.danger`로 접고 토큰에서 지웠다. 이후 좋아요 아이콘(`favorite-light.svg`)이 `#040509`로 교체되면서 `icon.strongest`가 **다른 값으로 다시 생겼다** — 접었던 `#111111`과는 별개 색이니 같은 것으로 보지 않는다. 남은 `icon.accent`(`#436E5D`)는 차트에 대응 항목이 없다. 로고(`assets/logo/`)에 시안 확정값으로 박힌 색과 같아서, 아이콘용 semantic 토큰으로 남길지 로고 전용으로 접을지 미확인이다.
 * `semantic.info`(`#E9E9F2`)의 이름이 임시다. 값만 받았고 용도를 못 들었다 — `warning`/`danger`가 진한 전경색인 것과 달리 혼자 아주 밝은 틴트라, 역할 이름(`info`)이 아니라 `background`의 색상 이름(`gold`/`red`) 쪽에 속할 가능성이 있다. 실제 쓰임을 확인하면 이름과 위치를 확정한다.
