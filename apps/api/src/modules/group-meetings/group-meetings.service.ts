@@ -3,6 +3,13 @@ import type { GroupMeeting, GroupMeetingDetail } from '@onnuri/shared';
 
 // DB 마이그레이션이 아직 없어(ARCHITECTURE.md Known Issues) 임시 하드코딩 데이터로 응답한다.
 // 소그룹 모임 스키마가 정해지면 PrismaService 조회로 교체한다.
+// 카드에 겹쳐 보여줄 참여자 프로필 3장. 목업이라 모임마다 같은 사람을 쓴다.
+const MEETING_AVATARS = [
+  'https://picsum.photos/seed/member-1/80/80',
+  'https://picsum.photos/seed/member-2/80/80',
+  'https://picsum.photos/seed/member-3/80/80',
+];
+
 const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
   {
     id: '1',
@@ -12,6 +19,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
     status: 'open',
     thumbnailUrl: 'https://picsum.photos/seed/meeting-1/600/600',
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: '2',
@@ -21,6 +29,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
     status: 'closed',
     thumbnailUrl: 'https://picsum.photos/seed/meeting-2/600/600',
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: '3',
@@ -30,6 +39,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
     status: 'open',
     thumbnailUrl: 'https://picsum.photos/seed/meeting-3/600/600',
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: '4',
@@ -39,6 +49,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
     status: 'open',
     thumbnailUrl: 'https://picsum.photos/seed/meeting-4/600/600',
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: '5',
@@ -48,6 +59,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, 'statusLabel'>[] = [
     status: 'closed',
     thumbnailUrl: 'https://picsum.photos/seed/meeting-5/600/600',
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
 ];
 
@@ -59,11 +71,6 @@ const MOCK_DETAIL_EXTRA = {
   schedule: '매주 토요일 6시',
   place: '매주 다른 동네 맛집',
   cost: '1/N 자유정산',
-  participantAvatarUrls: [
-    'https://picsum.photos/seed/member-1/80/80',
-    'https://picsum.photos/seed/member-2/80/80',
-    'https://picsum.photos/seed/member-3/80/80',
-  ],
   // 화면이 폭에 따라 몇 장을 보여줄지 정하므로(넓은 화면일수록 더 많이) 목록을 넉넉히 내려준다.
   // 첫 장이 큰 사진이고 캡션이 붙는다.
   photos: MOCK_PHOTO_TOTAL.map((_, index) => ({

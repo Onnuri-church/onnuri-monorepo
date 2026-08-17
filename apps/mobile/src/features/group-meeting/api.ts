@@ -4,6 +4,13 @@ import type { GroupMeeting, GroupMeetingDetail } from "@onnuri/shared";
 // (부서활동 게시판과 같은 방식). 소그룹 모임 API(GET /group-meetings, /:id)는 이미 apps/api에
 // 있으므로, 연동할 때 아래 두 함수 본문만 apiClient 호출로 바꾸고 이 파일의 목업을 지우면 된다.
 
+// 카드에 겹쳐 보여줄 참여자 프로필 3장. 목업이라 모임마다 같은 사람을 쓴다.
+const MEETING_AVATARS = [
+  "https://picsum.photos/seed/member-1/80/80",
+  "https://picsum.photos/seed/member-2/80/80",
+  "https://picsum.photos/seed/member-3/80/80",
+];
+
 const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
   {
     id: "1",
@@ -13,6 +20,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
     status: "open",
     thumbnailUrl: "https://picsum.photos/seed/meeting-1/600/600",
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: "2",
@@ -22,6 +30,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
     status: "closed",
     thumbnailUrl: "https://picsum.photos/seed/meeting-2/600/600",
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: "3",
@@ -31,6 +40,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
     status: "open",
     thumbnailUrl: "https://picsum.photos/seed/meeting-3/600/600",
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: "4",
@@ -40,6 +50,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
     status: "open",
     thumbnailUrl: "https://picsum.photos/seed/meeting-4/600/600",
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
   {
     id: "5",
@@ -49,6 +60,7 @@ const MOCK_MEETINGS: Omit<GroupMeeting, "statusLabel">[] = [
     status: "closed",
     thumbnailUrl: "https://picsum.photos/seed/meeting-5/600/600",
     participantCount: 3,
+    participantAvatarUrls: MEETING_AVATARS,
   },
 ];
 
@@ -63,11 +75,6 @@ const MOCK_DETAIL_EXTRA = {
   schedule: "매주 토요일 6시",
   place: "매주 다른 동네 맛집",
   cost: "1/N 자유정산",
-  participantAvatarUrls: [
-    "https://picsum.photos/seed/member-1/80/80",
-    "https://picsum.photos/seed/member-2/80/80",
-    "https://picsum.photos/seed/member-3/80/80",
-  ],
   photos: MOCK_PHOTOS,
   photoCount: MOCK_PHOTOS.length,
   comments: [
