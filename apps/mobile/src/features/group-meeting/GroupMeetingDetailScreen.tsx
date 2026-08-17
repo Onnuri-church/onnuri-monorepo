@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { apiClient } from "../../shared/api/client";
+import { fetchGroupMeetingDetail } from "./api";
 import { Button } from "../../shared/components/base/Button";
 import { Chip } from "../../shared/components/base/Chip";
 import { Icon } from "../../shared/components/base/Icon";
@@ -13,8 +13,8 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { Thumbnail } from "../../shared/components/base/Thumbnail";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { CommentInput } from "./components/CommentInput";
-import { CommentItem } from "./components/CommentItem";
+import { CommentInput } from "../../shared/components/composed/CommentInput";
+import { CommentItem } from "../../shared/components/composed/CommentItem";
 
 // 시안 확정값은 402pt 프레임 기준이다. 콘텐츠 폭 362 = 402 - 20*2 이므로
 // 폭을 박지 않고 좌우 여백 20만 주면 402에서 362가 그대로 나오고 다른 기기에도 맞는다.
@@ -63,8 +63,7 @@ export function GroupMeetingDetailScreen() {
     isError,
   } = useQuery({
     queryKey: ["group-meetings", params.id],
-    queryFn: async () =>
-      (await apiClient.get<GroupMeetingDetail>(`/group-meetings/${params.id}`)).data,
+    queryFn: () => fetchGroupMeetingDetail(params.id),
   });
 
   if (isPending) {

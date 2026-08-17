@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { apiClient } from "../../shared/api/client";
+import { fetchGroupMeetings } from "./api";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
@@ -70,7 +70,7 @@ export function GroupMeetingScreen() {
     isError,
   } = useQuery({
     queryKey: ["group-meetings"],
-    queryFn: async () => (await apiClient.get<GroupMeeting[]>("/group-meetings")).data,
+    queryFn: fetchGroupMeetings,
   });
 
   const filterRow = (
