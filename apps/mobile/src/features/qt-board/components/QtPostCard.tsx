@@ -25,7 +25,7 @@ export function QtPostCard({ post, onPress }: QtPostCardProps) {
         <View className="h-10 w-10 rounded-full bg-text-assistive" />
         <View>
           <Text className="text-label-medium">{post.author}</Text>
-          <Text className="text-caption-medium text-text-alternative">{post.date}</Text>
+          <Text className="text-body-small text-text-alternative">{post.date}</Text>
         </View>
       </View>
       <Text className="mt-4 text-heading-main">{post.title}</Text>
