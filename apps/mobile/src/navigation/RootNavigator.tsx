@@ -19,6 +19,7 @@ import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonScreen } from "../features/sermon/SermonScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
+import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
@@ -172,6 +173,14 @@ export function RootNavigator() {
             name="GroupMeetingDetail"
             component={GroupMeetingDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
+          />
+          <Stack.Screen
+            name="TeamMemberList"
+            component={TeamMemberListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팀원" rightAction="none" />,
+            }}
           />
         </Stack.Navigator>
       ) : (
