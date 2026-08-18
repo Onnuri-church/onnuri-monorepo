@@ -82,6 +82,14 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 * 비활성 상태: `disabled`는 RN 컴포넌트가 실제로 받는 prop으로 그대로 전달 (커스텀 wrapper에서 스타일 로직으로 재구현하지 않음)
 * `hover`, `focus`는 터치 디바이스 특성상 기본적으로 다루지 않는다. 필요한 화면(태블릿 등 포인터 입력)에 한해 별도 확인 후 정의.
 
+## 이벤트 핸들러 네이밍 규칙
+
+props(인터페이스)와 내부 함수(구현)의 이름을 구분한다. 연결부는 `onPress={handleCardPress}`처럼 "자리 = 꽂는 함수"로 읽힌다.
+
+* **콜백 props는 `on<이벤트>`** — `onPress`, `onSelect`, `onSubmit`. RN 기본 컴포넌트(`Pressable`의 `onPress` 등)와 같은 관례다. 같은 종류의 이벤트가 둘 이상이면 대상을 붙인다 (`onLikePress`, `onCommentSubmit`).
+* **내부 구현 함수는 `handle<대상><이벤트>`** — `handleWritePress`, `handleLikePress`, `handleCommentSubmit`. 대상 생략(`handlePress`)은 그 이벤트가 화면에 하나뿐일 때만 허용한다.
+* **내부 함수 이름에 `on*`을 쓰지 않는다** — props로 받은 것인지 지역에서 만든 것인지 읽을 때마다 헷갈린다.
+
 ## 작업 시작 조건
 
 아래가 모두 확보되지 않으면 코딩을 시작하지 않는다.
