@@ -39,7 +39,7 @@ export function DepartmentActivityDetailScreen() {
     const insets = useSafeAreaInsets();
     const [comment, setComment] = useState("");
 
-    const onPress = () => {
+    const handleLikePress = () => {
         console.log("좋아요 버튼")
     }
 
@@ -64,7 +64,7 @@ export function DepartmentActivityDetailScreen() {
           <View className="flex justify-start">
               <Text className="mt-2 text-heading-medium text-text-normal">인스타 스토리, 블로그 포스팅 일정</Text>
               <Text className="mt-2 text-body-medium text-text-neutral">내용</Text>
-              <FavoriteButton className="mt-5" count={14} onPress={onPress}/>
+              <FavoriteButton className="mt-5" count={14} onPress={handleLikePress}/>
           </View>
           <View className="mt-5 border-t border-t-text-assistive">
               <Text className="my-4 text-body-main text-text-normal">댓글 {comments.length}</Text>

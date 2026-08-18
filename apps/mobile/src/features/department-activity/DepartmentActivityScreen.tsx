@@ -86,7 +86,7 @@ const cardInfo: TeamPost[] = [
 export function DepartmentActivityScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handlePress = (id: string) => {
+  const handleCardPress = (id: string) => {
       navigation.navigate("DepartmentActivityDetail", { id })
   }
 
@@ -101,7 +101,7 @@ export function DepartmentActivityScreen() {
               contentContainerClassName="justify-start pt-14 pb-11 px-5 gap-3"
           >
               {cardInfo.map((post) => (
-                  <TeamPostCard key={post.id} post={post} onPress={() => handlePress(post.id)}/>
+                  <TeamPostCard key={post.id} post={post} onPress={() => handleCardPress(post.id)}/>
               ))}
           </ScrollView>
           <FloatingButton onPress={handleWritePress}>
