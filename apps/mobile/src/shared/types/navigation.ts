@@ -11,6 +11,7 @@ export type RootTabParamList = {
 export type RootStackParamList = {
   Main: undefined;
   QtBoard: undefined;
+  QtBoardDetail: { id: string };
   Live: undefined;
   DepartmentActivity: undefined;
   DepartmentActivityDetail: { id: string };

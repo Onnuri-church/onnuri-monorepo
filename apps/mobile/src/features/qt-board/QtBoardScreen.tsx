@@ -5,6 +5,9 @@ import {FilterBar} from "../../shared/components/base/FilterBar";
 import {FloatingButton} from "../../shared/components/base/FloatingButton";
 import {Icon} from "../../shared/components/base/Icon";
 import {colors} from "../../shared/theme/tokens";
+import {useNavigation} from "@react-navigation/native";
+import {NativeStackNavigationProp} from "@react-navigation/native-stack";
+import {RootStackParamList} from "../../shared/types/navigation";
 
 // API 연동 전 임시 데이터. 게시글 엔드포인트가 생기면 교체한다.
 const qtPosts: QtPost[] = [
@@ -64,24 +67,26 @@ const months = [
   { value: "2026.01", label: "26년 1월" },
 ];
 
-const onPress = () => {
-  console.log("카드 클릭")
-}
-
-const handleWritePress = () => {
-  console.log("글쓰기")
-}
-
 export function QtBoardScreen() {
   const [month, setMonth] = useState(months[0].value);
   const visiblePosts = qtPosts.filter((post) => post.date.startsWith(month));
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+
+  const handleCardPress = (id: string) => {
+    navigation.navigate("QtBoardDetail", {id})
+  }
+
+  const handleWritePress = () => {
+    console.log("글쓰기")
+  }
+
 
   return (
     <View className="flex-1 bg-background-normal">
       <FilterBar items={months} selected={month} onSelect={setMonth} />
       <ScrollView contentContainerClassName="gap-4 pt-3 px-5 py-4">
         {visiblePosts.map((post) => (
-          <QtPostCard key={post.id} post={post} onPress={onPress}/>
+          <QtPostCard key={post.id} post={post} onPress={() => handleCardPress(post.id)}/>
         ))}
       </ScrollView>
       <FloatingButton onPress={handleWritePress}>
