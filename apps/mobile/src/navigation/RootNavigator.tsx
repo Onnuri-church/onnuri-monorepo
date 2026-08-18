@@ -2,12 +2,14 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
+import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
+import { SermonScreen } from "../features/sermon/SermonScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
@@ -50,6 +52,17 @@ export function RootNavigator() {
             name="Live"
             component={LiveScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
+          />
+          {/* 말씀·오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
+          <Stack.Screen
+            name="Sermon"
+            component={SermonScreen}
+            options={{ headerShown: true, header: () => <Header variant="sub" title="말씀" /> }}
+          />
+          <Stack.Screen
+            name="Bulletin"
+            component={BulletinScreen}
+            options={{ headerShown: true, header: () => <Header variant="sub" title="오늘 주보" /> }}
           />
           <Stack.Screen
             name="DepartmentActivity"

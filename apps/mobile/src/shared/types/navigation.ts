@@ -1,17 +1,20 @@
 export type RootTabParamList = {
   Home: undefined;
   TeamStory: undefined;
-  Sermon: undefined;
-  Bulletin: undefined;
+  Qr: undefined;
+  Cell: undefined;
   MyPage: undefined;
 };
 
 // 메인 탭(BottomTabNavigator)을 하나의 스크린으로 품는 루트 스택. 로그인 상태일 때만 마운트된다.
-// 큐티나눔·실시간예배는 하단 탭이 아니라 홈에서 진입하는 서브 화면이라 여기서 push한다.
+// 큐티나눔·실시간예배·말씀·오늘 주보는 하단 탭이 아니라 홈에서 진입하는 서브 화면이라 여기서 push한다.
+// (말씀·주보는 원래 탭이었는데 시안에서 QR·셀 페이지에 자리를 내주고 홈 바로가기로 내려왔다.)
 export type RootStackParamList = {
   Main: undefined;
   QtBoard: undefined;
   Live: undefined;
+  Sermon: undefined;
+  Bulletin: undefined;
   DepartmentActivity: undefined;
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
