@@ -8,6 +8,7 @@ import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeeting
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
+import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { Header } from "../shared/components/base/Header";
@@ -45,6 +46,11 @@ export function RootNavigator() {
           <Stack.Screen
             name="QtBoard"
             component={QtBoardScreen}
+            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+          />
+          <Stack.Screen
+            name="QtBoardDetail"
+            component={QtBoardDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
           />
           <Stack.Screen

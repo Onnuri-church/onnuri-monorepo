@@ -3,7 +3,7 @@ import {Icon} from "./Icon";
 import {colors} from "../../theme/tokens";
 
 interface FavoriteButtonProps {
-    count: number,
+    count?: number,
     className?: string,
     onPress?: () => void
 }
@@ -11,10 +11,10 @@ interface FavoriteButtonProps {
 export function FavoriteButton({count, className, onPress}: FavoriteButtonProps) {
     return (
         <View className={`${className} flex-row items-center gap-1`}>
-            <Pressable className="w-7 h-7 flex items-center justify-center border border-semantic-info rounded-full" onPress={onPress}>
+            <Pressable className="w-7 h-7 flex items-center justify-center border border-semantic-info rounded-full bg-background-normal" onPress={onPress}>
                 <Icon name="favorite-light" color={colors.icon.strongest} size={18}/>
             </Pressable>
-            <Text className="text-body-regular text-text-normal">{count}</Text>
+            {count != null && count > 0 && <Text className="text-body-regular text-text-normal">{count}</Text>}
         </View>
     );
 }
