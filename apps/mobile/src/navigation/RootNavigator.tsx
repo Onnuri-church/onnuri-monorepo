@@ -2,6 +2,8 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
+import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
+import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
@@ -52,6 +54,22 @@ export function RootNavigator() {
             name="QtBoardDetail"
             component={QtBoardDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+          />
+          <Stack.Screen
+            name="BulletinDetail"
+            component={BulletinDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="주보" rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
+            name="SharingSheet"
+            component={SharingSheetScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="나눔지" rightAction="export" />,
+            }}
           />
           <Stack.Screen
             name="Live"
