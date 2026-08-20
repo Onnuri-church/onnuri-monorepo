@@ -98,7 +98,7 @@ features/<name>/
 
 ```
 apps/mobile/src/
-├── features/       auth/ bulletin/ home/ live/ my-page/ qt-board/ sermon/ splash/ team-story/
+├── features/       auth/ bulletin/ cell/ home/ live/ my-page/ qr/ qt-board/ sermon/ splash/ team-story/
 ├── navigation/     RootNavigator(인증 분기 Stack), BottomTabNavigator
 └── shared/
     ├── api/        axios client (요청 인터셉터: 토큰 첨부 / 응답 인터셉터: 401 처리)
@@ -109,7 +109,7 @@ apps/mobile/src/
     └── hooks/      useAppBootstrap(앱 부팅 시 준비 작업 → status 확정)
 ```
 
-스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-av`/`react-native-image-zoom-viewer`/`react-native-webview`.
+스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-video`(영상 기능 착수 시 설치)/`react-native-image-zoom-viewer`/`react-native-webview`.
 
 ## Access Model
 
@@ -137,7 +137,7 @@ apps/mobile/src/
 
 1. Prisma 마이그레이션 실행 (로컬 Postgres 연결) — 없으면 auth/users API가 실제로 안 돌아감
 2. 소셜 로그인 실제 연동 + Refresh token — 로그인 화면 UI는 나왔지만 카카오/구글 버튼은 아직 임시 세션에 연결돼 있다. 백엔드에 OAuth 엔드포인트(+`User`에 provider 필드)가 없고, 카카오는 네이티브 SDK라 dev build가 필요하다
-3. 하단 탭 아이콘 라이브러리 결정 및 적용 (디자이너 확인 대기)
+3. QR·셀 페이지 실제 기능 — 하단 탭은 시안대로 붙었지만 두 화면 다 제목만 있는 빈 화면이다. 특히 셀 페이지는 README 기준 기능 스코프가 아직 안 잡혀 있다
 4. 팀 스토리/마이페이지/오늘 주보/말씀 화면 실제 디자인 반영 (Figma 나오는 대로)
 5. 큐티나눔/기도요청 작성, 팀 게시판, 소그룹 모임 등 나머지 MVP 기능 모듈 (`posts`, `teams` 등) 추가
 6. (향후 스코프) 유저 등급/어드민 — Access Model의 capability 확장

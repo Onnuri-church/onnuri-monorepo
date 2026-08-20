@@ -11,11 +11,17 @@ module.exports = ({ config }) => ({
     [
       "expo-splash-screen",
       {
-        // 로고는 일부러 넣지 않는다. 네이티브 스플래시는 배경색만 맡고 로고는 RN 스플래시가 그리므로,
-        // 두 화면이 어긋날 여지가 배경색 하나로 줄어든다.
-        // 단 Android 12+는 시스템이 아이콘을 강제로 넣을 수 있어서(windowSplashScreenBehavior가
-        // icon_preferred로 박힌다) 실제 빌드에서 확인이 필요하다 — Expo Go에서는 확인되지 않는다.
+        // 네이티브 스플래시는 배경색만 맡고 로고는 RN 스플래시가 그린다 — 두 화면이 어긋날
+        // 여지가 배경색 하나로 줄어든다.
         backgroundColor: colors.primary.normal,
+        // 그렇다고 로고를 그냥 빼면 안 된다. expo-splash-screen은 image 없이도 styles.xml에
+        // windowSplashScreenAnimatedIcon="@drawable/splashscreen_logo"를 항상 쓰면서 정작
+        // 드로어블은 만들지 않아, 릴리스 빌드가 aapt2 링킹에서 깨진다. 게다가 Android 12+는
+        // 아이콘 슬롯을 비워두면 런처 아이콘을 대신 채운다. 그래서 투명 드로어블을 직접 넣어
+        // 슬롯을 채우면서 화면에는 배경색만 남긴다.
+        android: {
+          drawable: { icon: "./assets/android-splash-logo.xml" },
+        },
       },
     ],
   ],

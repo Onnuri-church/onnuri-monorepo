@@ -26,6 +26,7 @@ import NavHome from "../../assets/icons/nav-home.svg";
 import Note from "../../assets/icons/note.svg";
 import Palette from "../../assets/icons/palette.svg";
 import Place from "../../assets/icons/place.svg";
+import Plus from "../../assets/icons/plus.svg";
 import Pray from "../../assets/icons/pray.svg";
 import Search from "../../assets/icons/search.svg";
 import SendFill from "../../assets/icons/send-fill.svg";
@@ -73,6 +74,7 @@ const ICONS = {
   note: Note,
   palette: Palette,
   place: Place,
+  plus: Plus,
   pray: Pray,
   search: Search,
   "send-fill": SendFill,
