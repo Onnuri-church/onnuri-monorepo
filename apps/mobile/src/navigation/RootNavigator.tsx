@@ -16,6 +16,7 @@ import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
+import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -47,6 +48,11 @@ export function RootNavigator() {
             name="QtBoard"
             component={QtBoardScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+          />
+          <Stack.Screen
+              name="QtBoardWrite"
+              component={QtBoardWriteScreen}
+              options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔 글쓰기" /> }}
           />
           <Stack.Screen
             name="QtBoardDetail"
