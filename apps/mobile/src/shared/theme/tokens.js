@@ -70,15 +70,20 @@ const colors = {
 // 그림자. NativeWind는 shadow-*를 RN의 shadowColor/shadowOffset/shadowRadius로 변환하면서
 // shadowOpacity를 1로 고정하므로, 투명도는 색의 알파(#RRGGBBAA)에 넣어야 한다.
 // spread(4번째 값)는 RN에 대응이 없어 무시된다 — 0이 아닌 값이 필요하면 시안을 다시 확인한다.
-// card = primary.normal(#276E4C) 10%.
+// card = primary.normal(#276E4C) 10%, nav = 검정 3%(시안의 drop-shadow).
 const boxShadow = {
   card: "0px 1px 20px 0px #276E4C1A",
+  nav: "0px -5px 52px 0px #00000008",
 };
 
 // 안드로이드 전용 그림자 깊이. 키 이름을 boxShadow와 맞춰야 짝이 맞는다.
 // 지정하지 않으면 NativeWind가 blur(20)를 그대로 elevation으로 쓰는데 카드에는 과하다.
+// nav가 0인 건 값을 안 정해서가 아니다 — 안드로이드 elevation은 항상 아래로 그려져서
+// 위로 뜨는 탭바 그림자를 표현할 수 없다. 그렇다고 비워두면 NativeWind가 blur(52)를
+// 그대로 elevation으로 써서 iOS엔 거의 안 보이는 3% 그림자가 안드로이드에서만 시커멓게 나온다.
 const elevation = {
   card: 2,
+  nav: 0,
 };
 
 // 사이즈 스케일 예외. DESIGN.md 사이즈 규칙은 Tailwind 기본 스케일만 쓰도록 하고 있는데,
@@ -99,6 +104,8 @@ const spacing = {
   12.25: "49px",
   // 스플래시 로고를 화면 정중앙에서 34px 위로 올리기 위한 값. justify-center 컨테이너에서
   // padding/margin은 중심을 그 절반만큼만 옮기므로 34가 아니라 2배인 68이다. 34로 고치지 말 것.
+  // 하단 탭 가운데 원형 버튼의 지름(68)도 같은 값을 쓴다 — 우연히 같은 숫자라 한쪽 시안이
+  // 바뀌면 여기서 갈라내야 한다.
   17: "68px",
   18: "72px",
   // 부서활동 상세 (시안 확정값). 기본 스케일이 80(320px) → 96(384px)으로 건너뛰어 360px이 없다.
@@ -124,9 +131,10 @@ const fontFamily = {
 };
 
 // 타입 스케일(1-2). 사이즈 / 행간 / 자간 / 굵기를 한 클래스로 묶는다 —
-// `text-title` 하나만 쓰면 22px·Bold까지 전부 정해진다. lh(line-height)는 전부 140%(unitless),
-// ls(letter-spacing)는 label-medium/label-small만 -3%고 나머지는 전부 -1% (%→em 변환).
-// [사이즈, 자간, 폰트 파일] 순서.
+// `text-title` 하나만 쓰면 22px·Bold까지 전부 정해진다. lh(line-height)는 label-nav만 빼고
+// 전부 140%(unitless), ls(letter-spacing)는 label-medium/label-small/label-nav를 뺀 나머지가
+// 전부 -1% (%→em 변환).
+// [사이즈, 자간, 폰트 파일, (선택)행간] 순서 — 행간은 안 적으면 140%다.
 const TEXT_STYLE = {
   title: ["22px", "-0.01em", "Pretendard-Bold"],
   "heading-main": ["20px", "-0.01em", "Pretendard-Bold"],
@@ -140,15 +148,19 @@ const TEXT_STYLE = {
   "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
   "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
   "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
+  // 하단 탭 라벨 전용. Figma 레이어 이름은 label-small과 같은 "Label/Small"이지만 값이 셋 다 다르다
+  // (굵기 SemiBold, 자간 +1%, 행간 14px 고정). 같은 토큰의 변형이 아니라 별개 스타일이라 따로 등록한다 —
+  // label-small인 줄 알고 가져다 쓰면 자간·행간이 조용히 어긋난다.
+  "label-nav": ["12px", "0.01em", "Pretendard-SemiBold", "14px"],
   "caption-small": ["10px", "-0.01em", "Pretendard-Medium"],
 };
 
 // tailwind.config.js가 components 레이어에 등록한다. utilities 레이어인 font-pretendard-*가
 // 항상 뒤에 오므로, 굵기만 다르게 써야 하는 곳은 클래스를 덧붙여 덮어쓸 수 있다.
 const textStyles = Object.fromEntries(
-  Object.entries(TEXT_STYLE).map(([name, [fontSize, letterSpacing, family]]) => [
+  Object.entries(TEXT_STYLE).map(([name, [fontSize, letterSpacing, family, lineHeight = "1.4"]]) => [
     `.text-${name}`,
-    { fontSize, lineHeight: "1.4", letterSpacing, fontFamily: family },
+    { fontSize, lineHeight, letterSpacing, fontFamily: family },
   ]),
 );
 

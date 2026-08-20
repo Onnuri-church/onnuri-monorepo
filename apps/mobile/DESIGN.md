@@ -36,6 +36,7 @@ UI 작업 전 반드시 읽는다. 이 문서와 코드가 어긋나면 멈추�
 * `tokens.js`의 `boxShadow`에 등록된 토큰만 쓴다(`shadow-card`). Tailwind 기본 `shadow-sm`/`shadow-md`나 arbitrary value는 쓰지 않는다 — 컬러·타이포와 같은 이유로, 시안에 없는 그림자를 만들지 않기 위해서다.
 * **투명도는 색의 알파에 넣는다**(`#276E4C1A`). NativeWind가 `shadowOpacity`를 1로 고정하므로 별도 투명도 값을 줄 방법이 없다.
 * **`boxShadow` 토큰 하나당 같은 이름의 `elevation` 토큰을 함께 정의한다.** 안드로이드는 그림자를 elevation으로 그리는데, 없으면 NativeWind가 blur 값을 그대로 elevation으로 써버려서(20px → elevation 20) iOS보다 훨씬 진하게 나온다.
+* **안드로이드는 위로 뜨는 그림자를 그릴 수 없다.** elevation은 항상 아래로만 그려진다 — 하단 탭바처럼 위쪽 그림자가 필요한 곳은 `elevation` 토큰을 0으로 두고 iOS에서만 보이게 한다(`shadow-nav`). 값을 비워두면 안 되는 이유는 위 항목과 같다.
 * CSS `box-shadow`의 spread(4번째 값)는 RN에 대응이 없어 무시되고, 그림자를 여러 겹 겹친 값은 **첫 번째 레이어만** 적용된다. 시안이 두 겹이면 임의로 합치지 말고 작업자(디자인: 남현지)에게 어느 쪽을 살릴지 확인한다.
 
 ## 아이콘 규칙
@@ -103,10 +104,15 @@ props(인터페이스)와 내부 함수(구현)의 이름을 구분한다. 연�
 * 앱 루트는 `SafeAreaProvider` → `SafeAreaView`. 웹처럼 `max-w` / 데스크톱 중앙 정렬 개념 없음 — 네이티브 앱은 항상 디바이스 전체 화면.
 * Safe area는 `react-native-safe-area-context`의 `useSafeAreaInsets()`로 처리한다. `.pt-safe`/`.pb-safe` 같은 CSS 유틸은 RN에 없음 — Header/BottomNav 컴포넌트가 각자 insets 값을 받아 padding으로 적용.
 * 내비게이션 구조: 루트 `Stack.Navigator` 안에 `Tab.Navigator`(메인 탭, BottomNav 포함)를 하나의 스크린으로 넣고, 그 외 화면은 루트 Stack에 push한다.
-  * 메인 탭(`Tab.Navigator` 직접 등록, BottomNav 노출, Figma 확정): 홈 · 팀 스토리 · 말씀(가운데, 탭바 위로 튀어나온 원형 버튼) · 오늘 주보 · 마이페이지
-  * 큐티나눔·실시간예배는 하단 탭이 아니라 **홈 화면에서 진입하는 화면**이다 — 루트 `Stack.Navigator`에 등록해서 홈에서 push한다.
-  * 서브(루트/각 탭 내부 `Stack`에서 push, BottomNav 없음): 위 큐티나눔·실시간예배 외에 말씀 영상 상세, 주보 상세, 큐티나눔 작성, 기도요청 작성/상세, 팀 게시판 상세, 소그룹 모임 상세, 로그인/회원가입 등
+  * 메인 탭(`Tab.Navigator` 직접 등록, BottomNav 노출, Figma 확정): 홈 · 팀 스토리 · QR(가운데, 탭바 위로 튀어나온 원형 버튼) · 셀 페이지 · MY(마이페이지)
+  * 큐티나눔·실시간예배·**말씀·오늘 주보**는 하단 탭이 아니라 **홈 화면에서 진입하는 화면**이다 — 루트 `Stack.Navigator`에 등록해서 홈에서 push한다.
+  * 서브(루트/각 탭 내부 `Stack`에서 push, BottomNav 없음): 위 네 화면 외에 말씀 영상 상세, 주보 상세, 큐티나눔 작성, 기도요청 작성/상세, 팀 게시판 상세, 소그룹 모임 상세, 로그인/회원가입 등
   * 웹 버전의 `(main)/`, `(sub)` route group 구분과 동일한 개념을 폴더 대신 Navigator 등록 위치로 표현.
+* BottomNav는 `shared/components/base/BottomNav.tsx`에 구현하고 `Tab.Navigator`의 `tabBar` prop으로 넘긴다 — 가운데 QR 버튼이 탭바 위로 튀어나오고 배경·그림자도 시안 값이라 기본 탭바 옵션으로는 맞출 수 없다.
+  * 라벨은 BottomNav가 각 `Tab.Screen`의 `options.title`에서 읽는다. 컴포넌트 안에 문자열을 따로 두지 않는다.
+  * **튀어나온 버튼을 탭바의 자식으로 두지 않는다.** 안드로이드는 부모 경계 밖으로 나간 자식의 터치를 받지 못해서 원의 위쪽 절반이 안 눌린다. 컨테이너를 튀어나온 높이(32)만큼 키워 버튼을 그 안에 담고, 흰 배경은 아래 탭바에만 칠하고, 위쪽 빈 영역은 `pointerEvents="box-none"`으로 통과시킨다.
+  * 활성/비활성은 색만 바꾼다 (아이콘 `icon.strong`↔`icon.normal`, 라벨 `text.normal`↔`text.alternative`). 시안이 탭별로 채운/선 아이콘을 따로 주지 않았다 — 홈이 채워 보이는 건 원본 SVG(`nav-home`)가 원래 채운 그림이기 때문이지 활성 전용 아이콘이 아니다.
+  * 가운데 QR 버튼에는 pressed/focused 표현이 없다. 시안에 상태 스펙이 없어서 임의로 만들지 않았다.
 * BottomNav 활성 탭은 React Navigation이 관리하는 상태(`useNavigationState` 또는 tab navigator의 `focused` prop)로 결정한다. Zustand로 별도 복제하지 않는다 — Zustand는 이 프로젝트에서 다른 전역 상태(로그인 세션, 유저 프로필 등)에는 쓰되, 내비게이션이 이미 소유한 상태를 중복 관리하지 않는다는 원칙은 유지.
 * Header는 `shared/components/base/Header.tsx`에 구현, 두 variant로 나뉜다 (Figma 확정):
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
