@@ -41,7 +41,12 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
     // 튀어나온 QR 버튼을 탭바의 자식으로 두면 안드로이드에서 부모 경계 밖으로 나간 부분이
     // 눌리지 않는다. 그래서 컨테이너를 튀어나온 높이만큼 키워 버튼을 그 안에 담고,
     // 흰 배경은 아래쪽 탭바에만 칠한다. 위쪽 빈 영역은 box-none으로 터치를 통과시킨다.
-    <View pointerEvents="box-none" style={{ paddingTop: QR_OVERHANG }}>
+    //
+    // 커진 만큼 음수 marginTop으로 되돌린다. React Navigation은 커스텀 tabBar를 화면 콘텐츠
+    // 아래에 쌓으므로, 이게 없으면 투명한 위쪽 32까지 탭바 자리로 잡혀 콘텐츠가 보이는 탭바보다
+    // 32 위에서 끝난다 (배경색 있는 화면이 오면 탭바 위에 띠가 생긴다). 되돌리면 콘텐츠가
+    // 스트립 뒤까지 이어져서 box-none도 의도대로 동작한다. QR 버튼은 absolute라 영향이 없다.
+    <View pointerEvents="box-none" style={{ paddingTop: QR_OVERHANG, marginTop: -QR_OVERHANG }}>
       <View
         className="bg-background-normal shadow-nav"
         // 시안의 배경이 탭바(80)보다 12 더 내려와 있는 건 홈 인디케이터 영역이다 — 고정값 대신 inset으로 받는다.
