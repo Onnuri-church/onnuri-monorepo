@@ -7,7 +7,7 @@ import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { Skeleton } from "../../shared/components/base/Skeleton";
-import { PrayerCard } from "../../shared/components/composed/PrayerCard";
+import { PrayerCard } from "./components/PrayerCard";
 import { colors } from "../../shared/theme/tokens";
 import { PRAYER_CATEGORIES, fetchPrayers, type PrayerCategory } from "./api";
 

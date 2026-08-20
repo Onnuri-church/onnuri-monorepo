@@ -1,7 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
-import { Icon } from "../base/Icon";
-import { colors } from "../../theme/tokens";
+import { Icon } from "../../../shared/components/base/Icon";
+import { colors } from "../../../shared/theme/tokens";
 
 export interface PrayerRequest {
   id: string;
@@ -24,6 +24,8 @@ interface PrayerCardProps {
   onToggleBookmark?: () => void;
 }
 
+// 기도제목 카드. 번호·D-day·북마크 같은 기도제목 도메인을 알아서 base가 아니라 feature에 둔다
+// (DESIGN.md 컴포넌트 배치 규칙). 다른 기능이 같은 카드를 필요로 하면 그때 composed로 올린다.
 // 시안 확정값(402pt 프레임): 카드 362x106, 안쪽 여백 16, 라운드 20.
 // 높이가 106으로 떨어지려면 안쪽 줄 높이도 시안대로여야 한다 — 번호줄 17 + 7 + 제목 23 + 10 + 날짜줄 16 = 73.
 // 공용 TEXT_STYLE은 모든 스타일에 행간 140%를 쓰는데 시안은 스타일마다 다르므로(캡션 16, 본문 23),

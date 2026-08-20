@@ -1,4 +1,4 @@
-import type { PrayerRequest } from "../../shared/components/composed/PrayerCard";
+import type { PrayerRequest } from "./components/PrayerCard";
 
 // API 연동 전 임시 데이터. 서버를 따로 띄우지 않아도 화면을 확인할 수 있게 앱 안에서 돌려준다
 // (취향 소그룹·부서활동과 같은 방식). 연동할 때 아래 함수 본문만 apiClient 호출로 바꾼다.
