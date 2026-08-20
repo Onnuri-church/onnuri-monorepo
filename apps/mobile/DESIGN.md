@@ -83,6 +83,14 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 * 비활성 상태: `disabled`는 RN 컴포넌트가 실제로 받는 prop으로 그대로 전달 (커스텀 wrapper에서 스타일 로직으로 재구현하지 않음)
 * `hover`, `focus`는 터치 디바이스 특성상 기본적으로 다루지 않는다. 필요한 화면(태블릿 등 포인터 입력)에 한해 별도 확인 후 정의.
 
+## 이벤트 핸들러 네이밍 규칙
+
+props(인터페이스)와 내부 함수(구현)의 이름을 구분한다. 연결부는 `onPress={handleCardPress}`처럼 "자리 = 꽂는 함수"로 읽힌다.
+
+* **콜백 props는 `on<이벤트>`** — `onPress`, `onSelect`, `onSubmit`. RN 기본 컴포넌트(`Pressable`의 `onPress` 등)와 같은 관례다. 같은 종류의 이벤트가 둘 이상이면 대상을 붙인다 (`onLikePress`, `onCommentSubmit`).
+* **내부 구현 함수는 `handle<대상><이벤트>`** — `handleWritePress`, `handleLikePress`, `handleCommentSubmit`. 대상 생략(`handlePress`)은 그 이벤트가 화면에 하나뿐일 때만 허용한다.
+* **내부 함수 이름에 `on*`을 쓰지 않는다** — props로 받은 것인지 지역에서 만든 것인지 읽을 때마다 헷갈린다.
+
 ## 작업 시작 조건
 
 아래가 모두 확보되지 않으면 코딩을 시작하지 않는다.
@@ -108,7 +116,8 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 * BottomNav 활성 탭은 React Navigation이 관리하는 상태(`useNavigationState` 또는 tab navigator의 `focused` prop)로 결정한다. Zustand로 별도 복제하지 않는다 — Zustand는 이 프로젝트에서 다른 전역 상태(로그인 세션, 유저 프로필 등)에는 쓰되, 내비게이션이 이미 소유한 상태를 중복 관리하지 않는다는 원칙은 유지.
 * Header는 `shared/components/base/Header.tsx`에 구현, 두 variant로 나뉜다 (Figma 확정):
   * `variant="main"` — 메인 탭 5개 화면에 공통 적용. 로고+앱 이름("ONNURI YOUTH")+서브텍스트, 우측에 알림·설정 버튼. `BottomTabNavigator`의 `screenOptions.header`로 적용.
-  * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 더보기(⋮) 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
+  * `variant="sub"` — 탭 밖에서 push되는 화면용. 뒤로가기, 가운데 타이틀, 우측 버튼. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
+    * 우측 버튼은 `rightAction`으로 고른다: `more`(기본, 더보기 ⋮) · `home`(메인 탭으로) · `export`(공유, 주보·나눔지 상세) · `none`(버튼 없이 자리만 비워 타이틀을 가운데 유지). 시안에 없는 새 동작이 필요하면 화면에서 따로 그리지 말고 여기에 값을 추가한다.
   * 알림·설정·뒤로가기·더보기 버튼은 `Icon` 컴포넌트로 렌더한다 (`size={28}`, `color={colors.icon.strong}` — 원본 SVG가 28 그리드에 `#444444`로 그려져 있다). 아래 아이콘 규칙 참고.
 * **화면 트리는 `RootNavigator` 한 곳에서만 분기한다.** `useAuthStore`의 `session.status`를 보고 `authenticated`·`guest`면 `Main`(탭)+`QtBoard`+`Live`가 있는 스택, `unauthenticated`면 `Login`+`ProfileSetup`이 있는 `AuthStack`을 그린다. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의와 게스트가 못 하는 동작은 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
   * 준비가 끝나기 전(`loading`)에는 스플래시가 `NavigationContainer` **바깥에서** 트리를 통째로 대신한다. 스크린으로 등록하지 않는다 — 뒤로가기 대상이 되면 안 되고 네비게이션도 쓰지 않기 때문이다. 온보딩처럼 화면이 여러 장 붙으면 그때 별도 `Stack`으로 올린다.

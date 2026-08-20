@@ -17,7 +17,7 @@ export function FilterChip({ label, selected, onPress }: FilterChipProps) {
       onPress={onPress}
       className={`${chipStyle} ${
         selected
-          ? "border-primary-normal bg-primary-normal"
+          ? "border-chip-selected bg-chip-selected"
           : "border-text-assistive"
       }`}
       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}

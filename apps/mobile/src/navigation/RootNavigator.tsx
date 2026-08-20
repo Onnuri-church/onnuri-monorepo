@@ -2,12 +2,16 @@ import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
+import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
+import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
+import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
+import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonScreen } from "../features/sermon/SermonScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
@@ -49,6 +53,27 @@ export function RootNavigator() {
             options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
           />
           <Stack.Screen
+            name="QtBoardDetail"
+            component={QtBoardDetailScreen}
+            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+          />
+          <Stack.Screen
+            name="BulletinDetail"
+            component={BulletinDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="주보" rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
+            name="SharingSheet"
+            component={SharingSheetScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="나눔지" rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
             name="Live"
             component={LiveScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
@@ -67,6 +92,14 @@ export function RootNavigator() {
           <Stack.Screen
             name="DepartmentActivity"
             component={DepartmentActivityScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="부서활동 게시판" />,
+            }}
+          />
+          <Stack.Screen
+            name="DepartmentActivityDetail"
+            component={DepartmentActivityDetailScreen}
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="부서활동 게시판" />,

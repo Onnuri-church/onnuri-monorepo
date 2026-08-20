@@ -43,9 +43,11 @@ const colors = {
   },
   // chip. 구분용 팔레트(purple~indigo)는 배경(bg)이 공통이고 글자색만 다르고,
   // 모집 상태(open/closed)는 반대로 글자가 흰색이고 배경이 상태별로 다르다.
-  // 이름이 부서명이 아닌 이유와 부서→색 매핑을 두는 위치는 DESIGN.md 컬러 규칙 참고.
   chip: {
     bg: "#ECECEC",
+    // 필터 칩이 선택됐을 때의 배경 (시안 확정값). icon.accent와 값이 같지만 용도가 다른
+    // 별개 토큰이라 그대로 둔다 — 위 background.assistive / text.assistive와 같은 취급이다.
+    selected: "#436E5D",
     open: "#444444",
     closed: "#888888",
     purple: "#8C00BF",
@@ -89,6 +91,12 @@ const elevation = {
 // 시안 확정값이라 예외로 추가한다. rem이 아니라 px로 적는다 — metro.config.js에서
 // inlineRem: 16으로 맞춰뒀으므로 키 × 4 = px이 되어 기본 스케일과 규칙이 일치한다(17 → 68px).
 const spacing = {
+  // 이미지 페이저 인디케이터의 점 크기 (시안 확정값). 기본 스케일이 1.5(6px) → 2(8px)로
+  // 건너뛰어 7px이 없다. 점이 작아서 1px 차이가 비율로는 14%라 그대로 눈에 띈다.
+  1.75: "7px",
+  // 주보 목록 행의 위아래 여백 (시안 확정값): 구분선 간격 83 = 내용 47 + 18*2.
+  // 기본 스케일이 4(16px) → 5(20px)로 건너뛰어 18px이 없다.
+  4.5: "18px",
   // 취향 소그룹 상세 InfoBox (시안 확정값): 라벨-값 간격 30, 라벨 열 폭 42, 행 높이 49.
   // 4의 배수가 아니라 키가 소수로 떨어진다 — 기본 스케일도 0.5/1.5/2.5를 쓰므로 규칙은 유지된다.
   7.5: "30px",
@@ -100,6 +108,10 @@ const spacing = {
   // 바뀌면 여기서 갈라내야 한다.
   17: "68px",
   18: "72px",
+  // 부서활동 상세 (시안 확정값). 기본 스케일이 80(320px) → 96(384px)으로 건너뛰어 360px이 없다.
+  90: "360px",
+  // 큐티나눔 상세 (시안 확정값). 기본 스케일이 96(384px)에서 끝나 400px이 없다.
+  100: "400px",
 };
 
 // 라운드 예외. Tailwind 기본 borderRadius 스케일은 rounded-2xl(16px)에서 rounded-3xl(24px)로 건너뛰어서
@@ -107,6 +119,7 @@ const spacing = {
 // 키 번호는 spacing과 같은 규칙(키 × 4 = px)을 따른다.
 const borderRadius = {
   5: "20px",
+  2.5: "10px",
 };
 
 // 폰트 패밀리(1-1): 한글/영문·숫자 모두 Pretendard.
@@ -131,6 +144,7 @@ const TEXT_STYLE = {
   "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
   "body-regular": ["15px", "-0.01em", "Pretendard-Regular"],
   "body-small": ["13px", "-0.01em", "Pretendard-Regular"],
+  "body-small-bold": ["13px", "-0.01em", "Pretendard-ExtraBold"],
   "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
   "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
   "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
