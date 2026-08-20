@@ -17,6 +17,7 @@ export type RootStackParamList = {
   DepartmentActivityDetail: { id: string };
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
+  PrayerBoard: undefined;
 };
 
 // 로그인도 게스트도 아닌 상태(unauthenticated)일 때 마운트되는 스택.
