@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
@@ -7,14 +9,19 @@ import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { Skeleton } from "../../shared/components/base/Skeleton";
-import { PrayerCard } from "./components/PrayerCard";
 import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { PRAYER_CATEGORIES, fetchPrayers, type PrayerCategory } from "./api";
+import { useToggleBookmark } from "./useToggleBookmark";
+import { PrayerCard } from "./components/PrayerCard";
+import { PrayerMenu } from "./components/PrayerMenu";
 
 // 시안 확정값(402pt 프레임): 콘텐츠 폭 362 = 402 - 20*2.
 const CONTENT_PADDING = 20;
 
 export function PrayerBoardScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const toggleBookmark = useToggleBookmark();
   const [category, setCategory] = useState<PrayerCategory>("all");
   const [keyword, setKeyword] = useState("");
 
@@ -54,7 +61,13 @@ export function PrayerBoardScreen() {
           )}
 
           {data?.items.map((prayer) => (
-            <PrayerCard key={prayer.id} prayer={prayer} />
+            <PrayerCard
+              key={prayer.id}
+              prayer={prayer}
+              showBookmark
+              onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
+              onToggleBookmark={() => toggleBookmark(prayer.id)}
+            />
           ))}
         </View>
       </ScrollView>
@@ -62,6 +75,8 @@ export function PrayerBoardScreen() {
       <FloatingButton onPress={() => undefined}>
         <Icon name="write" size={24} color={colors.icon.disable} />
       </FloatingButton>
+
+      <PrayerMenu title="기도제목 게시판" />
     </View>
   );
 }
