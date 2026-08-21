@@ -91,7 +91,7 @@ export function DepartmentActivityScreen() {
   }
 
     const handleWritePress = () => {
-        console.log("글쓰기")
+        navigation.navigate("DepartmentActivityWrite")
     }
 
   return (

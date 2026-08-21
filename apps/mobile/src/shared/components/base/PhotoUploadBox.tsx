@@ -5,7 +5,7 @@ import { Icon } from "./Icon";
 import { colors } from "../../theme/tokens";
 
 interface PhotoUploadBoxProps {
-  label: string;
+  label?: string;
   /** 선택된 사진 URI. 있으면 빈 슬롯 UI 대신 사진을 채워 보여준다. */
   imageUri?: string | null;
   /** 박스 터치로 사진을 고르면 그 URI, 우상단 X로 해제하면 null. */
@@ -36,7 +36,7 @@ export function PhotoUploadBox({ label, imageUri, onChange }: PhotoUploadBoxProp
       ) : (
         <>
           <Icon name="add-round-light" size={36} color={colors.icon.normal} />
-          <Text className="text-body-regular text-text-alternative">{label}</Text>
+          {label && <Text className="text-body-regular text-text-alternative">{label}</Text>}
         </>
       )}
       {/* 안쪽 Pressable은 onPress가 실제로 달려 있어야 터치를 가져간다 —

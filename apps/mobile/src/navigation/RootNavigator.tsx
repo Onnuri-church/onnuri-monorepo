@@ -25,6 +25,7 @@ import { useAuthStore } from "../shared/store/useAuthStore";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
+import {DepartmentActivityWriteScreen} from "../features/department-activity/DepartmentActivityWriteScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -116,6 +117,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="부서활동 게시판" />,
+            }}
+          />
+          <Stack.Screen
+            name="DepartmentActivityWrite"
+            component={DepartmentActivityWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="부서활동 글쓰기" />,
             }}
           />
           <Stack.Screen
