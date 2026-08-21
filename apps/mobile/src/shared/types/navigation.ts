@@ -13,6 +13,7 @@ export type RootStackParamList = {
   Main: undefined;
   QtBoard: undefined;
   QtBoardDetail: { id: string };
+  QtBoardWrite: undefined;
   Live: undefined;
   Sermon: undefined;
   Bulletin: undefined;
