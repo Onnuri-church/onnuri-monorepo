@@ -12,6 +12,12 @@ export function QtBoardWriteScreen () {
     const [verse, setVerse] = useState("")
     const [title, setTitle] = useState("")
     const [content, setContent] = useState("")
+    const [backgroundPhotoUri, setBackgroundPhotoUri] = useState<string | null>(null)
+    const [bodyPhotoUri, setBodyPhotoUri] = useState<string | null>(null)
+
+    const handleSubmitPress = () => {
+
+    }
 
     return (
         <View className="flex-1 bg-background-normal">
@@ -21,29 +27,37 @@ export function QtBoardWriteScreen () {
             <KeyboardAvoidingView style={{flex: 1}} behavior="padding">
                 <ScrollView
                     className="flex-1 h-full"
-                    contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-3"
+                    contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
                     keyboardShouldPersistTaps="handled"
                 >
                     <DateField label="날짜" placeholder="날짜를 입력해주세요" value={selectDate} onChange={setSelectDate}/>
 
-                    <View className="mt-4">
+                    <View>
                         <Field label="사진">
                             <View className="flex-row items-start gap-4">
-                                <PhotoUploadBox label="배경사진"/>
-                                <PhotoUploadBox label="본문사진"/>
+                                <PhotoUploadBox
+                                    label="배경사진"
+                                    imageUri={backgroundPhotoUri}
+                                    onChange={setBackgroundPhotoUri}
+                                />
+                                <PhotoUploadBox
+                                    label="본문사진"
+                                    imageUri={bodyPhotoUri}
+                                    onChange={setBodyPhotoUri}
+                                />
                             </View>
                         </Field>
                     </View>
 
-                    <View className="mt-4">
+                    <View>
                         <TextField label="말씀" placeholder="예) 룻기 1:8-10" value={verse} onChangeText={setVerse}/>
                     </View>
 
-                    <View className="mt-4">
+                    <View>
                         <TextField label="제목" placeholder="제목을 입력해주세요." value={title} onChangeText={setTitle}/>
                     </View>
 
-                    <View className="mt-4">
+                    <View>
                         <TextAreaField
                             label="내용"
                             placeholder={"오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요."}
@@ -52,8 +66,8 @@ export function QtBoardWriteScreen () {
                         />
                     </View>
 
-                    <View className="mt-20">
-                        <Button label="등록하기"/>
+                    <View className="mt-16">
+                        <Button label="등록하기" onPress={handleSubmitPress}/>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

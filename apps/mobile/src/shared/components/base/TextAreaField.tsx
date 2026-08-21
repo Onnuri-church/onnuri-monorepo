@@ -23,9 +23,6 @@ export function TextAreaField({ label, placeholder, value, onChangeText }: TextA
         placeholderTextColor={colors.text.assistive}
         multiline
         textAlignVertical="top"
-        // Android 네이티브 EditText의 기본 밑줄 제거. RN 0.86(신 아키텍처)은 border를 줘도
-        // 원래 배경을 보존한 채 겹쳐 그려서, 이걸 안 주면 박스 하단에 밑줄이 하나 더 보인다.
-        underlineColorAndroid="transparent"
       />
     </Field>
   );
