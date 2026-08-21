@@ -10,6 +10,7 @@ import { DepartmentActivityScreen } from "../features/department-activity/Depart
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
+import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
@@ -76,7 +77,10 @@ export function RootNavigator() {
           <Stack.Screen
             name="Live"
             component={LiveScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="실시간 예배" />,
+            }}
           />
           {/* 말씀·오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
@@ -113,6 +117,15 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
             }}
           />
+          <Stack.Screen
+            name="PrayerBoard"
+            component={PrayerBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="기도제목 게시판" />,
+            }}
+          />
+
           <Stack.Screen
             name="GroupMeetingDetail"
             component={GroupMeetingDetailScreen}
