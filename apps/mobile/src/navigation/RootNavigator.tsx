@@ -10,7 +10,10 @@ import { DepartmentActivityScreen } from "../features/department-activity/Depart
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
+import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
+import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
+import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
@@ -123,6 +126,30 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="기도제목 게시판" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerBookmarks"
+            component={PrayerBookmarkScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="저장한 기도제목" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerMine"
+            component={MyPrayerScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="내 기도제목" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerBoardDetail"
+            component={PrayerDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="기도제목" rightAction="bookmark" />,
             }}
           />
 
