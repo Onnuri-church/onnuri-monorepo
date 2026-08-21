@@ -15,14 +15,19 @@ interface SubHeaderProps {
   variant: "sub";
   title: string;
   /**
-   * 우측 버튼. "home"이면 메인 탭으로 돌아간다. "export"면 공유 버튼(주보 상세 등).
+   * 우측 버튼. "home"이면 메인 탭으로 돌아간다. "export"면 공유 버튼(주보 상세 등),
+   * "bookmark"면 저장 버튼(기도제목 상세).
    * "none"이면 버튼 없이 자리만 비운다 (타이틀이 가운데 유지되도록 아이콘과 같은 폭).
    * 기본값은 더보기(⋮).
    */
-  rightAction?: "more" | "home" | "export" | "none";
+  rightAction?: "more" | "home" | "export" | "bookmark" | "none";
   onPressMore?: () => void;
   /** 공유 버튼 동작 (rightAction이 "export"일 때). */
   onPressShare?: () => void;
+  /** 북마크 버튼 동작 (rightAction이 "bookmark"일 때). */
+  onPressBookmark?: () => void;
+  /** 북마크가 켜져 있는지 (rightAction이 "bookmark"일 때 채워진 아이콘으로 그린다). */
+  bookmarked?: boolean;
   /**
    * 홈 버튼 동작. 안 주면 메인 탭으로 돌아간다.
    * 탭 안에서 쓰는 화면(팀스토리)은 이미 Main에 있어서 기본 동작이 아무 일도 하지 않으므로,
@@ -95,6 +100,14 @@ export function Header(props: HeaderProps) {
           ) : props.rightAction === "export" ? (
             <Pressable onPress={props.onPressShare} hitSlop={8}>
               <Icon name="export" size={28} color={colors.icon.strong} />
+            </Pressable>
+          ) : props.rightAction === "bookmark" ? (
+            <Pressable onPress={props.onPressBookmark} hitSlop={8}>
+              <Icon
+                name={props.bookmarked ? "bookmark-active" : "bookmark"}
+                size={28}
+                color={props.bookmarked ? colors.primary.normal : colors.icon.strong}
+              />
             </Pressable>
           ) : props.rightAction === "none" ? (
             <View className="w-7" />

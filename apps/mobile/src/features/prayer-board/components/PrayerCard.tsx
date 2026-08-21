@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { CategoryBadge } from "./CategoryBadge";
 
 export interface PrayerRequest {
   id: string;
@@ -22,6 +23,12 @@ interface PrayerCardProps {
   prayer: PrayerRequest;
   onPress?: () => void;
   onToggleBookmark?: () => void;
+  /** 카드 우상단 북마크. 내 기도제목 화면은 시안에 없어서 끌 수 있게 둔다. */
+  showBookmark?: boolean;
+  /** 수정 모드. 카드 아래에 구분선 + 수정/삭제 줄이 붙고 카드가 그만큼 높아진다. */
+  editing?: boolean;
+  onEdit?: () => void;
+  onDelete?: () => void;
 }
 
 // 기도제목 카드. 번호·D-day·북마크 같은 기도제목 도메인을 알아서 base가 아니라 feature에 둔다
@@ -33,13 +40,24 @@ interface PrayerCardProps {
 const CARD_HEIGHT = 106;
 const CAPTION_LINE = 16;
 const TITLE_LINE = 23;
-const BADGE_LINE = 13;
+// 수정 모드 시안 확정값: 카드 145(= 106 + 구분선 1 + 액션 줄 38). 구분선은 안쪽 여백을 무시하고
+// 카드 폭 전체(362)를 가로지른다 — 그래서 액션 영역만 -mx-4로 여백 밖으로 빼낸다.
+const EDIT_CARD_HEIGHT = 145;
+const ACTION_ROW_HEIGHT = 38;
 
-export function PrayerCard({ prayer, onPress, onToggleBookmark }: PrayerCardProps) {
+export function PrayerCard({
+  prayer,
+  onPress,
+  onToggleBookmark,
+  showBookmark,
+  editing,
+  onEdit,
+  onDelete,
+}: PrayerCardProps) {
   return (
     <Pressable
       className="rounded-5 border border-background-muted bg-background-normal p-4 active:opacity-80"
-      style={{ height: CARD_HEIGHT }}
+      style={{ height: editing ? EDIT_CARD_HEIGHT : CARD_HEIGHT }}
       onPress={onPress}
     >
       <View className="flex-row items-center gap-1.5">
@@ -49,16 +67,7 @@ export function PrayerCard({ prayer, onPress, onToggleBookmark }: PrayerCardProp
         >
           No.{prayer.number} · {prayer.authorName}
         </Text>
-        {/* 배지를 base/Chip으로 쓰지 않는 이유: Chip은 글자가 12px이라 높이가 21이 되어
-            시안의 17을 넘긴다. 카드 높이 106이 그만큼 밀린다. */}
-        <View className="rounded-full bg-background-alternative px-2 py-0.5">
-          <Text
-            className="text-caption-small text-primary-normal"
-            style={{ lineHeight: BADGE_LINE }}
-          >
-            {prayer.category}
-          </Text>
-        </View>
+        <CategoryBadge label={prayer.category} />
       </View>
 
       <Text
@@ -88,17 +97,55 @@ export function PrayerCard({ prayer, onPress, onToggleBookmark }: PrayerCardProp
 
       {/* 북마크는 카드 우상단에 겹친다 — 카드 전체 탭(상세 이동)과 동작이 달라 별도 Pressable이다.
           절대 위치 기준이 테두리 안쪽이라, 카드 끝에서 상 10·우 14가 되도록 9·13을 준다. */}
-      <Pressable
-        className="absolute right-3.25 top-2.25 active:opacity-60"
-        onPress={onToggleBookmark}
-        hitSlop={8}
-      >
-        <Icon
-          name={prayer.bookmarked ? "bookmark-active" : "bookmark"}
-          size={24}
-          color={prayer.bookmarked ? colors.primary.normal : colors.text.alternative}
-        />
-      </Pressable>
+      {showBookmark && (
+        <Pressable
+          className="absolute right-3.25 top-2.25 active:opacity-60"
+          onPress={onToggleBookmark}
+          hitSlop={8}
+        >
+          <Icon
+            name={prayer.bookmarked ? "bookmark-active" : "bookmark"}
+            size={24}
+            color={prayer.bookmarked ? colors.primary.normal : colors.text.alternative}
+          />
+        </Pressable>
+      )}
+
+      {/* mt-auto로 카드 바닥에 붙인다. -mx-4/-mb-4는 카드 안쪽 여백을 되돌려
+          구분선이 카드 폭 전체를 가로지르게 하려는 것이다. */}
+      {editing && (
+        <View className="-mx-4 -mb-4 mt-auto">
+          <View className="h-px bg-background-assistive" />
+          <View className="flex-row items-center gap-6 px-4" style={{ height: ACTION_ROW_HEIGHT }}>
+            <Pressable
+              className="flex-row items-center gap-1 active:opacity-60"
+              onPress={onEdit}
+              hitSlop={8}
+            >
+              <Icon name="edit" size={16} color={colors.icon.normal} />
+              <Text
+                className="text-caption-main text-text-alternative"
+                style={{ lineHeight: CAPTION_LINE }}
+              >
+                수정
+              </Text>
+            </Pressable>
+            <Pressable
+              className="flex-row items-center gap-1 active:opacity-60"
+              onPress={onDelete}
+              hitSlop={8}
+            >
+              <Icon name="trash-can" size={16} color={colors.semantic.danger} />
+              <Text
+                className="text-caption-main text-semantic-danger"
+                style={{ lineHeight: CAPTION_LINE }}
+              >
+                삭제
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
     </Pressable>
   );
 }
