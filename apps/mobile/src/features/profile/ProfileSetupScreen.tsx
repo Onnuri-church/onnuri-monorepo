@@ -8,7 +8,7 @@ import type { User } from "@onnuri/shared";
 import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
-import { SelectField } from "./components/SelectField";
+import { SelectField } from "../../shared/components/composed/SelectField";
 
 // 프로필 등록 API가 아직 없어서(백엔드 미구현) 등록하기는 서버로 보내지 않고 임시 세션으로 들어간다.
 // 로그인 → 프로필 설정 → 홈까지 눌러서 확인하기 위한 임시 배선이다 — 실제 연동 시 통째로 지운다.

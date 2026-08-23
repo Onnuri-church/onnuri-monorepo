@@ -19,6 +19,7 @@ export type RootStackParamList = {
   Bulletin: undefined;
   DepartmentActivity: undefined;
   DepartmentActivityDetail: { id: string };
+  DepartmentActivityWrite: undefined;
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
   PrayerBoard: undefined;

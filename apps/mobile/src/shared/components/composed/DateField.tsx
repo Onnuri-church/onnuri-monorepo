@@ -3,7 +3,7 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import { useRef } from "react";
-import { Platform, Pressable, Text, View } from "react-native";
+import { Keyboard, Platform, Pressable, Text, View } from "react-native";
 
 import { AppSheet, type AppSheetRef } from "../base/AppSheet";
 import { Field } from "../base/Field";
@@ -24,7 +24,8 @@ function parseDateString(value: string) {
   return new Date(year, month - 1, day);
 }
 
-function toDateString(date: Date) {
+// 화면이 초기값(오늘)을 만들 때도 쓰도록 export한다.
+export function toDateString(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
     date.getDate(),
   ).padStart(2, "0")}`;
@@ -32,7 +33,7 @@ function toDateString(date: Date) {
 
 // 라벨 + 선택값 줄. 누르면 OS 기본 날짜 선택 UI가 뜬다 — 안드로이드는 자체 다이얼로그라
 // 시트가 필요 없고, iOS는 인라인 달력 뷰라 AppSheet에 담아 바텀시트로 올린다.
-// 트리거 줄의 스타일은 profile/SelectField와 같은 시안(입력줄 48 / 좌우 8 / 아래 구분선)이다.
+// 트리거 줄의 스타일은 composed/SelectField와 같은 시안(입력줄 48 / 좌우 8 / 아래 구분선)이다.
 export function DateField({ label, placeholder, value, onChange }: DateFieldProps) {
   const sheetRef = useRef<AppSheetRef>(null);
 
@@ -46,6 +47,8 @@ export function DateField({ label, placeholder, value, onChange }: DateFieldProp
   };
 
   const handleFieldPress = () => {
+    // 키보드가 열린 채로 날짜 UI를 띄우면 겹친다 — 먼저 내리고 연다 (SelectField와 같은 처리).
+    Keyboard.dismiss();
     if (Platform.OS === "android") {
       DateTimePickerAndroid.open({
         value: pickerValue,
