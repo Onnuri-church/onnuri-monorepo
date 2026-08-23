@@ -20,6 +20,8 @@ import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonScreen } from "../features/sermon/SermonScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
+import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
+import { findTeam } from "../features/team-story/teams";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
@@ -173,6 +175,22 @@ export function RootNavigator() {
             name="GroupMeetingDetail"
             component={GroupMeetingDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
+          />
+          {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서
+              navigation.setOptions로 넘기는 쪽이 맞다. */}
+          <Stack.Screen
+            name="TeamStoryDetail"
+            component={TeamStoryDetailScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={findTeam(route.params.teamId)?.name ?? "팀"}
+                  rightAction="home"
+                />
+              ),
+            })}
           />
           <Stack.Screen
             name="TeamMemberList"
