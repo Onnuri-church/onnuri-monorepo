@@ -26,8 +26,9 @@ export function TeamStoryDetailScreen() {
   const hiddenMemberCount = TEAM_MEMBERS.length - previewMembers.length;
 
   const handleMemberListPress = () => navigation.navigate("TeamMemberList", { teamId: team.id });
-  // 갤러리(SCRUM-33)와 팀 게시판은 아직 화면이 없다. 생기면 여기서 navigate를 붙인다.
-  const handleViewAllPhotosPress = () => {};
+  const handleViewAllPhotosPress = () =>
+    navigation.navigate("TeamStoryGallery", { teamId: team.id });
+  // 팀 게시판은 아직 화면이 없다. 생기면 여기서 navigate를 붙인다.
   const handleBoardPress = () => {};
 
   return (

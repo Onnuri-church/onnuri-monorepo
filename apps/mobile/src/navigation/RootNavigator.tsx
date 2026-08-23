@@ -33,6 +33,7 @@ import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
+import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { findTeam } from "../features/team-story/teams";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
@@ -216,6 +217,20 @@ export function RootNavigator() {
                   variant="sub"
                   title={findTeam(route.params.teamId)?.name ?? "팀"}
                   rightAction="home"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="TeamStoryGallery"
+            component={TeamStoryGalleryScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={`${findTeam(route.params.teamId)?.name ?? "팀"} 갤러리`}
+                  rightAction="none"
                 />
               ),
             })}

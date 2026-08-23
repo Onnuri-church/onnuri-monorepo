@@ -37,6 +37,7 @@ export type RootStackParamList = {
   // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
   BulletinWrite: undefined;
   TeamStoryDetail: { teamId: string };
+  TeamStoryGallery: { teamId: string };
   // 팀 상세에서 "외 N명 더 보기"로 진입한다.
   TeamMemberList: { teamId: string };
   // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
