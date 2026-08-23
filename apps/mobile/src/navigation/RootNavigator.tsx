@@ -34,6 +34,7 @@ import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
+import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
 import { findTeam } from "../features/team-story/teams";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
@@ -235,6 +236,8 @@ export function RootNavigator() {
               ),
             })}
           />
+          {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
+          <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
           <Stack.Screen
             name="TeamMemberList"
             component={TeamMemberListScreen}

@@ -38,6 +38,7 @@ export type RootStackParamList = {
   BulletinWrite: undefined;
   TeamStoryDetail: { teamId: string };
   TeamStoryGallery: { teamId: string };
+  TeamStoryPhotoViewer: { teamId: string; photoId: string };
   // 팀 상세에서 "외 N명 더 보기"로 진입한다.
   TeamMemberList: { teamId: string };
   // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
