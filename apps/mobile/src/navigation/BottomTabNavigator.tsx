@@ -42,7 +42,12 @@ export function BottomTabNavigator() {
       {/* 가운데 원형 버튼. 시안에 라벨이 없어서 title은 화면에 안 보이고 접근성 레이블로만 쓰인다. */}
       <Tab.Screen name="Qr" component={QrScreen} options={{ title: "QR" }} />
       <Tab.Screen name="Cell" component={CellScreen} options={{ title: "셀 페이지" }} />
-      <Tab.Screen name="MyPage" component={MyPageScreen} options={{ title: "MY" }} />
+      {/* 마이페이지는 main 헤더 없이 화면 안의 알림·설정 액션 바만 쓴다 (시안). */}
+      <Tab.Screen
+        name="MyPage"
+        component={MyPageScreen}
+        options={{ title: "MY", headerShown: false }}
+      />
     </Tab.Navigator>
   );
 }
