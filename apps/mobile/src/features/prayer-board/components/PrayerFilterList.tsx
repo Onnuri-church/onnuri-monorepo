@@ -2,9 +2,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 
-import { AppSheet, type AppSheetRef } from "../../../shared/components/base/AppSheet";
+import { AppDialog, type AppDialogRef } from "../../../shared/components/base/AppDialog";
 import { FilterBar } from "../../../shared/components/base/FilterBar";
 import { Skeleton } from "../../../shared/components/base/Skeleton";
 import type { RootStackParamList } from "../../../shared/types/navigation";
@@ -38,7 +38,7 @@ export function PrayerFilterList({
   const [category, setCategory] = useState<PrayerCategory>("all");
   // 삭제 확인 중인 기도제목. 시트는 하나만 두고 대상만 바꾼다.
   const [pendingDelete, setPendingDelete] = useState<PrayerRequest | null>(null);
-  const sheetRef = useRef<AppSheetRef>(null);
+  const dialogRef = useRef<AppDialogRef>(null);
   const queryClient = useQueryClient();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
@@ -50,12 +50,12 @@ export function PrayerFilterList({
 
   const askDelete = (prayer: PrayerRequest) => {
     setPendingDelete(prayer);
-    sheetRef.current?.open();
+    dialogRef.current?.open();
   };
 
   const confirmDelete = async () => {
     if (pendingDelete) await deletePrayer(pendingDelete.id);
-    sheetRef.current?.close();
+    dialogRef.current?.close();
     setPendingDelete(null);
     // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
     await queryClient.invalidateQueries({ queryKey: ["prayers"] });
@@ -101,37 +101,14 @@ export function PrayerFilterList({
         ))}
       </ScrollView>
 
-      {/* 삭제는 되돌릴 수 없어서 한 번 더 묻는다. 취소는 SelectField와 같은 자리(시트 바닥)에 둔다. */}
-      <AppSheet
-        ref={sheetRef}
-        footer={
-          <View className="bg-background-normal px-4 pb-4">
-            <View className="border-t-2 border-background-assistive" />
-            <Pressable
-              onPress={() => sheetRef.current?.close()}
-              className="pt-4 active:opacity-60"
-              hitSlop={8}
-            >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
-            </Pressable>
-          </View>
-        }
-      >
-        <View className="px-4 pb-6 pt-2">
-          <Text className="text-center text-body-main text-text-normal">
-            이 기도제목을 삭제할까요?
-          </Text>
-          <Text className="mt-2 text-center text-body-small text-text-alternative">
-            삭제하면 되돌릴 수 없어요
-          </Text>
-          <Pressable
-            onPress={confirmDelete}
-            className="mt-6 h-12 items-center justify-center rounded-xl bg-semantic-danger active:opacity-80"
-          >
-            <Text className="text-body-main text-background-normal">삭제</Text>
-          </Pressable>
-        </View>
-      </AppSheet>
+      <AppDialog
+        ref={dialogRef}
+        title="정말 삭제하시겠습니까?"
+        description="삭제된 데이터는 복구할 수 없습니다."
+        confirmLabel="확인"
+        cancelLabel="취소"
+        onConfirm={confirmDelete}
+      />
     </View>
   );
 }

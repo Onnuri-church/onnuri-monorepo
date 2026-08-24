@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { fetchMyPrayers } from "./api";
 import { PrayerFilterList } from "./components/PrayerFilterList";
@@ -11,6 +11,19 @@ import { PrayerMenu } from "./components/PrayerMenu";
 export function MyPrayerScreen() {
   const [editing, setEditing] = useState(false);
 
+  // useMemo로 고정한다 — PrayerMenu가 이 배열을 헤더를 다시 그리는 effect의 의존성으로 쓰는데,
+  // 매 렌더 새 배열이면 렌더마다 setOptions가 돈다 (useToggleBookmark와 같은 이유).
+  const menuItems = useMemo(
+    () => [
+      {
+        icon: "edit" as const,
+        label: editing ? "수정 완료" : "수정하기",
+        onPress: () => setEditing((prev) => !prev),
+      },
+    ],
+    [editing],
+  );
+
   return (
     <>
       <PrayerFilterList
@@ -20,16 +33,7 @@ export function MyPrayerScreen() {
         emptyText="작성한 기도제목이 없어요"
       />
       {/* 내 화면이라 이동 항목(내 기도제목/저장한 기도제목)은 빼고 수정하기만 둔다. */}
-      <PrayerMenu
-        title="내 기도제목"
-        items={[
-          {
-            icon: "edit",
-            label: editing ? "수정 완료" : "수정하기",
-            onPress: () => setEditing((prev) => !prev),
-          },
-        ]}
-      />
+      <PrayerMenu title="내 기도제목" items={menuItems} />
     </>
   );
 }
