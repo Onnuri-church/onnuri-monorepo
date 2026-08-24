@@ -32,6 +32,9 @@ export type RootStackParamList = {
   // 딥링크·화면 로그가 둘을 구분할 수 있다. 같은 부분은 shared의 ImagePager가 갖고 있다.
   BulletinDetail: { id: string };
   SharingSheet: { id: string };
+  TeamStoryDetail: { teamId: string };
+  // 팀 상세에서 "외 N명 더 보기"로 진입한다.
+  TeamMemberList: { teamId: string };
 };
 
 // 로그인도 게스트도 아닌 상태(unauthenticated)일 때 마운트되는 스택.
