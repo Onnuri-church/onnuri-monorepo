@@ -77,9 +77,8 @@ export function QtBoardScreen() {
   }
 
   const handleWritePress = () => {
-    console.log("글쓰기")
+    navigation.navigate("QtBoardWrite")
   }
-
 
   return (
     <View className="flex-1 bg-background-normal">

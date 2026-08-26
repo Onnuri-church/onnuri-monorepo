@@ -25,6 +25,9 @@ export function HomeScreen() {
       <Pressable onPress={() => navigation.navigate("GroupMeeting")}>
         <Text className="text-body-main font-pretendard-semibold">취향 소그룹 보기</Text>
       </Pressable>
+      <Pressable onPress={() => navigation.navigate("PrayerBoard")}>
+        <Text className="text-body-main font-pretendard-semibold">기도제목 게시판 보기</Text>
+      </Pressable>
     </View>
   );
 }

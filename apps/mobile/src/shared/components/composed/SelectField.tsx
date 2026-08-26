@@ -1,9 +1,9 @@
 import { useRef } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Keyboard, Pressable, Text, View } from "react-native";
 
-import { AppSheet, type AppSheetRef } from "../../../shared/components/base/AppSheet";
-import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { AppSheet, type AppSheetRef } from "../base/AppSheet";
+import { Icon } from "../base/Icon";
+import { colors } from "../../theme/tokens";
 
 interface SelectFieldProps {
   label: string;
@@ -24,13 +24,19 @@ export function SelectField({ label, placeholder, options, value, onChange }: Se
     sheetRef.current?.close();
   };
 
+  // 키보드가 열린 채로 시트를 올리면 시트가 키보드에 가려진다 — 먼저 내리고 연다.
+  const handleTriggerPress = () => {
+    Keyboard.dismiss();
+    sheetRef.current?.open();
+  };
+
   return (
     <View className="py-4">
       <Text className="text-body-main text-text-normal">{label}</Text>
 
       {/* 눌림 상태는 prop이 아니라 Pressable 콜백으로 처리한다 (DESIGN.md props 규칙). */}
       <Pressable
-        onPress={() => sheetRef.current?.open()}
+        onPress={handleTriggerPress}
         className="mt-1 h-12 flex-row items-center justify-between border-b border-background-assistive px-2"
         style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
       >

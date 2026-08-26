@@ -10,16 +10,25 @@ import { DepartmentActivityScreen } from "../features/department-activity/Depart
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
+import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
+import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
+import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
+import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
+import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
+import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
+import { findTeam } from "../features/team-story/teams";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
+import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
+import {DepartmentActivityWriteScreen} from "../features/department-activity/DepartmentActivityWriteScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -50,12 +59,21 @@ export function RootNavigator() {
           <Stack.Screen
             name="QtBoard"
             component={QtBoardScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="큐티나눔" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+              name="QtBoardWrite"
+              component={QtBoardWriteScreen}
+              options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔 글쓰기" /> }}
           />
           <Stack.Screen
             name="QtBoardDetail"
             component={QtBoardDetailScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+            // 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 글 작성자에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="BulletinDetail"
@@ -76,7 +94,10 @@ export function RootNavigator() {
           <Stack.Screen
             name="Live"
             component={LiveScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="실시간 예배" />,
+            }}
           />
           {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
@@ -107,6 +128,14 @@ export function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="DepartmentActivityWrite"
+            component={DepartmentActivityWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="부서활동 글쓰기" />,
+            }}
+          />
+          <Stack.Screen
             name="GroupMeeting"
             component={GroupMeetingScreen}
             options={{
@@ -114,10 +143,59 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
             }}
           />
+          {/* 기도 목록 3개 화면은 PrayerMenu가 헤더를 단독 등록한다 (⋮ 메뉴 포함) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="PrayerBoard"
+            component={PrayerBoardScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerBookmarks"
+            component={PrayerBookmarkScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerMine"
+            component={MyPrayerScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerBoardDetail"
+            component={PrayerDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="기도제목" rightAction="bookmark" />,
+            }}
+          />
+
           <Stack.Screen
             name="GroupMeetingDetail"
             component={GroupMeetingDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
+          />
+          {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서
+              navigation.setOptions로 넘기는 쪽이 맞다. */}
+          <Stack.Screen
+            name="TeamStoryDetail"
+            component={TeamStoryDetailScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={findTeam(route.params.teamId)?.name ?? "팀"}
+                  rightAction="home"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="TeamMemberList"
+            component={TeamMemberListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팀원" rightAction="none" />,
+            }}
           />
         </Stack.Navigator>
       ) : (
