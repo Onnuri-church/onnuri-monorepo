@@ -18,6 +18,7 @@ import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonScreen } from "../features/sermon/SermonScreen";
+import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
@@ -198,6 +199,22 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="팀원" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="설정" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="ProfileEdit"
+            component={ProfileSetupScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="회원 정보 수정" rightAction="none" />,
             }}
           />
         </Stack.Navigator>

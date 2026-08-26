@@ -1,9 +1,14 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon } from "../../shared/components/base/Icon";
+import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
 import { RoleBadge } from "./components/RoleBadge";
@@ -47,7 +52,9 @@ function getRoleLinks(role: UserRole, team: string): MenuLink[] {
 
 export function MyPageScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const clearSession = useAuthStore((state) => state.clearSession);
+  const handleHideTabBarScroll = useHideTabBarOnScroll();
 
   const { name, cell, team, role } = MOCK_PROFILE;
   const roleLinks = getRoleLinks(role, team);
@@ -60,8 +67,15 @@ export function MyPageScreen() {
   return (
     <View className="flex-1 bg-background-alternative">
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top }}
-        contentContainerClassName="px-5 pb-10"
+        // 탭바가 오버레이라 콘텐츠가 그 뒤로 지나간다 — 로그아웃이 탭바에 가리지 않게
+        // 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-10 포함).
+        contentContainerStyle={{
+          paddingTop: insets.top,
+          paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom,
+        }}
+        contentContainerClassName="px-5"
+        onScroll={handleHideTabBarScroll}
+        scrollEventThrottle={16}
       >
         {/* 상단 액션 바 — 이 화면은 main 헤더(로고+앱 이름) 대신 알림·설정 아이콘만 쓴다 (시안). */}
         <View className="mt-7 flex-row justify-end gap-2">
@@ -69,8 +83,7 @@ export function MyPageScreen() {
           <Pressable>
             <Icon name="bell" size={28} color={colors.icon.strong} />
           </Pressable>
-          {/* TODO(라우트): 설정 화면은 별도 티켓 — 구현되면 push 연결 */}
-          <Pressable>
+          <Pressable onPress={() => navigation.navigate("Settings")}>
             <Icon name="setting" size={28} color={colors.icon.strong} />
           </Pressable>
         </View>
