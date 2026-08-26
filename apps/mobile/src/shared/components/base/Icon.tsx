@@ -28,6 +28,7 @@ import Palette from "../../assets/icons/palette.svg";
 import Place from "../../assets/icons/place.svg";
 import Plus from "../../assets/icons/plus.svg";
 import Pray from "../../assets/icons/pray.svg";
+import Qr from "../../assets/icons/qr.svg";
 import Search from "../../assets/icons/search.svg";
 import SendFill from "../../assets/icons/send-fill.svg";
 import Setting from "../../assets/icons/setting.svg";
@@ -76,6 +77,7 @@ const ICONS = {
   place: Place,
   plus: Plus,
   pray: Pray,
+  qr: Qr,
   search: Search,
   "send-fill": SendFill,
   setting: Setting,

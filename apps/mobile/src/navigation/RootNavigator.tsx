@@ -11,9 +11,9 @@ import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeeting
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
+import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
-import { SermonScreen } from "../features/sermon/SermonScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
@@ -78,12 +78,13 @@ export function RootNavigator() {
             component={LiveScreen}
             options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
           />
-          {/* 말씀·오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
+          {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
-            name="Sermon"
-            component={SermonScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="말씀" /> }}
+            name="Qr"
+            component={QrScreen}
+            options={{ headerShown: true, header: () => <Header variant="sub" title="QR" /> }}
           />
+          {/* 오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
             name="Bulletin"
             component={BulletinScreen}

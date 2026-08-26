@@ -16,9 +16,6 @@ export function HomeScreen() {
       <Pressable onPress={() => navigation.navigate("Live")}>
         <Text className="text-body-main font-pretendard-semibold">실시간 예배 보기</Text>
       </Pressable>
-      <Pressable onPress={() => navigation.navigate("Sermon")}>
-        <Text className="text-body-main font-pretendard-semibold">말씀 보기</Text>
-      </Pressable>
       <Pressable onPress={() => navigation.navigate("Bulletin")}>
         <Text className="text-body-main font-pretendard-semibold">오늘 주보 보기</Text>
       </Pressable>

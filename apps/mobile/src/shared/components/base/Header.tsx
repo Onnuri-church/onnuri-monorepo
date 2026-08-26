@@ -71,6 +71,10 @@ export function Header(props: HeaderProps) {
             <Text className="text-caption-small text-text-alternative">온누리교회 청년부</Text>
           </View>
           <View className="flex-row items-center gap-4">
+            {/* QR은 하단 탭이 아니라 여기서 연다. 크기 24는 시안 값 — 벨·설정(28)과 다르다. */}
+            <Pressable onPress={() => navigation.navigate("Qr" as never)} hitSlop={8}>
+              <Icon name="qr" size={24} color={colors.icon.strong} />
+            </Pressable>
             <Pressable onPress={props.onPressNotification} hitSlop={8}>
               <Icon name="bell" size={28} color={colors.icon.strong} />
             </Pressable>
