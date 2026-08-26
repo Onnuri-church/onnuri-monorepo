@@ -2,10 +2,11 @@ import {KeyboardAvoidingView, ScrollView, View} from "react-native";
 import {useState} from "react";
 import {DateField, toDateString} from "../../shared/components/composed/DateField";
 import {Field} from "../../shared/components/base/Field";
-import {PhotoUploadBox} from "../../shared/components/base/PhotoUploadBox";
 import {TextAreaField} from "../../shared/components/base/TextAreaField";
 import {TextField} from "../../shared/components/base/TextField";
 import {Button} from "../../shared/components/base/Button";
+import {ImageUploadBoxSingle} from "../../shared/components/base/ImageUploadBoxSingle";
+import {ImageUploadBoxMultiple} from "../../shared/components/base/ImageUploadBoxMultiple";
 
 export function QtBoardWriteScreen () {
     const [selectDate, setSelectDate] = useState<string | null>(toDateString(new Date()))
@@ -13,7 +14,7 @@ export function QtBoardWriteScreen () {
     const [title, setTitle] = useState("")
     const [content, setContent] = useState("")
     const [backgroundPhotoUri, setBackgroundPhotoUri] = useState<string | null>(null)
-    const [bodyPhotoUri, setBodyPhotoUri] = useState<string | null>(null)
+    const [bodyPhotoUris, setBodyPhotoUris] = useState<string[]>([])
 
     const handleSubmitPress = () => {
 
@@ -32,39 +33,24 @@ export function QtBoardWriteScreen () {
                 >
                     <DateField label="날짜" placeholder="날짜를 입력해주세요" value={selectDate} onChange={setSelectDate}/>
 
-                    <View>
-                        <Field label="사진">
-                            <View className="flex-row items-start gap-4">
-                                <PhotoUploadBox
-                                    label="배경사진"
-                                    imageUri={backgroundPhotoUri}
-                                    onChange={setBackgroundPhotoUri}
-                                />
-                                <PhotoUploadBox
-                                    label="본문사진"
-                                    imageUri={bodyPhotoUri}
-                                    onChange={setBodyPhotoUri}
-                                />
-                            </View>
-                        </Field>
-                    </View>
+                    <Field label="배경사진">
+                        <ImageUploadBoxSingle imageUri={backgroundPhotoUri} onChange={setBackgroundPhotoUri}/>
+                    </Field>
 
-                    <View>
-                        <TextField label="말씀" placeholder="예) 룻기 1:8-10" value={verse} onChangeText={setVerse}/>
-                    </View>
+                    <Field label="본문사진(최대 5장)">
+                        <ImageUploadBoxMultiple imageUris={bodyPhotoUris} onChange={setBodyPhotoUris}/>
+                    </Field>
 
-                    <View>
-                        <TextField label="제목" placeholder="제목을 입력해주세요." value={title} onChangeText={setTitle}/>
-                    </View>
+                    <TextField label="말씀" placeholder="예) 룻기 1:8-10" value={verse} onChangeText={setVerse}/>
 
-                    <View>
-                        <TextAreaField
-                            label="내용"
-                            placeholder={"오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요."}
-                            value={content}
-                            onChangeText={setContent}
-                        />
-                    </View>
+                    <TextField label="제목" placeholder="제목을 입력해주세요." value={title} onChangeText={setTitle}/>
+
+                    <TextAreaField
+                        label="내용"
+                        placeholder={"오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요."}
+                        value={content}
+                        onChangeText={setContent}
+                    />
 
                     <View className="mt-16">
                         <Button label="등록하기" onPress={handleSubmitPress}/>
