@@ -35,6 +35,18 @@ export type RootStackParamList = {
   TeamStoryDetail: { teamId: string };
   // 팀 상세에서 "외 N명 더 보기"로 진입한다.
   TeamMemberList: { teamId: string };
+  // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
+  // 셀은 관리자가 만들고 종료하는 유동 데이터라 화면 하나가 cellId로 어떤 셀이든 그린다.
+  CellDetail: { cellId: string };
+  CellNewsDetail: { cellId: string; newsId: string };
+  CellNewsWrite: { cellId: string };
+  // 갤러리 사진 뷰어. index는 월 섹션을 이어붙인 평탄화 순번이다.
+  CellGalleryPhoto: { cellId: string; index: number };
+  // 관리 탭에서 진입하는 셀장·관리자 전용 화면들.
+  CellAttendance: { cellId: string };
+  FollowerNoteBoard: { cellId: string };
+  FollowerNoteWrite: { cellId: string };
+  FollowerNoteDetail: { cellId: string; noteId: string };
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —
