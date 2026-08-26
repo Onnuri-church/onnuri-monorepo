@@ -60,7 +60,10 @@ export function RootNavigator() {
           <Stack.Screen
             name="QtBoard"
             component={QtBoardScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="큐티나눔" rightAction="home" />,
+            }}
           />
           <Stack.Screen
               name="QtBoardWrite"
@@ -70,7 +73,8 @@ export function RootNavigator() {
           <Stack.Screen
             name="QtBoardDetail"
             component={QtBoardDetailScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+            // 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 글 작성자에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="BulletinDetail"
@@ -139,29 +143,21 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
             }}
           />
+          {/* 기도 목록 3개 화면은 PrayerMenu가 헤더를 단독 등록한다 (⋮ 메뉴 포함) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
             name="PrayerBoard"
             component={PrayerBoardScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="기도제목 게시판" />,
-            }}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="PrayerBookmarks"
             component={PrayerBookmarkScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="저장한 기도제목" />,
-            }}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="PrayerMine"
             component={MyPrayerScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="내 기도제목" />,
-            }}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="PrayerBoardDetail"
