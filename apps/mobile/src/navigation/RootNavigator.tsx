@@ -3,6 +3,15 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
+import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
+import { CellDetailScreen } from "../features/cell/CellDetailScreen";
+import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
+import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
+import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
+import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
+import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
+import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
+import { findCell } from "../features/cell/cells";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
@@ -196,6 +205,68 @@ export function RootNavigator() {
               headerShown: true,
               header: () => <Header variant="sub" title="팀원" rightAction="none" />,
             }}
+          />
+          {/* 헤더 타이틀이 셀 이름이라 목업에서 찾아 쓴다 (TeamStoryDetail과 같은 패턴).
+              셀 API가 생기면 화면에서 navigation.setOptions로 넘기는 쪽이 맞다. */}
+          <Stack.Screen
+            name="CellDetail"
+            component={CellDetailScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={findCell(route.params.cellId)?.name ?? "셀 페이지"}
+                  rightAction="home"
+                />
+              ),
+            })}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 권한에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="CellNewsDetail"
+            component={CellNewsDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="CellNewsWrite"
+            component={CellNewsWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="소식 글쓰기" rightAction="none" />,
+            }}
+          />
+          {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
+          <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
+          <Stack.Screen
+            name="CellAttendance"
+            component={CellAttendanceScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="출석 관리" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="FollowerNoteBoard"
+            component={FollowerNoteBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팔로워 노트" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="FollowerNoteWrite"
+            component={FollowerNoteWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팔로워 노트 작성" rightAction="none" />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (⋮ 항목이 내 글 여부에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="FollowerNoteDetail"
+            component={FollowerNoteDetailScreen}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="Settings"
