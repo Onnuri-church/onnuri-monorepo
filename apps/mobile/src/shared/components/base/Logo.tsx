@@ -1,6 +1,7 @@
 import { Image } from "react-native";
 
 import LogoHorizontal from "../../assets/logo/logo-horizontal.svg";
+import LogoHorizontalGreen from "../../assets/logo/logo-horizontal-green.svg";
 import WordmarkTitle from "../../assets/logo/wordmark-title.svg";
 
 // 색이 고정된 브랜드 자산들. 원본 비율(가로/세로)과 원본 크기를 여기 모아두고,
@@ -8,12 +9,16 @@ import WordmarkTitle from "../../assets/logo/wordmark-title.svg";
 // symbol만 PNG(1024×1024)라 Image로 그린다. SVG 버전을 받으면 여기만 바꾸면 된다.
 const VARIANTS = {
   horizontal: { ratio: 222 / 46, width: 222 },
+  "horizontal-green": { ratio: 144 / 30, width: 144 },
   symbol: { ratio: 1, width: 205 },
   wordmark: { ratio: 150 / 104, width: 150 },
 } as const;
 
 interface LogoProps {
-  /** horizontal: 가로형 로고 / symbol: 정사각 심볼 / wordmark: '말씀'으로 보내소서 타이틀 */
+  /**
+   * horizontal: 가로형 로고(흰색, 어두운 배경용) / horizontal-green: 가로형 로고(초록, 밝은 배경용)
+   * / symbol: 정사각 심볼 / wordmark: '말씀'으로 보내소서 타이틀
+   */
   variant?: keyof typeof VARIANTS;
   /** 가로 길이(px). 세로는 원본 비율로 계산된다. 기본값은 원본 크기. */
   width?: number;
@@ -36,7 +41,12 @@ export function Logo({ variant = "horizontal", width = VARIANTS[variant].width }
     );
   }
 
-  const Source = variant === "horizontal" ? LogoHorizontal : WordmarkTitle;
+  const Source =
+    variant === "horizontal"
+      ? LogoHorizontal
+      : variant === "horizontal-green"
+        ? LogoHorizontalGreen
+        : WordmarkTitle;
 
   return <Source width={width} height={height} />;
 }
