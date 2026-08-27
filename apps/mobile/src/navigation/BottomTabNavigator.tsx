@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { CellScreen } from "../features/cell/CellScreen";
 import { HomeScreen } from "../features/home/HomeScreen";
 import { MyPageScreen } from "../features/my-page/MyPageScreen";
-import { QrScreen } from "../features/qr/QrScreen";
+import { SermonScreen } from "../features/sermon/SermonScreen";
 import { TeamStoryScreen } from "../features/team-story/TeamStoryScreen";
 import { BottomNav, TAB_BAR_HEIGHT } from "../shared/components/base/BottomNav";
 import { Header } from "../shared/components/base/Header";
@@ -12,7 +12,7 @@ import type { RootTabParamList } from "../shared/types/navigation";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-// 기본 탭바 대신 BottomNav를 쓴다 — 가운데 QR 버튼이 탭바 위로 튀어나오고 배경/그림자도
+// 기본 탭바 대신 BottomNav를 쓴다 — 가운데 말씀 버튼이 탭바 위로 튀어나오고 배경/그림자도
 // 시안 값이라 기본 탭바 옵션으로는 맞출 수 없다. 라벨은 BottomNav가 여기 title에서 읽는다.
 export function BottomTabNavigator() {
   const insets = useSafeAreaInsets();
@@ -49,7 +49,7 @@ export function BottomTabNavigator() {
         }}
       />
       {/* 가운데 원형 버튼. 시안에 라벨이 없어서 title은 화면에 안 보이고 접근성 레이블로만 쓰인다. */}
-      <Tab.Screen name="Qr" component={QrScreen} options={{ title: "QR" }} />
+      <Tab.Screen name="Sermon" component={SermonScreen} options={{ title: "말씀" }} />
       {/* 전체 셀 목록도 main 헤더 대신 화면이 직접 그리는 가운데 타이틀을 쓴다 (시안).
           스크롤 숨김을 쓰는 화면이라 공통 하단 패딩을 끄고(sceneStyle 0) 화면이 스크롤
           콘텐츠 패딩으로 직접 확보한다 — 탭바가 숨으면 그 자리까지 콘텐츠가 차오르게. */}

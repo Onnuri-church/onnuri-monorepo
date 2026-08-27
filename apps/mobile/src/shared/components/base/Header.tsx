@@ -103,7 +103,11 @@ export function Header(props: HeaderProps) {
             <>
               <Logo variant="horizontal-green" />
               <View className="flex-row items-center gap-4">
-                <Pressable onPress={props.onPressQr} hitSlop={8}>
+                {/* QR은 하단 탭이 아니라 여기서 연다. 갈 곳이 정해져 있어 기본 동작을 준다. */}
+                <Pressable
+                  onPress={props.onPressQr ?? (() => navigation.navigate("Qr" as never))}
+                  hitSlop={8}
+                >
                   <Icon name="qr" size={23} color={colors.icon.strong} />
                 </Pressable>
                 <Pressable onPress={props.onPressNotification} hitSlop={8}>
