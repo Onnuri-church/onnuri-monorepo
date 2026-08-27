@@ -1,8 +1,18 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Pressable, StyleSheet, Text, useWindowDimensions, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  Text,
+  useWindowDimensions,
+  View,
+  type LayoutChangeEvent,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
+import { useTabBarStore } from "../../store/useTabBarStore";
 import { colors } from "../../theme/tokens";
 import type { RootTabParamList } from "../../types/navigation";
 import { Icon } from "./Icon";
@@ -49,9 +59,35 @@ function backgroundPath(width: number, height: number) {
   ].join(" ");
 }
 
+// 탭바 몸통 높이 (h-20, 홈 인디케이터 inset 제외). 탭바가 오버레이(absolute)라 레이아웃 자리를
+// 차지하지 않으므로, BottomTabNavigator가 이 값 + inset만큼 sceneStyle 하단 패딩을 넣어
+// 화면 콘텐츠가 탭바에 가리지 않게 한다.
+export const TAB_BAR_HEIGHT = 80;
+
 export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
+
+  // 스크롤 방향에 따라 탭바를 숨기고 되살린다 (useHideTabBarOnScroll을 쓰는 화면이 값을 바꾼다).
+  // 탭바는 레이아웃에 끼지 않는 오버레이(absolute)다 — 숨겨도 화면·스크롤 영역 크기가 변하지
+  // 않아야, 콘텐츠가 짧은 화면(마이페이지)에서도 숨긴 뒤 위로 스크롤해 복귀할 수 있다
+  // (레이아웃 참여형으로 만들면 숨는 순간 스크롤 여유가 사라져 탭바가 갇힌다).
+  // 화면들이 차지하던 자리는 BottomTabNavigator의 sceneStyle 하단 패딩이 대신 확보한다.
+  const hidden = useTabBarStore((s) => s.hidden);
+  const [barHeight, setBarHeight] = useState(0);
+  const hideProgress = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.timing(hideProgress, {
+      toValue: hidden ? 1 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [hidden, hideProgress]);
+
+  const handleBarLayout = (event: LayoutChangeEvent) => {
+    setBarHeight(event.nativeEvent.layout.height);
+  };
 
   const handleTabPress = (route: (typeof state.routes)[number], isFocused: boolean) => {
     const event = navigation.emit({
@@ -76,6 +112,22 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
     // 아래에 쌓으므로, 이게 없으면 투명한 위쪽 32까지 탭바 자리로 잡혀 콘텐츠가 보이는 탭바보다
     // 32 위에서 끝난다 (배경색 있는 화면이 오면 탭바 위에 띠가 생긴다). 되돌리면 콘텐츠가
     // 스트립 뒤까지 이어져서 box-none도 의도대로 동작한다. 말씀 버튼은 absolute라 영향이 없다.
+    // 바깥 Animated.View는 오버레이 배치와 숨김 애니메이션만 맡는다
+    // (NativeWind className을 못 받아서 style만 쓴다). transform이라 native driver로 돌린다.
+    // 말씀 버튼이 탭바 위로 튀어나온 만큼(CENTER_OVERHANG)을 더 내려야 초록 원까지 완전히 사라진다.
+    <Animated.View
+      pointerEvents="box-none"
+      onLayout={handleBarLayout}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        bottom: 0,
+        transform: [
+          { translateY: Animated.multiply(hideProgress, barHeight + CENTER_OVERHANG) },
+        ],
+      }}
+    >
     <View
       pointerEvents="box-none"
       style={{ paddingTop: CENTER_OVERHANG, marginTop: -CENTER_OVERHANG }}
@@ -149,5 +201,6 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
         </View>
       ) : null}
     </View>
+    </Animated.View>
   );
 }
