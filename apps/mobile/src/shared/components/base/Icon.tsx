@@ -10,6 +10,7 @@ import BoxFill from "../../assets/icons/box-fill.svg";
 import Calendar from "../../assets/icons/calendar.svg";
 import Card from "../../assets/icons/card.svg";
 import Chat from "../../assets/icons/chat.svg";
+import Check from "../../assets/icons/check.svg";
 import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
 import Edit from "../../assets/icons/edit.svg";
@@ -20,6 +21,7 @@ import EyeOff from "../../assets/icons/eye-off.svg";
 import FavoriteLight from "../../assets/icons/favorite-light.svg";
 import Home from "../../assets/icons/home.svg";
 import Jubo from "../../assets/icons/jubo.svg";
+import Lock from "../../assets/icons/lock.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
@@ -58,6 +60,7 @@ const ICONS = {
   calendar: Calendar,
   card: Card,
   chat: Chat,
+  check: Check,
   "close-square": CloseSquare,
   "comment-light": CommentLight,
   edit: Edit,
@@ -69,6 +72,7 @@ const ICONS = {
   "favorite-light": FavoriteLight,
   home: Home,
   jubo: Jubo,
+  lock: Lock,
   "media-strip": MediaStrip,
   more: More,
   "nav-home": NavHome,

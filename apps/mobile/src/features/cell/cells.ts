@@ -10,6 +10,11 @@ export interface Cell {
 
 export const MY_CELL_ID = "nuri";
 
+// 개별 셀 페이지가 라우트 param(cellId)으로 셀 정보를 찾을 때 쓴다 (팀스토리의 findTeam과 같은 패턴).
+export function findCell(id: string): Cell | undefined {
+  return CELLS.find((cell) => cell.id === id);
+}
+
 export const CELLS: Cell[] = [
   { id: "nuri", name: "누리셀", leaderName: "이서연", viceLeaderName: "김민준" },
   { id: "beomjun", name: "범준셀", leaderName: "김범준", viceLeaderName: null },

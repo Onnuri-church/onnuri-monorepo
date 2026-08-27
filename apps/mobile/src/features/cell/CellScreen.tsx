@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -5,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { CELLS, MY_CELL_ID } from "./cells";
 import { CellListRow } from "./components/CellListRow";
 
@@ -13,6 +16,7 @@ import { CellListRow } from "./components/CellListRow";
 // 개별 셀 페이지부터는 루트 스택 push라 탭바가 없다.
 export function CellScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [query, setQuery] = useState("");
 
@@ -42,8 +46,11 @@ export function CellScreen() {
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
         renderItem={({ item }) => (
-          // TODO(라우트): 개별 셀 페이지(소식/갤러리/구성원/관리)는 별도 티켓 — 화면이 생기면 연결
-          <CellListRow cell={item} isMyCell={item.id === MY_CELL_ID} />
+          <CellListRow
+            cell={item}
+            isMyCell={item.id === MY_CELL_ID}
+            onPress={() => navigation.navigate("CellDetail", { cellId: item.id })}
+          />
         )}
         ListEmptyComponent={
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
