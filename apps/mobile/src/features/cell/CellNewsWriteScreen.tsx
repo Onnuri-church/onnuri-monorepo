@@ -1,9 +1,9 @@
 import { useState } from "react";
-import { KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
+import { KeyboardAvoidingView, ScrollView, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
-import { PhotoUploadBox } from "../../shared/components/base/PhotoUploadBox";
+import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUploadBoxMultiple";
 import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
@@ -16,15 +16,6 @@ export function CellNewsWriteScreen() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-
-  const handlePhotoChange = (index: number) => (uri: string | null) =>
-    setPhotoUris((prev) =>
-      uri === null ? prev.filter((_, i) => i !== index) : prev.map((p, i) => (i === index ? uri : p)),
-    );
-
-  const handlePhotoAdd = (uri: string | null) => {
-    if (uri) setPhotoUris((prev) => [...prev, uri]);
-  };
 
   const handleSubmitPress = () => {
     // TODO(API): 등록 연동 전 — 입력 검증까지만 동작한다.
@@ -47,24 +38,11 @@ export function CellNewsWriteScreen() {
 
           <View>
             <Field label={`사진(최대 ${MAX_PHOTOS}장)`}>
-              {/* 시안은 173px 슬롯 가로 스크롤 — 스케일에 없는 값이라 176(w-44)으로 근사 */}
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View className="flex-row gap-4">
-                  {photoUris.map((uri, index) => (
-                    <View key={uri} className="w-44">
-                      <PhotoUploadBox imageUri={uri} onChange={handlePhotoChange(index)} />
-                    </View>
-                  ))}
-                  {photoUris.length < MAX_PHOTOS && (
-                    <View className="w-44">
-                      <PhotoUploadBox label="추가" onChange={handlePhotoAdd} />
-                    </View>
-                  )}
-                </View>
-              </ScrollView>
-              <Text className="mt-2 text-body-small text-text-alternative">
-                {photoUris.length}/{MAX_PHOTOS}장
-              </Text>
+              <ImageUploadBoxMultiple
+                imageUris={photoUris}
+                onChange={setPhotoUris}
+                maxCount={MAX_PHOTOS}
+              />
             </Field>
           </View>
 
