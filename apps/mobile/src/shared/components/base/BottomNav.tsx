@@ -133,6 +133,8 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
       style={{ paddingTop: CENTER_OVERHANG, marginTop: -CENTER_OVERHANG }}
     >
       <View
+        // 배경색(bg-*) 없이 shadow-nav만 둔다. iOS는 배경색이 없으면 내용의 알파로 그림자를
+        // 계산하므로 아래 SVG의 뚫린 모양을 그대로 따라간다 — bg-*를 넣으면 사각형 그림자가 된다.
         className="shadow-nav"
         // 시안의 배경이 탭바(80)보다 12 더 내려와 있는 건 홈 인디케이터 영역이다 — 고정값 대신 inset으로 받는다.
         style={{ paddingBottom: insets.bottom }}
@@ -166,6 +168,8 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 accessibilityState={{ selected: isFocused }}
                 className="flex-1 items-center justify-center gap-2"
               >
+                {/* 활성/비활성은 색만 바꾼다. 탭별 활성 전용 아이콘은 없다 — 홈이 채워 보이는 건
+                    nav-home 원본이 원래 채운 그림이기 때문이지 활성 상태 표현이 아니다. */}
                 <Icon
                   name={icon.name}
                   size={icon.size}

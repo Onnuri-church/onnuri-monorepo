@@ -2,6 +2,12 @@
 
 백엔드(NestJS) 작업 전용 규칙. 공통 규칙은 루트 [AGENTS.md](../../AGENTS.md), 시스템 구조는 [ARCHITECTURE.md](../../ARCHITECTURE.md)를 먼저 본다.
 
+## 로컬 세팅
+
+1. `apps/api/.env.example`을 복사해 `apps/api/.env` 생성 후 값 채우기
+2. 로컬 Postgres 준비 — **아직 팀 차원에서 정해진 방법이 없음** (지금은 프론트 작업이 우선이라 보류 중. API 작업 착수 전 담당자가 방법을 정하고 이 항목을 갱신할 것)
+3. `prisma:migrate` → `prisma:generate` → `start:dev` 순으로 실행
+
 ## 도메인 모듈 만들 때
 
 ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Service` + `dto/`만 쓰고 `Repository`/`Domain` 레이어를 새로 만들지 않는다 (Clean/Hexagonal을 기각한 결정과 일관되게 유지). Service가 `PrismaService`를 직접 쓴다.

@@ -111,6 +111,12 @@ apps/mobile/src/
 
 스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-video`(영상 기능 착수 시 설치)/`react-native-image-zoom-viewer`/`react-native-webview`.
 
+## Media Layer
+
+* 말씀 영상 재생(`expo-video`), 주보 핀치 줌(`react-native-image-zoom-viewer`), 라이브 스트림(`react-native-webview`)은 각각 성격이 다른 네이티브 레이어이므로 공통 wrapper로 억지로 통합하지 않는다. 각 라이브러리의 기본 API를 그대로 노출하는 얇은 wrapper만 둔다.
+* 라이브 스트림 WebView는 일요일 방송 시간 여부에 따라 렌더 분기(스트림 vs 안내 화면)한다 — 분기 로직은 화면 컴포넌트가 아니라 상위 훅(`useLiveServiceStatus` 등)에서 처리하고 화면은 상태만 받아 렌더링한다.
+* 영상/이미지 로딩·에러 상태(버퍼링, 로드 실패, 빈 데이터)는 별도 확인 없이 스켈레톤/에러 placeholder로 처리 가능하나, 해당 상태의 컬러·사이즈는 [DESIGN.md](apps/mobile/DESIGN.md)의 컬러/사이즈 규칙을 동일하게 따른다.
+
 ## Access Model
 
 지금은 두 등급이다: **`Guest`**(로그인 없이 둘러보기) vs **`User`**(JWT 인증 완료). `Partner`/`Admin` 같은 별도 등급은 아직 없다 — README의 "임원 회의 사항"(유저 등급, 어드민 계정)은 향후 스코프이며 지금 코드에 반영돼 있지 않다.

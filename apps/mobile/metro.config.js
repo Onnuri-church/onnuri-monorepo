@@ -16,4 +16,7 @@ config.transformer.babelTransformerPath = require.resolve("react-native-svg-tran
 config.resolver.assetExts = config.resolver.assetExts.filter((ext) => ext !== "svg");
 config.resolver.sourceExts = [...config.resolver.sourceExts, "svg"];
 
+// inlineRem은 Tailwind 스케일(rem 기반, `1` = `0.25rem`)을 px로 환산하는 기준이다. NativeWind
+// 기본값은 14(= RN 기본 폰트 크기)라 그대로 두면 한 칸이 3.5px이 되므로, 웹과 같은 16으로 맞춰
+// 한 칸 = 4px을 보장한다. 바꾸면 앱 전체의 여백·사이즈가 한꺼번에 움직인다.
 module.exports = withNativeWind(config, { input: "./global.css", inlineRem: 16 });
