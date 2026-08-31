@@ -23,6 +23,7 @@ import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
+import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
@@ -175,6 +176,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="기도제목" rightAction="bookmark" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerWrite"
+            component={PrayerWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="기도제목 작성하기" rightAction="none" />,
             }}
           />
 

@@ -72,7 +72,7 @@ export function PrayerBoardScreen() {
         </View>
       </ScrollView>
 
-      <FloatingButton onPress={() => undefined}>
+      <FloatingButton onPress={() => navigation.navigate("PrayerWrite")}>
         <Icon name="write" size={24} color={colors.icon.disable} />
       </FloatingButton>
 
