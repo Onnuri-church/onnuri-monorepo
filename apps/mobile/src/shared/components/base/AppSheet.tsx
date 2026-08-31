@@ -7,7 +7,7 @@ import {
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import { type ReactNode, forwardRef, useCallback, useImperativeHandle, useRef } from "react";
-import { useWindowDimensions } from "react-native";
+import { View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "../../theme/tokens";
@@ -38,17 +38,34 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
   ref,
 ) {
   const modalRef = useRef<BottomSheetModal>(null);
+  // 열려 있어야 하는 상태인지. 아래 handleContentLayout의 보정이 닫히는 중에 시트를
+  // 도로 열지 않도록 present/dismiss 시점을 기억한다.
+  const presentedRef = useRef(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
   useImperativeHandle(
     ref,
     () => ({
-      open: () => modalRef.current?.present(),
-      close: () => modalRef.current?.dismiss(),
+      open: () => {
+        presentedRef.current = true;
+        modalRef.current?.present();
+      },
+      close: () => {
+        presentedRef.current = false;
+        modalRef.current?.dismiss();
+      },
     }),
     [],
   );
+
+  // dynamic sizing은 present 시점에 콘텐츠 높이 측정이 안 끝나 있으면 시트가 닫힘 위치에
+  // 그대로 머무는 레이스가 있다(gorhom/react-native-bottom-sheet#2126 — 5.2.14 기준 미해결).
+  // 측정이 끝난 시점(onLayout)에 열림 위치로 한 번 더 보내서 보정한다. 이미 열려 있으면
+  // 같은 자리라 no-op이고, 닫히는 중에는 presentedRef가 꺼져 있어 아무것도 안 한다.
+  const handleContentLayout = () => {
+    if (presentedRef.current) modalRef.current?.snapToIndex(0);
+  };
 
   const renderBackdrop = useCallback(
     (props: BottomSheetBackdropProps) => (
@@ -70,6 +87,10 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
   return (
     <BottomSheetModal
       ref={modalRef}
+      // 백드롭 탭·아래로 끌기처럼 close()를 거치지 않는 닫힘도 presentedRef를 꺼야 한다.
+      onDismiss={() => {
+        presentedRef.current = false;
+      }}
       maxDynamicContentSize={height * MAX_HEIGHT_RATIO}
       backdropComponent={renderBackdrop}
       footerComponent={footer ? renderFooter : undefined}
@@ -91,7 +112,7 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
         enableFooterMarginAdjustment
         contentContainerStyle={{ paddingBottom: insets.bottom }}
       >
-        {children}
+        <View onLayout={handleContentLayout}>{children}</View>
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
