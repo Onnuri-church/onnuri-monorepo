@@ -12,8 +12,11 @@ export interface PrayerRequest {
   authorName: string;
   category: string;
   title: string;
-  /** 표시용 문자열 (예: "작성일 2026.08.03") */
-  createdAtLabel: string;
+  /**
+   * 표시용 문자열 (예: "작성일 2026.08.03"). 안 주면 날짜 줄을 통째로 그리지 않는다 —
+   * 홈 화면은 그 자리에 카드 위로 페이지 인디케이터를 얹는다.
+   */
+  createdAtLabel?: string;
   /** 남은 기간 (예: "D-2"). 없으면 표시하지 않는다 */
   ddayLabel?: string | null;
   bookmarked?: boolean;
@@ -78,22 +81,24 @@ export function PrayerCard({
         {prayer.title}
       </Text>
 
-      <View className="mt-2.5 flex-row items-center gap-2.5">
-        <Text
-          className="text-caption-main text-text-alternative"
-          style={{ lineHeight: CAPTION_LINE }}
-        >
-          {prayer.createdAtLabel}
-        </Text>
-        {prayer.ddayLabel && (
+      {prayer.createdAtLabel && (
+        <View className="mt-2.5 flex-row items-center gap-2.5">
           <Text
-            className="text-caption-main text-semantic-danger"
+            className="text-caption-main text-text-alternative"
             style={{ lineHeight: CAPTION_LINE }}
           >
-            {prayer.ddayLabel}
+            {prayer.createdAtLabel}
           </Text>
-        )}
-      </View>
+          {prayer.ddayLabel && (
+            <Text
+              className="text-caption-main text-semantic-danger"
+              style={{ lineHeight: CAPTION_LINE }}
+            >
+              {prayer.ddayLabel}
+            </Text>
+          )}
+        </View>
+      )}
 
       {/* 북마크는 카드 우상단에 겹친다 — 카드 전체 탭(상세 이동)과 동작이 달라 별도 Pressable이다.
           절대 위치 기준이 테두리 안쪽이라, 카드 끝에서 상 10·우 14가 되도록 9·13을 준다. */}
