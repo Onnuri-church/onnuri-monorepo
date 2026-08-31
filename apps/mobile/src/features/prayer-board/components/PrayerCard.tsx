@@ -27,6 +27,8 @@ interface PrayerCardProps {
   showBookmark?: boolean;
   /** 수정 모드. 카드 아래에 구분선 + 수정/삭제 줄이 붙고 카드가 그만큼 높아진다. */
   editing?: boolean;
+  /** 수정 모드에서 삭제만 보여준다 — 관리자 게시판은 남의 글이라 수정이 없다. */
+  deleteOnly?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -51,6 +53,7 @@ export function PrayerCard({
   onToggleBookmark,
   showBookmark,
   editing,
+  deleteOnly,
   onEdit,
   onDelete,
 }: PrayerCardProps) {
@@ -117,19 +120,21 @@ export function PrayerCard({
         <View className="-mx-4 -mb-4 mt-auto">
           <View className="h-px bg-background-assistive" />
           <View className="flex-row items-center gap-6 px-4" style={{ height: ACTION_ROW_HEIGHT }}>
-            <Pressable
-              className="flex-row items-center gap-1 active:opacity-60"
-              onPress={onEdit}
-              hitSlop={8}
-            >
-              <Icon name="edit" size={16} color={colors.icon.normal} />
-              <Text
-                className="text-caption-main text-text-alternative"
-                style={{ lineHeight: CAPTION_LINE }}
+            {!deleteOnly && (
+              <Pressable
+                className="flex-row items-center gap-1 active:opacity-60"
+                onPress={onEdit}
+                hitSlop={8}
               >
-                수정
-              </Text>
-            </Pressable>
+                <Icon name="edit" size={16} color={colors.icon.normal} />
+                <Text
+                  className="text-caption-main text-text-alternative"
+                  style={{ lineHeight: CAPTION_LINE }}
+                >
+                  수정
+                </Text>
+              </Pressable>
+            )}
             <Pressable
               className="flex-row items-center gap-1 active:opacity-60"
               onPress={onDelete}

@@ -1,3 +1,4 @@
+import type { UserRole } from "../my-page/types";
 import type { PrayerRequest } from "./components/PrayerCard";
 
 // API 연동 전 임시 데이터. 서버를 따로 띄우지 않아도 화면을 확인할 수 있게 앱 안에서 돌려준다
@@ -13,6 +14,11 @@ export const PRAYER_CATEGORIES = [
 ] as const;
 
 export type PrayerCategory = (typeof PRAYER_CATEGORIES)[number]["value"];
+
+// 내 등급 목업 — cellDetail의 MOCK_MY_ROLE과 같은 임시 값이다. "admin"으로 바꾸면 
+// 게시판이 관리자용(작성자 실명 표시·카드 삭제 줄)으로 보인다. 유저 정보 연동 시 함께 정리.
+// 등급 member가 기본 값임
+export const MOCK_MY_ROLE: UserRole = "member";
 
 interface PrayerListResult {
   /** 화면 상단 문구에 쓰는 전체 등록 수 (필터와 무관한 총계) */
@@ -60,6 +66,16 @@ export async function fetchPrayers(category: PrayerCategory): Promise<PrayerList
   const items =
     category === "all" ? MOCK_PRAYERS : MOCK_PRAYERS.filter((p) => p.category_key === category);
   return { totalCount: 128, items: items.map(withBookmark) };
+}
+
+// 관리자에게는 익명 글도 실제 작성자가 붙은 문구가 내려온다 (예: "익명(김민준)").
+// 표시 문구 조립은 서버 몫이라(익명 여부 판단 포함) 여기서도 완성된 문자열로 바꿔치기만 한다.
+export async function fetchPrayersForAdmin(category: PrayerCategory): Promise<PrayerListResult> {
+  const result = await fetchPrayers(category);
+  return {
+    ...result,
+    items: result.items.map((prayer) => ({ ...prayer, authorName: `${prayer.authorName}(김민준)` })),
+  };
 }
 
 // 저장한 기도제목 = 내가 북마크한 것만. 지금은 목업 배열의 bookmarked 플래그로 거른다.
