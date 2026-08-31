@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
@@ -8,7 +11,8 @@ import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { SelectField } from "../../shared/components/composed/SelectField";
-import { PRAYER_CATEGORIES } from "./api";
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { PRAYER_CATEGORIES, fetchPrayerDetail } from "./api";
 
 // 카테고리 선택지는 목록 필터와 같은 소스를 쓰되 "전체"만 뺀다 — 글에 "전체"를 달 수는 없다.
 const WRITE_CATEGORIES = PRAYER_CATEGORIES.filter((category) => category.value !== "all").map(
@@ -21,12 +25,30 @@ const PERIOD_OPTIONS = ["1주일", "2주일", "1개월", "직접설정"];
 
 // 기도제목 작성하기 (시안 402pt 프레임: 익명 토글 → 기도제목 → 카테고리 → 공개기간 → 사진 → 내용 → 등록).
 export function PrayerWriteScreen() {
+  const route = useRoute<RouteProp<RootStackParamList, "PrayerWrite">>();
+  // id가 있으면 수정 모드 — 기존 글을 불러와 필드를 채운 채 시작한다.
+  const editingId = route.params?.id;
+
   const [anonymous, setAnonymous] = useState(true);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [period, setPeriod] = useState<string | null>(null);
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [content, setContent] = useState("");
+
+  const { data: editingPrayer } = useQuery({
+    queryKey: ["prayerDetail", editingId],
+    queryFn: () => fetchPrayerDetail(editingId as string),
+    enabled: editingId !== undefined,
+  });
+
+  // 수정 모드 프리필. 익명 여부·공개기간·사진은 목업 상세에 없어 못 채운다 — API 연동 시 채운다.
+  useEffect(() => {
+    if (!editingPrayer) return;
+    setTitle(editingPrayer.title);
+    setCategory(editingPrayer.category);
+    setContent(editingPrayer.content);
+  }, [editingPrayer]);
 
   const handleSubmitPress = () => {
     // TODO(API): 등록 연동 전 — 입력 검증까지만 동작한다.
