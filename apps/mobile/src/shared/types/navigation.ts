@@ -16,6 +16,8 @@ export type RootStackParamList = {
   QtBoardWrite: undefined;
   Live: undefined;
   Qr: undefined;
+  // 말씀 탭에서 카드를 눌러 들어가는 설교영상 상세. 탭 밖으로 push된다.
+  SermonDetail: { id: string };
   Bulletin: undefined;
   DepartmentActivity: undefined;
   DepartmentActivityDetail: { id: string };
