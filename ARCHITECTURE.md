@@ -56,6 +56,17 @@ onnuri-monorepo/
 * 환경변수는 부팅 시 `config/env.validation.ts`가 검증한다. 코드에 기본값을 두지 않으므로 `.env`가 단일 소스다.
 * 환경변수는 `ConfigService`를 쓴다. `env()`는 검증 결과를 `configuration.ts`로 넘기는 다리라 호출처는 그 파일 하나뿐이다.
 * 점 표기에는 `{ infer: true }`가 필요하다 — `config.get('jwt.accessSecret', { infer: true })`.
+* 예외는 `src/instrument.ts` 하나뿐이다 — ConfigModule보다 먼저 실행돼야 해서 `dotenv`로 `.env`를 직접 읽고 `process.env`를 쓴다. 다른 곳에서 이 방식을 따라하지 않는다.
+
+## Observability
+
+에러 추적은 **Sentry**(`@sentry/nestjs`)를 쓴다. 지금은 `apps/api`만 계측돼 있고 `apps/mobile`은 아직 붙이지 않았다.
+
+* `src/instrument.ts`가 `main.ts` 최상단에서 import된다. Sentry는 다른 모듈보다 먼저 초기화돼야 하므로 이 import는 항상 첫 줄이어야 한다.
+* `SENTRY_DSN`이 비어 있으면 SDK가 비활성으로 동작한다 — 로컬 개발 기본값이며, DSN 없이도 서버는 정상 기동한다.
+* **에러 모니터링만 켜져 있다.** Tracing·Profiling·Logs는 별도 쿼터를 소모해 무료 한도를 빠르게 태우므로 의도적으로 껐다. 필요해지면 그때 켠다.
+* `sendDefaultPii: false` — 성도 개인정보가 에러 리포트에 실려 나가지 않게 하려는 의도적 설정이다. 켜기 전에 반드시 논의한다.
+* `SentryGlobalFilter`를 `APP_FILTER`로 등록하지만, 이건 `BaseExceptionFilter`를 상속해 `super.catch()`로 위임하므로 **HTTP 응답 모양을 바꾸지 않는다** (`apps/api/AGENTS.md`의 "커스텀 전역 ExceptionFilter 금지"와 충돌하지 않는 이유). 4xx `HttpException`은 Sentry로 보내지 않고 걸러진다.
 
 ## Backend Module Shape
 

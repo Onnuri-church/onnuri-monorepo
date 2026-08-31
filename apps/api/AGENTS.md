@@ -20,6 +20,7 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 
 - 컨트롤러는 서비스 반환값을 가공 없이 그대로 반환한다 (`{success, data}` 같은 공통 envelope로 감싸지 않는다). `packages/shared`에 그런 envelope 타입을 새로 만들지 않는다 — 이전에 있던 미사용 `ApiResponse`/`ApiError` 타입도 이 이유로 제거함.
 - 에러는 NestJS 기본 예외 처리를 그대로 쓴다: 입력 검증 실패는 `class-validator` + `ValidationPipe`가 자동으로 400을 반환하고, 그 외 실패는 `UnauthorizedException` 등 Nest 내장 `HttpException` 계열을 던진다. 커스텀 전역 `ExceptionFilter`로 에러 모양을 새로 정의하지 않는다.
+  - `app.module.ts`에 등록된 `SentryGlobalFilter`는 이 규칙의 예외가 아니다 — 에러를 Sentry로 보내기만 하고 `super.catch()`로 Nest 기본 처리에 위임해서 응답 모양을 건드리지 않는다. **제거하면 에러가 Sentry에 안 잡히므로 지우지 않는다** (자세한 내용은 ARCHITECTURE.md "Observability").
 - 응답 모양을 바꿔야 할 필요가 생기면(예: 페이지네이션에 `packages/shared`의 `PaginatedResult` 사용) 이 문서와 함께 갱신한다.
 
 ## 테스트
