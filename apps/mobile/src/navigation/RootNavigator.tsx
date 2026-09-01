@@ -238,16 +238,8 @@ export function RootNavigator() {
           <Stack.Screen
             name="TeamStoryGallery"
             component={TeamStoryGalleryScreen}
-            options={({ route }) => ({
-              headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title={`${findTeam(route.params.teamId)?.name ?? "팀"} 갤러리`}
-                  rightAction="none"
-                />
-              ),
-            })}
+            // 헤더는 화면이 단독 등록한다 (우측 버튼 문구가 선택 모드에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
           />
           {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
           <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
