@@ -13,7 +13,9 @@ import Chat from "../../assets/icons/chat.svg";
 import Check from "../../assets/icons/check.svg";
 import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
+import Crosshair from "../../assets/icons/crosshair.svg";
 import Edit from "../../assets/icons/edit.svg";
+import Error from "../../assets/icons/error.svg";
 import Expand from "../../assets/icons/expand.svg";
 import ExpandRight from "../../assets/icons/expand-right.svg";
 import Export from "../../assets/icons/export.svg";
@@ -42,6 +44,7 @@ import User from "../../assets/icons/user.svg";
 import Video from "../../assets/icons/video.svg";
 import VideoOn from "../../assets/icons/video-on.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
+import Warning from "../../assets/icons/warning.svg";
 import Write from "../../assets/icons/write.svg";
 import { colors } from "../../theme/tokens";
 
@@ -64,7 +67,10 @@ const ICONS = {
   check: Check,
   "close-square": CloseSquare,
   "comment-light": CommentLight,
+  // QR 스캔 화면의 사각 조준 프레임. 아이콘치고 크지만(266) 벡터라 여기서 같이 관리한다.
+  crosshair: Crosshair,
   edit: Edit,
+  error: Error,
   expand: Expand,
   // expand의 좌우 반전. 원본이 같은 벡터라 Figma도 scaleX(-1)로 쓰고 있다.
   "expand-right": ExpandRight,
@@ -94,6 +100,7 @@ const ICONS = {
   video: Video,
   "video-on": VideoOn,
   "view-light": ViewLight,
+  warning: Warning,
   write: Write,
 } as const;
 
