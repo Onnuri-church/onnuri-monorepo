@@ -32,6 +32,8 @@ export type RootStackParamList = {
   // 딥링크·화면 로그가 둘을 구분할 수 있다. 같은 부분은 shared의 ImagePager가 갖고 있다.
   BulletinDetail: { id: string };
   SharingSheet: { id: string };
+  // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
+  BulletinWrite: undefined;
   TeamStoryDetail: { teamId: string };
   // 팀 상세에서 "외 N명 더 보기"로 진입한다.
   TeamMemberList: { teamId: string };
