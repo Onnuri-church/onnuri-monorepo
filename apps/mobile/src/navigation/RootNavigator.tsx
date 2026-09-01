@@ -134,7 +134,8 @@ export function RootNavigator() {
           <Stack.Screen
             name="Qr"
             component={QrScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="QR" /> }}
+            // 검은 배경에 흰 타이틀이라 화면이 헤더까지 직접 그린다 (사진 뷰어와 같은 처리).
+            options={{ headerShown: false }}
           />
           {/* 오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
