@@ -96,6 +96,7 @@ export function PrayerFilterList({
             editing={editing}
             onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
             onToggleBookmark={() => toggleBookmark(prayer.id)}
+            onEdit={() => navigation.navigate("PrayerWrite", { id: prayer.id })}
             onDelete={() => askDelete(prayer)}
           />
         ))}

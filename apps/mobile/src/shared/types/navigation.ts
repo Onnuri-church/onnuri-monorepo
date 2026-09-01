@@ -28,6 +28,8 @@ export type RootStackParamList = {
   PrayerBookmarks: undefined;
   PrayerMine: undefined;
   PrayerBoardDetail: { id: string };
+  // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (내 기도제목의 수정 버튼에서 진입).
+  PrayerWrite: { id: string } | undefined;
   // 주보와 나눔지는 화면이 같지만 라우트는 나눈다 — 이름이 무엇을 여는지 그대로 말해야
   // 딥링크·화면 로그가 둘을 구분할 수 있다. 같은 부분은 shared의 ImagePager가 갖고 있다.
   BulletinDetail: { id: string };
