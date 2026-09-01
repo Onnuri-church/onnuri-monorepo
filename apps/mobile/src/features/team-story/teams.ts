@@ -87,6 +87,11 @@ function makePhotos(prefix: string, count: number): GalleryPhoto[] {
   }));
 }
 
+// 업로드한 사진도 목업 설명을 그대로 쓴다 — 실제 값은 업로드 API가 내려준다.
+export function makeUploadedPhoto(uri: string): GalleryPhoto {
+  return { id: uri, url: uri, title: PHOTO_TITLE, meta: PHOTO_META };
+}
+
 export function findPhotoIndex(photoId: string) {
   return TEAM_PHOTO_GROUPS.flatMap((group) => group.photos).findIndex(
     (photo) => photo.id === photoId,
