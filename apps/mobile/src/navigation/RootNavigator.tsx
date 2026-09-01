@@ -29,6 +29,7 @@ import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
+import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
@@ -101,6 +102,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="나눔지" rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
+            name="SermonDetail"
+            component={SermonDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="" rightAction="none" />,
             }}
           />
           <Stack.Screen

@@ -16,6 +16,7 @@ const colors = {
   // 용도가 다른 별개 토큰이라 그대로 두고, 한쪽 값이 바뀌면 다른 쪽은 따라가지 않는다.
   background: {
     normal: "#FFFFFF",
+    page: "#FBFBFB",
     alternative: "#EFF7F3",
     assistive: "#D9D9D9",
     muted: "#ECECEC",
