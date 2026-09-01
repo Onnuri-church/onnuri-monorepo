@@ -30,6 +30,7 @@ export function TeamMemberAdminScreen() {
 
   const handleDeleteConfirm = () => {
     // TODO(API): 팀원 삭제 연동 전 — 팝업 흐름까지만 동작한다.
+    deleteDialogRef.current?.close();
   };
 
   return (

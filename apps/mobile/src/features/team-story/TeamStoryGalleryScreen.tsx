@@ -63,6 +63,7 @@ export function TeamStoryGalleryScreen() {
       })),
     );
     setSelectedIds([]);
+    deleteDialogRef.current?.close();
   };
 
   // 우측 버튼 문구가 선택 모드에 따라 바뀌므로 화면이 헤더를 단독 등록한다 (QtBoardDetail 패턴).

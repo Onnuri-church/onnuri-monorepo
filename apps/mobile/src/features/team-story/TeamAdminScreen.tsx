@@ -24,6 +24,7 @@ export function TeamAdminScreen() {
 
   const handleDeleteConfirm = () => {
     // TODO(API): 팀 삭제 연동 전 — 팝업 흐름까지만 동작한다.
+    deleteDialogRef.current?.close();
   };
 
   return (
