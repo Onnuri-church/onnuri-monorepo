@@ -1,9 +1,13 @@
 import { Pressable, Text, View } from "react-native";
+import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
 
 type IconName = React.ComponentProps<typeof Icon>["name"];
+
+// 스와이프해서 드러나는 영역의 폭. 시안(402pt 프레임)에서 행이 밀려난 만큼이다.
+const ACTION_WIDTH = 112;
 
 interface TeamListItemProps {
   name: string;
@@ -11,7 +15,10 @@ interface TeamListItemProps {
   /** 팀 아이콘. 디자인 export 전까지는 비워두고 회색 원만 그린다. */
   icon?: IconName;
   onPress?: () => void;
-  /** 관리 화면에서만 넘긴다. 주면 화살표 옆에 편집·삭제 버튼이 붙는다. */
+  /**
+   * 관리 화면에서만 넘긴다. 주면 행을 왼쪽으로 밀었을 때 편집·삭제 버튼이 드러난다.
+   * 둘 다 없으면 스와이프 없이 평범한 행이다 (팀스토리 목록).
+   */
   onEditPress?: () => void;
   onDeletePress?: () => void;
 }
@@ -27,9 +34,9 @@ export function TeamListItem({
   onEditPress,
   onDeletePress,
 }: TeamListItemProps) {
-  return (
+  const row = (
     <Pressable
-      className="flex-row items-center gap-4 border-b border-text-assistive py-4"
+      className="flex-row items-center gap-4 border-b border-text-assistive bg-background-normal py-4"
       onPress={onPress}
     >
       <View className="h-12 w-12 items-center justify-center rounded-full bg-text-assistive">
@@ -40,16 +47,49 @@ export function TeamListItem({
         <Text className="text-body-small text-text-neutral">{description}</Text>
       </View>
       <Icon name="expand-right" size={28} />
-      {onEditPress && (
-        <Pressable onPress={onEditPress} hitSlop={8}>
-          <Icon name="edit" size={24} color={colors.icon.strong} />
-        </Pressable>
-      )}
-      {onDeletePress && (
-        <Pressable onPress={onDeletePress} hitSlop={8}>
-          <Icon name="trash-can" size={24} color={colors.semantic.danger} />
-        </Pressable>
-      )}
     </Pressable>
+  );
+
+  if (!onEditPress && !onDeletePress) {
+    return row;
+  }
+
+  return (
+    <ReanimatedSwipeable
+      // 버튼이 다 드러나기 전에 튕겨 나가지 않도록 임계값을 영역의 절반으로 둔다.
+      rightThreshold={ACTION_WIDTH / 2}
+      overshootRight={false}
+      renderRightActions={(_progress, _translation, methods) => (
+        <View
+          className="flex-row items-center justify-center gap-6"
+          style={{ width: ACTION_WIDTH }}
+        >
+          {onEditPress && (
+            <Pressable
+              onPress={() => {
+                methods.close();
+                onEditPress();
+              }}
+              hitSlop={8}
+            >
+              <Icon name="edit" size={20} />
+            </Pressable>
+          )}
+          {onDeletePress && (
+            <Pressable
+              onPress={() => {
+                methods.close();
+                onDeletePress();
+              }}
+              hitSlop={8}
+            >
+              <Icon name="trash-can" size={20} color={colors.semantic.danger} />
+            </Pressable>
+          )}
+        </View>
+      )}
+    >
+      {row}
+    </ReanimatedSwipeable>
   );
 }

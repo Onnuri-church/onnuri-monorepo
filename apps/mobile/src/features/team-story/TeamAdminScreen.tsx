@@ -56,6 +56,7 @@ export function TeamAdminScreen() {
         title="정말 삭제하시겠습니까?"
         description="삭제된 데이터는 복구할 수 없습니다."
         confirmLabel="확인"
+        placement="center"
         cancelLabel="취소"
         onConfirm={handleDeleteConfirm}
       />
