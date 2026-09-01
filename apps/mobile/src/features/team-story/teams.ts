@@ -107,3 +107,24 @@ export const TEAM_PHOTOS = TEAM_PHOTO_GROUPS.flatMap((group) => group.photos)
   .map((photo, index) =>
     index === 0 ? { ...photo, caption: "2026 여름수련회 첫째날 · 8월" } : photo,
   );
+
+// 팀원 추가 화면의 후보 명단. 유저 검색 API가 생기면 교체한다.
+// affiliation은 그 사람이 이미 속한 팀 이름이고, 없으면 "소속 팀 없음"이다 (시안 문구).
+export interface MemberCandidate {
+  id: string;
+  name: string;
+  affiliation: string;
+}
+
+export const MEMBER_CANDIDATES: MemberCandidate[] = [
+  { id: "c1", name: "고다원", affiliation: "소속 팀 없음" },
+  { id: "c2", name: "윤채원", affiliation: "디자인팀" },
+  { id: "c3", name: "조은서", affiliation: "소속 팀 없음" },
+  { id: "c4", name: "한지우", affiliation: "영상팀" },
+  { id: "c5", name: "오시현", affiliation: "소속 팀 없음" },
+  { id: "c6", name: "배주원", affiliation: "찬양팀" },
+  { id: "c7", name: "서다인", affiliation: "소속 팀 없음" },
+  { id: "c8", name: "임하늘", affiliation: "풋살팀" },
+  { id: "c9", name: "노건우", affiliation: "소속 팀 없음" },
+  { id: "c10", name: "정소율", affiliation: "SNS팀" },
+];

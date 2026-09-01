@@ -48,6 +48,10 @@ export type RootStackParamList = {
   TeamStoryPhotoViewer: { teamId: string; photoId: string };
   // 팀 상세에서 "외 N명 더 보기"로 진입한다.
   TeamMemberList: { teamId: string };
+  // 마이페이지(팀장)에서 진입하는 팀원 관리·추가. 조회 전용인 TeamMemberList와 라우트를 나눈다 —
+  // 무엇을 여는지 이름으로 드러나야 딥링크·화면 로그가 둘을 구분한다.
+  TeamMemberAdmin: { teamId: string };
+  TeamMemberAdd: { teamId: string };
   // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
   // 셀은 관리자가 만들고 종료하는 유동 데이터라 화면 하나가 cellId로 어떤 셀이든 그린다.
   CellDetail: { cellId: string };
