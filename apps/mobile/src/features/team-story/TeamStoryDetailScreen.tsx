@@ -28,8 +28,9 @@ export function TeamStoryDetailScreen() {
   const handleMemberListPress = () => navigation.navigate("TeamMemberList", { teamId: team.id });
   const handleViewAllPhotosPress = () =>
     navigation.navigate("TeamStoryGallery", { teamId: team.id });
-  // 팀 게시판은 아직 화면이 없다. 생기면 여기서 navigate를 붙인다.
-  const handleBoardPress = () => {};
+  // 팀 게시판은 부서활동 게시판이다 (기획 확인). 기획상 해당 팀으로 필터된 화면이 맞지만,
+  // 지금 걸어봐야 목업 필터라 API 연동 때 다시 짜야 해서 그때 같이 하기로 했다 — 우선 목록 전체를 연다.
+  const handleBoardPress = () => navigation.navigate("DepartmentActivity");
 
   return (
     <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="px-5 pb-10">
