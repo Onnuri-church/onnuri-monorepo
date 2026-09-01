@@ -52,11 +52,58 @@ export const TEAM_MEMBERS: TeamMember[] = [
 ];
 
 // 활동 사진. 실제 이미지가 없어서 URL은 비워두고 회색 자리만 보이게 한다.
-export const TEAM_PHOTOS = [
-  { id: "p1", url: null, caption: "2026 여름수련회 첫째날 · 8월" },
-  { id: "p2", url: null },
-  { id: "p3", url: null },
-  { id: "p4", url: null },
+// 갤러리가 월 단위로 묶어 보여주므로 여기서도 묶음으로 둔다 — 상세의 미리보기와 전체 장수를
+// 여기서 파생시켜야 두 화면이 같은 숫자를 말한다.
+export interface GalleryPhoto {
+  id: string;
+  url: string | null;
+  /** 뷰어 하단에 크게 찍는 제목. */
+  title: string;
+  /** 뷰어 하단의 날짜·올린 사람 (예: "2026년 8월 16일 · 조인승"). 서버가 만들어 내려준다. */
+  meta: string;
+}
+
+export interface GalleryPhotoGroup {
+  label: string;
+  photos: GalleryPhoto[];
+}
+
+// 시안에 사진 설명이 한 벌만 있어서 전부 같은 값을 쓴다 — 실제 값은 API가 내려준다.
+const PHOTO_TITLE = "2026 여름 수련회 찬양";
+const PHOTO_META = "2026년 8월 16일 · 조인승";
+
+function makePhotos(prefix: string, count: number): GalleryPhoto[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `${prefix}-${index + 1}`,
+    url: null,
+    title: PHOTO_TITLE,
+    meta: PHOTO_META,
+  }));
+}
+
+export function findPhotoIndex(photoId: string) {
+  return TEAM_PHOTO_GROUPS.flatMap((group) => group.photos).findIndex(
+    (photo) => photo.id === photoId,
+  );
+}
+
+export function allPhotos() {
+  return TEAM_PHOTO_GROUPS.flatMap((group) => group.photos);
+}
+
+export const TEAM_PHOTO_GROUPS: GalleryPhotoGroup[] = [
+  { label: "2026년 7월", photos: makePhotos("2026-07", 9) },
+  { label: "2026년 6월", photos: makePhotos("2026-06", 9) },
 ];
 
-export const TEAM_PHOTO_TOTAL = 12;
+export const TEAM_PHOTO_TOTAL = TEAM_PHOTO_GROUPS.reduce(
+  (total, group) => total + group.photos.length,
+  0,
+);
+
+// 팀 상세의 활동 사진은 앞에서 네 장만 쓴다 (큰 사진 1 + 작은 사진 3).
+export const TEAM_PHOTOS = TEAM_PHOTO_GROUPS.flatMap((group) => group.photos)
+  .slice(0, 4)
+  .map((photo, index) =>
+    index === 0 ? { ...photo, caption: "2026 여름수련회 첫째날 · 8월" } : photo,
+  );
