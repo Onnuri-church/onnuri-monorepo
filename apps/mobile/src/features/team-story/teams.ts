@@ -27,6 +27,12 @@ export function findTeam(id: string): Team | undefined {
   return TEAMS.find((team) => team.id === id);
 }
 
+// 마이페이지 목업이 소속 팀을 이름으로 들고 있어서 id로 바꿔줄 때 쓴다.
+// 유저 API가 팀 id를 내려주면 필요 없어진다.
+export function findTeamByName(name: string): Team | undefined {
+  return TEAMS.find((team) => team.name === name);
+}
+
 // 팀 소개 본문. 시안에 디자인팀 문구 하나만 있어서 모든 팀이 같은 글을 쓴다 —
 // 팀별 실제 소개글은 API가 내려준다.
 export const TEAM_INTRO =
@@ -107,3 +113,24 @@ export const TEAM_PHOTOS = TEAM_PHOTO_GROUPS.flatMap((group) => group.photos)
   .map((photo, index) =>
     index === 0 ? { ...photo, caption: "2026 여름수련회 첫째날 · 8월" } : photo,
   );
+
+// 팀원 추가 화면의 후보 명단. 유저 검색 API가 생기면 교체한다.
+// affiliation은 그 사람이 이미 속한 팀 이름이고, 없으면 "소속 팀 없음"이다 (시안 문구).
+export interface MemberCandidate {
+  id: string;
+  name: string;
+  affiliation: string;
+}
+
+export const MEMBER_CANDIDATES: MemberCandidate[] = [
+  { id: "c1", name: "고다원", affiliation: "소속 팀 없음" },
+  { id: "c2", name: "윤채원", affiliation: "디자인팀" },
+  { id: "c3", name: "조은서", affiliation: "소속 팀 없음" },
+  { id: "c4", name: "한지우", affiliation: "영상팀" },
+  { id: "c5", name: "오시현", affiliation: "소속 팀 없음" },
+  { id: "c6", name: "배주원", affiliation: "찬양팀" },
+  { id: "c7", name: "서다인", affiliation: "소속 팀 없음" },
+  { id: "c8", name: "임하늘", affiliation: "풋살팀" },
+  { id: "c9", name: "노건우", affiliation: "소속 팀 없음" },
+  { id: "c10", name: "정소율", affiliation: "SNS팀" },
+];

@@ -9,6 +9,7 @@ import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll"
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { findTeamByName } from "../team-story/teams";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
 import { RoleBadge } from "./components/RoleBadge";
@@ -35,12 +36,19 @@ const MOCK_STATS = [
 ];
 
 // 등급별 관리 메뉴 (시안 확정). 일반 유저는 관리 카드가 없다.
-// TODO(라우트): 대상 화면들(게시판 관리·팀원 관리·팔로워 노트·출석 관리·기도제목 관리)이
+// TODO(라우트): 나머지 대상 화면들(게시판 관리·팔로워 노트·출석 관리·기도제목 관리)이
 //   아직 없어 onPress를 비워둔다. 화면이 생기면 라우트 등록과 함께 연결.
-function getRoleLinks(role: UserRole, team: string): MenuLink[] {
+function getRoleLinks(
+  role: UserRole,
+  team: string,
+  onTeamMemberPress?: () => void,
+): MenuLink[] {
   switch (role) {
     case "teamLeader":
-      return [{ label: `${team} 게시판 관리` }, { label: `${team} 팀원 관리` }];
+      return [
+        { label: `${team} 게시판 관리` },
+        { label: `${team} 팀원 관리`, onPress: onTeamMemberPress },
+      ];
     case "cellLeader":
       return [{ label: "팔로워 노트" }, { label: "출석 관리" }];
     case "admin":
@@ -57,7 +65,13 @@ export function MyPageScreen() {
   const handleHideTabBarScroll = useHideTabBarOnScroll();
 
   const { name, cell, team, role } = MOCK_PROFILE;
-  const roleLinks = getRoleLinks(role, team);
+  // 목업이 소속 팀을 이름으로 들고 있어 id로 바꿔 넘긴다 (유저 API가 붙으면 id를 그대로 쓴다).
+  const myTeamId = findTeamByName(team)?.id;
+  const roleLinks = getRoleLinks(
+    role,
+    team,
+    myTeamId ? () => navigation.navigate("TeamMemberAdmin", { teamId: myTeamId }) : undefined,
+  );
 
   const handleLogoutPress = () => {
     // TODO(로그인 연동): 서버 세션 만료 처리가 생기면 여기서 같이 호출.

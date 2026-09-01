@@ -25,11 +25,15 @@ interface SubHeaderProps {
   title: string;
   /**
    * 우측 버튼. "home"이면 메인 탭으로 돌아간다. "export"면 공유 버튼(주보 상세 등),
-   * "bookmark"면 저장 버튼(기도제목 상세).
+   * "bookmark"면 저장 버튼(기도제목 상세), "text"면 아이콘 대신 문구 버튼(팀원 추가의 "완료" 등).
    * "none"이면 버튼 없이 자리만 비운다 (타이틀이 가운데 유지되도록 아이콘과 같은 폭).
    * 기본값은 더보기(⋮).
    */
-  rightAction?: "more" | "home" | "export" | "bookmark" | "none";
+  rightAction?: "more" | "home" | "export" | "bookmark" | "text" | "none";
+  /** rightAction이 "text"일 때 그릴 문구 (예: "완료", "편집"). */
+  rightLabel?: string;
+  /** 우측 문구 버튼 동작 (rightAction이 "text"일 때). */
+  onPressRightLabel?: () => void;
   /**
    * ⋮ 드롭다운 항목. ⋮를 누르면 헤더가 내장 ContextMenu를 연다.
    * 항목이 고정이면 RootNavigator 등록부에서 넘기고, 화면 데이터에 의존하면
@@ -142,6 +146,10 @@ export function Header(props: HeaderProps) {
                         size={28}
                         color={props.bookmarked ? colors.primary.normal : colors.icon.strong}
                     />
+                  </Pressable>
+              ) : props.rightAction === "text" ? (
+                  <Pressable onPress={props.onPressRightLabel} hitSlop={8}>
+                    <Text className="text-body-main text-primary-normal">{props.rightLabel}</Text>
                   </Pressable>
               ) : props.rightAction === "none" ? (
                   <View className="w-7" />

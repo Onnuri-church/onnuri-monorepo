@@ -32,7 +32,11 @@ import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
+import { TeamMemberAddScreen } from "../features/team-story/TeamMemberAddScreen";
+import { TeamMemberAdminScreen } from "../features/team-story/TeamMemberAdminScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
+import { TeamAdminScreen } from "../features/team-story/TeamAdminScreen";
+import { TeamFormScreen } from "../features/team-story/TeamFormScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
@@ -247,6 +251,54 @@ export function RootNavigator() {
           />
           {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
           <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
+          <Stack.Screen
+            name="TeamAdmin"
+            component={TeamAdminScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팀 관리" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamForm"
+            component={TeamFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.teamId ? "팀 편집" : "팀 생성"}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="TeamMemberAdmin"
+            component={TeamMemberAdminScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="팀원 관리" rightAction="home" />,
+            }}
+          />
+          {/* "완료"는 고른 사람을 반영하고 돌아가는 동작이라 화면 상태가 필요하다 —
+              API가 붙기 전까지는 뒤로가기만 한다. */}
+          <Stack.Screen
+            name="TeamMemberAdd"
+            component={TeamMemberAddScreen}
+            options={({ navigation }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="팀원 추가"
+                  rightAction="text"
+                  rightLabel="완료"
+                  onPressRightLabel={() => navigation.goBack()}
+                />
+              ),
+            })}
+          />
           <Stack.Screen
             name="TeamMemberList"
             component={TeamMemberListScreen}
