@@ -27,6 +27,12 @@ export function findTeam(id: string): Team | undefined {
   return TEAMS.find((team) => team.id === id);
 }
 
+// 마이페이지 목업이 소속 팀을 이름으로 들고 있어서 id로 바꿔줄 때 쓴다.
+// 유저 API가 팀 id를 내려주면 필요 없어진다.
+export function findTeamByName(name: string): Team | undefined {
+  return TEAMS.find((team) => team.name === name);
+}
+
 // 팀 소개 본문. 시안에 디자인팀 문구 하나만 있어서 모든 팀이 같은 글을 쓴다 —
 // 팀별 실제 소개글은 API가 내려준다.
 export const TEAM_INTRO =
