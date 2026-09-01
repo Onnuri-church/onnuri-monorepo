@@ -33,6 +33,7 @@ import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
+import { TeamFormScreen } from "../features/team-story/TeamFormScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
@@ -247,6 +248,20 @@ export function RootNavigator() {
           />
           {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
           <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
+          <Stack.Screen
+            name="TeamForm"
+            component={TeamFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.teamId ? "팀 편집" : "팀 생성"}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
           <Stack.Screen
             name="TeamMemberList"
             component={TeamMemberListScreen}
