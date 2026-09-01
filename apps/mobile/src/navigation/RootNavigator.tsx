@@ -13,6 +13,7 @@ import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScr
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
 import { findCell } from "../features/cell/cells";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
+import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
@@ -23,6 +24,7 @@ import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
+import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
@@ -111,6 +113,14 @@ export function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="BulletinWrite"
+            component={BulletinWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="주보/나눔지 업로드" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
             name="Live"
             component={LiveScreen}
             options={{
@@ -128,7 +138,10 @@ export function RootNavigator() {
           <Stack.Screen
             name="Bulletin"
             component={BulletinScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="오늘 주보" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="마태복음 시리즈" rightAction="none" />,
+            }}
           />
           <Stack.Screen
             name="DepartmentActivity"
@@ -184,6 +197,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="기도제목" rightAction="bookmark" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerWrite"
+            component={PrayerWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="기도제목 작성하기" rightAction="none" />,
             }}
           />
 

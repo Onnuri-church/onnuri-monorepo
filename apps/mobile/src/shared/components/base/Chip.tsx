@@ -38,23 +38,38 @@ const CHIP_STYLE = {
   },
 } as const;
 
+// size="small"의 글자 행간 (시안 확정값 13). 공용 TEXT_STYLE은 행간이 140%라 10px 글자에도
+// 배지 높이가 18이 되는데, 시안은 17로 고정된 자리가 있어서 여기서만 시안 값으로 덮는다.
+const SMALL_TEXT_LINE = 13;
+
 interface ChipProps {
   color: keyof typeof CHIP_STYLE;
   outline?: boolean;
+  /**
+   * 글자 크기. "small"은 10px로, 배지 높이가 17로 고정된 자리(홈 부서활동 카드)에서 쓴다.
+   * 여백·라운드·배경은 기본과 같다.
+   */
+  size?: "normal" | "small";
   text: string;
 }
 
 // outline 여부에 따라 모서리(8px / 알약)와 글자 굵기(medium / semibold)가 함께 바뀐다.
 // 색은 outline 변형이 정의돼 있으면 그걸 쓰고, 없으면 원래 색 그대로 테두리만 더한다.
-export function Chip({ color, outline = false, text }: ChipProps) {
+export function Chip({ color, outline = false, size = "normal", text }: ChipProps) {
   const base = CHIP_STYLE[color];
   const style = outline && "outline" in base ? base.outline : base;
   const shape = outline ? `rounded-lg border ${style.border}` : "rounded-full";
   const weight = outline ? "font-pretendard-medium" : "font-pretendard-semibold";
+  const small = size === "small";
 
   return (
     <View className={`self-start px-2 py-0.5 ${style.bg} ${shape}`}>
-      <Text className={`text-label-small ${weight} ${style.text}`}>{text}</Text>
+      <Text
+        className={`${small ? "text-caption-small" : "text-label-small"} ${weight} ${style.text}`}
+        style={small ? { lineHeight: SMALL_TEXT_LINE } : undefined}
+      >
+        {text}
+      </Text>
     </View>
   );
 }

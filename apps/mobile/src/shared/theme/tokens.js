@@ -111,6 +111,10 @@ const spacing = {
   7.5: "30px",
   10.5: "42px",
   12.25: "49px",
+  // 홈 화면 큐티나눔 → 취향 소그룹 띠배너 사이 간격 (시안 확정값 46px).
+  // 기본 스케일이 11(44px) → 12(48px)로 건너뛰어 46px이 없다. 시안의 다른 여백은 기본 스케일과
+  // 1px 차이라 스케일 값으로 맞췄고, 이것만 양쪽에서 2px 떨어져 어느 쪽으로도 정할 수 없다.
+  11.5: "46px",
   // 월 선택 그리드의 원형 알약 지름 (시안 확정값 52×52 — 출석 관리 주차별 보기·팔로워 노트 달력).
   // 기본 스케일이 12(48px) → 14(56px)로 건너뛰어 52px이 없다.
   13: "52px",
@@ -126,6 +130,9 @@ const spacing = {
   // 마이페이지 프로필 아바타 지름 (시안 확정값 100×100). 기본 스케일이 24(96px) → 28(112px)로
   // 건너뛰어 100px이 없다.
   25: "100px",
+  // 홈 화면 부서활동 가로 스크롤 카드 폭 (시안 확정값 150px). 기본 스케일이 36(144px) →
+  // 40(160px)으로 건너뛰는데, 반올림하면 가로 스크롤에서 카드가 잘리는 위치가 달라진다.
+  37.5: "150px",
   // 이미지 ui (시안 확정값)
   43: "172px",
   // 부서활동 상세 (시안 확정값). 기본 스케일이 80(320px) → 96(384px)으로 건너뛰어 360px이 없다.
@@ -160,6 +167,9 @@ const TEXT_STYLE = {
   "heading-main": ["20px", "-0.01em", "Pretendard-Bold"],
   "heading-medium": ["20px", "-0.01em", "Pretendard-SemiBold"],
   "heading-small": ["18px", "-0.01em", "Pretendard-SemiBold"],
+  // 홈 큐티나눔 목록 행 제목 (시안 확정값 16px SemiBold). heading-small(18)과 body-main(15)
+  // 사이 값이라 어느 쪽으로도 대체되지 않는다.
+  "body-large": ["16px", "-0.01em", "Pretendard-SemiBold"],
   "body-main": ["15px", "-0.01em", "Pretendard-SemiBold"],
   "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
   "body-regular": ["15px", "-0.01em", "Pretendard-Regular"],

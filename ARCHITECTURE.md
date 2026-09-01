@@ -56,6 +56,17 @@ onnuri-monorepo/
 * 환경변수는 부팅 시 `config/env.validation.ts`가 검증한다. 코드에 기본값을 두지 않으므로 `.env`가 단일 소스다.
 * 환경변수는 `ConfigService`를 쓴다. `env()`는 검증 결과를 `configuration.ts`로 넘기는 다리라 호출처는 그 파일 하나뿐이다.
 * 점 표기에는 `{ infer: true }`가 필요하다 — `config.get('jwt.accessSecret', { infer: true })`.
+* 예외는 `src/instrument.ts` 하나뿐이다 — ConfigModule보다 먼저 실행돼야 해서 `dotenv`로 `.env`를 직접 읽고 `process.env`를 쓴다. 다른 곳에서 이 방식을 따라하지 않는다.
+
+## Observability
+
+에러 추적은 **Sentry**(`@sentry/nestjs`)를 쓴다. 지금은 `apps/api`만 계측돼 있고 `apps/mobile`은 아직 붙이지 않았다.
+
+* `src/instrument.ts`가 `main.ts` 최상단에서 import된다. Sentry는 다른 모듈보다 먼저 초기화돼야 하므로 이 import는 항상 첫 줄이어야 한다.
+* `SENTRY_DSN`이 비어 있으면 SDK가 비활성으로 동작한다 — 로컬 개발 기본값이며, DSN 없이도 서버는 정상 기동한다.
+* **에러 모니터링만 켜져 있다.** Tracing·Profiling·Logs는 별도 쿼터를 소모해 무료 한도를 빠르게 태우므로 의도적으로 껐다. 필요해지면 그때 켠다.
+* `sendDefaultPii: false` — 성도 개인정보가 에러 리포트에 실려 나가지 않게 하려는 의도적 설정이다. 켜기 전에 반드시 논의한다.
+* `SentryGlobalFilter`를 `APP_FILTER`로 등록하지만, 이건 `BaseExceptionFilter`를 상속해 `super.catch()`로 위임하므로 **HTTP 응답 모양을 바꾸지 않는다** (`apps/api/AGENTS.md`의 "커스텀 전역 ExceptionFilter 금지"와 충돌하지 않는 이유). 4xx `HttpException`은 Sentry로 보내지 않고 걸러진다.
 
 ## Backend Module Shape
 
@@ -110,6 +121,12 @@ apps/mobile/src/
 ```
 
 스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-video`(영상 기능 착수 시 설치)/`react-native-image-zoom-viewer`/`react-native-webview`.
+
+## Media Layer
+
+* 말씀 영상 재생(`expo-video`), 주보 핀치 줌(`react-native-image-zoom-viewer`), 라이브 스트림(`react-native-webview`)은 각각 성격이 다른 네이티브 레이어이므로 공통 wrapper로 억지로 통합하지 않는다. 각 라이브러리의 기본 API를 그대로 노출하는 얇은 wrapper만 둔다.
+* 라이브 스트림 WebView는 일요일 방송 시간 여부에 따라 렌더 분기(스트림 vs 안내 화면)한다 — 분기 로직은 화면 컴포넌트가 아니라 상위 훅(`useLiveServiceStatus` 등)에서 처리하고 화면은 상태만 받아 렌더링한다.
+* 영상/이미지 로딩·에러 상태(버퍼링, 로드 실패, 빈 데이터)는 별도 확인 없이 스켈레톤/에러 placeholder로 처리 가능하나, 해당 상태의 컬러·사이즈는 [DESIGN.md](apps/mobile/DESIGN.md)의 컬러/사이즈 규칙을 동일하게 따른다.
 
 ## Access Model
 

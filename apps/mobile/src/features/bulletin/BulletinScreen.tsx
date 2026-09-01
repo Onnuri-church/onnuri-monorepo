@@ -47,13 +47,12 @@ const BulletinInfo = [
 ]
 
 
-// 주보 등록 화면이 아직 없다. 그 화면이 생기면 아래 handleWritePress에 navigate를 붙인다.
 export function BulletinScreen() {
   const [month, setMonth] = useState(MONTHS[0].value);
   const visibleBulletins = BulletinInfo.filter((bulletin) => bulletin.date.startsWith(month));
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const handleWritePress = () => {};
+  const handleWritePress = () => navigation.navigate("BulletinWrite");
 
   return (
     <View className="flex-1 bg-background-normal">
