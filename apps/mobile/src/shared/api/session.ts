@@ -1,23 +1,42 @@
-import type { AuthTokens, User } from "@onnuri/shared";
+import type { AuthTokens, LoginResponse, User } from "@onnuri/shared";
 
 import { useAuthStore } from "../store/useAuthStore";
-import { getMe, postGoogleLogin, postKakaoLogin, postLogout, postRefresh } from "./authApi";
+import {
+  getMe,
+  postDevLogin,
+  postGoogleLogin,
+  postKakaoLogin,
+  postLogout,
+  postRefresh,
+} from "./authApi";
 import { clearTokens, loadTokens, saveTokens } from "./tokenStorage";
 
-// 소셜 로그인 → 토큰 저장 → 세션 시작까지. providerToken은 SDK가 발급받은
-// 카카오 액세스 토큰/구글 ID 토큰이다 (SDK 연동은 dev build 이후 — LoginScreen 참고).
-// 반환된 isNewUser로 프로필 설정 화면으로 보낼지 결정한다.
+// 로그인 응답 → 토큰 저장 → 세션 시작. isNewUser로 프로필 설정 화면 분기를 판단한다.
+async function startSession({
+  accessToken,
+  refreshToken,
+  isNewUser,
+  user,
+}: LoginResponse): Promise<{ isNewUser: boolean }> {
+  const tokens = { accessToken, refreshToken };
+  await saveTokens(tokens);
+  useAuthStore.getState().setSession(user, tokens);
+  return { isNewUser };
+}
+
+// 소셜 로그인. providerToken은 SDK가 발급받은 카카오 액세스 토큰/구글 ID 토큰이다.
 export async function signInWithSocial(
   provider: "kakao" | "google",
   providerToken: string,
 ): Promise<{ isNewUser: boolean }> {
   const login = provider === "kakao" ? postKakaoLogin : postGoogleLogin;
-  const { accessToken, refreshToken, isNewUser, user } = await login(providerToken);
+  return startSession(await login(providerToken));
+}
 
-  const tokens = { accessToken, refreshToken };
-  await saveTokens(tokens);
-  useAuthStore.getState().setSession(user, tokens);
-  return { isNewUser };
+// 개발용 로그인 — 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
+// 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다.
+export async function signInWithDev(email: string): Promise<{ isNewUser: boolean }> {
+  return startSession(await postDevLogin(email));
 }
 
 // 앱 부팅 시 저장된 토큰으로 세션을 복원한다. 세션 확정(setSession/clearSession)은

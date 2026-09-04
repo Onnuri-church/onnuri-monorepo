@@ -3,10 +3,14 @@ import { useState } from "react";
 import { Alert, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { signInWithDev } from "../../shared/api/session";
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { SocialLoginButton } from "./components/SocialLoginButton";
 import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
+
+// 개발용 로그인이 만드는 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
+const DEV_LOGIN_EMAIL = "dev@onnuri.local";
 
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
@@ -38,6 +42,7 @@ export function LoginScreen() {
 
   const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk);
   const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk);
+  const handleDevPress = () => void runSocialLogin(() => signInWithDev(DEV_LOGIN_EMAIL));
 
   return (
     <View
@@ -70,6 +75,17 @@ export function LoginScreen() {
         >
           <Text className="text-body-medium text-text-alternative">게스트로 로그인하기</Text>
         </Pressable>
+
+        {/* 개발 빌드 전용 — 소셜 SDK 없이 진짜 세션으로 유저 기능을 확인하기 위한 버튼. 릴리스에는 안 나온다. */}
+        {__DEV__ && (
+          <Pressable
+            className="items-center py-2"
+            onPress={handleDevPress}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
+            <Text className="text-body-medium text-text-assistive">[DEV] 개발용 로그인</Text>
+          </Pressable>
+        )}
       </View>
     </View>
   );

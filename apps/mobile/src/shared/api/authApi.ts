@@ -20,6 +20,13 @@ export function postGoogleLogin(googleIdToken: string): Promise<LoginResponse> {
     .then((res) => res.data);
 }
 
+// 개발용 로그인 — 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다 (아니면 404).
+export function postDevLogin(email: string): Promise<LoginResponse> {
+  return bareClient
+    .post<LoginResponse>("/auth/login/dev", { email })
+    .then((res) => res.data);
+}
+
 export function postRefresh(refreshToken: string): Promise<AuthTokens> {
   return bareClient.post<AuthTokens>("/auth/refresh", { refreshToken }).then((res) => res.data);
 }

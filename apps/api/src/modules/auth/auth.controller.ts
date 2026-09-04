@@ -1,6 +1,7 @@
 import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
+import { DevLoginDto } from './dto/dev-login.dto';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
@@ -17,6 +18,12 @@ export class AuthController {
   @Post('login/google')
   loginWithGoogle(@Body() dto: SocialLoginDto) {
     return this.authService.loginWithGoogle(dto.token);
+  }
+
+  // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404
+  @Post('login/dev')
+  loginWithDev(@Body() dto: DevLoginDto) {
+    return this.authService.loginWithDev(dto.email);
   }
 
   @Post('refresh')

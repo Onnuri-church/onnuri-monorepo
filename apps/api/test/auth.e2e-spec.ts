@@ -20,6 +20,7 @@ import type { JwtPayload } from '../src/modules/auth/strategies/jwt.strategy';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 // 테스트 데이터 식별용 도메인 — 시작/종료 시 이 도메인의 유저를 정리한다.
+// 개발용 로그인은 test/setup-e2e.ts가 AUTH_DEV_LOGIN을 켜준다 (import 시점 검증보다 먼저 실행).
 const EMAIL_DOMAIN = 'auth-e2e.test';
 const MINSU_EMAIL = `minsu@${EMAIL_DOMAIN}`;
 
@@ -252,6 +253,38 @@ describe('Auth (e2e)', () => {
           redirectUri: 'http://localhost:3000/oauth-test',
         })
         .expect(401));
+  });
+
+  describe('개발용 로그인', () => {
+    const DEV_EMAIL = `dev@${EMAIL_DOMAIN}`;
+
+    it('이메일만으로 유저를 만들고 토큰 쌍을 준다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email: DEV_EMAIL })
+        .expect(201);
+
+      const body = res.body as LoginBody;
+      expect(body.isNewUser).toBe(true);
+      expect(body.user.name).toBe('dev'); // 이메일 로컬파트가 임시 이름
+
+      await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${body.accessToken}`)
+        .expect(200);
+    });
+
+    it('재호출이면 같은 유저로 들어온다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email: DEV_EMAIL })
+        .expect(201);
+
+      expect((res.body as LoginBody).isNewUser).toBe(false);
+    });
+
+    // 꺼졌을 때 404로 숨기는지는 유닛 테스트(auth.service.spec.ts)가 커버한다 —
+    // 게이트가 import 시점 검증에 묶여 같은 프로세스로 껐다 켜기 어렵기 때문이다.
   });
 
   describe('인증 가드', () => {

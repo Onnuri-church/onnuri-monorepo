@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -68,6 +69,22 @@ export class AuthService {
     return this.login(SocialProvider.GOOGLE, profile);
   }
 
+  // 개발용: 소셜 SDK가 없는 웹·Expo Go에서 유저 기반 기능을 개발할 수 있게 이메일만으로
+  // 로그인시킨다. AUTH_DEV_LOGIN=true인 환경에서만 열리고, 꺼진 환경에선 404로 존재를 숨긴다.
+  async loginWithDev(email: string) {
+    if (!this.config.get('auth.devLoginEnabled', { infer: true })) {
+      throw new NotFoundException();
+    }
+
+    const existing = await this.prisma.user.findUnique({ where: { email } });
+    const user =
+      existing ??
+      (await this.prisma.user.create({
+        data: { email, name: email.split('@')[0] },
+      }));
+    return this.buildLoginResponse(user.id, !existing);
+  }
+
   // 리프레시 토큰 회전: 저장된 해시와 일치하는 행을 지우면서 소비한다.
   // 이미 회전된 토큰의 재사용은 삭제 건수 0으로 걸러진다.
   async refresh(refreshToken: string) {
@@ -92,11 +109,15 @@ export class AuthService {
 
   private async login(provider: SocialProvider, profile: SocialProfile) {
     const { user, isNewUser } = await this.findOrCreateUser(provider, profile);
-    const tokens = await this.issueTokenPair(user.id);
+    return this.buildLoginResponse(user.id, isNewUser);
+  }
+
+  private async buildLoginResponse(userId: string, isNewUser: boolean) {
+    const tokens = await this.issueTokenPair(userId);
     return {
       ...tokens,
       isNewUser,
-      user: await this.usersService.findById(user.id),
+      user: await this.usersService.findById(userId),
     };
   }
 

@@ -53,7 +53,7 @@ onnuri-monorepo/
 
 ## Backend Configuration
 
-* 환경변수는 부팅 시 `config/env.validation.ts`가 검증한다. 코드에 기본값을 두지 않으므로 `.env`가 단일 소스다.
+* 환경변수는 부팅 시 `config/env.validation.ts`가 검증한다. 코드에 기본값을 두지 않는다. 로컬은 `.env`가 소스이고, 운영(Render 등 `.env` 파일 없이 플랫폼 환경변수로 주입하는 곳)을 위해 `validate()`가 `process.env`도 함께 검증한다 — 둘 다 있으면 `.env` 값이 우선한다.
 * 환경변수는 `ConfigService`를 쓴다. `env()`는 검증 결과를 `configuration.ts`로 넘기는 다리라 호출처는 그 파일 하나뿐이다.
 * 점 표기에는 `{ infer: true }`가 필요하다 — `config.get('jwt.accessSecret', { infer: true })`.
 * 예외는 `src/instrument.ts` 하나뿐이다 — ConfigModule보다 먼저 실행돼야 해서 `dotenv`로 `.env`를 직접 읽고 `process.env`를 쓴다. 다른 곳에서 이 방식을 따라하지 않는다.
@@ -145,6 +145,7 @@ apps/mobile/src/
   * `unauthenticated` → `AuthStack`(`Login` + `ProfileSetup`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다). 프로필 설정은 원래 `isNewUser`에 따라 갈릴 화면인데 AuthStack에만 있어 세션이 생기면 접근 불가라, 분기와 실제 저장은 프로필 등록 API 작업에서 함께 설계한다 — 그때까지 ProfileSetup은 진입 경로가 없고 등록하기의 임시 세션 배선만 남아 있다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
 * 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
+* **개발용 로그인**: 소셜 SDK가 없는 웹·Expo Go에서는 실제 로그인이 불가능해 유저 기반 기능을 개발할 수 없다. 이를 위해 `POST /auth/login/dev`(이메일만으로 진짜 유저+토큰 발급)를 두고, 백엔드는 `AUTH_DEV_LOGIN=true`인 환경에서만 응답한다(아니면 404로 숨김, 운영 금지). 모바일은 로그인 화면에 `__DEV__`에서만 보이는 "[DEV] 개발용 로그인" 버튼으로 연결한다.
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
 * 토큰은 `expo-secure-store`에 저장되고, 앱 부팅 시 `useAppBootstrap`이 refresh로 세션을 복원한다. 로그인 상태에서 API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 리프레시 후 원 요청을 한 번 재시도하고, 리프레시까지 실패하면 Alert → 확인 누르면 `clearSession()` → 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음). 게스트/비로그인 상태의 401은 세션 문제가 아니므로 호출한 쪽에 그대로 전달된다.
 * 유저 등급이 추가되면(향후) capability 기반 가드 조합(`@UseGuards(AuthGuard, XGuard)`)으로 확장하고, 리소스 소유권 검증(예: 내 글만 수정 가능)을 role 체크와 별도로 반드시 추가한다.
