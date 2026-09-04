@@ -2,6 +2,13 @@
 
 프론트엔드(Expo/React Native) 작업 전용 규칙. 공통 규칙은 루트 [AGENTS.md](../../AGENTS.md), 시스템 구조는 [ARCHITECTURE.md](../../ARCHITECTURE.md)를 먼저 본다.
 
+## 소셜 로그인 키
+
+- `.env` 값(`EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)은 **Jira 문서**에 있다 — [.env.example](.env.example) 참고.
+- **본인 빌드 키 등록**: 소셜 로그인은 서명 키가 카카오/구글 콘솔에 등록된 빌드에서만 동작한다. 본인 키스토어의 SHA-1·키 해시 값을 **한재민에게 보내면 콘솔에 등록해준다**. 미등록이면 구글은 `DEVELOPER_ERROR`, 카카오는 키 해시 오류가 난다.
+- 두 SDK 다 네이티브 모듈이라 **Expo Go·웹에서는 소셜 로그인이 동작하지 않는다** (dev build 필요). 웹/Expo Go에서는 게스트로 화면 작업만 한다.
+- 카카오 config plugin은 **빌드 시점**에 키를 읽으므로, 빌드하는 환경에도 `EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY`가 설정돼 있어야 한다.
+
 ## UI 작업 전 필수
 
 화면/컴포넌트/스타일/네비게이션을 건드리기 전에 [DESIGN.md](DESIGN.md)를 읽는다 — 컬러·사이즈 토큰, 컴포넌트 props 규칙, 네비게이션 구조가 여기 정의돼 있다.

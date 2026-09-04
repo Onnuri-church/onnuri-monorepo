@@ -142,7 +142,7 @@ apps/mobile/src/
 * 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
   * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
   * `authenticated` / `guest` → 같은 `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live` 등)
-  * `unauthenticated` → `AuthStack`(`Login` + `ProfileSetup`). 프로필 설정은 로그인 응답의 `isNewUser`에 따라 갈릴 화면인데, 소셜 SDK(dev build 필요)가 아직 없어 지금은 소셜 로그인 버튼에서 무조건 push하고 등록하기에서 임시 세션을 만든다 — 연동 함수(`shared/api/session.ts`의 `signInWithSocial`)는 준비돼 있고 SDK 토큰만 꽂으면 된다
+  * `unauthenticated` → `AuthStack`(`Login` + `ProfileSetup`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다). 프로필 설정은 원래 `isNewUser`에 따라 갈릴 화면인데 AuthStack에만 있어 세션이 생기면 접근 불가라, 분기와 실제 저장은 프로필 등록 API 작업에서 함께 설계한다 — 그때까지 ProfileSetup은 진입 경로가 없고 등록하기의 임시 세션 배선만 남아 있다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
 * 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
@@ -165,7 +165,7 @@ apps/mobile/src/
 ## Build Order
 
 1. ~~Prisma 마이그레이션 실행~~ — **완료 (2026-09-02)**: 확정 ERD 전체(25개 모델)가 스키마로 전환·적용됨. 근거 문서는 [docs/erd.md](docs/erd.md)
-2. 소셜 로그인 실제 연동 + Refresh token — **백엔드·모바일 연동 기반 완료 (2026-09-04)**: 백엔드는 `/auth/login/kakao|google`·`/auth/refresh`·`/auth/logout` + 인증 가드 2종, 모바일은 SecureStore 세션 복원·401 자동 refresh·`signInWithSocial`까지 배선됨 (Access Model 참고). 남은 것은 소셜 SDK 연동뿐 — 카카오는 네이티브 SDK라 dev build(EAS)가 필요하고, 그때 로그인 버튼을 `signInWithSocial`에 연결하고 프로필 등록 API도 만든다
+2. 소셜 로그인 실제 연동 + Refresh token — **백엔드·모바일 배선 완료 (2026-09-05)**: 백엔드는 `/auth/login/kakao|google`(+인가 코드 교환)·`/auth/refresh`·`/auth/logout` + 인증 가드 2종, 모바일은 SecureStore 세션 복원·401 자동 refresh·로그인 버튼 → SDK → `signInWithSocial` 배선까지. 남은 것: dev build에서 종단 확인(키 등록은 apps/mobile/AGENTS.md "소셜 로그인 키"), 프로필 등록 API(`PATCH /users/me`) + `isNewUser` 분기, 마이페이지 로그아웃 배선
 3. QR·셀 페이지 실제 기능 — 진입로(QR은 메인 헤더 버튼, 셀 페이지는 하단 탭)는 붙었지만 두 화면 다 제목만 있는 빈 화면이다. 특히 셀 페이지는 README 기준 기능 스코프가 아직 안 잡혀 있다
 4. 팀 스토리/마이페이지/오늘 주보/말씀 화면 실제 디자인 반영 (Figma 나오는 대로)
 5. 큐티나눔/기도요청 작성, 팀 게시판, 소그룹 모임 등 나머지 MVP 기능 모듈 (`posts`, `teams` 등) 추가

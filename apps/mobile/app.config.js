@@ -8,6 +8,17 @@ module.exports = ({ config }) => ({
   ...config,
   plugins: [
     ...(config.plugins ?? []),
+    // 카카오 SDK의 네이티브 설정(매니페스트의 앱 키·리다이렉트 스킴)은 빌드 시점에 키가 필요하다.
+    // 키가 없는 환경(웹 미리보기, 키를 아직 안 채운 팀원)에서도 동작해야 하므로 키가 있을 때만 얹는다.
+    // 빌드하는 환경에도 이 env가 설정돼 있어야 한다 — AGENTS.md "소셜 로그인 키" 참고.
+    ...(process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY
+      ? [
+          [
+            "@react-native-kakao/core",
+            { nativeAppKey: process.env.EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY },
+          ],
+        ]
+      : []),
     [
       "expo-splash-screen",
       {

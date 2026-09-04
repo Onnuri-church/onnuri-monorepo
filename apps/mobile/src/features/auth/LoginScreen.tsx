@@ -1,26 +1,43 @@
-import { useNavigation } from "@react-navigation/native";
-import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { StatusBar } from "expo-status-bar";
-import { Pressable, Text, View } from "react-native";
+import { useState } from "react";
+import { Alert, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
-import type { AuthStackParamList } from "../../shared/types/navigation";
 import { SocialLoginButton } from "./components/SocialLoginButton";
+import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
 
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
 export function LoginScreen() {
   const startGuestSession = useAuthStore((state) => state.startGuestSession);
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
+  const [submitting, setSubmitting] = useState(false);
 
-  // 백엔드 연동(shared/api/session.ts)은 준비됐지만 SDK 토큰을 받으려면 dev build가 필요해서
-  // (카카오 네이티브 SDK — EAS 빌드로 진행) 두 버튼은 아직 프로필 설정 화면으로 바로 넘어간다.
-  // SDK가 붙으면: SDK로 받은 토큰으로 signInWithSocial(provider, token)을 호출하고,
-  // 반환된 isNewUser가 true일 때만 ProfileSetup으로 보낸다 (세션은 signInWithSocial이 만든다).
-  const handleSocialLogin = () => navigation.navigate("ProfileSetup");
+  // 성공하면 signInWithSocial이 세션을 만들고, RootNavigator가 session.status를 보고 홈으로 전환한다.
+  // TODO(프로필 등록 API 작업에서): isNewUser=true면 프로필 설정으로 보내야 하는데, ProfileSetup이
+  // AuthStack에만 있어 세션이 생기는 순간 접근 불가다 — 분기는 프로필 저장 API와 함께 설계한다.
+  const runSocialLogin = async (
+    login: () => Promise<{ isNewUser: boolean } | null>,
+  ) => {
+    if (submitting) return; // 연타로 로그인 창이 겹치지 않게
+    setSubmitting(true);
+    try {
+      await login(); // null이면 사용자가 취소한 것 — 아무것도 하지 않는다
+    } catch (error) {
+      // 흔한 원인: dev build가 아님(네이티브 모듈 없음), .env 키 미설정, 빌드 키(SHA-1/키 해시) 미등록.
+      Alert.alert(
+        "로그인에 실패했습니다",
+        error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk);
+  const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk);
 
   return (
     <View
@@ -42,8 +59,8 @@ export function LoginScreen() {
         </View>
 
         <View className="gap-4">
-          <SocialLoginButton provider="kakao" onPress={handleSocialLogin} />
-          <SocialLoginButton provider="google" onPress={handleSocialLogin} />
+          <SocialLoginButton provider="kakao" onPress={handleKakaoPress} />
+          <SocialLoginButton provider="google" onPress={handleGooglePress} />
         </View>
 
         <Pressable
