@@ -16,9 +16,10 @@ export function LoginScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<AuthStackParamList>>();
 
-  // 카카오·구글 로그인 API가 아직 없어서(백엔드에 소셜 로그인 엔드포인트 미구현) 두 버튼은
-  // 프로필 설정 화면으로 바로 넘어간다. 실제로는 로그인 응답에 따라 프로필 설정/홈으로 갈린다 —
-  // 연동할 때 이 함수를 그 분기로 바꾼다. 세션은 프로필 설정 화면의 등록하기에서 만든다.
+  // 백엔드 연동(shared/api/session.ts)은 준비됐지만 SDK 토큰을 받으려면 dev build가 필요해서
+  // (카카오 네이티브 SDK — EAS 빌드로 진행) 두 버튼은 아직 프로필 설정 화면으로 바로 넘어간다.
+  // SDK가 붙으면: SDK로 받은 토큰으로 signInWithSocial(provider, token)을 호출하고,
+  // 반환된 isNewUser가 true일 때만 ProfileSetup으로 보낸다 (세션은 signInWithSocial이 만든다).
   const handleSocialLogin = () => navigation.navigate("ProfileSetup");
 
   return (
