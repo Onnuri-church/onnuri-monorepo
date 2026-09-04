@@ -7,8 +7,6 @@ import { type AppConfig } from '../../../config/configuration';
 
 export interface JwtPayload {
   sub: string;
-  email: string;
-  role: string;
 }
 
 @Injectable()

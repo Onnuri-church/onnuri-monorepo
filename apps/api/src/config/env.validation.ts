@@ -39,6 +39,27 @@ export class EnvironmentVariables {
   })
   JWT_REFRESH_EXPIRES_IN: string;
 
+  // 비어 있으면 카카오 토큰의 발급 앱(app_id) 검증을 건너뛴다 (로컬 개발용).
+  @ValidateIf((e: EnvironmentVariables) => Boolean(e.KAKAO_APP_ID))
+  @Matches(/^\d+$/, { message: 'KAKAO_APP_ID는 숫자여야 합니다.' })
+  KAKAO_APP_ID?: string;
+
+  // 인가 코드 로그인(code → 토큰 교환)에만 필요하다. SDK 토큰 로그인은 없이도 동작한다.
+  @IsOptional()
+  @IsString()
+  KAKAO_REST_API_KEY?: string;
+
+  // 카카오 콘솔 보안 메뉴에서 Client Secret을 활성화한 경우 코드 교환에 필수다.
+  @IsOptional()
+  @IsString()
+  KAKAO_CLIENT_SECRET?: string;
+
+  // 쉼표 구분 목록 (Android/iOS 클라이언트 ID가 다르다).
+  // 비어 있으면 구글 ID 토큰의 aud 검증을 건너뛴다 (로컬 개발용).
+  @IsOptional()
+  @IsString()
+  GOOGLE_CLIENT_IDS?: string;
+
   // 비어 있으면 Sentry 전송이 꺼진다. 값이 있을 때만 형식을 검사한다.
   @ValidateIf((e: EnvironmentVariables) => Boolean(e.SENTRY_DSN))
   @Matches(/^https:\/\/[^@]+@[^/]+\/\d+$/, {
