@@ -12,6 +12,11 @@ import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
 // 개발용 로그인이 만드는 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
 const DEV_LOGIN_EMAIL = "dev@onnuri.local";
 
+// 개발용 로그인 버튼은 .env에 EXPO_PUBLIC_AUTH_DEV_LOGIN=true를 명시한 사람에게만 보인다
+// (백엔드 AUTH_DEV_LOGIN과 짝 — 둘 다 켜야 실제로 동작한다). Expo는 EXPO_PUBLIC_ 접두사 변수만
+// 번들에 넣고 빌드 시점에 상수로 치환하므로, .env를 바꾸면 Metro를 다시 시작해야 반영된다.
+const DEV_LOGIN_ENABLED = process.env.EXPO_PUBLIC_AUTH_DEV_LOGIN === "true";
+
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
 export function LoginScreen() {
@@ -76,8 +81,8 @@ export function LoginScreen() {
           <Text className="text-body-medium text-text-alternative">게스트로 로그인하기</Text>
         </Pressable>
 
-        {/* 개발 빌드 전용 — 소셜 SDK 없이 진짜 세션으로 유저 기능을 확인하기 위한 버튼. 릴리스에는 안 나온다. */}
-        {__DEV__ && (
+        {/* EXPO_PUBLIC_AUTH_DEV_LOGIN=true일 때만 — 소셜 SDK 없이 진짜 세션으로 유저 기능을 확인하는 버튼 */}
+        {DEV_LOGIN_ENABLED && (
           <Pressable
             className="items-center py-2"
             onPress={handleDevPress}
