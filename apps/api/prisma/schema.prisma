@@ -1,5 +1,7 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
+//
+// 전체 데이터 모델의 근거는 docs/erd.md (확정본). 스키마를 바꾸면 그 문서도 함께 갱신한다.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,48 +13,534 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ---------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------
+
+// legacy: 등급은 멤버십 역할(TeamRole/CellRole) + User.isAdmin으로 대체됨.
+// auth 모듈(JWT payload)이 아직 참조하므로 소셜 로그인 전환 시 함께 제거한다.
 enum UserRole {
   MEMBER
   TEAM_LEADER
   ADMIN
 }
 
-enum BoardType {
-  QT
-  PRAYER
-  TEAM
-  GROUP
+enum Gender {
+  MALE
+  FEMALE
 }
+
+enum SocialProvider {
+  KAKAO
+  GOOGLE
+}
+
+enum TeamRole {
+  LEADER // 팀장 — 자기 팀 소개·갤러리·팀원·게시판 관리
+  MEMBER
+}
+
+enum CellRole {
+  LEADER // 셀장(팔로워)
+  SUB_LEADER // 부셀장 — 셀장과 동일 권한
+  MEMBER
+}
+
+enum AttendanceMethod {
+  QR // 본인이 QR 스캔
+  MANUAL // 셀장/관리자가 출석 관리 화면에서 수동 기록
+}
+
+enum BoardType {
+  QT_SHARE // 큐티나눔
+  CELL_NEWS // 셀 소식 (cellId 필수)
+  TEAM_ACTIVITY // 부서활동 (teamId 필수)
+  HOBBY_GROUP // 취향 소그룹
+  PRAYER // 기도제목
+}
+
+enum PrayerCategory {
+  PERSONAL_SPIRITUAL // 개인 및 영성
+  HEALTH_DAILY // 건강 및 일상
+  RELATIONSHIP_COMMUNITY // 관계 및 공동체
+  INTERCESSION_SERVICE // 중보 및 섬김
+  OTHER
+}
+
+enum HobbyGroupStatus {
+  RECRUITING
+  CLOSED
+}
+
+enum ImageKind {
+  POST_CONTENT // 게시글 본문 사진 — postId
+  GALLERY // 셀/팀 갤러리 직접 업로드 — cellId 또는 teamId
+  BULLETIN // 주보 — serviceId
+  HANDOUT // 나눔지 — serviceId
+}
+
+enum NoticeType {
+  NOTICE // 공지사항 (마이페이지)
+  BANNER // 홈 배너 / 이벤트 페이지
+}
+
+enum NotificationType {
+  FOLLOWER_NOTE
+  SERMON_UPLOAD
+  LIVE_START
+  QT_NEW
+  COMMENT
+  LIKE
+  NOTICE
+}
+
+// ---------------------------------------------------------------------
+// 회원 · 권한
+// ---------------------------------------------------------------------
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String
-  cellName  String?
-  team      Team?    @relation(fields: [teamId], references: [id])
-  teamId    String?
-  role      UserRole @default(MEMBER)
-  posts     Post[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+  id       String  @id @default(cuid())
+  email    String  @unique
+  password String // legacy: 소셜 로그인 전환 시 제거 (현재 auth 모듈이 사용)
+  name     String
+  cellName String? // legacy: CellMembership으로 대체 (users 모듈이 아직 참조)
 
-model Team {
-  id    String @id @default(cuid())
-  name  String @unique
-  users User[]
-}
+  team   Team?    @relation(fields: [teamId], references: [id])
+  teamId String? // legacy: TeamMembership으로 대체 (users 모듈이 아직 참조)
+  role   UserRole @default(MEMBER) // legacy: isAdmin + 멤버십 역할로 대체
 
-model Post {
-  id          String    @id @default(cuid())
-  boardType   BoardType
-  title       String?
-  content     String
-  isAnonymous Boolean   @default(false)
-  isPinned    Boolean   @default(false)
-  author      User      @relation(fields: [authorId], references: [id])
-  authorId    String
+  birthDate DateTime? @db.Date // 생년월일 전체 수집 (개인정보 동의 필요)
+  gender    Gender?
+  phone     String? // 연락처 — 프로필에서 직접 입력 (소셜 로그인 미제공, 본인인증 없음)
+  avatarUrl String?
+  intro     String? // 한 줄 소개
+  isAdmin   Boolean   @default(false) // 관리자(임원) — 임원이 수동 지정
+
+  notifySermonUpload Boolean @default(true)
+  notifyLiveWorship  Boolean @default(true)
+  notifyQtNewPost    Boolean @default(true)
+
+  withdrawnAt DateTime? // 탈퇴 soft delete — 출석·게시글 이력 보존
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+
+  socialAccounts         SocialAccount[]
+  teamMemberships        TeamMembership[]
+  cellMemberships        CellMembership[]
+  worshipAttendances     WorshipAttendance[]     @relation("WorshipAttendee")
+  recordedWorshipChecks  WorshipAttendance[]     @relation("WorshipRecorder")
+  cellMeetingAttendances CellMeetingAttendance[] @relation("CellMeetingAttendee")
+  recordedMeetingChecks  CellMeetingAttendance[] @relation("CellMeetingRecorder")
+  createdCells           Cell[]                  @relation("CellCreator")
+  createdCellMeetings    CellMeeting[]           @relation("CellMeetingCreator")
+  followerNotes          FollowerNote[]
+  followerNoteComments   FollowerNoteComment[]
+  posts                  Post[]
+  comments               Comment[]
+  postLikes              PostLike[]
+  bookmarks              Bookmark[]
+  hobbyGroupMemberships  HobbyGroupMember[]
+  uploadedImages         Image[]
+  notices                Notice[]
+  notifications          Notification[]
+}
+
+model SocialAccount {
+  id          String         @id @default(cuid())
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  provider    SocialProvider
+  providerUid String // 카카오/구글이 발급한 사용자 식별자
+  createdAt   DateTime       @default(now())
+
+  @@unique([provider, providerUid])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// 팀 · 셀
+// ---------------------------------------------------------------------
+
+model Team {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  iconUrl       String? // 팀스토리 목록 아이콘
+  coverImageUrl String? // 배경사진
+  tagline       String? // 한 줄 소개 (목록에 표시)
+  description   String? // 팀 소개
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users       User[] // legacy: User.teamId
+  memberships TeamMembership[]
+  posts       Post[]
+  images      Image[]
+}
+
+model TeamMembership {
+  id        String    @id @default(cuid())
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      TeamRole  @default(MEMBER)
+  startedAt DateTime  @db.Date
+  endedAt   DateTime? @db.Date // null = 현재 소속. 팀 이동/삭제 시 종료일 기록 → 소속 이력
+  createdAt DateTime  @default(now())
+
+  @@index([teamId, userId])
+  @@index([userId])
+}
+
+model Cell {
+  id            String    @id @default(cuid())
+  name          String // 보통 셀장 이름 (지환셀)
+  coverImageUrl String? // 단체 사진
+  startedAt     DateTime  @db.Date // 생성일
+  expiresAt     DateTime  @db.Date // 활동 종료 예정일 — 자연 만료 시 삭제가 아니라 종료 처리(기록 보존)
+  deletedAt     DateTime? // 관리자 강제 삭제 soft delete
+  createdBy     User      @relation("CellCreator", fields: [createdById], references: [id])
+  createdById   String
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  memberships CellMembership[]
+  meetings    CellMeeting[]
+  posts       Post[]
+  images      Image[]
+}
+
+model CellMembership {
+  id        String    @id @default(cuid())
+  cell      Cell      @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  role      CellRole  @default(MEMBER)
+  startedAt DateTime  @db.Date
+  endedAt   DateTime? @db.Date // null = 현재 소속. 셀 이동/삭제 시 종료일 기록 후 새 행
+  createdAt DateTime  @default(now())
+
+  @@index([cellId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// 예배 · 출석
+// ---------------------------------------------------------------------
+
+model WorshipService {
+  id         String    @id @default(cuid())
+  date       DateTime  @unique @db.Date // 예배일. 하루 1회차 가정
+  name       String // 예: 4부 청년 주일예배
+  startsAt   DateTime? // 예배 시작 시각
+  qrToken    String?   @unique // QR 출석용 (MVP 이후, 컬럼만 선점)
+  qrOpensAt  DateTime? // QR 시작 시각 — 12:00 (2026-09-04 확정, 회차 생성 시 서버가 기본값 세팅)
+  qrClosesAt DateTime? // QR 마감 시각 — 14:30 (2026-09-04 확정). 이 시각 이후 스캔은 거부
+  createdAt  DateTime  @default(now())
+
+  attendances  WorshipAttendance[]
+  cellMeetings CellMeeting[]
+  sermon       Sermon?
+  images       Image[]
+}
+
+model WorshipAttendance {
+  id           String           @id @default(cuid())
+  service      WorshipService   @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    String
+  user         User             @relation("WorshipAttendee", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  attended     Boolean          @default(true) // 행 없음 = 결석. false = 명시적 결석 처리(QR 오스캔 정정)
+  method       AttendanceMethod @default(QR)
+  recordedBy   User?            @relation("WorshipRecorder", fields: [recordedById], references: [id])
+  recordedById String? // method=MANUAL일 때 기록자
+  checkedAt    DateTime         @default(now())
+
+  @@unique([serviceId, userId])
+  @@index([userId])
+}
+
+model CellMeeting {
+  id          String         @id @default(cuid())
+  cell        Cell           @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId      String
+  service     WorshipService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId   String // 셀모임 날짜 = 그 주 예배일. 행이 없는 주는 모임 '없음'(결석 아님)
+  createdBy   User?          @relation("CellMeetingCreator", fields: [createdById], references: [id])
+  createdById String?
+  createdAt   DateTime       @default(now())
+
+  attendances  CellMeetingAttendance[]
+  followerNote FollowerNote?
+
+  @@unique([cellId, serviceId])
+}
+
+model CellMeetingAttendance {
+  id           String      @id @default(cuid())
+  meeting      CellMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId    String
+  user         User        @relation("CellMeetingAttendee", fields: [userId], references: [id], onDelete: Cascade)
+  userId       String
+  attended     Boolean     @default(true) // 행 없음 = 불참
+  recordedBy   User        @relation("CellMeetingRecorder", fields: [recordedById], references: [id])
+  recordedById String // 기록한 셀장/부셀장 — 셀모임 출석은 QR 자동이 아니라 셀장이 직접 기록한다 (2026-09-03 확정)
+  recordedAt   DateTime    @default(now())
+
+  @@unique([meetingId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// 셀 케어 (팔로워 노트) — 게시판이 아니라 셀 관리 기록이므로 Post와 분리
+// ---------------------------------------------------------------------
+
+model FollowerNote {
+  id        String      @id @default(cuid())
+  meeting   CellMeeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  meetingId String      @unique // 셀모임당 주간 보고 1개
+  author    User        @relation(fields: [authorId], references: [id])
+  authorId  String // 셀장/부셀장
+  answer1   String? // 요즘 상황과 기도제목
+  answer2   String? // 나눔 중 함께 이야기하면 좋을 것
+  answer3   String? // 궁금한 점이나 하고 싶은 말
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  comments FollowerNoteComment[]
+}
+
+model FollowerNoteComment {
+  id        String                @id @default(cuid())
+  note      FollowerNote          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId    String
+  author    User                  @relation(fields: [authorId], references: [id])
+  authorId  String // 관리자 — 화면에 '목사님 댓글'로 표시
+  parent    FollowerNoteComment?  @relation("FollowerNoteReplies", fields: [parentId], references: [id])
+  parentId  String? // 대댓글 부모 — 1단계 깊이만 (앱 검증). 목사님 댓글에 셀장이 답변
+  replies   FollowerNoteComment[] @relation("FollowerNoteReplies")
+  content   String
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+
+  @@index([noteId, createdAt])
+}
+
+// ---------------------------------------------------------------------
+// 게시판 (공용 Post + 게시판별 1:1 확장)
+// ---------------------------------------------------------------------
+
+model Post {
+  id            String    @id @default(cuid())
+  board         BoardType
+  author        User      @relation(fields: [authorId], references: [id])
+  authorId      String // 익명 글도 실제 작성자 저장 — 관리자만 확인 가능
+  cell          Cell?     @relation(fields: [cellId], references: [id])
+  cellId        String? // board=CELL_NEWS일 때 필수 (앱 검증)
+  team          Team?     @relation(fields: [teamId], references: [id])
+  teamId        String? // board=TEAM_ACTIVITY일 때 필수 (앱 검증)
+  title         String?
+  content       String
+  eventDate     DateTime? @db.Date // 큐티 날짜·소식 날짜·활동 날짜 — 갤러리 월별 그룹 기준
+  coverImageUrl String? // 큐티 배경사진 / 소식·부서활동 상단 이미지 / 소그룹 대표 이미지
+  viewCount     Int       @default(0)
+  isPinned      Boolean   @default(false)
+  deletedAt     DateTime? // 작성자/관리자 삭제 (soft)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  qtShare       QtShare?
+  prayerRequest PrayerRequest?
+  hobbyGroup    HobbyGroup?
+  comments      Comment[]
+  likes         PostLike[]
+  bookmarks     Bookmark[]
+  images        Image[]
+
+  @@index([board, createdAt])
+  @@index([authorId])
+  @@index([cellId])
+  @@index([teamId])
+}
+
+model QtShare {
+  post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId  String  @id
+  passage String? // 말씀 구절 (룻기 2:16-23). 나눔 날짜 = Post.eventDate
+}
+
+model PrayerRequest {
+  post         Post           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String         @id
+  number       Int            @unique @default(autoincrement()) // 표시용 등록 번호 (No.128) — 삭제돼도 안 바뀜
+  category     PrayerCategory
+  isAnonymous  Boolean        @default(false) // 일반 유저에겐 "익명", 관리자에겐 실명 표시
+  visibleUntil DateTime       @db.Date // 공개기간 종료일 — D-day 기준, 지나면 목록에서 숨김
+}
+
+model HobbyGroup {
+  post            Post             @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId          String           @id
+  status          HobbyGroupStatus @default(RECRUITING)
+  recruitStart    DateTime?        @db.Date
+  recruitEnd      DateTime?        @db.Date
+  meetingSchedule String? // 모임일 (매주 토요일 6시)
+  place           String?
+  cost            String?
+
+  members HobbyGroupMember[]
+}
+
+model HobbyGroupMember {
+  id       String     @id @default(cuid())
+  group    HobbyGroup @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  postId   String
+  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  joinedAt DateTime   @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  String
+  parent    Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
+  parentId  String? // 대댓글 부모 — 1단계 깊이만 (앱 검증). 취향 소그룹·부서활동 게시판에서 사용
+  replies   Comment[] @relation("CommentReplies")
+  content   String
+  deletedAt DateTime? // 작성자/관리자 삭제 (soft)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([postId, createdAt])
+  @@index([authorId])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+model Bookmark {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([userId])
+}
+
+// ---------------------------------------------------------------------
+// 이미지 — postId/serviceId/cellId/teamId 중 정확히 하나만 채운다 (앱 검증)
+// ---------------------------------------------------------------------
+
+model Image {
+  id           String          @id @default(cuid())
+  url          String
+  kind         ImageKind
+  post         Post?           @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId       String?
+  service      WorshipService? @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    String?
+  cell         Cell?           @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId       String?
+  team         Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId       String?
+  uploadedBy   User            @relation(fields: [uploadedById], references: [id])
+  uploadedById String
+  takenOn      DateTime?       @db.Date // 갤러리 월별 그룹 기준. 게시글 첨부면 Post.eventDate, 직접 업로드면 업로드일
+  sortOrder    Int             @default(0)
+  createdAt    DateTime        @default(now())
+
+  @@index([postId])
+  @@index([serviceId])
+  @@index([cellId, takenOn])
+  @@index([teamId, takenOn])
+}
+
+// ---------------------------------------------------------------------
+// 말씀 (설교 시리즈 · 설교 영상)
+// ---------------------------------------------------------------------
+
+model SermonSeries {
+  id            String   @id @default(cuid())
+  title         String // 하나님 나라의 왕
+  description   String? // 산상수훈을 따라가는 8월
+  month         DateTime @db.Date // 시리즈 월 (해당 월 1일)
+  coverImageUrl String?
+  createdAt     DateTime @default(now())
+
+  sermons Sermon[]
+}
+
+model Sermon {
+  id           String         @id @default(cuid())
+  service      WorshipService @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  serviceId    String         @unique // 예배 회차와 1:1
+  series       SermonSeries?  @relation(fields: [seriesId], references: [id])
+  seriesId     String?
+  title        String
+  passage      String? // 본문 (룻 1:19-22)
+  preacher     String?
+  videoUrl     String? // 유튜브 API 자동 인입
+  thumbnailUrl String?
+  isLive       Boolean        @default(false) // 실시간 예배 진행 중 (LIVE 배지)
+  viewCount    Int            @default(0)
+  deletedAt    DateTime? // 잘못 인입된 영상 관리자 삭제 (soft)
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([seriesId])
+}
+
+// ---------------------------------------------------------------------
+// 공지 · 알림
+// ---------------------------------------------------------------------
+
+model Notice {
+  id        String     @id @default(cuid())
+  type      NoticeType @default(NOTICE)
+  title     String
+  content   String?
+  imageUrl  String? // 배너 이미지 / 상세 이미지
+  linkUrl   String?
+  startsOn  DateTime?  @db.Date // 배너 노출 시작
+  endsOn    DateTime?  @db.Date // 배너 노출 종료
+  author    User       @relation(fields: [authorId], references: [id])
+  authorId  String // 관리자
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([type, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String // 수신자
+  type      NotificationType
+  title     String // 알림 화면 상단 라벨
+  body      String // "이서연 셀장님이 누리셀 팔로워 노트를 작성했어요."
+  linkUrl   String? // 탭하면 이동할 딥링크
+  readAt    DateTime? // null = 안 읽음
+  createdAt DateTime         @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
 }
