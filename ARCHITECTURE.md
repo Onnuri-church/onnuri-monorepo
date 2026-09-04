@@ -146,13 +146,20 @@ apps/mobile/src/
 * API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 Alert → 확인 누르면 `clearSession()` → `accessToken`이 null이 되는 순간 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음).
 * 유저 등급이 추가되면(향후) capability 기반 가드 조합(`@UseGuards(AuthGuard, XGuard)`)으로 확장하고, 리소스 소유권 검증(예: 내 글만 수정 가능)을 role 체크와 별도로 반드시 추가한다.
 
+## Deployment
+
+(2026-09-04 확정) 배포 대상과 시점:
+
+* **API — Render.** 개발 중에는 무료 인스턴스(15분 유휴 시 잠들고 깨어날 때 30초~1분 콜드 스타트 — 개발 단계에선 감수). 실사용(출시) 직전에 Starter(월 $7)로 올려 상시 가동으로 전환한다. 무료 티어의 750시간/월 제한은 무료 전용이라 유료 전환 후에는 계정 분리·시간 제한이 없다.
+* **DB — 로컬 개발은 Docker Postgres**(`apps/api`의 docker-compose), **운영은 Supabase Postgres**(무료 티어로 시작) 예정. Vercel(서버리스라 NestJS 부적합)·AWS(운영 부담 과함)는 기각.
+
 ## Known Issues
 
-* Prisma 스키마(`User`/`Team`/`Post`)는 정의만 됐고 마이그레이션은 아직 실행 안 함 — 로컬 Postgres 연결 전까지 DB를 쓰는 API 호출은 실패한다.
+* 인증은 아직 이메일/비밀번호 임시 구현 — 소셜 로그인(카카오/구글) 전환 시 `User`의 레거시 필드(`password`/`cellName`/`teamId`/`role`)를 제거한다 ([docs/erd.md](docs/erd.md) 참고).
 
 ## Build Order
 
-1. Prisma 마이그레이션 실행 (로컬 Postgres 연결) — 없으면 auth/users API가 실제로 안 돌아감
+1. ~~Prisma 마이그레이션 실행~~ — **완료 (2026-09-02)**: 확정 ERD 전체(25개 모델)가 스키마로 전환·적용됨. 근거 문서는 [docs/erd.md](docs/erd.md)
 2. 소셜 로그인 실제 연동 + Refresh token — 로그인 화면 UI는 나왔지만 카카오/구글 버튼은 아직 임시 세션에 연결돼 있다. 백엔드에 OAuth 엔드포인트(+`User`에 provider 필드)가 없고, 카카오는 네이티브 SDK라 dev build가 필요하다
 3. QR·셀 페이지 실제 기능 — 진입로(QR은 메인 헤더 버튼, 셀 페이지는 하단 탭)는 붙었지만 두 화면 다 제목만 있는 빈 화면이다. 특히 셀 페이지는 README 기준 기능 스코프가 아직 안 잡혀 있다
 4. 팀 스토리/마이페이지/오늘 주보/말씀 화면 실제 디자인 반영 (Figma 나오는 대로)

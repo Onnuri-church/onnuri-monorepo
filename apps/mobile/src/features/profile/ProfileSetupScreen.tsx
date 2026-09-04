@@ -18,6 +18,12 @@ const DEV_USER: User = {
   cellName: null,
   teamId: null,
   role: "member",
+  birthDate: null,
+  gender: null,
+  phone: null,
+  avatarUrl: null,
+  intro: null,
+  isAdmin: false,
   createdAt: "2026-01-01T00:00:00.000Z",
 };
 
