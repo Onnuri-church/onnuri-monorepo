@@ -1,8 +1,5 @@
-// DB 스키마(apps/api/prisma/schema.prisma)의 User를 따른다. legacy 표시 필드는 멤버십·권한
-// 체계 전환 시 스키마와 함께 제거한다 (docs/erd.md 참고).
-
-/** legacy: isAdmin + 멤버십 역할(CellRole/TeamRole)로 대체 예정. 값은 DB enum(UserRole) 표기 그대로다. */
-export type UserRole = "MEMBER" | "TEAM_LEADER" | "ADMIN";
+// DB 스키마(apps/api/prisma/schema.prisma)의 User를 따른다 (docs/erd.md 참고).
+// 등급은 isAdmin + 멤버십 역할(CellRole/TeamRole)로 표현한다.
 
 export type Gender = "MALE" | "FEMALE";
 
@@ -14,12 +11,6 @@ export type TeamRole = "LEADER" | "MEMBER";
 export interface User {
   id: string;
   name: string;
-  /** legacy: CellMembership으로 대체 예정 */
-  cellName: string | null;
-  /** legacy: TeamMembership으로 대체 예정 */
-  teamId: string | null;
-  /** legacy */
-  role: UserRole;
   /** ISO date (YYYY-MM-DD). 나이는 계산한다. */
   birthDate: string | null;
   gender: Gender | null;

@@ -15,9 +15,6 @@ import { SelectField } from "../../shared/components/composed/SelectField";
 const DEV_USER: User = {
   id: "dev-user",
   name: "개발용 계정",
-  cellName: null,
-  teamId: null,
-  role: "MEMBER",
   birthDate: null,
   gender: null,
   phone: null,

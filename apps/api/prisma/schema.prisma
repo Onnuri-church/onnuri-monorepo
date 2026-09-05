@@ -17,14 +17,6 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------
 
-// legacy: 등급은 멤버십 역할(TeamRole/CellRole) + User.isAdmin으로 대체됨.
-// users 모듈(/users/me select)이 아직 참조하므로 권한 체계 전환 시 함께 제거한다.
-enum UserRole {
-  MEMBER
-  TEAM_LEADER
-  ADMIN
-}
-
 enum Gender {
   MALE
   FEMALE
@@ -99,14 +91,9 @@ enum NotificationType {
 // ---------------------------------------------------------------------
 
 model User {
-  id       String  @id @default(cuid())
-  email    String  @unique
-  name     String
-  cellName String? // legacy: CellMembership으로 대체 (users 모듈이 아직 참조)
-
-  team   Team?    @relation(fields: [teamId], references: [id])
-  teamId String? // legacy: TeamMembership으로 대체 (users 모듈이 아직 참조)
-  role   UserRole @default(MEMBER) // legacy: isAdmin + 멤버십 역할로 대체
+  id    String @id @default(cuid())
+  email String @unique
+  name  String
 
   birthDate DateTime? @db.Date // 생년월일 전체 수집 (개인정보 동의 필요)
   gender    Gender?
@@ -183,7 +170,6 @@ model Team {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  users       User[] // legacy: User.teamId
   memberships TeamMembership[]
   posts       Post[]
   images      Image[]
