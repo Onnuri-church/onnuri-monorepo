@@ -5,9 +5,20 @@
 ## 소셜 로그인 키
 
 - `.env` 값(`EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`)은 **Jira 문서**에 있다 — [.env.example](.env.example) 참고.
-- **본인 빌드 키 등록**: 소셜 로그인은 서명 키가 카카오/구글 콘솔에 등록된 빌드에서만 동작한다. 본인 키스토어의 SHA-1·키 해시 값을 **한재민에게 보내면 콘솔에 등록해준다**. 미등록이면 구글은 `DEVELOPER_ERROR`, 카카오는 키 해시 오류가 난다.
+- **빌드 키 등록**: 소셜 로그인은 서명 키가 카카오/구글 콘솔에 등록된 빌드에서만 동작한다. 조직 프로젝트 키스토어의 SHA-1·키 해시 값을 **한재민에게 보내면 콘솔에 등록해준다** (조직 키스토어는 하나라 한 번만 등록하면 된다). 미등록이면 구글은 `DEVELOPER_ERROR`, 카카오는 키 해시 오류가 난다.
 - 두 SDK 다 네이티브 모듈이라 **Expo Go·웹에서는 소셜 로그인이 동작하지 않는다** (dev build 필요). 웹/Expo Go에서는 게스트로 화면 작업만 한다.
 - 카카오 config plugin은 **빌드 시점**에 키를 읽으므로, 빌드하는 환경에도 `EXPO_PUBLIC_KAKAO_NATIVE_APP_KEY`가 설정돼 있어야 한다.
+
+## EAS 빌드
+
+프로필은 [eas.json](eas.json)에 있다 — `development`(dev client·APK), `preview`(내부 배포용 APK), `production`(AAB). 실행은 `pnpm --filter @onnuri/mobile exec eas <command>`.
+
+**빌드는 공용 조직 계정 `onnuri-church-app`의 프로젝트 `onnuri-app`으로 나간다.** 계정을 공유하지 않고, 각자 자기 Expo 계정으로 로그인한 채 조직 멤버(Developer 이상)로 참여한다.
+
+- 계정 연결값(`owner`, `extra.eas.projectId`)은 `eas init`이 **`app.json`에 직접 쓴다**. `.env`로 빼는 건 안 된다 — EAS CLI는 `.env`를 읽지 않아서 "EAS project not configured"로 빌드가 죽는다 (Expo CLI는 읽으므로 `expo config`만으로 검증하면 못 잡는다).
+- 이 두 값은 **커밋한다**. 팀 전체가 같은 조직 프로젝트를 보게 하려는 것이므로, 개인 계정 값으로 덮어쓰지 않는다.
+- `app.json`의 `slug`는 EAS 프로젝트 slug(`onnuri-app`)와 같아야 한다. 다르면 `eas init`이 다른 프로젝트를 찾거나 새로 만든다.
+- **키스토어는 조직 계정에 하나만 둔다.** 조직 프로젝트로 빌드하면 누가 돌리든 같은 SHA-1이 나오므로, 위 "소셜 로그인 키"의 콘솔 등록도 한 번만 하면 된다. (`*.jks`는 gitignore 대상이라 저장소에 넣지 않는다.)
 
 ## UI 작업 전 필수
 
