@@ -1,8 +1,9 @@
 {
   "expo": {
     "name": "mobile",
-    "slug": "mobile",
+    "slug": "onnuri-app",
     "version": "1.0.0",
+    "scheme": "onnurichurch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -31,6 +32,12 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "owner": "onnuri-church-app",
+    "extra": {
+      "eas": {
+        "projectId": "f187ceb9-84e9-454e-afb9-cfd7f961721b"
+      }
     }
   }
 }
