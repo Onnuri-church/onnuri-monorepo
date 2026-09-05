@@ -1,20 +1,39 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 
-import { CreateUserDto } from '../users/dto/create-user.dto';
 import { AuthService } from './auth.service';
-import { LoginDto } from './dto/login.dto';
+import { DevLoginDto } from './dto/dev-login.dto';
+import { KakaoLoginDto } from './dto/kakao-login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { SocialLoginDto } from './dto/social-login.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('register')
-  register(@Body() dto: CreateUserDto) {
-    return this.authService.register(dto);
+  @Post('login/kakao')
+  loginWithKakao(@Body() dto: KakaoLoginDto) {
+    return this.authService.loginWithKakao(dto);
   }
 
-  @Post('login')
-  login(@Body() dto: LoginDto) {
-    return this.authService.login(dto.email, dto.password);
+  @Post('login/google')
+  loginWithGoogle(@Body() dto: SocialLoginDto) {
+    return this.authService.loginWithGoogle(dto.token);
+  }
+
+  // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404
+  @Post('login/dev')
+  loginWithDev(@Body() dto: DevLoginDto) {
+    return this.authService.loginWithDev(dto.email);
+  }
+
+  @Post('refresh')
+  refresh(@Body() dto: RefreshTokenDto) {
+    return this.authService.refresh(dto.refreshToken);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('logout')
+  logout(@Body() dto: RefreshTokenDto) {
+    return this.authService.logout(dto.refreshToken);
   }
 }

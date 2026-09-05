@@ -1,47 +1,38 @@
-import { ConflictException, Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcryptjs';
+import { Injectable } from '@nestjs/common';
+import type { User } from '@onnuri/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
-import { CreateUserDto } from './dto/create-user.dto';
 
 @Injectable()
 export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  findByEmail(email: string) {
-    return this.prisma.user.findUnique({ where: { email } });
-  }
-
-  findById(id: string) {
-    return this.prisma.user.findUnique({
+  // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
+  async findById(id: string): Promise<User | null> {
+    const user = await this.prisma.user.findUnique({
       where: { id },
       select: {
         id: true,
-        email: true,
         name: true,
         cellName: true,
         teamId: true,
         role: true,
+        birthDate: true,
+        gender: true,
+        phone: true,
+        avatarUrl: true,
+        intro: true,
+        isAdmin: true,
         createdAt: true,
-        updatedAt: true,
       },
     });
-  }
+    if (!user) return null;
 
-  async create(dto: CreateUserDto) {
-    const existing = await this.findByEmail(dto.email);
-    if (existing) {
-      throw new ConflictException('이미 가입된 이메일입니다.');
-    }
-
-    const passwordHash = await bcrypt.hash(dto.password, 10);
-    return this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: passwordHash,
-        name: dto.name,
-        cellName: dto.cellName,
-      },
-    });
+    return {
+      ...user,
+      // 계약: birthDate는 YYYY-MM-DD (나이는 클라이언트가 계산), createdAt은 ISO 문자열
+      birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
+      createdAt: user.createdAt.toISOString(),
+    };
   }
 }

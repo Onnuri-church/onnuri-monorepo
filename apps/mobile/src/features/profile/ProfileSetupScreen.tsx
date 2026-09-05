@@ -17,7 +17,7 @@ const DEV_USER: User = {
   name: "개발용 계정",
   cellName: null,
   teamId: null,
-  role: "member",
+  role: "MEMBER",
   birthDate: null,
   gender: null,
   phone: null,
@@ -148,7 +148,7 @@ export function ProfileSetupScreen() {
           <Button
             label="등록하기"
             disabled={!canSubmit}
-            onPress={() => setSession(DEV_USER, "dev")}
+            onPress={() => setSession(DEV_USER, { accessToken: "dev", refreshToken: "dev" })}
           />
         </View>
       </KeyboardAvoidingView>

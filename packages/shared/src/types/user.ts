@@ -1,8 +1,8 @@
-// DB 스키마(apps/api/prisma/schema.prisma)의 User를 따른다. legacy 표시 필드는 소셜 로그인
-// 전환 시 스키마와 함께 제거한다 (docs/erd.md 참고).
+// DB 스키마(apps/api/prisma/schema.prisma)의 User를 따른다. legacy 표시 필드는 멤버십·권한
+// 체계 전환 시 스키마와 함께 제거한다 (docs/erd.md 참고).
 
-/** legacy: isAdmin + 멤버십 역할(CellRole/TeamRole)로 대체 예정. auth 연동 전까지만 유지. */
-export type UserRole = "member" | "team_leader" | "admin";
+/** legacy: isAdmin + 멤버십 역할(CellRole/TeamRole)로 대체 예정. 값은 DB enum(UserRole) 표기 그대로다. */
+export type UserRole = "MEMBER" | "TEAM_LEADER" | "ADMIN";
 
 export type Gender = "MALE" | "FEMALE";
 

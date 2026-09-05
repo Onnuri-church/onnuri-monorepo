@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-import type { User } from "@onnuri/shared";
+import type { AuthTokens, User } from "@onnuri/shared";
 
 // 세션은 필드 여러 개가 아니라 값 하나로 표현한다. accessToken이 null인 것만으로는
 // "세션 없음"과 "아직 확인 전"을 구분할 수 없는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고
@@ -11,21 +11,21 @@ import type { User } from "@onnuri/shared";
 // 없으므로 게스트 상태에서 유저 정보를 읽는 코드는 컴파일에서 막힌다.
 type Session =
   | { status: "loading" }
-  | { status: "authenticated"; user: User; accessToken: string }
+  | { status: "authenticated"; user: User; accessToken: string; refreshToken: string }
   | { status: "guest" }
   | { status: "unauthenticated" };
 
 interface AuthState {
   session: Session;
-  setSession: (user: User, accessToken: string) => void;
+  setSession: (user: User, tokens: AuthTokens) => void;
   startGuestSession: () => void;
   clearSession: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   session: { status: "loading" },
-  setSession: (user, accessToken) =>
-    set({ session: { status: "authenticated", user, accessToken } }),
+  setSession: (user, tokens) =>
+    set({ session: { status: "authenticated", user, ...tokens } }),
   startGuestSession: () => set({ session: { status: "guest" } }),
   clearSession: () => set({ session: { status: "unauthenticated" } }),
 }));

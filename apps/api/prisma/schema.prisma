@@ -18,7 +18,7 @@ datasource db {
 // ---------------------------------------------------------------------
 
 // legacy: 등급은 멤버십 역할(TeamRole/CellRole) + User.isAdmin으로 대체됨.
-// auth 모듈(JWT payload)이 아직 참조하므로 소셜 로그인 전환 시 함께 제거한다.
+// users 모듈(/users/me select)이 아직 참조하므로 권한 체계 전환 시 함께 제거한다.
 enum UserRole {
   MEMBER
   TEAM_LEADER
@@ -101,7 +101,6 @@ enum NotificationType {
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
-  password String // legacy: 소셜 로그인 전환 시 제거 (현재 auth 모듈이 사용)
   name     String
   cellName String? // legacy: CellMembership으로 대체 (users 모듈이 아직 참조)
 
@@ -125,6 +124,7 @@ model User {
   updatedAt   DateTime  @updatedAt
 
   socialAccounts         SocialAccount[]
+  refreshTokens          RefreshToken[]
   teamMemberships        TeamMembership[]
   cellMemberships        CellMembership[]
   worshipAttendances     WorshipAttendance[]     @relation("WorshipAttendee")
@@ -154,6 +154,18 @@ model SocialAccount {
   createdAt   DateTime       @default(now())
 
   @@unique([provider, providerUid])
+  @@index([userId])
+}
+
+// 리프레시 토큰은 회전(rotation) 방식 — 사용 시 행을 지우고 새로 발급한다.
+model RefreshToken {
+  id        String   @id // 리프레시 JWT의 jti 클레임
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  tokenHash String // sha256(토큰 원문) — 원문은 저장하지 않는다
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
   @@index([userId])
 }
 
