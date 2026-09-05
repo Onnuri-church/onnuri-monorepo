@@ -23,7 +23,7 @@ export class AuthController {
   // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404
   @Post('login/dev')
   loginWithDev(@Body() dto: DevLoginDto) {
-    return this.authService.loginWithDev(dto.email);
+    return this.authService.loginWithDev(dto.email, dto.role);
   }
 
   @Post('refresh')

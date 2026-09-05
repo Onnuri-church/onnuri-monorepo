@@ -80,8 +80,13 @@ describe('Auth (e2e)', () => {
   // 임시 이메일(@social.invalid)로 가입된 테스트 유저는 이메일 도메인으로 못 찾으므로
   // 테스트가 쓰는 providerUid로도 지운다.
   const TEST_UIDS = ['kakao-uid-1', 'kakao-uid-2', 'google-uid-1'];
-  const cleanup = () =>
-    prisma.user.deleteMany({
+  const cleanup = async () => {
+    // 개발용 로그인 테스트가 만든 셀은 createdById가 Restrict FK라 유저보다 먼저 지운다.
+    // (팀은 유저 쪽 FK가 없어 남겨둔다 — 실제 개발용 로그인이 재사용하는 고정 팀이다.)
+    await prisma.cell.deleteMany({
+      where: { createdBy: { email: { endsWith: `@${EMAIL_DOMAIN}` } } },
+    });
+    await prisma.user.deleteMany({
       where: {
         OR: [
           { email: { endsWith: `@${EMAIL_DOMAIN}` } },
@@ -89,6 +94,7 @@ describe('Auth (e2e)', () => {
         ],
       },
     });
+  };
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -285,6 +291,57 @@ describe('Auth (e2e)', () => {
 
     // 꺼졌을 때 404로 숨기는지는 유닛 테스트(auth.service.spec.ts)가 커버한다 —
     // 게이트가 import 시점 검증에 묶여 같은 프로세스로 껐다 켜기 어렵기 때문이다.
+  });
+
+  describe('개발용 로그인 역할', () => {
+    const devLogin = (email: string, role: string) =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email, role })
+        .expect(201);
+
+    it('ADMIN이면 관리자 플래그가 켜진다', async () => {
+      const res = await devLogin(`dev-admin@${EMAIL_DOMAIN}`, 'ADMIN');
+
+      const dbUser = await prisma.user.findUnique({
+        where: { id: (res.body as LoginBody).user.id },
+      });
+      expect(dbUser?.isAdmin).toBe(true);
+    });
+
+    it('TEAM_LEADER면 개발팀 팀장 멤버십이 생기고, 재로그인해도 중복되지 않는다', async () => {
+      const email = `dev-team-leader@${EMAIL_DOMAIN}`;
+      await devLogin(email, 'TEAM_LEADER');
+      const res = await devLogin(email, 'TEAM_LEADER');
+
+      const memberships = await prisma.teamMembership.findMany({
+        where: { userId: (res.body as LoginBody).user.id },
+        include: { team: true },
+      });
+      expect(memberships).toHaveLength(1);
+      expect(memberships[0].role).toBe('LEADER');
+      expect(memberships[0].team.name).toBe('개발팀');
+    });
+
+    it('CELL_LEADER면 개발셀 셀장 멤버십이 생기고, 재로그인해도 중복되지 않는다', async () => {
+      const email = `dev-cell-leader@${EMAIL_DOMAIN}`;
+      await devLogin(email, 'CELL_LEADER');
+      const res = await devLogin(email, 'CELL_LEADER');
+
+      const memberships = await prisma.cellMembership.findMany({
+        where: { userId: (res.body as LoginBody).user.id },
+        include: { cell: true },
+      });
+      expect(memberships).toHaveLength(1);
+      expect(memberships[0].role).toBe('LEADER');
+      expect(memberships[0].cell.name).toBe('개발셀');
+    });
+
+    it('목록에 없는 role 값이면 400', () =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email: `dev-admin@${EMAIL_DOMAIN}`, role: 'SUPER' })
+        .expect(400));
   });
 
   describe('인증 가드', () => {

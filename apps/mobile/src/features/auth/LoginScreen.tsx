@@ -9,8 +9,15 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import { SocialLoginButton } from "./components/SocialLoginButton";
 import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
 
-// 개발용 로그인이 만드는 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
-const DEV_LOGIN_EMAIL = "dev@onnuri.local";
+// 개발용 로그인이 만드는 역할별 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을
+// 확인하기 위한 것. 역할(관리자 플래그·멤버십)이 유저 레코드에 계속 남으므로, 한 계정으로 role만
+// 바꿔 로그인하면 역할이 누적된다 — 역할마다 계정을 분리해서 "일반 유저" 상태를 보존한다.
+const DEV_ACCOUNTS = [
+  { label: "일반", email: "dev@onnuri.local", role: "MEMBER" },
+  { label: "팀장", email: "dev-team-leader@onnuri.local", role: "TEAM_LEADER" },
+  { label: "셀장", email: "dev-cell-leader@onnuri.local", role: "CELL_LEADER" },
+  { label: "관리자", email: "dev-admin@onnuri.local", role: "ADMIN" },
+] as const;
 
 // 개발용 로그인 버튼은 .env에 EXPO_PUBLIC_AUTH_DEV_LOGIN=true를 명시한 사람에게만 보인다
 // (백엔드 AUTH_DEV_LOGIN과 짝 — 둘 다 켜야 실제로 동작한다). Expo는 EXPO_PUBLIC_ 접두사 변수만
@@ -47,7 +54,8 @@ export function LoginScreen() {
 
   const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk);
   const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk);
-  const handleDevPress = () => void runSocialLogin(() => signInWithDev(DEV_LOGIN_EMAIL));
+  const handleDevPress = (account: (typeof DEV_ACCOUNTS)[number]) =>
+    void runSocialLogin(() => signInWithDev(account.email, account.role));
 
   return (
     <View
@@ -81,15 +89,20 @@ export function LoginScreen() {
           <Text className="text-body-medium text-text-alternative">게스트로 로그인하기</Text>
         </Pressable>
 
-        {/* EXPO_PUBLIC_AUTH_DEV_LOGIN=true일 때만 — 소셜 SDK 없이 진짜 세션으로 유저 기능을 확인하는 버튼 */}
+        {/* EXPO_PUBLIC_AUTH_DEV_LOGIN=true일 때만 — 소셜 SDK 없이 역할별 고정 계정의 진짜 세션으로 유저 기능을 확인하는 버튼 */}
         {DEV_LOGIN_ENABLED && (
-          <Pressable
-            className="items-center py-2"
-            onPress={handleDevPress}
-            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-          >
-            <Text className="text-body-medium text-text-assistive">[DEV] 개발용 로그인</Text>
-          </Pressable>
+          <View className="flex-row items-center justify-center gap-3 py-2">
+            <Text className="text-body-medium text-text-assistive">[DEV]</Text>
+            {DEV_ACCOUNTS.map((account) => (
+              <Pressable
+                key={account.role}
+                onPress={() => handleDevPress(account)}
+                style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+              >
+                <Text className="text-body-medium text-text-assistive">{account.label}</Text>
+              </Pressable>
+            ))}
+          </View>
         )}
       </View>
     </View>
