@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import type { AuthTokens, LoginResponse, User } from "@onnuri/shared";
+import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
 
 import { API_BASE_URL } from "./config";
 
@@ -21,9 +21,9 @@ export function postGoogleLogin(googleIdToken: string): Promise<LoginResponse> {
 }
 
 // 개발용 로그인 — 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다 (아니면 404).
-export function postDevLogin(email: string): Promise<LoginResponse> {
+export function postDevLogin(email: string, role: DevLoginRole): Promise<LoginResponse> {
   return bareClient
-    .post<LoginResponse>("/auth/login/dev", { email })
+    .post<LoginResponse>("/auth/login/dev", { email, role })
     .then((res) => res.data);
 }
 

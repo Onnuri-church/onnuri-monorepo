@@ -1,4 +1,4 @@
-import type { AuthTokens, LoginResponse, User } from "@onnuri/shared";
+import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
 
 import { useAuthStore } from "../store/useAuthStore";
 import {
@@ -34,9 +34,12 @@ export async function signInWithSocial(
 }
 
 // 개발용 로그인 — 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
-// 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다.
-export async function signInWithDev(email: string): Promise<{ isNewUser: boolean }> {
-  return startSession(await postDevLogin(email));
+// 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다. role은 백엔드가 로그인하면서 세팅한다.
+export async function signInWithDev(
+  email: string,
+  role: DevLoginRole,
+): Promise<{ isNewUser: boolean }> {
+  return startSession(await postDevLogin(email, role));
 }
 
 // 앱 부팅 시 저장된 토큰으로 세션을 복원한다. 세션 확정(setSession/clearSession)은
