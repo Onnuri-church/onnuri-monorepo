@@ -14,9 +14,6 @@ export class UsersService {
       select: {
         id: true,
         name: true,
-        cellName: true,
-        teamId: true,
-        role: true,
         birthDate: true,
         gender: true,
         phone: true,

@@ -3,7 +3,7 @@
 > **상태: 확정 (2026-09-02)** — [attendance-data-model.md](attendance-data-model.md)의 미결 중 팀장 표현·소속 팀 이력·셀모임 주기는 아래 구조로 확정했고, 출석 기록 방식도 attended+기록자 저장으로 확정했다. 남은 미결(문서 §6)이 확정되면 함께 갱신한다.
 
 이 문서는 [schema.prisma](../apps/api/prisma/schema.prisma)로 **구현되어 있다** — 스키마를 바꾸면 이 문서도 같은 턴에 갱신한다.
-레거시 필드(`User.cellName`·`teamId` — 멤버십 전환 시, `role` — 권한 체계 전환 시 제거 예정)는 스키마에만 있고 이 문서에는 표기하지 않는다 (`password`는 소셜 로그인 전환으로 제거됨). 생성·수정 시각(`createdAt`/`updatedAt`)도 다이어그램에서는 대부분 생략한다 — 스키마에는 전 테이블에 있다. QR 출석·엑셀 추출은 MVP 이후 기능이다.
+레거시 필드는 모두 제거됨 (`User.cellName`·`teamId`·`role`은 멤버십+`isAdmin` 체계로, `password`는 소셜 로그인 전환으로). 생성·수정 시각(`createdAt`/`updatedAt`)은 다이어그램에서 대부분 생략한다 — 스키마에는 전 테이블에 있다. QR 출석·엑셀 추출은 MVP 이후 기능이다.
 
 ## 1. 회원·조직
 
