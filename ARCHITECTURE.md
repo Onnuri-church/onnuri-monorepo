@@ -34,6 +34,13 @@ onnuri-monorepo/
 
 앱은 실행 단위, 패키지는 공유 단위다. 프론트·백이 같이 쓰는 타입/상수/유틸은 특정 앱에 중복 구현하지 않고 `packages/shared`에 둔다.
 
+`@onnuri/shared`는 소비자에 따라 두 형태로 읽힌다 (package.json의 `exports` 조건 분기):
+
+* **Metro(모바일)·타입체크** — TS 소스(`src/`)를 그대로 읽는다. shared를 고치면 즉시 반영된다.
+* **Node 런타임(백엔드 실행)** — Node는 TS 소스를 못 읽으므로 빌드 산출물 `dist/`(CJS)를 읽는다(`node` 조건). api의 `build`/`start*` 스크립트가 shared 빌드를 먼저 돌리므로 따로 챙길 건 없지만, **백엔드 `start:dev`가 떠 있는 동안 shared를 고치면 재시작해야 반영된다.** jest(유닛·e2e)는 `moduleNameMapper`로 src를 직접 읽어서 dist가 낡아도 테스트는 항상 최신 소스로 돈다.
+
+이 분기가 생긴 이유: 백엔드가 shared에서 타입만 쓰는 동안은 런타임 로드가 없어 `main: src/index.ts`로도 돌았지만, 값(상수·유틸)을 쓰는 순간 Node가 TS를 로드하다 죽는다(`ERR_MODULE_NOT_FOUND`). shared의 값을 api에 복붙하는 대신(위 중복 금지 원칙) Node에게만 빌드본을 주는 쪽을 택했다.
+
 ## Architecture Decisions
 
 두 앱 다 팀 규모(7명)·기간(6개월)·현재 도메인 복잡도 기준으로 "지금 필요한 만큼만" 원칙으로 정했다. 이미 있는 대안을 왜 안 썼는지 기록해서 나중에 같은 논의를 반복하지 않는다.
@@ -88,7 +95,8 @@ apps/api/src/
 ├── modules/
 │   ├── prisma/    PrismaService (전역 모듈) — DB 연결 실패해도 서버가 안 죽도록 onModuleInit에서 catch함
 │   ├── auth/      소셜 로그인(카카오/구글), 액세스/리프레시 토큰 발급·회전 (social/ 토큰 검증기, strategies/jwt.strategy.ts)
-│   └── users/     findById(공개 프로필 select), GET /users/me
+│   ├── users/     findById(공개 프로필 select), GET /users/me, PATCH /users/me(프로필 등록·수정 — 소속은 셀/팀 멤버십 행으로 반영, 변경 시 endedAt으로 이력 보존)
+│   └── cells/ teams/  GET 목록 — 프로필 설정의 소속 선택지. 로컬 데이터는 prisma/seed.ts로 채운다(prisma:seed)
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠
     ├── decorators/ CurrentUser
