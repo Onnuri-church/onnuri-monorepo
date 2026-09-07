@@ -3,7 +3,7 @@ import { useState } from "react";
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { User } from "@onnuri/shared";
+import { PHONE_NUMBER_REGEX, type User } from "@onnuri/shared";
 
 import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -59,12 +59,18 @@ export function ProfileSetupScreen() {
   const insets = useSafeAreaInsets();
 
   const [birthday, setBirthday] = useState("");
+  const [phone, setPhone] = useState("");
   const [gender, setGender] = useState<string | null>(null);
   const [cell, setCell] = useState<string | null>(null);
   const [team, setTeam] = useState<string | null>(null);
 
-  // 네 항목을 다 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
-  const canSubmit = birthday.length === 6 && gender !== null && cell !== null && team !== null;
+  // 모든 항목을 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
+  const canSubmit =
+    birthday.length === 6 &&
+    PHONE_NUMBER_REGEX.test(phone) &&
+    gender !== null &&
+    cell !== null &&
+    team !== null;
 
   return (
     <View className="flex-1 bg-background-normal" style={{ paddingBottom: insets.bottom }}>
@@ -92,6 +98,19 @@ export function ProfileSetupScreen() {
               placeholderTextColor={colors.text.assistive}
               keyboardType="number-pad"
               maxLength={6}
+            />
+          </View>
+
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">전화번호</Text>
+            <TextInput
+              className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="예) 01012345678"
+              placeholderTextColor={colors.text.assistive}
+              keyboardType="number-pad"
+              maxLength={11}
             />
           </View>
 
