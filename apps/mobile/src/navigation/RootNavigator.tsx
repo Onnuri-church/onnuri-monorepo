@@ -384,15 +384,21 @@ export function RootNavigator() {
         </Stack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-          <AuthStack.Screen name="Login" component={LoginScreen} />
-          <AuthStack.Screen
-            name="ProfileSetup"
-            component={ProfileSetupScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="프로필 설정" rightAction="none" />,
-            }}
-          />
+          {/* 세션 상태에 따라 화면을 하나만 등록한다 — onboarding(프로필 미완, 토큰은 이미 있음)이면
+              프로필 설정만 남아 뒤로가기로 로그인에 돌아갈 수 없고, 등록을 마치면 setSession이
+              메인 트리로 전환한다. */}
+          {session.status === "onboarding" ? (
+            <AuthStack.Screen
+              name="ProfileSetup"
+              component={ProfileSetupScreen}
+              options={{
+                headerShown: true,
+                header: () => <Header variant="sub" title="프로필 설정" rightAction="none" />,
+              }}
+            />
+          ) : (
+            <AuthStack.Screen name="Login" component={LoginScreen} />
+          )}
         </AuthStack.Navigator>
       )}
     </NavigationContainer>

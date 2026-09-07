@@ -8,23 +8,25 @@ import { refreshSession } from "./session";
 
 export const apiClient = axios.create({ baseURL: API_BASE_URL });
 
+// 프로필 설정 중(onboarding)도 토큰이 있는 상태라 똑같이 붙인다 — PATCH /users/me가 인증을 요구한다.
 apiClient.interceptors.request.use((config) => {
   const { session } = useAuthStore.getState();
-  if (session.status === "authenticated") {
+  if (session.status === "authenticated" || session.status === "onboarding") {
     config.headers.Authorization = `Bearer ${session.accessToken}`;
   }
   return config;
 });
 
-// 로그인 상태에서 401을 받으면 리프레시 후 원 요청을 한 번 재시도한다. 리프레시까지 실패하면
-// 알림을 띄우고, 확인을 눌렀을 때만 세션을 지운다 — RootNavigator가 session.status로 화면을
-// 분기하므로 clearSession 호출 자체가 로그인 화면 전환을 트리거한다.
-// 게스트/비로그인 상태의 401은 세션 문제가 아니므로 그대로 호출한 쪽에 전달한다.
+// 토큰이 있는 상태(authenticated/onboarding)에서 401을 받으면 리프레시 후 원 요청을 한 번
+// 재시도한다. 리프레시까지 실패하면 알림을 띄우고, 확인을 눌렀을 때만 세션을 지운다 —
+// RootNavigator가 session.status로 화면을 분기하므로 clearSession 호출 자체가 로그인 화면
+// 전환을 트리거한다. 게스트/비로그인 상태의 401은 세션 문제가 아니므로 그대로 호출한 쪽에 전달한다.
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
     const { session } = useAuthStore.getState();
-    if (error.response?.status !== 401 || session.status !== "authenticated") {
+    const hasSession = session.status === "authenticated" || session.status === "onboarding";
+    if (error.response?.status !== 401 || !hasSession) {
       return Promise.reject(error);
     }
 
