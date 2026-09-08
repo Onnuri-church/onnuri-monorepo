@@ -64,6 +64,19 @@ enum HobbyGroupStatus {
   CLOSED
 }
 
+// 소그룹 안에서의 역할 — 셀장/팀장과 같은 멤버십 역할 패턴 (전역 등급 아님)
+enum HobbyGroupRole {
+  LEADER // 소그룹장 — 참여 승인/거절, 소그룹 관리 (2026-09-08 확정)
+  MEMBER
+}
+
+// 소그룹 참여는 신청 → 소그룹장 승인 흐름 (2026-09-08 시안 확정)
+enum HobbyGroupMemberStatus {
+  PENDING // 승인 대기중 — 신청 취소 가능
+  APPROVED // 참여 중 — 탈퇴 가능, 활동 사진 추가 가능
+  REJECTED // 승인 거절됨
+}
+
 enum ImageKind {
   POST_CONTENT // 게시글 본문 사진 — postId
   GALLERY // 셀/팀 갤러리 직접 업로드 — cellId 또는 teamId
@@ -161,14 +174,15 @@ model RefreshToken {
 // ---------------------------------------------------------------------
 
 model Team {
-  id            String   @id @default(cuid())
-  name          String   @unique
+  id            String    @id @default(cuid())
+  name          String    @unique
   iconUrl       String? // 팀스토리 목록 아이콘
   coverImageUrl String? // 배경사진
   tagline       String? // 한 줄 소개 (목록에 표시)
   description   String? // 팀 소개
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime? // 관리자 삭제 soft delete — 기록은 보존 (2026-09-08 확정)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   memberships TeamMembership[]
   posts       Post[]
@@ -391,12 +405,14 @@ model HobbyGroup {
 }
 
 model HobbyGroupMember {
-  id       String     @id @default(cuid())
-  group    HobbyGroup @relation(fields: [postId], references: [postId], onDelete: Cascade)
+  id       String                 @id @default(cuid())
+  group    HobbyGroup             @relation(fields: [postId], references: [postId], onDelete: Cascade)
   postId   String
-  user     User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId   String
-  joinedAt DateTime   @default(now())
+  role     HobbyGroupRole         @default(MEMBER) // 작성자(개설자) = LEADER
+  status   HobbyGroupMemberStatus @default(PENDING)
+  joinedAt DateTime               @default(now()) // 신청 시각
 
   @@unique([postId, userId])
   @@index([userId])
