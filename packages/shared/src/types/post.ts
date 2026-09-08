@@ -17,6 +17,12 @@ export type PrayerCategory =
 
 export type HobbyGroupStatus = "RECRUITING" | "CLOSED";
 
+/** 소그룹 멤버십 역할. 작성자(개설자) = LEADER(소그룹장) — 참여 승인/거절 권한. */
+export type HobbyGroupRole = "LEADER" | "MEMBER";
+
+/** 소그룹 참여는 승인제 — PENDING(신청 취소 가능) / APPROVED(참여 중) / REJECTED. */
+export type HobbyGroupMemberStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export interface Post {
   id: string;
   board: BoardType;

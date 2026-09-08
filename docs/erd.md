@@ -29,7 +29,7 @@ erDiagram
         boolean notifySermonUpload "설정 토글: 말씀영상 업로드"
         boolean notifyLiveWorship "설정 토글: 실시간 예배 시작"
         boolean notifyQtNewPost "설정 토글: 큐티나눔 새글"
-        datetime withdrawnAt "탈퇴 soft delete — 출석·게시글 이력 보존"
+        datetime withdrawnAt "탈퇴 soft delete — 30일 후 프로필 파기, 이름+출석·활동 기록은 기명 보존 (2026-09-08 확정)"
         datetime createdAt
         datetime updatedAt
     }
@@ -55,6 +55,7 @@ erDiagram
         string coverImageUrl "배경사진 (nullable)"
         string tagline "한 줄 소개 — 목록에 표시 (nullable)"
         string description "팀 소개 (nullable)"
+        datetime deletedAt "관리자 삭제 soft delete — 기록은 보존 (2026-09-08 확정)"
     }
 
     TeamMembership {
@@ -243,7 +244,9 @@ erDiagram
         string id PK
         string postId FK "userId와 복합 유니크"
         string userId FK
-        datetime joinedAt
+        HobbyGroupRole role "LEADER(소그룹장, 작성자=개설자) / MEMBER — 2026-09-08 확정"
+        HobbyGroupMemberStatus status "PENDING(승인 대기) / APPROVED(참여 중) / REJECTED(거절)"
+        datetime joinedAt "신청 시각"
     }
 
     Comment {
@@ -322,7 +325,8 @@ erDiagram
 - **예배 회차(`WorshipService`)를 엔티티로 분리** — 설교·영상·주보·QR·실시간 예배가 전부 매주 예배일에 붙으므로 자연스럽게 연결되고, `CellMeeting` 분리로 "셀모임 없는 주"가 결석이 아니라 자동으로 '없음'이 된다.
 - **문서 vs 화면이 다른 곳은 화면 기준** — 생년월일 전체(DATE), 부셀장 역할, 배경사진·소개 컬럼. 화면이 더 최신·구체적이다.
 - **저장하지 않고 계산하는 것**: 나이, 출석 횟수·주수, 큐티나눔 수, 받은 하트 수 (근거: [attendance-data-model.md §5](attendance-data-model.md)).
-- 회원탈퇴·게시글 삭제·셀 삭제는 soft delete — 출석·이력이 끊기지 않게. **보관 기간 (2026-09-03 확정)**: 회원 탈퇴는 30일 후 개인정보 파기하되 출석 기록은 익명화해 보존(통계용), 게시글·댓글은 당분간 무기한 보관(정리 배치는 필요해질 때 추가). 출시 전 개인정보처리방침에 명시할 것.
+- 회원탈퇴·게시글 삭제·셀/팀 삭제는 soft delete — 출석·이력이 끊기지 않게. **보관 기간 (2026-09-03 확정, 2026-09-08 수정)**: 회원 탈퇴는 30일 후 프로필 등 개인정보를 파기하되 이름+출석·활동 기록은 **기명으로 보존**(통계용 — 익명화하지 않음), 게시글·댓글은 당분간 무기한 보관(정리 배치는 필요해질 때 추가). 출시 전 개인정보처리방침에 명시할 것.
+- **취향 소그룹 참여는 승인제 (2026-09-08 확정)** — 신청하면 `HobbyGroupMember`가 `PENDING`으로 생성되고, 소그룹장(`role = LEADER`, 글 작성자가 개설과 동시에 LEADER)이 승인(`APPROVED`)/거절(`REJECTED`)한다. PENDING 상태에서는 본인이 신청 취소(행 삭제) 가능, APPROVED 상태에서는 탈퇴 가능.
 
 ## 미결 (구조에 영향 없어 진행 가능, 확정 시 갱신)
 
@@ -331,3 +335,4 @@ erDiagram
 - ~~갤러리 게시글 사진 자동 포함~~ → **확정 (2026-09-04): 자동 포함** — 위 §4 매칭 규칙 참고. 디자이너에게 공유할 것.
 - ~~부서활동 게시판 업로드 권한~~ → **확정 (2026-09-03): 해당 팀 소속 팀원 모두 작성 가능.**
 - ~~셀 강제 삭제 시 출석 기록 처리~~ → **확정 (2026-09-04): 기록 보존** — 셀은 soft delete로 숨기고 출석·팔로워 노트 기록은 남긴다(통계·엑셀 유지, 표시는 "(삭제된 셀)").
+- ~~소속 있는 회원을 다른 셀에 추가할 때~~ → **확정 (2026-09-08): 자동 이동** — 기존 `CellMembership`에 `endedAt`을 찍고 새 셀 멤버십을 생성한다(이력·출석 기록은 이전 셀 소속으로 보존). 실수 방지용 확인 다이얼로그만 둔다.
