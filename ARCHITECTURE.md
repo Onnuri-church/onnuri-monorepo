@@ -34,12 +34,6 @@ onnuri-monorepo/
 
 앱은 실행 단위, 패키지는 공유 단위다. 프론트·백이 같이 쓰는 타입/상수/유틸은 특정 앱에 중복 구현하지 않고 `packages/shared`에 둔다.
 
-`@onnuri/shared`는 소비자에 따라 두 형태로 읽힌다 (package.json의 `exports` 조건 분기):
-
-* **Metro(모바일)·타입체크** — TS 소스(`src/`)를 그대로 읽는다. shared를 고치면 즉시 반영된다.
-* **Node 런타임(백엔드 실행)** — Node는 TS 소스를 못 읽으므로 빌드 산출물 `dist/`(CJS)를 읽는다(`node` 조건). api의 `build`/`start*` 스크립트가 shared 빌드를 먼저 돌리므로 따로 챙길 건 없지만, **백엔드 `start:dev`가 떠 있는 동안 shared를 고치면 재시작해야 반영된다.** jest(유닛·e2e)는 `moduleNameMapper`로 src를 직접 읽어서 dist가 낡아도 테스트는 항상 최신 소스로 돈다.
-
-이 분기가 생긴 이유: 백엔드가 shared에서 타입만 쓰는 동안은 런타임 로드가 없어 `main: src/index.ts`로도 돌았지만, 값(상수·유틸)을 쓰는 순간 Node가 TS를 로드하다 죽는다(`ERR_MODULE_NOT_FOUND`). shared의 값을 api에 복붙하는 대신(위 중복 금지 원칙) Node에게만 빌드본을 주는 쪽을 택했다.
 
 ## Architecture Decisions
 
@@ -153,8 +147,7 @@ apps/mobile/src/
   * `unauthenticated` → `AuthStack`(`Login`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다)
   * `onboarding`(프로필 설정 미완 — `user.profileCompleted`가 기준, 토큰은 이미 있음) → 같은 `AuthStack`이 `ProfileSetup`만 그린다. 등록하기가 `PATCH /users/me`로 저장하면 `setSession`으로 `authenticated`가 되며 메인 트리로 전환된다. 로그인·세션 복원(`useAppBootstrap`)이 같은 기준으로 분기하므로, 프로필을 마치기 전에 앱을 껐다 켜거나 다시 로그인해도 온보딩으로 돌아온다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
-* 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`/`onboarding`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
-* **개발용 로그인**: 소셜 SDK가 없는 웹·Expo Go에서는 실제 로그인이 불가능해 유저 기반 기능을 개발할 수 없다. 이를 위해 `POST /auth/login/dev`(이메일만으로 진짜 유저+토큰 발급)를 두고, 백엔드는 `AUTH_DEV_LOGIN=true`인 환경에서만 응답한다(아니면 404로 숨김, 운영 금지). 모바일은 로그인 화면에 "[DEV] 개발용 로그인" 버튼으로 연결하되, `.env`의 `EXPO_PUBLIC_AUTH_DEV_LOGIN=true`일 때만 버튼이 보인다 (백엔드 `AUTH_DEV_LOGIN`과 짝 — 둘 다 켜야 동작).
+
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
 * 토큰은 `expo-secure-store`에 저장되고, 앱 부팅 시 `useAppBootstrap`이 refresh로 세션을 복원한다. 로그인 상태에서 API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 리프레시 후 원 요청을 한 번 재시도하고, 리프레시까지 실패하면 Alert → 확인 누르면 `clearSession()` → 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음). 게스트/비로그인 상태의 401은 세션 문제가 아니므로 호출한 쪽에 그대로 전달된다.
 * 유저 등급이 추가되면(향후) capability 기반 가드 조합(`@UseGuards(AuthGuard, XGuard)`)으로 확장하고, 리소스 소유권 검증(예: 내 글만 수정 가능)을 role 체크와 별도로 반드시 추가한다.

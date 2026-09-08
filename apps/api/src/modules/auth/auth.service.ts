@@ -8,7 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { createHash, randomUUID } from 'node:crypto';
 
-import { SocialProvider } from '../../../generated/prisma';
+import type { DevLoginRole } from '@onnuri/shared';
+
+import { CellRole, SocialProvider, TeamRole } from '../../../generated/prisma';
 import { type AppConfig } from '../../config/configuration';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
@@ -28,6 +30,10 @@ interface RefreshPayload {
 // 이메일을 만들어 가입시키고, 나중에 실제 이메일이 오면 재로그인 시점에 교체한다
 // (findOrCreateUser 참고). 심사 통과 후 이 임시방편 제거를 검토한다 — ARCHITECTURE.md Known Issues.
 const PLACEHOLDER_EMAIL_DOMAIN = 'social.invalid';
+
+// 개발용 로그인의 팀장/셀장 역할이 붙는 고정 팀·셀 — 없으면 만들고, 있으면 재사용한다.
+const DEV_TEAM_NAME = '개발팀';
+const DEV_CELL_NAME = '개발셀';
 
 function placeholderEmail(provider: SocialProvider, providerUid: string) {
   return `${provider.toLowerCase()}-${providerUid}@${PLACEHOLDER_EMAIL_DOMAIN}`;
@@ -71,7 +77,8 @@ export class AuthService {
 
   // 개발용: 소셜 SDK가 없는 웹·Expo Go에서 유저 기반 기능을 개발할 수 있게 이메일만으로
   // 로그인시킨다. AUTH_DEV_LOGIN=true인 환경에서만 열리고, 꺼진 환경에선 404로 존재를 숨긴다.
-  async loginWithDev(email: string) {
+  // role을 주면 그 역할로 확인할 수 있게 관리자 플래그·팀장/셀장 멤버십을 함께 세팅한다.
+  async loginWithDev(email: string, role: DevLoginRole = 'MEMBER') {
     if (!this.config.get('auth.devLoginEnabled', { infer: true })) {
       throw new NotFoundException();
     }
@@ -82,7 +89,80 @@ export class AuthService {
       (await this.prisma.user.create({
         data: { email, name: email.split('@')[0] },
       }));
+    await this.provisionDevRole(user.id, role);
     return this.buildLoginResponse(user.id, !existing);
+  }
+
+  // 개발용 역할 세팅 — 등급의 실체는 isAdmin·멤버십이므로 역할별로 그 상태를 만들어준다.
+  // 재로그인마다 불리므로 멱등이어야 한다. 멤버십 테이블에는 (팀/셀, 유저) 유니크 제약이
+  // 없어 upsert 대신 활성 멤버십(endedAt: null)을 확인하고 없을 때만 만든다.
+  private async provisionDevRole(userId: string, role: DevLoginRole) {
+    if (role === 'ADMIN') {
+      await this.prisma.user.update({
+        where: { id: userId },
+        data: { isAdmin: true },
+      });
+      return;
+    }
+
+    if (role === 'TEAM_LEADER') {
+      const team =
+        (await this.prisma.team.findUnique({
+          where: { name: DEV_TEAM_NAME },
+        })) ??
+        (await this.prisma.team.create({ data: { name: DEV_TEAM_NAME } }));
+
+      const membership = await this.prisma.teamMembership.findFirst({
+        where: { teamId: team.id, userId, endedAt: null },
+      });
+      if (!membership) {
+        await this.prisma.teamMembership.create({
+          data: {
+            teamId: team.id,
+            userId,
+            role: TeamRole.LEADER,
+            startedAt: new Date(),
+          },
+        });
+      }
+      return;
+    }
+
+    if (role === 'CELL_LEADER') {
+      const now = new Date();
+      const cell =
+        (await this.prisma.cell.findFirst({
+          where: { name: DEV_CELL_NAME, deletedAt: null },
+        })) ??
+        (await this.prisma.cell.create({
+          data: {
+            name: DEV_CELL_NAME,
+            startedAt: now,
+            // 자연 만료로 종료되지 않게 넉넉히 — 개발용 고정 셀이다.
+            expiresAt: new Date(
+              now.getFullYear() + 10,
+              now.getMonth(),
+              now.getDate(),
+            ),
+            createdById: userId,
+          },
+        }));
+
+      const membership = await this.prisma.cellMembership.findFirst({
+        where: { cellId: cell.id, userId, endedAt: null },
+      });
+      if (!membership) {
+        await this.prisma.cellMembership.create({
+          data: {
+            cellId: cell.id,
+            userId,
+            role: CellRole.LEADER,
+            startedAt: now,
+          },
+        });
+      }
+    }
+    // MEMBER는 세팅할 것이 없다.
   }
 
   // 리프레시 토큰 회전: 저장된 해시와 일치하는 행을 지우면서 소비한다.
