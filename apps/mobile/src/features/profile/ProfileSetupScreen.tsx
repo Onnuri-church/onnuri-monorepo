@@ -1,9 +1,10 @@
 import { useNavigation } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
+  BackHandler,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -16,6 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PHONE_NUMBER_REGEX, type Gender } from "@onnuri/shared";
 
+import { signOut } from "../../shared/api/session";
 import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
@@ -79,6 +81,18 @@ export function ProfileSetupScreen() {
   const [cell, setCell] = useState<string | null>(null);
   const [team, setTeam] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // 안드로이드 하드웨어(제스처) 뒤로가기. 온보딩에서는 이 화면이 스택의 유일한 화면이라
+  // 기본 동작이 앱을 내려버린다 — 헤더 뒤로가기(RootNavigator 등록부)와 같은 의미로,
+  // 온보딩을 중단(signOut)하고 로그인 화면으로 돌아간다. 수정 모드(ProfileEdit)는 기본 pop 유지.
+  useEffect(() => {
+    if (session.status !== "onboarding") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      void signOut();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [session.status]);
 
   const { data: cells } = useQuery({ queryKey: ["cells"], queryFn: fetchCells });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: fetchTeams });

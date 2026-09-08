@@ -53,6 +53,11 @@ interface SubHeaderProps {
    * 갈 탭을 아는 쪽에서 직접 넘긴다.
    */
   onPressHome?: () => void;
+  /**
+   * 뒤로가기 버튼 동작. 안 주면 navigation.goBack(). 스택에 이전 화면이 없어서
+   * 뒤로가기의 의미를 직접 정해야 하는 화면(온보딩의 프로필 설정 등)에서 넘긴다.
+   */
+  onPressBack?: () => void;
 }
 
 interface OverlayHeaderProps {
@@ -124,7 +129,7 @@ export function Header(props: HeaderProps) {
             </>
         ) : (
             <>
-              <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+              <Pressable onPress={props.onPressBack ?? (() => navigation.goBack())} hitSlop={8}>
                 <Icon name="back" size={28} color={colors.icon.strong} />
               </Pressable>
               <Text className="font-pretendard-semibold text-heading-small">{props.title}</Text>

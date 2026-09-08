@@ -42,6 +42,7 @@ import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScr
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
 import { findTeam } from "../features/team-story/teams";
+import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
@@ -385,15 +386,24 @@ export function RootNavigator() {
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
           {/* 세션 상태에 따라 화면을 하나만 등록한다 — onboarding(프로필 미완, 토큰은 이미 있음)이면
-              프로필 설정만 남아 뒤로가기로 로그인에 돌아갈 수 없고, 등록을 마치면 setSession이
-              메인 트리로 전환한다. */}
+              프로필 설정만 남고, 등록을 마치면 setSession이 메인 트리로 전환한다. 뒤로가기는
+              온보딩 중단이므로 signOut으로 세션을 정리해 로그인 화면으로 돌아간다 — 세션이
+              남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
+              ProfileSetupScreen이 같은 동작으로 처리한다.) */}
           {session.status === "onboarding" ? (
             <AuthStack.Screen
               name="ProfileSetup"
               component={ProfileSetupScreen}
               options={{
                 headerShown: true,
-                header: () => <Header variant="sub" title="프로필 설정" rightAction="none" />,
+                header: () => (
+                  <Header
+                    variant="sub"
+                    title="프로필 설정"
+                    rightAction="none"
+                    onPressBack={() => void signOut()}
+                  />
+                ),
               }}
             />
           ) : (

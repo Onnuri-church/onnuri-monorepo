@@ -145,7 +145,7 @@ apps/mobile/src/
   * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
   * `authenticated` / `guest` → 같은 `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live` 등)
   * `unauthenticated` → `AuthStack`(`Login`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다)
-  * `onboarding`(프로필 설정 미완 — `user.profileCompleted`가 기준, 토큰은 이미 있음) → 같은 `AuthStack`이 `ProfileSetup`만 그린다. 등록하기가 `PATCH /users/me`로 저장하면 `setSession`으로 `authenticated`가 되며 메인 트리로 전환된다. 로그인·세션 복원(`useAppBootstrap`)이 같은 기준으로 분기하므로, 프로필을 마치기 전에 앱을 껐다 켜거나 다시 로그인해도 온보딩으로 돌아온다
+  * `onboarding`(프로필 설정 미완 — `user.profileCompleted`가 기준, 토큰은 이미 있음) → 같은 `AuthStack`이 `ProfileSetup`만 그린다. 등록하기가 `PATCH /users/me`로 저장하면 `setSession`으로 `authenticated`가 되며 메인 트리로 전환된다. 로그인·세션 복원(`useAppBootstrap`)이 같은 기준으로 분기하므로, 프로필을 마치기 전에 앱을 껐다 켜거나 다시 로그인해도 온보딩으로 돌아온다. 뒤로가기(헤더·안드로이드 하드웨어 둘 다)는 온보딩 중단으로 보고 `signOut`으로 세션을 정리해 로그인 화면으로 돌아간다 — 세션이 남아 있으면 트리 분기상 로그인 화면을 그릴 수 없기 때문이다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
 
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
