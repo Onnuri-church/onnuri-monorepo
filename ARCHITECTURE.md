@@ -34,6 +34,13 @@ onnuri-monorepo/
 
 앱은 실행 단위, 패키지는 공유 단위다. 프론트·백이 같이 쓰는 타입/상수/유틸은 특정 앱에 중복 구현하지 않고 `packages/shared`에 둔다.
 
+`@onnuri/shared`는 소비자에 따라 두 형태로 읽힌다 (package.json의 `exports` 조건 분기):
+
+* **Metro(모바일)·타입체크** — TS 소스(`src/`)를 그대로 읽는다. shared를 고치면 즉시 반영된다.
+* **Node 런타임(백엔드 실행)** — Node는 TS 소스를 못 읽으므로 빌드 산출물 `dist/`(CJS)를 읽는다(`node` 조건). api의 `build`/`start*` 스크립트가 shared 빌드를 먼저 돌리므로 따로 챙길 건 없지만, **백엔드 `start:dev`가 떠 있는 동안 shared를 고치면 재시작해야 반영된다.** jest(유닛·e2e)는 `moduleNameMapper`로 src를 직접 읽어서 dist가 낡아도 테스트는 항상 최신 소스로 돈다.
+
+이 분기가 생긴 이유: 백엔드가 shared에서 타입만 쓰는 동안은 런타임 로드가 없어 `main: src/index.ts`로도 돌았지만, 값(상수·유틸)을 쓰는 순간 Node가 TS를 로드하다 죽는다(`ERR_MODULE_NOT_FOUND`). shared의 값을 api에 복붙하는 대신(위 중복 금지 원칙) Node에게만 빌드본을 주는 쪽을 택했다.
+
 ## Architecture Decisions
 
 두 앱 다 팀 규모(7명)·기간(6개월)·현재 도메인 복잡도 기준으로 "지금 필요한 만큼만" 원칙으로 정했다. 이미 있는 대안을 왜 안 썼는지 기록해서 나중에 같은 논의를 반복하지 않는다.
@@ -88,7 +95,8 @@ apps/api/src/
 ├── modules/
 │   ├── prisma/    PrismaService (전역 모듈) — DB 연결 실패해도 서버가 안 죽도록 onModuleInit에서 catch함
 │   ├── auth/      소셜 로그인(카카오/구글), 액세스/리프레시 토큰 발급·회전 (social/ 토큰 검증기, strategies/jwt.strategy.ts)
-│   └── users/     findById(공개 프로필 select), GET /users/me
+│   ├── users/     findById(공개 프로필 select), GET /users/me, PATCH /users/me(프로필 등록·수정 — 소속은 셀/팀 멤버십 행으로 반영, 변경 시 endedAt으로 이력 보존)
+│   └── cells/ teams/  GET 목록 — 프로필 설정의 소속 선택지. 로컬 데이터는 prisma/seed.ts로 채운다(prisma:seed)
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠
     ├── decorators/ CurrentUser
@@ -137,14 +145,15 @@ apps/mobile/src/
 @UseGuards(OptionalJwtAuthGuard)  # 게스트 허용 — 토큰 없으면 user 없이 통과, 토큰이 있는데 무효(만료 포함)면 401
 ```
 
-인증 흐름: 모바일 SDK가 받은 카카오 액세스 토큰/구글 ID 토큰을 `POST /auth/login/kakao|google`로 보내면 백엔드가 제공자에 검증 → `User`+`SocialAccount` find-or-create(같은 이메일이면 기존 유저에 로그인 수단 연결) → 액세스+리프레시 토큰 발급. 카카오는 SDK 토큰 대신 인가 코드(`{code, redirectUri}`)로도 로그인할 수 있다 — 백엔드가 REST 키+Client Secret으로 코드를 교환한다 (웹 흐름·수동 테스트용). 리프레시 토큰은 DB에 sha256 해시로 저장하고 `POST /auth/refresh`마다 회전(rotation)한다 — 한 번 쓴 리프레시 토큰은 재사용할 수 없다. 로그인 응답의 `isNewUser`로 프로필 설정 화면 분기를 판단한다.
+인증 흐름: 모바일 SDK가 받은 카카오 액세스 토큰/구글 ID 토큰을 `POST /auth/login/kakao|google`로 보내면 백엔드가 제공자에 검증 → `User`+`SocialAccount` find-or-create(같은 이메일이면 기존 유저에 로그인 수단 연결) → 액세스+리프레시 토큰 발급. 카카오는 SDK 토큰 대신 인가 코드(`{code, redirectUri}`)로도 로그인할 수 있다 — 백엔드가 REST 키+Client Secret으로 코드를 교환한다 (웹 흐름·수동 테스트용). 리프레시 토큰은 DB에 sha256 해시로 저장하고 `POST /auth/refresh`마다 회전(rotation)한다 — 한 번 쓴 리프레시 토큰은 재사용할 수 없다. 프로필 설정 화면 분기는 유저 응답의 `profileCompleted`(생년월일·성별·전화번호가 다 입력됐는지 — 서버가 계산하는 필드)로 판단한다.
 
 * 세션 체크는 개별 화면이 아니라 `RootNavigator`가 `useAuthStore`의 `session.status`로 트리 전체를 분기해서 처리한다.
   * `loading`(아직 확인 전) → 스플래시. `NavigationContainer` 바깥에서 트리를 대신하며 스크린으로 등록하지 않는다
   * `authenticated` / `guest` → 같은 `Stack`(`Main`(BottomTabNavigator) + `QtBoard` + `Live` 등)
-  * `unauthenticated` → `AuthStack`(`Login` + `ProfileSetup`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다). 프로필 설정은 원래 `isNewUser`에 따라 갈릴 화면인데 AuthStack에만 있어 세션이 생기면 접근 불가라, 분기와 실제 저장은 프로필 등록 API 작업에서 함께 설계한다 — 그때까지 ProfileSetup은 진입 경로가 없고 등록하기의 임시 세션 배선만 남아 있다
+  * `unauthenticated` → `AuthStack`(`Login`). 소셜 로그인 버튼은 SDK(카카오 네이티브/구글 sign-in, dev build 필요) → `signInWithSocial`로 배선돼 있다 (`features/auth/socialLogin.ts` — SDK는 lazy import라 웹/Expo Go에서도 앱은 뜬다)
+  * `onboarding`(프로필 설정 미완 — `user.profileCompleted`가 기준, 토큰은 이미 있음) → 같은 `AuthStack`이 `ProfileSetup`만 그린다. 등록하기가 `PATCH /users/me`로 저장하면 `setSession`으로 `authenticated`가 되며 메인 트리로 전환된다. 로그인·세션 복원(`useAppBootstrap`)이 같은 기준으로 분기하므로, 프로필을 마치기 전에 앱을 껐다 켜거나 다시 로그인해도 온보딩으로 돌아온다
 * **게스트는 로그인한 유저와 같은 화면 트리를 본다.** 트리를 따로 만들지 않는 이유는 게스트가 못 하는 것이 화면 단위가 아니라 동작 단위(글 작성, 마이페이지의 내 정보 등)이기 때문이다 — 그 제한은 각 기능 담당자가 자기 화면에서 `session.status`를 보고 막고, 지금은 **아직 어느 화면에도 구현돼 있지 않다**(로그인 화면의 "게스트로 로그인하기"만 있는 상태).
-* 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
+* 게스트는 토큰이 없다. `shared/api/client.ts`의 요청 인터셉터가 `authenticated`/`onboarding`일 때만 `Authorization`을 붙이므로 게스트 요청은 그냥 비인증 요청으로 나간다.
 * **개발용 로그인**: 소셜 SDK가 없는 웹·Expo Go에서는 실제 로그인이 불가능해 유저 기반 기능을 개발할 수 없다. 이를 위해 `POST /auth/login/dev`(이메일만으로 진짜 유저+토큰 발급)를 두고, 백엔드는 `AUTH_DEV_LOGIN=true`인 환경에서만 응답한다(아니면 404로 숨김, 운영 금지). 모바일은 로그인 화면에 "[DEV] 개발용 로그인" 버튼으로 연결하되, `.env`의 `EXPO_PUBLIC_AUTH_DEV_LOGIN=true`일 때만 버튼이 보인다 (백엔드 `AUTH_DEV_LOGIN`과 짝 — 둘 다 켜야 동작).
 * 세션은 필드 여러 개가 아니라 **판별 유니온 값 하나**(`session`)다. `accessToken`이 null인 것만으로는 "세션 없음"과 "아직 확인 전"이 구분되지 않는데, 상태를 별도 필드로 두면 둘을 손으로 맞춰야 하고 한쪽만 바꾸는 실수가 조용히 통과한다. 유니온이면 어긋난 조합 자체가 만들어지지 않고, `user`/`accessToken`은 `authenticated` 가지에서만 읽힌다 — 그 밖에서 접근하면 컴파일 에러다.
 * 토큰은 `expo-secure-store`에 저장되고, 앱 부팅 시 `useAppBootstrap`이 refresh로 세션을 복원한다. 로그인 상태에서 API가 401을 주면 `shared/api/client.ts`의 응답 인터셉터가 리프레시 후 원 요청을 한 번 재시도하고, 리프레시까지 실패하면 Alert → 확인 누르면 `clearSession()` → 자동으로 로그인 화면 전환 (별도 네비게이션 호출 없음). 게스트/비로그인 상태의 401은 세션 문제가 아니므로 호출한 쪽에 그대로 전달된다.
@@ -166,7 +175,7 @@ apps/mobile/src/
 ## Build Order
 
 1. ~~Prisma 마이그레이션 실행~~ — **완료 (2026-09-02)**: 확정 ERD 전체(25개 모델)가 스키마로 전환·적용됨. 근거 문서는 [docs/erd.md](docs/erd.md)
-2. 소셜 로그인 실제 연동 + Refresh token — **백엔드·모바일 배선 완료 (2026-09-05)**: 백엔드는 `/auth/login/kakao|google`(+인가 코드 교환)·`/auth/refresh`·`/auth/logout` + 인증 가드 2종, 모바일은 SecureStore 세션 복원·401 자동 refresh·로그인 버튼 → SDK → `signInWithSocial` 배선까지. 남은 것: dev build에서 종단 확인(키 등록은 apps/mobile/AGENTS.md "소셜 로그인 키"), 프로필 등록 API(`PATCH /users/me`) + `isNewUser` 분기, 마이페이지 로그아웃 배선
+2. 소셜 로그인 실제 연동 + Refresh token — **백엔드·모바일 배선 완료 (2026-09-05)**: 백엔드는 `/auth/login/kakao|google`(+인가 코드 교환)·`/auth/refresh`·`/auth/logout` + 인증 가드 2종, 모바일은 SecureStore 세션 복원·401 자동 refresh·로그인 버튼 → SDK → `signInWithSocial` 배선까지. 프로필 등록 API(`PATCH /users/me` + 셀/팀 멤버십) + `isNewUser` 분기(`onboarding` 세션)는 **완료 (2026-09-07)**. 남은 것: dev build에서 종단 확인(키 등록은 apps/mobile/AGENTS.md "소셜 로그인 키"), 마이페이지 로그아웃 배선
 3. QR·셀 페이지 실제 기능 — 진입로(QR은 메인 헤더 버튼, 셀 페이지는 하단 탭)는 붙었지만 두 화면 다 제목만 있는 빈 화면이다. 특히 셀 페이지는 README 기준 기능 스코프가 아직 안 잡혀 있다
 4. 팀 스토리/마이페이지/오늘 주보/말씀 화면 실제 디자인 반영 (Figma 나오는 대로)
 5. 큐티나눔/기도요청 작성, 팀 게시판, 소그룹 모임 등 나머지 MVP 기능 모듈 (`posts`, `teams` 등) 추가

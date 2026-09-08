@@ -6,7 +6,7 @@
 
 1. `apps/api/.env.example`을 복사해 `apps/api/.env` 생성 후 값 채우기 — `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`은 **32자 이상**이어야 부팅 시 환경변수 검증을 통과한다 (`openssl rand -hex 32`로 생성)
 2. 로컬 Postgres 준비: `apps/api`에서 `docker compose up -d` (Docker Desktop 필요). 계정·DB명이 `.env.example`의 `DATABASE_URL`과 맞춰져 있어 `.env`의 해당 값은 그대로 쓰면 된다
-3. `prisma:migrate` → `prisma:generate` → `start:dev` 순으로 실행
+3. `prisma:migrate` → `prisma:generate` → (선택) `prisma:seed`(프로필 설정의 셀/팀 선택지 데이터) → `start:dev` 순으로 실행
 
 ## 도메인 모듈 만들 때
 

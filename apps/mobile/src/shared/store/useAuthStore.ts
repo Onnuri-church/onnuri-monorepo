@@ -9,15 +9,21 @@ import type { AuthTokens, User } from "@onnuri/shared";
 // guest는 "로그인하지 않고 둘러보기를 선택한 상태"다. unauthenticated(로그인 화면을 봐야 하는 상태)와
 // 구분해야 하는 이유는 둘 다 토큰이 없는데 보여줄 화면이 다르기 때문이다 — user/accessToken 필드가
 // 없으므로 게스트 상태에서 유저 정보를 읽는 코드는 컴파일에서 막힌다.
+// onboarding은 "로그인은 됐지만(토큰 있음) 프로필 설정을 아직 마치지 않은" 상태다 —
+// 유저 응답의 profileCompleted(서버 계산)가 기준이고, RootNavigator가 이 상태에서 프로필 설정
+// 화면을 그린다. 등록(PATCH /users/me)이 끝나면 setSession으로 authenticated가 되면서 메인
+// 트리로 전환되고, 앱을 껐다 켜도 세션 복원(useAppBootstrap)이 같은 기준으로 되돌린다.
 type Session =
   | { status: "loading" }
   | { status: "authenticated"; user: User; accessToken: string; refreshToken: string }
+  | { status: "onboarding"; user: User; accessToken: string; refreshToken: string }
   | { status: "guest" }
   | { status: "unauthenticated" };
 
 interface AuthState {
   session: Session;
   setSession: (user: User, tokens: AuthTokens) => void;
+  startOnboarding: (user: User, tokens: AuthTokens) => void;
   startGuestSession: () => void;
   clearSession: () => void;
 }
@@ -26,6 +32,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   session: { status: "loading" },
   setSession: (user, tokens) =>
     set({ session: { status: "authenticated", user, ...tokens } }),
+  startOnboarding: (user, tokens) =>
+    set({ session: { status: "onboarding", user, ...tokens } }),
   startGuestSession: () => set({ session: { status: "guest" } }),
   clearSession: () => set({ session: { status: "unauthenticated" } }),
 }));

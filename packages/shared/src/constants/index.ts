@@ -21,3 +21,6 @@ export const PRAYER_CATEGORY_LABELS: Record<PrayerCategory, string> = {
 
 export const MAX_POST_TITLE_LENGTH = 100;
 export const MAX_POST_CONTENT_LENGTH = 5000;
+
+/** 휴대전화 번호 형식 — 하이픈 없이 01로 시작하는 10~11자리. 프로필 입력 검증에 프론트·백이 같이 쓴다. */
+export const PHONE_NUMBER_REGEX = /^01\d{8,9}$/;

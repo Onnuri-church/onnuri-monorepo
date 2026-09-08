@@ -24,9 +24,9 @@ export function LoginScreen() {
   const insets = useSafeAreaInsets();
   const [submitting, setSubmitting] = useState(false);
 
-  // 성공하면 signInWithSocial이 세션을 만들고, RootNavigator가 session.status를 보고 홈으로 전환한다.
-  // TODO(프로필 등록 API 작업에서): isNewUser=true면 프로필 설정으로 보내야 하는데, ProfileSetup이
-  // AuthStack에만 있어 세션이 생기는 순간 접근 불가다 — 분기는 프로필 저장 API와 함께 설계한다.
+  // 성공하면 signInWithSocial이 세션을 만들고, RootNavigator가 session.status를 보고 전환한다 —
+  // 프로필 설정을 마치지 않은 유저(신규 가입 포함)는 onboarding 세션이 되어 프로필 설정으로,
+  // 나머지는 홈으로 간다.
   const runSocialLogin = async (
     login: () => Promise<{ isNewUser: boolean } | null>,
   ) => {
