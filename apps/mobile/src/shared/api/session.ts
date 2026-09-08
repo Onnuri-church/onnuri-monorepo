@@ -11,7 +11,9 @@ import {
 } from "./authApi";
 import { clearTokens, loadTokens, saveTokens } from "./tokenStorage";
 
-// 로그인 응답 → 토큰 저장 → 세션 시작. isNewUser로 프로필 설정 화면 분기를 판단한다.
+// 로그인 응답 → 토큰 저장 → 세션 시작. 프로필 설정을 마치지 않은 유저(신규 가입 포함, 서버가
+// user.profileCompleted로 계산)는 onboarding 세션으로 시작해 RootNavigator가 프로필 설정 화면을
+// 그리고, 등록을 마친 화면이 setSession으로 확정한다.
 async function startSession({
   accessToken,
   refreshToken,
@@ -20,7 +22,12 @@ async function startSession({
 }: LoginResponse): Promise<{ isNewUser: boolean }> {
   const tokens = { accessToken, refreshToken };
   await saveTokens(tokens);
-  useAuthStore.getState().setSession(user, tokens);
+  const store = useAuthStore.getState();
+  if (user.profileCompleted) {
+    store.setSession(user, tokens);
+  } else {
+    store.startOnboarding(user, tokens);
+  }
   return { isNewUser };
 }
 
@@ -85,10 +92,12 @@ async function doRefresh(): Promise<AuthTokens | null> {
     const tokens = await postRefresh(stored.refreshToken);
     await saveTokens(tokens);
 
-    // 이미 로그인된 상태라면(401 재시도 경로) 스토어의 토큰도 갈아끼운다.
-    const { session, setSession } = useAuthStore.getState();
+    // 이미 세션이 있는 상태라면(401 재시도 경로) 스토어의 토큰도 갈아끼운다.
+    const { session, setSession, startOnboarding } = useAuthStore.getState();
     if (session.status === "authenticated") {
       setSession(session.user, tokens);
+    } else if (session.status === "onboarding") {
+      startOnboarding(session.user, tokens);
     }
     return tokens;
   } catch {

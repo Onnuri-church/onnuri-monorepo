@@ -12,6 +12,7 @@ const MIN_SPLASH_DURATION_MS = 1500;
 export function useAppBootstrap() {
   const status = useAuthStore((state) => state.session.status);
   const setSession = useAuthStore((state) => state.setSession);
+  const startOnboarding = useAuthStore((state) => state.startOnboarding);
   const clearSession = useAuthStore((state) => state.clearSession);
 
   useEffect(() => {
@@ -27,10 +28,15 @@ export function useAppBootstrap() {
     // 스플래시 최소 노출 시간 전에 화면이 바뀌지 않게 하기 위해서다.
     Promise.all([minDuration, restoreSession()]).then(([, restored]) => {
       if (restored) {
-        setSession(restored.user, restored.tokens);
+        // 프로필 설정을 마치기 전에 앱을 껐다 켜도 온보딩으로 돌아온다 (로그인 분기와 같은 기준).
+        if (restored.user.profileCompleted) {
+          setSession(restored.user, restored.tokens);
+        } else {
+          startOnboarding(restored.user, restored.tokens);
+        }
       } else {
         clearSession();
       }
     });
-  }, [status, setSession, clearSession]);
+  }, [status, setSession, startOnboarding, clearSession]);
 }

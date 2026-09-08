@@ -8,8 +8,10 @@ import { AppService } from './app.service';
 import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
+import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { TeamsModule } from './modules/teams/teams.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -23,6 +25,8 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     UsersModule,
     AuthModule,
+    CellsModule,
+    TeamsModule,
     GroupMeetingsModule,
   ],
   controllers: [AppController],
