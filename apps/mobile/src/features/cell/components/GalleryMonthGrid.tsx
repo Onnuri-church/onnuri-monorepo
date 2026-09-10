@@ -20,6 +20,8 @@ interface GalleryMonthGridProps {
   onTilePress: (tile: GalleryTile) => void;
   /** 편집 권한이 있을 때 첫 칸에 붙는 "추가" 슬롯 (시안 갤러리-관리). 없으면 안 그린다. */
   onAddPress?: () => void;
+  /** 월 라벨 표시 여부. 단일 월 보기에서는 상단 드롭다운이 라벨을 대신해 숨긴다 (시안). */
+  showMonthLabel?: boolean;
 }
 
 // 갤러리 탭의 한 달 섹션 (시안: 월 라벨 + 3열 그리드, 타일 119·간격 5 — flex 3등분·gap 4로 근사).
@@ -30,6 +32,7 @@ export function GalleryMonthGrid({
   selectedIds,
   onTilePress,
   onAddPress,
+  showMonthLabel = true,
 }: GalleryMonthGridProps) {
   // 추가 슬롯은 그리드의 첫 칸을 차지한다 — null을 셀 목록에 끼워 넣고 렌더에서 구분한다.
   const slots: (GalleryTile | null)[] = onAddPress ? [null, ...tiles] : [...tiles];
@@ -40,7 +43,7 @@ export function GalleryMonthGrid({
 
   return (
     <View className="gap-2">
-      <Text className="text-body-main text-text-normal">{month}</Text>
+      {showMonthLabel && <Text className="text-body-main text-text-normal">{month}</Text>}
       <View className="gap-1">
         {rows.map((row, rowIndex) => (
           <View key={rowIndex} className="flex-row gap-1">

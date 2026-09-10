@@ -9,6 +9,7 @@ import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { canWriteFollowerNote } from "./cellDetail";
 import { findCell } from "./cells";
 import { MonthPicker } from "./components/MonthPicker";
 import { FollowerNoteCard } from "./components/FollowerNoteCard";
@@ -21,6 +22,8 @@ export function FollowerNoteBoardScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
   const cell = findCell(cellId);
+  // 작성·편집·삭제는 그 셀의 셀장·부셀장만 — 관리자는 열람과 댓글(목사님 댓글)만 (2026-09-10 확정).
+  const canWrite = canWriteFollowerNote(cellId);
 
   // TODO(API): 노트 목록 연동 전 — 삭제까지 화면 로컬로만 동작한다.
   const [notes, setNotes] = useState<FollowerNote[]>(() => getFollowerNotes(cellId));
@@ -86,8 +89,10 @@ export function FollowerNoteBoardScreen() {
                 navigation.navigate("FollowerNoteDetail", { cellId, noteId: note.id })
               }
               // 작성자(셀장) 본인 글 목업 — 작성자 API가 붙으면 내 글 여부로 교체.
-              onEditPress={() => navigation.navigate("FollowerNoteWrite", { cellId })}
-              onDeletePress={() => handleDeletePress(note.id)}
+              onEditPress={
+                canWrite ? () => navigation.navigate("FollowerNoteWrite", { cellId }) : undefined
+              }
+              onDeletePress={canWrite ? () => handleDeletePress(note.id) : undefined}
             />
           ))}
           {visibleNotes.length === 0 && (
@@ -98,9 +103,11 @@ export function FollowerNoteBoardScreen() {
         </View>
       </ScrollView>
 
-      <FloatingButton onPress={() => navigation.navigate("FollowerNoteWrite", { cellId })}>
-        <Icon name="write" size={24} color={colors.icon.disable} />
-      </FloatingButton>
+      {canWrite && (
+        <FloatingButton onPress={() => navigation.navigate("FollowerNoteWrite", { cellId })}>
+          <Icon name="write" size={24} color={colors.icon.disable} />
+        </FloatingButton>
+      )}
 
       <AppDialog
         ref={deleteDialogRef}
