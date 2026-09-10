@@ -6,6 +6,7 @@ import { ScrollView, Text, View } from "react-native";
 
 import { fetchQtShares } from "./api";
 import { QtPostCard } from "./components/QtPostCard";
+import { useToggleQtLike } from "./useToggleQtLike";
 import { FilterBar } from "../../shared/components/base/FilterBar";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
@@ -25,8 +26,14 @@ export function QtBoardScreen() {
     placeholderData: keepPreviousData,
   });
 
+  const toggleLike = useToggleQtLike();
+
   const handleCardPress = (id: string) => {
     navigation.navigate("QtBoardDetail", { id });
+  };
+
+  const handleFavoritePress = (id: string, likedByMe: boolean) => {
+    toggleLike({ postId: id, likedByMe });
   };
 
   const handleWritePress = () => {
@@ -72,8 +79,10 @@ export function QtBoardScreen() {
               title: item.title,
               description: item.description,
               favorite: item.likeCount,
+              favorited: item.likedByMe,
             }}
             onPress={() => handleCardPress(item.id)}
+            onFavoritePress={() => handleFavoritePress(item.id, item.likedByMe)}
           />
         ))}
       </ScrollView>

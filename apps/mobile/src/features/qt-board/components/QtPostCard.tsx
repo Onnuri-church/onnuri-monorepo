@@ -9,6 +9,8 @@ export interface QtPost {
   title: string;
   description: string;
   favorite: number;
+  // 내가 좋아요를 눌렀는지. 하트를 채운 상태로 그릴지 정한다.
+  favorited?: boolean;
 }
 
 interface QtPostCardProps {
@@ -33,7 +35,7 @@ export function QtPostCard({ post, onPress, onFavoritePress }: QtPostCardProps) 
       <Text className="mt-2 text-body-medium text-text-neutral" numberOfLines={2}>
         {post.description}
       </Text>
-        <FavoriteButton className="justify-end mt-1" count={post.favorite} onPress={onFavoritePress}/>
+        <FavoriteButton className="justify-end mt-1" count={post.favorite} favorited={post.favorited} onPress={onFavoritePress}/>
     </Pressable>
   );
 }
