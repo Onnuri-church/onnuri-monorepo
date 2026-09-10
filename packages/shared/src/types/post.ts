@@ -23,6 +23,35 @@ export type HobbyGroupRole = "LEADER" | "MEMBER";
 /** 소그룹 참여는 승인제 — PENDING(신청 취소 가능) / APPROVED(참여 중) / REJECTED. */
 export type HobbyGroupMemberStatus = "PENDING" | "APPROVED" | "REJECTED";
 
+/** 큐티나눔 목록 카드 1건 (GET /posts/qt-shares). 화면에 그대로 찍히는 문구는
+ *  서버가 만들어 내려준다 — ARCHITECTURE.md App Responsibilities. */
+export interface QtShareListItem {
+  id: string;
+  authorName: string;
+  /** 큐티 날짜 — "2026.05.07" */
+  dateLabel: string;
+  title: string;
+  /** 본문. 카드는 2줄까지만 보여준다 */
+  description: string;
+  likeCount: number;
+}
+
+/** 목록 상단 월 필터 항목. 글이 있는 달만 최신순으로 내려간다. */
+export interface QtShareMonth {
+  /** "2026.05" — 목록 조회의 month 파라미터로 그대로 되돌려준다 */
+  value: string;
+  /** "26년 5월" */
+  label: string;
+}
+
+export interface QtShareListResponse {
+  months: QtShareMonth[];
+  /** 서버가 실제로 고른 달. 요청한 month에 글이 없으면 최신 달로 바뀌므로, 화면은
+   *  요청값이 아니라 이 값을 선택 상태로 표시한다 (글이 하나도 없으면 null). */
+  selectedMonth: string | null;
+  items: QtShareListItem[];
+}
+
 export interface Post {
   id: string;
   board: BoardType;
