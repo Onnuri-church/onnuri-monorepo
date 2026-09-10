@@ -38,8 +38,8 @@ export function SettingsScreen() {
   const clearSession = useAuthStore((state) => state.clearSession);
   const languageSheetRef = useRef<AppSheetRef>(null);
 
-  // TODO(디자인): 다크 팔레트 시안이 아직 없어 실제 테마 전환은 못 붙인다 — 토글 상태만 동작.
-  //   다크 컬러차트를 받으면 tokens.js 확장과 함께 연결한다.
+  // TODO(디자인): 다크 팔레트 값이 어색해 디자이너와 함께 다시 작업하기로 함 (2026-09-09) —
+  //   그때까지 토글 상태만 동작. 시안 확정되면 tokens.js 확장과 함께 연결한다.
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState("한국어");
   const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({

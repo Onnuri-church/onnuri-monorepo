@@ -1,11 +1,19 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useEffect } from "react";
 
+import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
+import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
+import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
+import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
+import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
+import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
 import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
 import { CellDetailScreen } from "../features/cell/CellDetailScreen";
 import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
+import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
 import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
@@ -42,6 +50,8 @@ import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScr
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
 import { findTeam } from "../features/team-story/teams";
+import { fetchMe } from "../features/profile/api";
+import { queryClient } from "../shared/api/queryClient";
 import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
@@ -67,6 +77,14 @@ export function RootNavigator() {
   const session = useAuthStore((state) => state.session);
 
   useAppBootstrap();
+
+  // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
+  // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      queryClient.prefetchQuery({ queryKey: ["me"], queryFn: fetchMe });
+    }
+  }, [session.status]);
 
   if (session.status === "loading") {
     return <SplashScreen />;
@@ -337,6 +355,14 @@ export function RootNavigator() {
           {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
           <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
           <Stack.Screen
+            name="CellMemberManage"
+            component={CellMemberManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="셀원 관리" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
             name="CellAttendance"
             component={CellAttendanceScreen}
             options={{
@@ -372,6 +398,86 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="설정" rightAction="home" />,
+            }}
+          />
+          {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
+              헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
+          <Stack.Screen
+            name="AdminCellManage"
+            component={AdminCellManageScreen}
+            options={({ navigation: nav }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="셀 관리"
+                  rightAction="text"
+                  rightLabel="생성"
+                  onPressRightLabel={() => nav.navigate("AdminCellForm", {})}
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminCellForm"
+            component={AdminCellFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.cellId ? "셀 편집" : "셀 생성"}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminMemberList"
+            component={AdminMemberListScreen}
+            options={({ navigation: nav }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="회원 관리"
+                  rightAction="text"
+                  rightLabel="다운로드"
+                  onPressRightLabel={() => nav.navigate("AdminDataDownload")}
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminMemberDetail"
+            component={AdminMemberDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="회원 관리" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminAttendance"
+            component={AdminAttendanceScreen}
+            options={({ navigation: nav }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="출석부"
+                  rightAction="text"
+                  rightLabel="다운로드"
+                  onPressRightLabel={() => nav.navigate("AdminDataDownload")}
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminDataDownload"
+            component={AdminDataDownloadScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="데이터 다운로드" rightAction="none" />,
             }}
           />
           <Stack.Screen
