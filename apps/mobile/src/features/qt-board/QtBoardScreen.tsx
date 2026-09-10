@@ -1,95 +1,93 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, View } from "react-native";
-import { QtPost, QtPostCard } from "./components/QtPostCard";
-import {FilterBar} from "../../shared/components/base/FilterBar";
-import {FloatingButton} from "../../shared/components/base/FloatingButton";
-import {Icon} from "../../shared/components/base/Icon";
-import {colors} from "../../shared/theme/tokens";
-import {useNavigation} from "@react-navigation/native";
-import {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import {RootStackParamList} from "../../shared/types/navigation";
+import { ScrollView, Text, View } from "react-native";
 
-// API 연동 전 임시 데이터. 게시글 엔드포인트가 생기면 교체한다.
-const qtPosts: QtPost[] = [
-  {
-    id: "1",
-    author: "원준호",
-    date: "2026.05.07",
-    title: "절망, 자기 우상화의 열매",
-    description:
-      "자신의 인생이 텅 비었다고 고백하는 나오미의 판단과 생각과 다르게 하나님은 점차 그를 채워가고 계셨다.",
-    favorite: 14,
-  },
-  {
-    id: "2",
-    author: "김서연",
-    date: "2026.05.06",
-    title: "묵묵히 걷는 길 위에서",
-    description:
-      "당장 답이 보이지 않아도 그 자리를 지키는 것이 믿음이라는 걸 배운다. 조급함을 내려놓는 하루였다.",
-    favorite: 8,
-  },
-  {
-    id: "3",
-    author: "이정민",
-    date: "2026.05.05",
-    title: "다시 돌아오는 마음",
-    description:
-      "멀리 돌아왔지만 늦지 않았다고 말씀하시는 것 같았다. 돌아설 수 있는 것 자체가 은혜였다.",
-    favorite: 21,
-  },
-  {
-    id: "3",
-    author: "이정민",
-    date: "2026.05.05",
-    title: "다시 돌아오는 마음",
-    description:
-        "멀리 돌아왔지만 늦지 않았다고 말씀하시는 것 같았다. 돌아설 수 있는 것 자체가 은혜였다.",
-    favorite: 21,
-  },
-  {
-    id: "3",
-    author: "이정민",
-    date: "2026.05.05",
-    title: "다시 돌아오는 마음",
-    description:
-        "멀리 돌아왔지만 늦지 않았다고 말씀하시는 것 같았다. 돌아설 수 있는 것 자체가 은혜였다.",
-    favorite: 21,
-  },
-];
-
-// 월 목록도 임시. 게시글 엔드포인트가 생기면 실제 데이터에서 뽑는다.
-const months = [
-  { value: "2026.05", label: "26년 5월" },
-  { value: "2026.04", label: "26년 4월" },
-  { value: "2026.03", label: "26년 3월" },
-  { value: "2026.02", label: "26년 2월" },
-  { value: "2026.01", label: "26년 1월" },
-];
+import { fetchQtShares } from "./api";
+import { QtPostCard } from "./components/QtPostCard";
+import { useToggleQtLike } from "./useToggleQtLike";
+import { FilterBar } from "../../shared/components/base/FilterBar";
+import { FloatingButton } from "../../shared/components/base/FloatingButton";
+import { Icon } from "../../shared/components/base/Icon";
+import { Skeleton } from "../../shared/components/base/Skeleton";
+import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
 
 export function QtBoardScreen() {
-  const [month, setMonth] = useState(months[0].value);
-  const visiblePosts = qtPosts.filter((post) => post.date.startsWith(month));
+  // 처음에는 달을 고르지 않고 보낸다 — 글이 있는 가장 최근 달을 서버가 골라 준다.
+  const [month, setMonth] = useState<string>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["qt-shares", month],
+    queryFn: () => fetchQtShares(month),
+    // 달을 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
+    placeholderData: keepPreviousData,
+  });
+
+  const toggleLike = useToggleQtLike();
+
   const handleCardPress = (id: string) => {
-    navigation.navigate("QtBoardDetail", {id})
-  }
+    navigation.navigate("QtBoardDetail", { id });
+  };
+
+  const handleFavoritePress = (id: string, likedByMe: boolean) => {
+    toggleLike({ postId: id, likedByMe });
+  };
 
   const handleWritePress = () => {
-    navigation.navigate("QtBoardWrite")
+    navigation.navigate("QtBoardWrite");
+  };
+
+  if (isPending) {
+    return (
+      <View className="flex-1 bg-background-normal">
+        <View className="gap-4 px-5 py-4">
+          <Skeleton className="h-40 rounded-3xl" />
+          <Skeleton className="h-40 rounded-3xl" />
+        </View>
+      </View>
+    );
   }
+
+  if (isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background-normal">
+        <Text className="text-body-medium text-text-alternative">
+          큐티나눔을 불러오지 못했어요
+        </Text>
+      </View>
+    );
+  }
+
+  const { months, selectedMonth, items } = data;
 
   return (
     <View className="flex-1 bg-background-normal">
-      <FilterBar items={months} selected={month} onSelect={setMonth} />
+      {/* 요청한 달(month)이 아니라 서버가 고른 달을 표시한다 — 보고 있던 달의 글이 전부
+          사라지면 서버가 최신 달로 폴백하는데, 요청값을 쓰면 목록과 어긋난다. */}
+      <FilterBar items={months} selected={selectedMonth ?? ""} onSelect={setMonth} />
       <ScrollView contentContainerClassName="gap-4 pt-3 px-5 py-4">
-        {visiblePosts.map((post) => (
-          <QtPostCard key={post.id} post={post} onPress={() => handleCardPress(post.id)}/>
+        {items.map((item) => (
+          <QtPostCard
+            key={item.id}
+            post={{
+              id: item.id,
+              author: item.authorName,
+              date: item.dateLabel,
+              title: item.title,
+              description: item.description,
+              favorite: item.likeCount,
+              favorited: item.likedByMe,
+            }}
+            onPress={() => handleCardPress(item.id)}
+            onFavoritePress={() => handleFavoritePress(item.id, item.likedByMe)}
+          />
         ))}
       </ScrollView>
       <FloatingButton onPress={handleWritePress}>
-        <Icon name="write" color={colors.icon.disable}/>
+        <Icon name="write" color={colors.icon.disable} />
       </FloatingButton>
     </View>
   );

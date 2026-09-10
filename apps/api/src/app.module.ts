@@ -10,6 +10,7 @@ import configuration from './config/configuration';
 import { AuthModule } from './modules/auth/auth.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { UsersModule } from './modules/users/users.module';
@@ -28,6 +29,7 @@ import { UsersModule } from './modules/users/users.module';
     CellsModule,
     TeamsModule,
     GroupMeetingsModule,
+    PostsModule,
   ],
   controllers: [AppController],
   providers: [

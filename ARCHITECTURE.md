@@ -158,12 +158,12 @@ apps/mobile/src/
 
 * **API — Render.** 개발 중에는 무료 인스턴스(15분 유휴 시 잠들고 깨어날 때 30초~1분 콜드 스타트 — 개발 단계에선 감수). 실사용(출시) 직전에 Starter(월 $7)로 올려 상시 가동으로 전환한다. 무료 티어의 750시간/월 제한은 무료 전용이라 유료 전환 후에는 계정 분리·시간 제한이 없다.
   * **개발 서버 배포됨 (2026-09-10)**: https://onnuri-api-dev.onrender.com — `dev` 브랜치 자동 배포(머지될 때마다 갱신), 공용 Supabase DB 사용. 모바일 `.env`의 `EXPO_PUBLIC_API_URL`을 이 주소로 바꾸면 로컬 서버 없이 테스트할 수 있다. 빌드 명령은 pnpm을 직접 설치한다(`npm install -g pnpm@10.34.4 && pnpm install --frozen-lockfile && prisma generate && api build` — `corepack enable`은 Render 빌드 환경에서 실패). 환경변수는 `apps/api/.env`와 같되 `PORT`는 넣지 않는다(Render가 주입). 운영 전환 시 `main` 브랜치 기준 별도 서비스로 올리고 `AUTH_DEV_LOGIN`을 제거한다.
-* **DB — 로컬 개발은 Docker Postgres**(`apps/api`의 docker-compose), **운영은 Supabase Postgres**(무료 티어로 시작) 예정. Vercel(서버리스라 NestJS 부적합)·AWS(운영 부담 과함)는 기각.
+* **DB — Supabase Postgres.** 개발용 인스턴스는 이미 떠 있고 Render 개발 서버와 로컬이 이걸 공유한다(공용이라 주의할 점은 Known Issues). **로컬을 격리하고 싶으면 Docker Postgres**(`apps/api`의 docker-compose)를 띄우고 `.env`의 `DATABASE_URL`을 `.env.example` 값으로 되돌린다 — 스키마를 바꿀 때는 이쪽에서 마이그레이션을 만든다. 운영은 출시 시점에 별도 인스턴스로 분리한다. Vercel(서버리스라 NestJS 부적합)·AWS(운영 부담 과함)는 기각.
 
 ## Known Issues
 
 * `User`의 레거시 필드 `cellName`/`teamId`(멤버십 전환 시 제거)와 `role`(권한 체계를 `isAdmin`+멤버십 역할로 전환 시 제거)이 남아 있다 ([docs/erd.md](docs/erd.md) 참고). `password`는 소셜 로그인 전환(2026-09-04)으로 제거됨.
-* 로컬 `.env`의 `DATABASE_URL`이 Supabase를 가리키면 마이그레이션이 드리프트로 막힌다 — 로컬 개발은 Docker Postgres(`.env.example` 값)를 쓴다. Supabase에는 ERD 이전의 옛 임시 테이블이 남아 있어 운영 세팅 시 정리(리셋 또는 베이스라인)가 필요하다.
+* **개발용 Supabase는 공용이다** — Render 개발 서버와 로컬이 같은 인스턴스를 본다(Deployment 참고). 여기에 `prisma migrate dev`를 돌리지 않는다: 드리프트가 감지되면 DB 리셋을 제안하고, 승인하면 팀 전체의 개발 데이터가 사라진다. 스키마 변경 절차는 [apps/api/AGENTS.md](apps/api/AGENTS.md) "Prisma"를 따른다. (2026-09-10 확인: 마이그레이션 8개가 전부 적용돼 있고 스키마도 일치한다 — 이전에 남아 있던 ERD 이전 임시 테이블은 정리된 상태다.)
 * **카카오 이메일 임시방편**: 이메일 동의항목이 심사 전이라 카카오 프로필에 이메일이 안 온다. 이메일이 없으면 `{provider}-{uid}@social.invalid` 형태의 임시 이메일로 가입시키고, 심사 통과 후 실제 이메일이 오면 재로그인 시점에 자동 교체된다 (`auth.service.ts`). 심사 통과·정식 앱 전환 후 이 임시방편 제거를 검토한다.
 
 ## Build Order
