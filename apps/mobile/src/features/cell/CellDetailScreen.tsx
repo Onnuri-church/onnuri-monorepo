@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { canManageCell, canPostToCell, getCellDetail } from "./cellDetail";
@@ -45,8 +46,11 @@ export function CellDetailScreen() {
 
   const { members, news, gallery } = getCellDetail(cellId);
   // 작성·업로드(canPost)는 그 셀에 속한 누구나, 삭제·관리 탭(canManage)은 셀장·관리자만.
-  const canPost = canPostToCell(cellId);
-  const canManage = canManageCell(cellId);
+  // 관리자 여부는 세션에서 읽는다 — 관리자는 어느 셀이든 관리 탭에 들어갈 수 있다.
+  const session = useAuthStore((state) => state.session);
+  const isAdmin = session.status === "authenticated" && session.user.isAdmin;
+  const canPost = canPostToCell(cellId, isAdmin);
+  const canManage = canManageCell(cellId, isAdmin);
 
   const [activeTab, setActiveTab] = useState<CellTabKey>("news");
   const [galleryMonths, setGalleryMonths] = useState<GalleryMonthState[]>(() =>
@@ -54,20 +58,31 @@ export function CellDetailScreen() {
   );
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  // 갤러리 월 필터 (시안: 월 라벨 드롭다운). null이면 "전체" — 모든 달을 이어 보여준다.
+  // 기본값은 가장 최근 달(목업의 첫 항목).
+  const [galleryMonthFilter, setGalleryMonthFilter] = useState<string | null>(
+    () => gallery[0]?.month ?? null,
+  );
+  const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
-  const totalPhotoCount = galleryMonths.reduce((sum, section) => sum + section.tiles.length, 0);
-
   const handleTabChange = (tab: CellTabKey) => {
-    // 갤러리 선택 모드는 갤러리 탭 안의 상태라 탭을 떠나면 정리한다.
+    // 갤러리 선택 모드·드롭다운은 갤러리 탭 안의 상태라 탭을 떠나면 정리한다.
     setSelecting(false);
     setSelectedIds([]);
+    setMonthDropdownOpen(false);
     setActiveTab(tab);
   };
 
   const handleEditTogglePress = () => {
     setSelecting((prev) => !prev);
     setSelectedIds([]);
+    setMonthDropdownOpen(false);
+  };
+
+  const handleMonthFilterSelect = (month: string | null) => {
+    setGalleryMonthFilter(month);
+    setMonthDropdownOpen(false);
   };
 
   const handleTilePress = (tile: GalleryTile, flatIndex: number) => {
@@ -109,8 +124,16 @@ export function CellDetailScreen() {
     deleteDialogRef.current?.close();
   };
 
-  // 뷰어에 넘길 평탄화 인덱스 — 월 섹션을 순서대로 이어붙인 위치다.
-  let flatOffset = 0;
+  // 월 필터가 걸리면 그 달 섹션만 보여준다. 뷰어의 평탄화 인덱스(N/전체장)는 필터와 무관하게
+  // 전체 목록 기준이어야 해서, 섹션의 전역 오프셋을 전체 목록에서 계산한다.
+  const visibleGallerySections = galleryMonthFilter
+    ? galleryMonths.filter((section) => section.month === galleryMonthFilter)
+    : galleryMonths;
+
+  const sectionFlatOffset = (section: GalleryMonthState) =>
+    galleryMonths
+      .slice(0, galleryMonths.indexOf(section))
+      .reduce((sum, prev) => sum + prev.tiles.length, 0);
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -134,42 +157,92 @@ export function CellDetailScreen() {
 
         {activeTab === "gallery" && (
           <View className="px-5 pb-10 pt-4">
-            {canPost && (
-              <View className="mb-4 h-6 items-center justify-center">
-                <Text className="text-caption-main text-text-alternative">
-                  전체 {totalPhotoCount}장
-                </Text>
+            {/* 월 드롭다운 + 편집 (시안: 왼쪽 월 라벨▾, 오른쪽 편집/완료) */}
+            <View className="z-10">
+              <View className="mb-4 h-6 flex-row items-center justify-between">
+                <Pressable
+                  className="flex-row items-center gap-2"
+                  onPress={() => setMonthDropdownOpen((prev) => !prev)}
+                >
+                  <Text className="text-body-main text-text-normal">
+                    {galleryMonthFilter ?? "전체"}
+                  </Text>
+                  <View
+                    style={monthDropdownOpen ? { transform: [{ rotate: "180deg" }] } : undefined}
+                  >
+                    <Icon name="arrow-drop-down" size={14} color={colors.icon.normal} />
+                  </View>
+                </Pressable>
                 {canManage && (
-                  <Pressable className="absolute right-0" onPress={handleEditTogglePress}>
+                  <Pressable onPress={handleEditTogglePress}>
                     <Text className="text-body-main text-primary-normal">
                       {selecting ? "완료" : "편집"}
                     </Text>
                   </Pressable>
                 )}
               </View>
-            )}
+
+              {/* overflow-hidden은 iOS에서 그림자를 지워서, 컨테이너 대신 첫/끝 항목에
+                  라운드를 나눠 준다. */}
+              {monthDropdownOpen && (
+                <View className="absolute left-0 top-8 w-42.5 rounded-5 bg-background-normal shadow-dropdown">
+                  <Pressable
+                    className="h-11 justify-center rounded-t-5 border-b border-background-assistive bg-background-normal px-4"
+                    onPress={() => handleMonthFilterSelect(null)}
+                  >
+                    <Text
+                      className={`text-body-small ${
+                        galleryMonthFilter === null ? "text-primary-normal" : "text-text-alternative"
+                      }`}
+                    >
+                      전체
+                    </Text>
+                  </Pressable>
+                  {galleryMonths.map((section, index) => {
+                    const active = section.month === galleryMonthFilter;
+                    const last = index === galleryMonths.length - 1;
+                    return (
+                      <Pressable
+                        key={section.month}
+                        className={`h-9 justify-center px-4 ${
+                          active ? "bg-background-alternative" : "bg-background-normal"
+                        } ${last ? "rounded-b-5" : "border-b border-background-assistive"}`}
+                        onPress={() => handleMonthFilterSelect(section.month)}
+                      >
+                        <Text
+                          className={`text-caption-main ${
+                            active ? "text-primary-normal" : "text-text-alternative"
+                          }`}
+                        >
+                          {section.month}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+
             <View className="gap-6">
-              {galleryMonths.map((section) => {
-                const sectionOffset = flatOffset;
-                flatOffset += section.tiles.length;
-                return (
-                  <GalleryMonthGrid
-                    key={section.month}
-                    month={section.month}
-                    tiles={section.tiles}
-                    selecting={selecting}
-                    selectedIds={selectedIds}
-                    onTilePress={(tile) =>
-                      handleTilePress(tile, sectionOffset + section.tiles.indexOf(tile))
-                    }
-                    onAddPress={
-                      canPost && !selecting && section === galleryMonths[0]
-                        ? handleAddPhotoPress
-                        : undefined
-                    }
-                  />
-                );
-              })}
+              {visibleGallerySections.map((section) => (
+                <GalleryMonthGrid
+                  key={section.month}
+                  month={section.month}
+                  tiles={section.tiles}
+                  // 단일 월 보기에서는 위 드롭다운이 월 라벨을 대신한다 (시안).
+                  showMonthLabel={galleryMonthFilter === null}
+                  selecting={selecting}
+                  selectedIds={selectedIds}
+                  onTilePress={(tile) =>
+                    handleTilePress(tile, sectionFlatOffset(section) + section.tiles.indexOf(tile))
+                  }
+                  onAddPress={
+                    canPost && !selecting && section === galleryMonths[0]
+                      ? handleAddPhotoPress
+                      : undefined
+                  }
+                />
+              ))}
             </View>
           </View>
         )}
@@ -199,6 +272,11 @@ export function CellDetailScreen() {
             </View>
             <View className="mt-6 gap-4.5">
               <ManageLinkCard
+                title="셀원 관리"
+                description="셀원을 추가하거나 관리해요"
+                onPress={() => navigation.navigate("CellMemberManage", { cellId })}
+              />
+              <ManageLinkCard
                 title="팔로워 노트"
                 description="셀원별 케어 기록을 남기고 확인해요"
                 onPress={() => navigation.navigate("FollowerNoteBoard", { cellId })}
@@ -213,8 +291,7 @@ export function CellDetailScreen() {
         )}
       </ScrollView>
 
-      {/* 소식 글쓰기 진입 — 시안에 진입 버튼이 명시돼 있지 않아 팔로워노트 게시판과 같은
-          플로팅 버튼으로 달았다 (그 셀 소속 유저만). 시안 확정 시 위치 조정. */}
+      {/* 소식 글쓰기 진입 플로팅 버튼 (2026-08-27 시안에 정식 반영됨 — 그 셀 소속 유저만). */}
       {activeTab === "news" && canPost && (
         <FloatingButton onPress={() => navigation.navigate("CellNewsWrite", { cellId })}>
           <Icon name="write" size={24} color={colors.icon.disable} />

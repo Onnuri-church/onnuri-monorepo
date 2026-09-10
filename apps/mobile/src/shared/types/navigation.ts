@@ -63,10 +63,21 @@ export type RootStackParamList = {
   // 갤러리 사진 뷰어. index는 월 섹션을 이어붙인 평탄화 순번이다.
   CellGalleryPhoto: { cellId: string; index: number };
   // 관리 탭에서 진입하는 셀장·관리자 전용 화면들.
+  CellMemberManage: { cellId: string };
   CellAttendance: { cellId: string };
   FollowerNoteBoard: { cellId: string };
   FollowerNoteWrite: { cellId: string };
   FollowerNoteDetail: { cellId: string; noteId: string };
+  // 마이페이지 관리자 메뉴에서 진입하는 관리자 전용 화면들 (2026-09-09 시안).
+  // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라
+  // cellId가 있으면 편집 모드다.
+  AdminCellManage: undefined;
+  AdminCellForm: { cellId?: string } | undefined;
+  AdminMemberList: undefined;
+  AdminMemberDetail: { memberId: string };
+  AdminAttendance: undefined;
+  // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
+  AdminDataDownload: undefined;
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —

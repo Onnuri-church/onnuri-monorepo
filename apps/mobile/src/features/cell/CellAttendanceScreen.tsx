@@ -92,8 +92,7 @@ export function CellAttendanceScreen() {
         {/* 안내 배너 */}
         <View className="mt-3.5 rounded-2.5 bg-background-alternative px-4 py-2.5">
           <Text className="text-caption-main text-primary-normal">
-            QR로 예배 출석하면 셀모임 참석까지 자동으로 체크돼요.{"\n"}실제와 다른 사람만 눌러서
-            정정해주세요.
+            QR은 예배 출석만 기록돼요.{"\n"}셀모임에 온 사람은 아래에서 직접 체크해주세요.
           </Text>
         </View>
 

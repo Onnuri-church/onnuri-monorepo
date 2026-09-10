@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { User } from '@onnuri/shared';
+import type { MeResponse, User } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
@@ -38,12 +38,40 @@ export class UsersService {
     };
   }
 
+  // GET/PATCH /users/me 응답 — findById에 진행 중(endedAt 없음)인 소속 멤버십을 붙인다.
+  // soft delete된 셀/팀은 소속 없음으로 취급한다 (기록은 남지만 화면에 현재 소속으로 안 보여줌).
+  async findMe(id: string): Promise<MeResponse | null> {
+    const user = await this.findById(id);
+    if (!user) return null;
+
+    const [cellMembership, teamMembership] = await Promise.all([
+      this.prisma.cellMembership.findFirst({
+        where: { userId: id, endedAt: null, cell: { deletedAt: null } },
+        select: { role: true, cell: { select: { id: true, name: true } } },
+      }),
+      this.prisma.teamMembership.findFirst({
+        where: { userId: id, endedAt: null, team: { deletedAt: null } },
+        select: { role: true, team: { select: { id: true, name: true } } },
+      }),
+    ]);
+
+    return {
+      ...user,
+      cell: cellMembership
+        ? { ...cellMembership.cell, role: cellMembership.role }
+        : null,
+      team: teamMembership
+        ? { ...teamMembership.team, role: teamMembership.role }
+        : null,
+    };
+  }
+
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라
   // 멤버십 행으로 표현하므로(docs/erd.md — 레거시 cellName/teamId 제거 근거) 여기서 같이 반영한다.
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,
-  ): Promise<User> {
+  ): Promise<MeResponse> {
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({
@@ -73,7 +101,7 @@ export class UsersService {
     });
 
     // 방금 update가 성공했으므로 유저는 반드시 있다.
-    return (await this.findById(userId))!;
+    return (await this.findMe(userId))!;
   }
 
   // 소속 변경은 기존 행을 지우지 않고 endedAt을 찍고 새 행을 만든다 — 소속 이력 보존

@@ -157,6 +157,7 @@ apps/mobile/src/
 (2026-09-04 확정) 배포 대상과 시점:
 
 * **API — Render.** 개발 중에는 무료 인스턴스(15분 유휴 시 잠들고 깨어날 때 30초~1분 콜드 스타트 — 개발 단계에선 감수). 실사용(출시) 직전에 Starter(월 $7)로 올려 상시 가동으로 전환한다. 무료 티어의 750시간/월 제한은 무료 전용이라 유료 전환 후에는 계정 분리·시간 제한이 없다.
+  * **개발 서버 배포됨 (2026-09-10)**: https://onnuri-api-dev.onrender.com — `dev` 브랜치 자동 배포(머지될 때마다 갱신), 공용 Supabase DB 사용. 모바일 `.env`의 `EXPO_PUBLIC_API_URL`을 이 주소로 바꾸면 로컬 서버 없이 테스트할 수 있다. 빌드 명령은 pnpm을 직접 설치한다(`npm install -g pnpm@10.34.4 && pnpm install --frozen-lockfile && prisma generate && api build` — `corepack enable`은 Render 빌드 환경에서 실패). 환경변수는 `apps/api/.env`와 같되 `PORT`는 넣지 않는다(Render가 주입). 운영 전환 시 `main` 브랜치 기준 별도 서비스로 올리고 `AUTH_DEV_LOGIN`을 제거한다.
 * **DB — 로컬 개발은 Docker Postgres**(`apps/api`의 docker-compose), **운영은 Supabase Postgres**(무료 티어로 시작) 예정. Vercel(서버리스라 NestJS 부적합)·AWS(운영 부담 과함)는 기각.
 
 ## Known Issues

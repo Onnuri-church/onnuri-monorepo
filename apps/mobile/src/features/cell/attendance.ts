@@ -41,13 +41,14 @@ export function getLatestSunday(base: Date): Date {
   return date;
 }
 
-// QR 출석이 자동 반영된다는 전제라 기본값은 전원 출석이다 — 셀장이 실제와 다른
-// 사람만 눌러서 정정한다 (안내 배너 문구와 같은 모델).
+// 확정 스펙(2026-09-03, docs/attendance-data-model.md §2): QR은 예배 출석만 자동 기록되고,
+// 셀모임은 기본 결석 — 셀장이 온 사람만 직접 체크한다. 예배가 전원 출석인 건
+// QR 자동 반영을 흉내낸 목업 전제다 (API 연동 시 그 주 QR 기록으로 교체).
 export function getInitialAttendance(cellId: string): MemberAttendance[] {
   return getCellDetail(cellId).members.map((member) => ({
     memberId: member.id,
     name: member.name,
     worship: "present",
-    meeting: "present",
+    meeting: "absent",
   }));
 }

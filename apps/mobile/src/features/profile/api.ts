@@ -1,6 +1,16 @@
-import type { CellSummary, TeamSummary, UpdateMyProfileRequest, User } from "@onnuri/shared";
+import type {
+  CellSummary,
+  MeResponse,
+  TeamSummary,
+  UpdateMyProfileRequest,
+  User,
+} from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
+
+export function fetchMe(): Promise<MeResponse> {
+  return apiClient.get<MeResponse>("/users/me").then((res) => res.data);
+}
 
 export function fetchCells(): Promise<CellSummary[]> {
   return apiClient.get<CellSummary[]>("/cells").then((res) => res.data);

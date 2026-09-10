@@ -11,6 +11,7 @@ import { Header } from "../../shared/components/base/Header";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { canManageCell, findCellNews } from "./cellDetail";
@@ -35,7 +36,9 @@ export function CellNewsDetailScreen() {
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
   // 수정/삭제는 셀장·관리자 기준 — 작성자 API가 붙으면 "내 글이거나 셀장·관리자"로 교체.
-  const canEdit = canManageCell(cellId);
+  const session = useAuthStore((state) => state.session);
+  const isAdmin = session.status === "authenticated" && session.user.isAdmin;
+  const canEdit = canManageCell(cellId, isAdmin);
 
   const [comments, setComments] = useState<MockComment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");
