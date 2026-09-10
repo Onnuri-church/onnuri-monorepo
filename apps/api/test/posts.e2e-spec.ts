@@ -20,6 +20,7 @@ describe('Posts (e2e)', () => {
   let userId: string;
   let accessToken: string;
   let marchPostId: string;
+  let deletedPostId: string;
 
   const cleanup = async () => {
     await prisma.post.deleteMany({
@@ -79,8 +80,8 @@ describe('Posts (e2e)', () => {
       },
     });
 
-    // 삭제된 글은 목록에 안 나와야 한다.
-    await prisma.post.create({
+    // 삭제된 글은 목록에 안 나와야 하고, 좋아요도 받지 않아야 한다.
+    const deleted = await prisma.post.create({
       data: {
         board: 'QT_SHARE',
         authorId: userId,
@@ -91,6 +92,7 @@ describe('Posts (e2e)', () => {
         qtShare: { create: { passage: '룻기 1:11-14' } },
       },
     });
+    deletedPostId = deleted.id;
   });
 
   afterAll(async () => {
@@ -161,6 +163,105 @@ describe('Posts (e2e)', () => {
       expect(body.selectedMonth).not.toBe('2025.01');
       // 폴백 대상은 월 목록의 첫 항목(최신 달)이다 — 화면은 이 값을 선택 상태로 쓴다.
       expect(body.selectedMonth).toBe(body.months[0].value);
+    });
+  });
+
+  describe('좋아요 (POST/DELETE /posts/:id/likes)', () => {
+    // 이 describe는 marchPostId의 좋아요 상태를 바꾸므로, 끝나면 픽스처가 만든
+    // 초기 상태(내 좋아요 1개)로 되돌려 다른 테스트에 영향을 주지 않게 한다.
+    afterAll(async () => {
+      await prisma.postLike.deleteMany({ where: { postId: marchPostId } });
+      await prisma.postLike.create({ data: { postId: marchPostId, userId } });
+    });
+
+    const findMarchPost = async () => {
+      const res = await getList('?month=2025.03').expect(200);
+      return (res.body as QtShareListResponse).items.find(
+        (item) => item.id === marchPostId,
+      );
+    };
+
+    it('토큰 없이 좋아요는 401', () =>
+      request(app.getHttpServer())
+        .post(`/posts/${marchPostId}/likes`)
+        .expect(401));
+
+    it('토큰 없이 좋아요 취소는 401', () =>
+      request(app.getHttpServer())
+        .delete(`/posts/${marchPostId}/likes`)
+        .expect(401));
+
+    it('없는 글에 좋아요하면 404', () =>
+      request(app.getHttpServer())
+        .post('/posts/no-such-post/likes')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(404));
+
+    it('삭제된 글에 좋아요하면 404 (목록에서 빠진 글에 붙지 않게)', () =>
+      request(app.getHttpServer())
+        .post(`/posts/${deletedPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(404));
+
+    it('좋아요를 취소하면 개수가 줄고 likedByMe가 false가 된다', async () => {
+      await request(app.getHttpServer())
+        .delete(`/posts/${marchPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const item = await findMarchPost();
+      expect(item?.likeCount).toBe(0);
+      expect(item?.likedByMe).toBe(false);
+    });
+
+    it('누르지 않은 글의 좋아요를 취소해도 에러가 아니다 (재시도 대비)', () =>
+      request(app.getHttpServer())
+        .delete(`/posts/${marchPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204));
+
+    it('좋아요하면 개수가 늘고 likedByMe가 true가 된다', async () => {
+      await request(app.getHttpServer())
+        .post(`/posts/${marchPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const item = await findMarchPost();
+      expect(item?.likeCount).toBe(1);
+      expect(item?.likedByMe).toBe(true);
+    });
+
+    it('같은 글에 두 번 좋아요해도 개수가 늘지 않는다 (멱등)', async () => {
+      await request(app.getHttpServer())
+        .post(`/posts/${marchPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const item = await findMarchPost();
+      expect(item?.likeCount).toBe(1);
+    });
+
+    it('남이 누른 좋아요는 개수에 들어가지만 내 likedByMe는 false다', async () => {
+      const other = await prisma.user.create({
+        data: { email: `other@${EMAIL_DOMAIN}`, name: '다른사람' },
+      });
+      await prisma.postLike.create({
+        data: { postId: marchPostId, userId: other.id },
+      });
+
+      const item = await findMarchPost();
+      expect(item?.likeCount).toBe(2);
+      expect(item?.likedByMe).toBe(true);
+
+      // 내 좋아요만 빼면 개수는 남고 likedByMe만 꺼진다.
+      await request(app.getHttpServer())
+        .delete(`/posts/${marchPostId}/likes`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const after = await findMarchPost();
+      expect(after?.likeCount).toBe(1);
+      expect(after?.likedByMe).toBe(false);
     });
   });
 });

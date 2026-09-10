@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
   QtShareListItem,
   QtShareListResponse,
@@ -33,7 +33,10 @@ export class PostsService {
 
   // 큐티나눔 목록. 월 필터 항목도 함께 내려준다 — 앱이 월 목록을 직접 만들지 않게 하려는 것
   // (ARCHITECTURE.md App Responsibilities). 글이 없는 달은 선택지에 넣지 않는다.
-  async findQtShares(month?: string): Promise<QtShareListResponse> {
+  async findQtShares(
+    userId: string,
+    month?: string,
+  ): Promise<QtShareListResponse> {
     const months = await this.findMonths();
     // 요청한 달에 글이 없으면(또는 month 생략) 가장 최근 달을 보여준다.
     const selected =
@@ -57,6 +60,8 @@ export class PostsService {
         eventDate: true,
         author: { select: { name: true } },
         _count: { select: { likes: true } },
+        // 내 좋아요만 한 건 집어온다 — 행이 있으면 내가 누른 것 (전체를 받아서 세지 않는다).
+        likes: { where: { userId }, select: { id: true } },
       },
       orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
     });
@@ -69,9 +74,36 @@ export class PostsService {
       title: post.title ?? '',
       description: post.content,
       likeCount: post._count.likes,
+      likedByMe: post.likes.length > 0,
     }));
 
     return { months, selectedMonth: selected, items };
+  }
+
+  // 좋아요는 게시판과 무관하게 Post에 붙으므로 큐티 전용이 아니다 — 기도제목·부서활동도 이걸 쓴다.
+  // 같은 요청이 두 번 와도 결과가 같게 만든다(네트워크 재시도 대비): 이미 누른 상태면 그대로 둔다.
+  async like(postId: string, userId: string): Promise<void> {
+    await this.assertPostExists(postId);
+    await this.prisma.postLike.upsert({
+      where: { postId_userId: { postId, userId } },
+      update: {},
+      create: { postId, userId },
+    });
+  }
+
+  // 누르지 않은 글의 좋아요를 취소해도 에러로 보지 않는다(위와 같은 이유).
+  async unlike(postId: string, userId: string): Promise<void> {
+    await this.assertPostExists(postId);
+    await this.prisma.postLike.deleteMany({ where: { postId, userId } });
+  }
+
+  // 삭제된 글은 없는 것으로 취급한다 — 목록에서 빠진 글에 좋아요가 붙지 않게.
+  private async assertPostExists(postId: string): Promise<void> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
   }
 
   // 월 목록은 전체 글의 날짜에서 뽑아야 해서 본문 없이 날짜만 따로 조회한다.

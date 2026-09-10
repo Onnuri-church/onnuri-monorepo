@@ -34,6 +34,8 @@ export interface QtShareListItem {
   /** 본문. 카드는 2줄까지만 보여준다 */
   description: string;
   likeCount: number;
+  /** 로그인한 내가 좋아요를 눌렀는지 — 하트를 채운 상태로 그릴지 정한다 */
+  likedByMe: boolean;
 }
 
 /** 목록 상단 월 필터 항목. 글이 있는 달만 최신순으로 내려간다. */
