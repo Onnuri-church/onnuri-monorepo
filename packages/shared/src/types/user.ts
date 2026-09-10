@@ -29,6 +29,15 @@ export interface User {
   createdAt: string;
 }
 
+/**
+ * GET /users/me · PATCH /users/me 응답 — User에 진행 중(endedAt 없음)인 소속 멤버십을 붙인 형태.
+ * 마이페이지가 이름·소속·등급(isAdmin+역할) 표시에 쓴다. soft delete된 셀/팀 소속은 null로 내려온다.
+ */
+export interface MeResponse extends User {
+  cell: { id: string; name: string; role: CellRole } | null;
+  team: { id: string; name: string; role: TeamRole } | null;
+}
+
 /** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지 */
 export interface CellSummary {
   id: string;
