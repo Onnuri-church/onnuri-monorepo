@@ -29,6 +29,12 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Get('qt-shares/:id')
+  findQtShare(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.postsService.findQtShare(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Post(':id/likes')
   like(@CurrentUser() user: JwtPayload, @Param('id') id: string) {

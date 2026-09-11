@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import type {
+  QtShareDetail,
   QtShareListItem,
   QtShareListResponse,
   QtShareMonth,
 } from '@onnuri/shared';
 
-import { pad, toDateLabel } from '../../common/utils/date';
+import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 월 필터는 큐티나눔 목록 전용이라 여기 둔다 (공용 날짜 라벨은 common/utils/date).
@@ -70,6 +71,51 @@ export class PostsService {
     }));
 
     return { months, selectedMonth: selected, items };
+  }
+
+  // 큐티나눔 상세. board까지 조건에 넣는다 — 다른 게시판 글 id로 이 경로를 부르면
+  // 큐티 전용 필드(passage)가 빈 채로 조용히 200이 나가므로 없는 글로 취급한다.
+  async findQtShare(id: string, userId: string): Promise<QtShareDetail> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'QT_SHARE', deletedAt: null },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        eventDate: true,
+        coverImageUrl: true,
+        createdAt: true,
+        authorId: true,
+        author: { select: { name: true, avatarUrl: true } },
+        qtShare: { select: { passage: true } },
+        // 본문사진. 배경사진(coverImageUrl)과 달리 Image 테이블에 쌓이고 순서가 있다.
+        images: {
+          where: { kind: 'POST_CONTENT' },
+          select: { url: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
+        _count: { select: { likes: true } },
+        // 목록과 같은 방식 — 내 좋아요 행이 있는지만 본다.
+        likes: { where: { userId }, select: { id: true } },
+      },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+
+    return {
+      id: post.id,
+      authorName: post.author.name,
+      authorAvatarUrl: post.author.avatarUrl,
+      dateLabel: post.eventDate ? toDayLabel(post.eventDate) : '',
+      createdAt: post.createdAt.toISOString(),
+      title: post.title ?? '',
+      passage: post.qtShare?.passage ?? null,
+      content: post.content,
+      coverImageUrl: post.coverImageUrl,
+      imageUrls: post.images.map((image) => image.url),
+      likeCount: post._count.likes,
+      likedByMe: post.likes.length > 0,
+      isMine: post.authorId === userId,
+    };
   }
 
   // 좋아요는 게시판과 무관하게 Post에 붙으므로 큐티 전용이 아니다 — 기도제목·부서활동도 이걸 쓴다.
