@@ -120,6 +120,7 @@ apps/mobile/src/
     ├── store/      Zustand (useAuthStore: session 판별 유니온 — user, access/refresh 토큰)
     ├── theme/      tokens.js(컬러·타입스케일 단일 소스), fonts.ts(폰트 로딩용 require 맵)
     ├── types/      navigation.ts (RootStackParamList, RootTabParamList, AuthStackParamList)
+    ├── utils/      date.ts(toTimeAgo — 표시용 상대 시각). 프론트만 쓰는 유틸은 여기, 백엔드와 같이 쓰는 것만 packages/shared
     └── hooks/      useAppBootstrap(앱 부팅 시 세션 복원 → status 확정)
 ```
 

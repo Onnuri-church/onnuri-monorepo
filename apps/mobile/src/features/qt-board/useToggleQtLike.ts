@@ -1,4 +1,4 @@
-import type { QtShareListResponse } from "@onnuri/shared";
+import type { QtShareDetail, QtShareListResponse } from "@onnuri/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { likePost, unlikePost } from "./api";
@@ -46,17 +46,35 @@ export function useToggleQtLike() {
           },
       );
 
-      return { previous };
+      // 상세는 캐시가 따로다(["qt-share", id] — 목록의 접두사에 안 걸린다). 목록만 고치면
+      // 상세에서 하트를 눌렀을 때 화면이 그대로 있는다.
+      const detailKey = ["qt-share", postId];
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previousDetail = queryClient.getQueryData<QtShareDetail>(detailKey);
+
+      queryClient.setQueryData<QtShareDetail>(
+        detailKey,
+        (old) =>
+          old && {
+            ...old,
+            likedByMe: !likedByMe,
+            likeCount: old.likeCount + (likedByMe ? -1 : 1),
+          },
+      );
+
+      return { previous, previousDetail };
     },
 
-    onError: (_error, _args, context) => {
+    onError: (_error, { postId }, context) => {
       context?.previous.forEach(([key, data]) =>
         queryClient.setQueryData(key, data),
       );
+      queryClient.setQueryData(["qt-share", postId], context?.previousDetail);
     },
 
-    onSettled: () => {
+    onSettled: (_data, _error, { postId }) => {
       void queryClient.invalidateQueries({ queryKey: ["qt-shares"] });
+      void queryClient.invalidateQueries({ queryKey: ["qt-share", postId] });
     },
   });
 
