@@ -154,8 +154,9 @@ describe('Posts (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`);
 
   describe('큐티나눔 목록 (GET /posts/qt-shares)', () => {
-    it('토큰 없이 401', () =>
-      request(app.getHttpServer()).get('/posts/qt-shares').expect(401));
+    // 열람은 게스트도 된다 (README 기능 범위). 로그인이 필요한 건 좋아요 같은 동작뿐이다.
+    it('토큰 없이도 볼 수 있다', () =>
+      request(app.getHttpServer()).get('/posts/qt-shares').expect(200));
 
     it('잘못된 토큰이면 401', () =>
       request(app.getHttpServer())
@@ -222,9 +223,25 @@ describe('Posts (e2e)', () => {
         .get(`/posts/qt-shares/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
-    it('토큰 없이 401', () =>
+    // 게스트에게는 "내" 상태가 없다. 픽스처의 3월글에는 내 좋아요가 1건 있는데,
+    // 그게 게스트 응답에서 likedByMe로 새어 나오면 안 된다 — Prisma가 where의
+    // undefined를 조건 없음으로 보기 때문에 그냥 넘기면 조용히 true가 된다.
+    it('토큰 없이도 볼 수 있고, likedByMe·isMine이 false다', async () => {
+      const res = await request(app.getHttpServer())
+        .get(`/posts/qt-shares/${marchPostId}`)
+        .expect(200);
+
+      const body = res.body as QtShareDetail;
+      expect(body.title).toBe(`${FIXTURE_PREFIX}3월글`);
+      expect(body.likeCount).toBe(1);
+      expect(body.likedByMe).toBe(false);
+      expect(body.isMine).toBe(false);
+    });
+
+    it('잘못된 토큰이면 401 (만료를 게스트로 조용히 넘기지 않는다)', () =>
       request(app.getHttpServer())
         .get(`/posts/qt-shares/${marchPostId}`)
+        .set('Authorization', 'Bearer not-a-real-token')
         .expect(401));
 
     it('없는 글이면 404', () => getDetail('no-such-post').expect(404));

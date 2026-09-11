@@ -12,6 +12,7 @@ import {
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
 import { PostsService } from './posts.service';
@@ -22,16 +23,24 @@ import { PostsService } from './posts.service';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  @UseGuards(JwtAuthGuard)
+  // 열람은 게스트도 된다 (README 기능 범위: "큐티나눔 게시판 — 열람 + 로그인 후 작성").
+  // 좋아요처럼 로그인이 필요한 건 아래 동작 단위로 막는다.
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('qt-shares')
-  findQtShares(@CurrentUser() user: JwtPayload, @Query() query: FindQtSharesDto) {
-    return this.postsService.findQtShares(user.sub, query.month);
+  findQtShares(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Query() query: FindQtSharesDto,
+  ) {
+    return this.postsService.findQtShares(user?.sub, query.month);
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('qt-shares/:id')
-  findQtShare(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
-    return this.postsService.findQtShare(id, user.sub);
+  findQtShare(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.postsService.findQtShare(id, user?.sub);
   }
 
   @UseGuards(JwtAuthGuard)

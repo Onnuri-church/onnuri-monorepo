@@ -9,6 +9,13 @@ import type {
 import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 
+// "내 좋아요"를 고르는 조건. 게스트(userId 없음)는 좋아요가 있을 수 없는데, Prisma는
+// where의 undefined를 "조건 없음"으로 보기 때문에 그냥 넘기면 남의 좋아요까지 딸려와
+// likedByMe가 조용히 true가 된다. 빈 문자열은 어떤 cuid와도 안 맞아 0건이 된다.
+function myLikeFilter(userId?: string) {
+  return { userId: userId ?? '' };
+}
+
 // 월 필터는 큐티나눔 목록 전용이라 여기 둔다 (공용 날짜 라벨은 common/utils/date).
 function toMonthValue(date: Date): string {
   return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}`;
@@ -27,7 +34,7 @@ export class PostsService {
   // 큐티나눔 목록. 월 필터 항목도 함께 내려준다 — 앱이 월 목록을 직접 만들지 않게 하려는 것
   // (ARCHITECTURE.md App Responsibilities). 글이 없는 달은 선택지에 넣지 않는다.
   async findQtShares(
-    userId: string,
+    userId: string | undefined,
     month?: string,
   ): Promise<QtShareListResponse> {
     const months = await this.findMonths();
@@ -54,7 +61,7 @@ export class PostsService {
         author: { select: { name: true } },
         _count: { select: { likes: true } },
         // 내 좋아요만 한 건 집어온다 — 행이 있으면 내가 누른 것 (전체를 받아서 세지 않는다).
-        likes: { where: { userId }, select: { id: true } },
+        likes: { where: myLikeFilter(userId), select: { id: true } },
       },
       orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
     });
@@ -75,7 +82,10 @@ export class PostsService {
 
   // 큐티나눔 상세. board까지 조건에 넣는다 — 다른 게시판 글 id로 이 경로를 부르면
   // 큐티 전용 필드(passage)가 빈 채로 조용히 200이 나가므로 없는 글로 취급한다.
-  async findQtShare(id: string, userId: string): Promise<QtShareDetail> {
+  async findQtShare(
+    id: string,
+    userId: string | undefined,
+  ): Promise<QtShareDetail> {
     const post = await this.prisma.post.findFirst({
       where: { id, board: 'QT_SHARE', deletedAt: null },
       select: {
@@ -96,7 +106,7 @@ export class PostsService {
         },
         _count: { select: { likes: true } },
         // 목록과 같은 방식 — 내 좋아요 행이 있는지만 본다.
-        likes: { where: { userId }, select: { id: true } },
+        likes: { where: myLikeFilter(userId), select: { id: true } },
       },
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
