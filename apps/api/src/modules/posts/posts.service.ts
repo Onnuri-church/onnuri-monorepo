@@ -5,14 +5,10 @@ import type {
   QtShareMonth,
 } from '@onnuri/shared';
 
+import { pad, toDateLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 
-// 큐티 날짜는 @db.Date라 Prisma가 UTC 자정으로 돌려준다 — KST로 읽으면 하루 밀리므로
-// 아래 포맷 함수들은 전부 UTC 기준으로 읽는다.
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
+// 월 필터는 큐티나눔 목록 전용이라 여기 둔다 (공용 날짜 라벨은 common/utils/date).
 function toMonthValue(date: Date): string {
   return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}`;
 }
@@ -21,10 +17,6 @@ function toMonthValue(date: Date): string {
 function toMonthLabel(monthValue: string): string {
   const [year, month] = monthValue.split('.');
   return `${year.slice(2)}년 ${Number(month)}월`;
-}
-
-function toDateLabel(date: Date): string {
-  return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`;
 }
 
 @Injectable()

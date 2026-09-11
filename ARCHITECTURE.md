@@ -94,6 +94,7 @@ apps/api/src/
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠
     ├── decorators/ CurrentUser
+    ├── utils/     날짜 라벨 포맷(date.ts) — 응답에 싣는 표시 문구를 서버가 만든다
     ├── filters/   (비어있음)
     └── interceptors/ (비어있음)
 ```
