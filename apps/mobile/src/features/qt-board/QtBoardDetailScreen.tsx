@@ -1,7 +1,7 @@
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import type {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useLayoutEffect, useRef} from "react";
-import {ScrollView, View, Text, Image} from "react-native";
+import {ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
 import {AppDialog, type AppDialogRef} from "../../shared/components/base/AppDialog";
 import {FavoriteButton} from "../../shared/components/base/FavoriteButton";
 import {Header} from "../../shared/components/base/Header";
@@ -13,11 +13,19 @@ import {fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
 
+// 본문사진 캐러셀의 좌우 여백. 아래 ScrollView의 mx-5(한 칸 4px × 5)와 같은 값이어야 한다 —
+// 사진 폭을 여기서 빼서 계산하므로 한쪽만 바꾸면 페이징이 어긋난다.
+const CAROUSEL_MARGIN_X = 20;
+
 export function QtBoardDetailScreen() {
     const route = useRoute<RouteProp<RootStackParamList, "QtBoardDetail">>();
     const {id} = route.params
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const dialogRef = useRef<AppDialogRef>(null);
+    // 본문사진은 정사각형(시안)이고, 폭은 캐러셀 여백을 뺀 만큼이다. 훅을 쓰면
+    // 회전·폴더블로 화면 폭이 바뀌어도 따라온다.
+    const {width} = useWindowDimensions();
+    const imageSize = width - CAROUSEL_MARGIN_X * 2;
     // 서버 연동 전 목업 — API가 붙으면 글 작성자 id와 내 id 비교로 교체한다.
     const isMine = true;
 
@@ -135,6 +143,30 @@ export function QtBoardDetailScreen() {
                     <Text className="mt-12 text-body-regular text-text-neutral">{data.content}</Text>
                 </View>
 
+                {/* 본문사진(작성 화면에서 최대 5장)을 한 장씩 넘겨 본다.
+                    pagingEnabled는 스크롤뷰 폭 단위로 멈추므로 사진 한 장의 폭도 같아야
+                    딱 떨어진다 — 안 맞으면 넘길 때마다 어긋난 만큼 밀린다. */}
+                {data.imageUrls.length > 0 && (
+                    <ScrollView
+                        horizontal
+                        pagingEnabled
+                        showsHorizontalScrollIndicator={false}
+                        className="mx-5 mb-20"
+                        // 사진과 같은 높이를 직접 준다. 가로 스크롤뷰는 높이를 안 주면
+                        // 내용에 맞춰지길 기대하게 되는데, 세로 스크롤뷰 안에서는 그 계산이
+                        // 어긋나기 쉬워 정사각형이 깨진다.
+                        style={{height: imageSize}}
+                    >
+                        {data.imageUrls.map((url) => (
+                            <Image
+                                key={url}
+                                source={{uri: url}}
+                                resizeMode="cover"
+                                style={{width: imageSize, height: imageSize}}
+                            />
+                        ))}
+                    </ScrollView>
+                )}
             </ScrollView>
 
             <AppDialog
