@@ -5,6 +5,8 @@ import type {
   CellRole,
   CellSummary,
   CreateCellNewsRequest,
+  CreateFollowerNoteRequest,
+  FollowerNoteInfo,
   PostComment,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -87,6 +89,56 @@ export function useAddCellNewsComment(newsId: string) {
         .then((res) => res.data),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["cell-news-detail", newsId] }),
+  });
+}
+
+// ── 팔로워 노트 (셀 케어 기록 API) ───────────────────────────────────────
+// 쓰기 요청들이 전부 갱신된 목록을 응답으로 돌려주므로(서버 계약) invalidate 대신
+// setQueryData로 바로 캐시를 바꾼다 — 왕복 한 번이 줄고 화면이 즉시 반영된다.
+
+export function useFollowerNotes(cellId: string) {
+  return useQuery({
+    queryKey: ["follower-notes", cellId],
+    queryFn: () =>
+      apiClient
+        .get<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes`)
+        .then((res) => res.data),
+  });
+}
+
+export function useCreateFollowerNote(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateFollowerNoteRequest) =>
+      apiClient
+        .post<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes`, payload)
+        .then((res) => res.data),
+    onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
+  });
+}
+
+export function useDeleteFollowerNote(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (noteId: string) =>
+      apiClient
+        .delete<{ id: string }>(`/cells/${cellId}/follower-notes/${noteId}`)
+        .then((res) => res.data),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["follower-notes", cellId] }),
+  });
+}
+
+export function useAddFollowerNoteComment(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, content }: { noteId: string; content: string }) =>
+      apiClient
+        .post<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes/${noteId}/comments`, {
+          content,
+        })
+        .then((res) => res.data),
+    onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
   });
 }
 

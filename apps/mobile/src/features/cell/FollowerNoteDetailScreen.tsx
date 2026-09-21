@@ -12,8 +12,14 @@ import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { toTimeAgo } from "../../shared/utils/date";
+import {
+  useAddFollowerNoteComment,
+  useDeleteFollowerNote,
+  useFollowerNotes,
+} from "./api";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
-import { NOTE_QUESTIONS, findFollowerNote, type NoteComment } from "./followerNotes";
+import { NOTE_QUESTIONS } from "./followerNotes";
 
 // 팔로워 노트 게시글 (시안: 작성자 프로필 + 셀장 뱃지 + 날짜 제목 + 3문항 + 댓글).
 export function FollowerNoteDetailScreen() {
@@ -22,11 +28,14 @@ export function FollowerNoteDetailScreen() {
   const insets = useSafeAreaInsets();
   const { cellId, noteId } = route.params;
 
-  const note = findFollowerNote(cellId, noteId);
+  // 게시판을 거쳐 들어오므로 목록 캐시에서 찾는다 (목록 응답이 상세 전체를 담는 계약).
+  const { data: notes } = useFollowerNotes(cellId);
+  const note = notes?.find((item) => item.id === noteId);
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
-  // TODO(API): 댓글 등록 연동 전 — 화면 로컬 목록에만 쌓인다.
-  const [comments, setComments] = useState<NoteComment[]>(note?.comments ?? []);
+  const deleteNote = useDeleteFollowerNote(cellId);
+  const addComment = useAddFollowerNoteComment(cellId);
+  const comments = note?.comments ?? [];
   const [commentDraft, setCommentDraft] = useState("");
 
   // ⋮ 항목이 내 글 여부에 의존하므로 화면이 헤더를 단독 등록한다 (QtBoardDetail 패턴).
@@ -56,19 +65,14 @@ export function FollowerNoteDetailScreen() {
   }, [navigation, cellId]);
 
   const confirmDelete = () => {
-    // TODO(API): 삭제 연동 전 — 게시판으로 돌아가기만 한다.
     deleteDialogRef.current?.close();
-    navigation.goBack();
+    deleteNote.mutate(noteId, { onSuccess: () => navigation.goBack() });
   };
 
   const handleCommentSubmit = () => {
     const content = commentDraft.trim();
-    if (!content) return;
-    setComments((prev) => [
-      ...prev,
-      { id: String(prev.length + 1), authorName: "이서연", timeAgo: "방금 전", content, isPastor: false },
-    ]);
-    setCommentDraft("");
+    if (!content || addComment.isPending) return;
+    addComment.mutate({ noteId, content }, { onSuccess: () => setCommentDraft("") });
   };
 
   if (!note) {
@@ -94,7 +98,9 @@ export function FollowerNoteDetailScreen() {
                     <Text className="text-caption-small text-text-disable">셀장</Text>
                   </View>
                 </View>
-                <Text className="text-body-small text-text-alternative">{note.writtenAgo}</Text>
+                <Text className="text-body-small text-text-alternative">
+                  {note.writtenDateLabel} · {toTimeAgo(note.createdAt)}
+                </Text>
               </View>
             </View>
 
@@ -132,12 +138,14 @@ export function FollowerNoteDetailScreen() {
             ) : (
               <View className="mt-2">
                 {comments.map((comment) => (
-                  <CommentItem
-                    key={comment.id}
-                    authorName={comment.authorName}
-                    timeAgo={comment.timeAgo}
-                    content={comment.content}
-                  />
+                  /* 대댓글(parentId 있음)은 시안처럼 한 단계 들여쓴다. */
+                  <View key={comment.id} className={comment.parentId ? "pl-10" : ""}>
+                    <CommentItem
+                      authorName={comment.authorName}
+                      timeAgo={comment.dateLabel}
+                      content={comment.content}
+                    />
+                  </View>
                 ))}
               </View>
             )}

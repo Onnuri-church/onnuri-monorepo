@@ -26,3 +26,44 @@ export interface CellDetailResponse {
   expiresAt: string;
   members: CellMemberInfo[];
 }
+
+// ── 팔로워 노트 (셀 케어 기록 — 게시판 Post와 분리, FollowerNote 테이블) ──────────
+
+export interface FollowerNoteCommentInfo {
+  id: string;
+  authorName: string;
+  /** 작성일 — "08.17" */
+  dateLabel: string;
+  content: string;
+  /** 관리자(목사님) 댓글 여부 — 카드의 "목사님 댓글" 표시에 쓴다 */
+  isPastor: boolean;
+  /** 대댓글 부모 (1단계 깊이만) — null이면 원댓글 */
+  parentId: string | null;
+}
+
+/** GET /cells/:id/follower-notes 응답 항목 — 게시판 카드와 상세가 같이 쓴다 */
+export interface FollowerNoteInfo {
+  id: string;
+  /** 셀모임 날짜 — "2026.08.02" */
+  dateLabel: string;
+  /** 셀모임 달 (1~12) — 게시판 월 필터용 */
+  month: number;
+  /** "(일) 셀모임" */
+  meetingLabel: string;
+  authorName: string;
+  /** 작성일 — "08월 03일". "3주 전"은 앱이 계산한다 */
+  writtenDateLabel: string;
+  createdAt: string;
+  /** 3문항 답변 순서 고정 (빈 답변은 "") */
+  answers: string[];
+  /** 작성 시각순 — 대댓글은 parentId로 구분 */
+  comments: FollowerNoteCommentInfo[];
+}
+
+/** POST /cells/:id/follower-notes 요청 본문 (응답은 FollowerNoteInfo) */
+export interface CreateFollowerNoteRequest {
+  /** 셀모임 날짜 (YYYY-MM-DD) */
+  meetingDate: string;
+  /** 3문항 답변 — 첫 문항은 필수 (화면 검증과 동일) */
+  answers: string[];
+}

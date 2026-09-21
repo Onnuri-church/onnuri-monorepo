@@ -10,11 +10,15 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
-import { useCell } from "./api";
+import {
+  useAddFollowerNoteComment,
+  useCell,
+  useDeleteFollowerNote,
+  useFollowerNotes,
+} from "./api";
 import { canWriteFollowerNote } from "./cellDetail";
 import { MonthPicker } from "./components/MonthPicker";
 import { FollowerNoteCard } from "./components/FollowerNoteCard";
-import { getFollowerNotes, type FollowerNote } from "./followerNotes";
 
 // 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
 // "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
@@ -27,8 +31,9 @@ export function FollowerNoteBoardScreen() {
   const me = useMe();
   const canWrite = canWriteFollowerNote(cellId, me);
 
-  // TODO(API): 노트 목록 연동 전 — 삭제까지 화면 로컬로만 동작한다.
-  const [notes, setNotes] = useState<FollowerNote[]>(() => getFollowerNotes(cellId));
+  const { data: notes, isLoading } = useFollowerNotes(cellId);
+  const deleteNote = useDeleteFollowerNote(cellId);
+  const addComment = useAddFollowerNoteComment(cellId);
   // null = 전체 기간
   const [monthFilter, setMonthFilter] = useState<number | null>(new Date().getMonth() + 1);
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -36,7 +41,9 @@ export function FollowerNoteBoardScreen() {
   const deleteTargetId = useRef<string | null>(null);
 
   const visibleNotes =
-    monthFilter === null ? notes : notes.filter((note) => note.month === monthFilter);
+    monthFilter === null
+      ? (notes ?? [])
+      : (notes ?? []).filter((note) => note.month === monthFilter);
 
   const handleDeletePress = (noteId: string) => {
     deleteTargetId.current = noteId;
@@ -44,7 +51,9 @@ export function FollowerNoteBoardScreen() {
   };
 
   const confirmDelete = () => {
-    setNotes((prev) => prev.filter((note) => note.id !== deleteTargetId.current));
+    if (deleteTargetId.current && !deleteNote.isPending) {
+      deleteNote.mutate(deleteTargetId.current);
+    }
     deleteDialogRef.current?.close();
   };
 
@@ -95,11 +104,12 @@ export function FollowerNoteBoardScreen() {
                 canWrite ? () => navigation.navigate("FollowerNoteWrite", { cellId }) : undefined
               }
               onDeletePress={canWrite ? () => handleDeletePress(note.id) : undefined}
+              onCommentSubmit={(content) => addComment.mutate({ noteId: note.id, content })}
             />
           ))}
           {visibleNotes.length === 0 && (
             <Text className="pt-10 text-center text-body-medium text-text-alternative">
-              이 기간에 작성된 노트가 없어요.
+              {isLoading ? "노트를 불러오고 있어요." : "이 기간에 작성된 노트가 없어요."}
             </Text>
           )}
         </View>
