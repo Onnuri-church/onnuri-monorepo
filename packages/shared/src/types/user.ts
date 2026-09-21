@@ -45,6 +45,21 @@ export interface CellSummary {
   /** 진행 중(endedAt 없음) 멤버십 기준 셀장 이름 — 아직 지정 전이면 null */
   leaderName: string | null;
   viceLeaderName: string | null;
+  /** 활동 종료일 (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용 */
+  expiresAt: string;
+}
+
+/** 회원 목록 뱃지 — 관리자 > 팀장 > 셀장(부셀장 포함) 우선순위로 하나만 단다 */
+export type AdminMemberBadge = "admin" | "teamLeader" | "cellLeader";
+
+/** GET /users 응답 항목 (관리자 전용) — 회원 관리 목록과 셀장/부셀장 선택지가 같이 쓴다 */
+export interface AdminMemberSummary {
+  id: string;
+  name: string;
+  /** 진행 중 소속 (없으면 null) */
+  cellName: string | null;
+  teamName: string | null;
+  badge: AdminMemberBadge | null;
 }
 
 /** GET /teams 응답 항목 — 프로필 설정의 소속 팀 선택지 */

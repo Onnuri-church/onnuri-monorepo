@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
-import type { MeResponse, User } from '@onnuri/shared';
+import type { AdminMemberSummary, MeResponse, User } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
@@ -64,6 +64,46 @@ export class UsersService {
         ? { ...teamMembership.team, role: teamMembership.role }
         : null,
     };
+  }
+
+  // 전체 회원 목록 (관리자 전용) — 회원 관리 목록과 셀 생성/편집의 셀장·부셀장 선택지가 쓴다.
+  // 탈퇴 회원은 제외. 뱃지는 관리자 > 팀장 > 셀장(부셀장 포함) 우선순위로 하나만 단다.
+  async findAllForAdmin(): Promise<AdminMemberSummary[]> {
+    const users = await this.prisma.user.findMany({
+      where: { withdrawnAt: null },
+      select: {
+        id: true,
+        name: true,
+        isAdmin: true,
+        cellMemberships: {
+          where: { endedAt: null, cell: { deletedAt: null } },
+          select: { role: true, cell: { select: { name: true } } },
+        },
+        teamMemberships: {
+          where: { endedAt: null, team: { deletedAt: null } },
+          select: { role: true, team: { select: { name: true } } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+
+    return users.map((user) => {
+      const cell = user.cellMemberships[0] ?? null;
+      const team = user.teamMemberships[0] ?? null;
+      return {
+        id: user.id,
+        name: user.name,
+        cellName: cell?.cell.name ?? null,
+        teamName: team?.team.name ?? null,
+        badge: user.isAdmin
+          ? ('admin' as const)
+          : team?.role === 'LEADER'
+            ? ('teamLeader' as const)
+            : cell && cell.role !== 'MEMBER'
+              ? ('cellLeader' as const)
+              : null,
+      };
+    });
   }
 
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라

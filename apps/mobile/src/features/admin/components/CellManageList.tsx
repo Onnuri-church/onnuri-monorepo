@@ -10,6 +10,7 @@ import { SearchBar } from "../../../shared/components/base/SearchBar";
 import { colors } from "../../../shared/theme/tokens";
 import type { RootStackParamList } from "../../../shared/types/navigation";
 import { useCells } from "../../cell/api";
+import { useDeleteCell } from "../api";
 
 interface CellManageListProps {
   /** 탭 안에서 쓸 때 목록 끝이 탭바에 가리지 않게 주는 바닥 여백 (스택 화면은 0). */
@@ -21,23 +22,23 @@ interface CellManageListProps {
 // 관리자 마이페이지의 셀 관리 화면과, 관리자용 하단 탭 "셀 페이지"가 같이 쓴다.
 export function CellManageList({ bottomInset = 0 }: CellManageListProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  // 목록은 서버(전체 셀)에서 온다. TODO(API): 삭제는 아직 미연동 — 로컬에서 숨기기만 한다.
+  // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
+  // 셀 캐시가 무효화돼 목록에서 빠진다.
   const { data } = useCells();
-  const [removedIds, setRemovedIds] = useState<string[]>([]);
   const [query, setQuery] = useState("");
-  const cells = (data ?? [])
-    .filter((cell) => !removedIds.includes(cell.id))
-    .filter((cell) => (query.trim() ? cell.name.includes(query.trim()) : true));
+  const cells = (data ?? []).filter((cell) =>
+    query.trim() ? cell.name.includes(query.trim()) : true,
+  );
   const [deleteTarget, setDeleteTarget] = useState<CellSummary | null>(null);
+  const deleteCell = useDeleteCell();
 
   const handleEditPress = (cellId: string) => {
     navigation.navigate("AdminCellForm", { cellId });
   };
 
   const handleDeleteConfirmPress = () => {
-    // TODO(API): 셀 soft delete 연동 — 지금은 로컬에서 숨기기만 한다.
-    if (deleteTarget) {
-      setRemovedIds((prev) => [...prev, deleteTarget.id]);
+    if (deleteTarget && !deleteCell.isPending) {
+      deleteCell.mutate(deleteTarget.id);
     }
     setDeleteTarget(null);
   };

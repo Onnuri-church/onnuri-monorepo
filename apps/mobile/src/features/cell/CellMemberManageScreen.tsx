@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useRemoveCellMember } from "../admin/api";
 import { toCellMemberRole, useCellDetail } from "./api";
 import { type CellMember } from "./cellDetail";
 
@@ -17,16 +18,15 @@ export function CellMemberManageScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "CellMemberManage">>();
   const { cellId } = route.params;
 
-  // 셀원 목록은 서버에서 온다. TODO(API): 삭제는 아직 미연동 — 로컬에서 지운 것처럼만 보여준다.
+  // 셀원 목록은 서버에서 온다. 삭제는 DELETE /cells/:id/members/:userId — 멤버십 종료
+  // (soft) 후 셀 캐시가 무효화돼 목록에서 빠진다.
   const { data: cellData } = useCellDetail(cellId);
-  const [removedIds, setRemovedIds] = useState<string[]>([]);
-  const members: CellMember[] = (cellData?.members ?? [])
-    .filter((member) => !removedIds.includes(member.id))
-    .map((member) => ({
-      id: member.id,
-      name: member.name,
-      role: toCellMemberRole(member.role),
-    }));
+  const removeMember = useRemoveCellMember(cellId);
+  const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
+    id: member.id,
+    name: member.name,
+    role: toCellMemberRole(member.role),
+  }));
   const [query, setQuery] = useState("");
   const [pendingDelete, setPendingDelete] = useState<CellMember | null>(null);
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -41,8 +41,8 @@ export function CellMemberManageScreen() {
   };
 
   const confirmDelete = () => {
-    if (pendingDelete) {
-      setRemovedIds((prev) => [...prev, pendingDelete.id]);
+    if (pendingDelete && !removeMember.isPending) {
+      removeMember.mutate(pendingDelete.id);
     }
     setPendingDelete(null);
     deleteDialogRef.current?.close();
