@@ -8,6 +8,7 @@ import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { uploadImage } from "../../shared/api/upload";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
@@ -29,7 +30,9 @@ export function AdminCellFormScreen() {
   const findMemberIdByName = (name: string | null) =>
     (members ?? []).find((member) => member.name === name)?.id ?? null;
 
-  const [coverUri, setCoverUri] = useState<string | null>(null);
+  // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
+  // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
+  const [coverUri, setCoverUri] = useState<string | null>(editingCell?.coverImageUrl ?? null);
   const [name, setName] = useState(editingCell?.name ?? "");
   const [leaderName, setLeaderName] = useState<string | null>(editingCell?.leaderName ?? null);
   const [hasViceLeader, setHasViceLeader] = useState(editingCell ? editingCell.viceLeaderName !== null : true);
@@ -51,20 +54,29 @@ export function AdminCellFormScreen() {
 
   const handleCoverUploadPress = async () => {
     // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
-    // TODO(업로드): 이미지 업로드 인프라가 아직 없어 서버에는 안 보내고 화면에서만 보여준다.
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (result.canceled) return;
     setCoverUri(result.assets[0].uri);
   };
 
-  const handleSubmitPress = () => {
+  const handleSubmitPress = async () => {
     const leaderId = findMemberIdByName(leaderName);
     if (!leaderId || !period) return;
+
+    let coverImageUrl: string | null = null;
+    try {
+      coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      return;
+    }
+
     const payload = {
       name: name.trim(),
       leaderId,
       viceLeaderId: hasViceLeader ? findMemberIdByName(viceLeaderName) : null,
       expiresAt: period,
+      coverImageUrl,
     };
 
     const mutation = editingCell ? updateCell : createCell;

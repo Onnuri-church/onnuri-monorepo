@@ -27,6 +27,7 @@ export class CellsService {
         id: true,
         name: true,
         expiresAt: true,
+        coverImageUrl: true,
         memberships: {
           where: { endedAt: null, role: { in: ['LEADER', 'SUB_LEADER'] } },
           select: { role: true, user: { select: { name: true } } },
@@ -45,6 +46,7 @@ export class CellsService {
         null,
       // 계약: ISO date (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용
       expiresAt: cell.expiresAt.toISOString().slice(0, 10),
+      coverImageUrl: cell.coverImageUrl,
     }));
   }
 

@@ -52,3 +52,6 @@ coverage/
 # Misc
 .eslintcache
 .turbo/
+
+# 디자이너 시안 원본 (2.5MB PDF들) — 저장소엔 넣지 않기로 함 (2026-09-11 지환님)
+apps/mobile/design-assets/

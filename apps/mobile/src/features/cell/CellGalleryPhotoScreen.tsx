@@ -2,14 +2,13 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { getCellGallery } from "./cellDetail";
-import { useCell } from "./api";
+import { useCell, useCellGallery } from "./api";
 
 // 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터 + 좌우 화살표).
 // 배경이 어두워 공통 sub 헤더를 못 쓰고 화면이 직접 그린다 — 등록부는 headerShown: false.
@@ -20,10 +19,10 @@ export function CellGalleryPhotoScreen() {
   const { cellId, index: initialIndex } = route.params;
 
   const cell = useCell(cellId);
-  const totalCount = getCellGallery(cellId).reduce(
-    (sum, section) => sum + section.photoIds.length,
-    0,
-  );
+  // 갤러리 탭을 거쳐 들어오므로 캐시에 있다 — 탭의 평탄화 인덱스와 같은 순서로 편다.
+  const { data: galleryData } = useCellGallery(cellId);
+  const photos = (galleryData ?? []).flatMap((section) => section.photos);
+  const totalCount = photos.length;
 
   const [index, setIndex] = useState(initialIndex);
 
@@ -44,9 +43,17 @@ export function CellGalleryPhotoScreen() {
       </Text>
 
       <View className="flex-1 justify-center">
-        {/* TODO(사진): 이미지 연동 전 placeholder — 실제 이미지가 붙으면 원본 비율을 따른다.
-            시안 402x617은 콘텐츠 비율 영역이라 aspectRatio로 처리한다 (DESIGN.md 사이즈 규칙 예외). */}
-        <View className="w-full bg-background-assistive" style={{ aspectRatio: 402 / 617 }} />
+        {/* 시안 402x617은 콘텐츠 비율 영역이라 aspectRatio로 처리한다 (DESIGN.md 사이즈 규칙 예외). */}
+        {photos[index] ? (
+          <Image
+            source={{ uri: photos[index].url }}
+            className="w-full"
+            style={{ aspectRatio: 402 / 617 }}
+            resizeMode="contain"
+          />
+        ) : (
+          <View className="w-full bg-background-assistive" style={{ aspectRatio: 402 / 617 }} />
+        )}
 
         <Pressable
           className="absolute left-5 h-7 w-7 items-center justify-center"

@@ -236,6 +236,16 @@ export class PostsService {
         title: dto.title,
         content: dto.content,
         eventDate: new Date(dto.eventDate),
+        // 본문 사진 — takenOn을 소식 날짜로 둬서 갤러리 월 그룹이 소식 날짜를 따라간다
+        images: {
+          create: (dto.imageUrls ?? []).map((url, index) => ({
+            url,
+            kind: 'POST_CONTENT' as const,
+            uploadedById: userId,
+            takenOn: new Date(dto.eventDate),
+            sortOrder: index,
+          })),
+        },
       },
       select: { id: true },
     });

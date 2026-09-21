@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -96,8 +96,16 @@ export function CellNewsDetailScreen() {
     <View className="flex-1 bg-background-normal">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView keyboardShouldPersistTaps="handled">
-          {/* TODO(사진): 소식 사진(imageUrls)은 업로드 인프라 연동 후 — placeholder (시안 362x360) */}
-          <View className="mx-5 mt-1 aspect-square bg-background-assistive" />
+          {/* 소식 사진 (시안 362x360 한 장 영역) — 여러 장이면 첫 장만. 없으면 회색 자리 유지 */}
+          {news.imageUrls.length > 0 ? (
+            <Image
+              source={{ uri: news.imageUrls[0] }}
+              className="mx-5 mt-1 aspect-square"
+              resizeMode="cover"
+            />
+          ) : (
+            <View className="mx-5 mt-1 aspect-square bg-background-assistive" />
+          )}
 
           <View className="px-5 pt-4">
             <View className="flex-row items-center gap-2">

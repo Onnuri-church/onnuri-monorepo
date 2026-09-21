@@ -188,6 +188,7 @@ export class GroupMeetingsService {
         authorId: adminId,
         title: dto.title,
         content: dto.description,
+        coverImageUrl: dto.coverImageUrl ?? null,
         hobbyGroup: {
           create: {
             recruitStart: new Date(dto.recruitStart),
@@ -219,12 +220,19 @@ export class GroupMeetingsService {
     await this.assertCanManage(requesterId, id);
 
     await this.prisma.$transaction(async (tx) => {
-      if (dto.title !== undefined || dto.description !== undefined) {
+      if (
+        dto.title !== undefined ||
+        dto.description !== undefined ||
+        dto.coverImageUrl !== undefined
+      ) {
         await tx.post.update({
           where: { id },
           data: {
             ...(dto.title !== undefined && { title: dto.title }),
             ...(dto.description !== undefined && { content: dto.description }),
+            ...(dto.coverImageUrl !== undefined && {
+              coverImageUrl: dto.coverImageUrl,
+            }),
           },
         });
       }

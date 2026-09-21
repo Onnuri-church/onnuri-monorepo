@@ -1,7 +1,7 @@
 import type { CellRole, MeResponse } from "@onnuri/shared";
 
-// 개별 셀 페이지의 권한 규칙 + 갤러리 목업. 구성원·권한 근거는 서버 데이터(GET /cells/:id,
-// GET /users/me), 소식은 /posts/cell-news 실데이터. 갤러리만 업로드 인프라 대기로 목업이다.
+// 개별 셀 페이지의 권한 규칙. 구성원·권한 근거는 서버 데이터(GET /cells/:id, GET /users/me),
+// 소식·갤러리는 각각 /posts/cell-news, /cells/:id/gallery 실데이터 (api.ts).
 
 /** 셀 안에서의 역할(화면 표시용). 부셀장(viceLeader)은 셀장과 동일 권한 — 표시만 구분한다 (docs/erd.md).
  * 서버 enum(CellRole)에서의 변환은 api.ts의 toCellMemberRole. */
@@ -39,21 +39,3 @@ export interface CellMember {
   role: CellMemberRole;
 }
 
-export interface GalleryMonth {
-  /** 섹션 제목 (예: "2026년 7월") */
-  month: string;
-  /** 사진 연동 전이라 id만 있는 placeholder. 실제 이미지는 API 연동 시 붙는다. */
-  photoIds: string[];
-}
-
-// 사진 API 전이라 개수만 의미 있는 placeholder 목록이다.
-const MOCK_GALLERY: GalleryMonth[] = [
-  { month: "2026년 7월", photoIds: Array.from({ length: 9 }, (_, i) => `2026-07-${i}`) },
-  { month: "2026년 6월", photoIds: Array.from({ length: 9 }, (_, i) => `2026-06-${i}`) },
-];
-
-// 갤러리만 목업으로 남았다 — 이미지 업로드 인프라가 생기면 Image 테이블 조회로 교체한다.
-// (소식은 /posts/cell-news 실데이터로 전환됨 — api.ts)
-export function getCellGallery(_cellId: string): GalleryMonth[] {
-  return MOCK_GALLERY;
-}

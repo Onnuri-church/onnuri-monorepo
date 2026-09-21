@@ -47,6 +47,8 @@ export interface CellSummary {
   viceLeaderName: string | null;
   /** 활동 종료일 (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용 */
   expiresAt: string;
+  /** 셀 커버(단체) 사진 — 편집 폼 프리필용 */
+  coverImageUrl: string | null;
 }
 
 /** 회원 목록 뱃지 — 관리자 > 팀장 > 셀장(부셀장 포함) 우선순위로 하나만 단다 */

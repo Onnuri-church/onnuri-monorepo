@@ -1,7 +1,13 @@
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 
-// POST /posts/cell-news 요청 본문 — 글쓰기 시안(날짜/사진/제목/내용) 중 사진은
-// 업로드 인프라가 붙은 뒤 별도 계약으로 추가한다.
+// POST /posts/cell-news 요청 본문 — 글쓰기 시안(날짜/사진 최대 5장/제목/내용).
 export class CreateCellNewsDto {
   @IsString()
   @IsNotEmpty({ message: 'cellId는 필수입니다.' })
@@ -19,4 +25,11 @@ export class CreateCellNewsDto {
     message: 'eventDate는 YYYY-MM-DD 형식이어야 합니다.',
   })
   eventDate!: string;
+
+  // POST /uploads가 돌려준 주소들 — Image(POST_CONTENT) 행으로 쌓여 갤러리에 자동 포함된다.
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5, { message: '사진은 최대 5장까지 올릴 수 있어요.' })
+  @IsString({ each: true })
+  imageUrls?: string[];
 }

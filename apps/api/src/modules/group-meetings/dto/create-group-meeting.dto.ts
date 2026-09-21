@@ -2,6 +2,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Matches,
 } from 'class-validator';
@@ -39,4 +40,9 @@ export class CreateGroupMeetingDto {
   @ArrayMinSize(1, { message: '소그룹장을 한 명 이상 지정해주세요.' })
   @IsString({ each: true })
   leaderIds!: string[];
+
+  // POST /uploads가 돌려준 주소 — 카드 썸네일·상세 히어로에 쓰인다.
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string | null;
 }

@@ -44,4 +44,9 @@ export class UpdateGroupMeetingDto {
   @ArrayMinSize(1, { message: '소그룹장을 한 명 이상 지정해주세요.' })
   @IsString({ each: true })
   leaderIds?: string[];
+
+  // "생략 = 유지, null = 사진 제거"
+  @IsOptional()
+  @IsString()
+  coverImageUrl?: string | null;
 }

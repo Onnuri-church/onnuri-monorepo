@@ -124,6 +124,8 @@ export interface CreateCellNewsRequest {
   content: string;
   /** YYYY-MM-DD */
   eventDate: string;
+  /** 본문 사진 (최대 5장) — POST /uploads로 받은 주소. 갤러리에 자동 포함된다 */
+  imageUrls?: string[];
 }
 
 export interface Post {

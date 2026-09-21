@@ -1,6 +1,7 @@
 import type {
   CellAttendanceResponse,
   CellDetailResponse,
+  CellGalleryMonth,
   CellNewsDetail,
   CellNewsListItem,
   CellRole,
@@ -91,6 +92,41 @@ export function useAddCellNewsComment(newsId: string) {
         .then((res) => res.data),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["cell-news-detail", newsId] }),
+  });
+}
+
+// ── 갤러리 (직접 업로드 + 소식 사진 자동 포함 — 서버 계약) ─────────────────
+// 쓰기 응답이 갱신된 전체 목록이라 캐시를 바로 교체한다.
+
+export function useCellGallery(cellId: string) {
+  return useQuery({
+    queryKey: ["cell-gallery", cellId],
+    queryFn: () =>
+      apiClient
+        .get<CellGalleryMonth[]>(`/cells/${cellId}/gallery`)
+        .then((res) => res.data),
+  });
+}
+
+export function useAddGalleryPhoto(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (url: string) =>
+      apiClient
+        .post<CellGalleryMonth[]>(`/cells/${cellId}/gallery`, { url })
+        .then((res) => res.data),
+    onSuccess: (months) => queryClient.setQueryData(["cell-gallery", cellId], months),
+  });
+}
+
+export function useRemoveGalleryPhotos(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (imageIds: string[]) =>
+      apiClient
+        .delete<CellGalleryMonth[]>(`/cells/${cellId}/gallery`, { data: { imageIds } })
+        .then((res) => res.data),
+    onSuccess: (months) => queryClient.setQueryData(["cell-gallery", cellId], months),
   });
 }
 

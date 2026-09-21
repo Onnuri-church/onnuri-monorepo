@@ -66,6 +66,8 @@ export interface CellFormPayload {
   viceLeaderId: string | null;
   /** 셀 턴 종료일 (YYYY-MM-DD) */
   expiresAt: string;
+  /** 커버(단체) 사진 — POST /uploads 주소, null = 사진 없음 */
+  coverImageUrl: string | null;
 }
 
 // 셀 목록·상세·회원 소속이 전부 바뀔 수 있어서 셀 캐시를 통째로 무효화한다.

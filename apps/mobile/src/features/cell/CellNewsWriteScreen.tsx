@@ -10,6 +10,7 @@ import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUpload
 import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
+import { uploadImage } from "../../shared/api/upload";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateCellNews } from "./api";
 
@@ -22,17 +23,30 @@ export function CellNewsWriteScreen() {
   const { cellId } = route.params;
 
   const [selectDate, setSelectDate] = useState<string | null>(toDateString(new Date()));
-  // TODO(업로드): 사진은 업로드 인프라 연동 전이라 서버로 안 보내고 화면에서만 보여준다.
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const createNews = useCreateCellNews(cellId);
 
-  const handleSubmitPress = () => {
-    if (!selectDate || createNews.isPending) return;
+  const handleSubmitPress = async () => {
+    if (!selectDate || createNews.isPending || uploading) return;
+
+    // 사진 먼저 전부 업로드해 주소로 바꾼 뒤 글을 만든다 — 하나라도 실패하면 등록하지 않는다.
+    let imageUrls: string[];
+    setUploading(true);
+    try {
+      imageUrls = await Promise.all(photoUris.map((uri) => uploadImage(uri)));
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      return;
+    } finally {
+      setUploading(false);
+    }
+
     createNews.mutate(
-      { title: title.trim(), content: content.trim(), eventDate: selectDate },
+      { title: title.trim(), content: content.trim(), eventDate: selectDate, imageUrls },
       {
         onSuccess: () => navigation.goBack(),
         onError: () => Alert.alert("등록 실패", "잠시 후 다시 시도해주세요."),
@@ -88,7 +102,10 @@ export function CellNewsWriteScreen() {
               label="등록하기"
               onPress={handleSubmitPress}
               disabled={
-                title.trim().length === 0 || content.trim().length === 0 || createNews.isPending
+                title.trim().length === 0 ||
+                content.trim().length === 0 ||
+                createNews.isPending ||
+                uploading
               }
             />
           </View>

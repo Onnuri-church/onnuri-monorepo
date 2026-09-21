@@ -79,6 +79,8 @@ export interface CreateGroupMeetingRequest {
   cost: string;
   /** 소그룹장 — 한 명 이상, 다중 가능 (2026-09-21 확정). 자동으로 APPROVED가 된다 */
   leaderIds: string[];
+  /** 배경사진 — POST /uploads로 받은 주소 */
+  coverImageUrl?: string | null;
 }
 
 /** PATCH /group-meetings/:id 요청 본문 — 보낸 필드만 반영. leaderIds는 전체 교체 (빠진 사람은 일반 참여자로 남는다) */
@@ -91,4 +93,5 @@ export interface UpdateGroupMeetingRequest {
   cost?: string;
   status?: GroupMeetingStatus;
   leaderIds?: string[];
+  coverImageUrl?: string | null;
 }

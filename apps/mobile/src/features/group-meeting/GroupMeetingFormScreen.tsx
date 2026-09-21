@@ -12,6 +12,7 @@ import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { uploadImage } from "../../shared/api/upload";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
@@ -41,7 +42,8 @@ export function GroupMeetingFormScreen() {
   const updateMeeting = useUpdateGroupMeeting(meetingId ?? "");
   const saving = createMeeting.isPending || updateMeeting.isPending;
 
-  const [coverUri, setCoverUri] = useState<string | null>(null);
+  // 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://) — 저장 때 로컬만 업로드된다.
+  const [coverUri, setCoverUri] = useState<string | null>(editing?.thumbnailUrl ?? null);
   const [title, setTitle] = useState(editing?.title ?? "");
   const [description, setDescription] = useState(editing?.description ?? "");
   const [recruitStart, setRecruitStart] = useState<string | null>(editing?.recruitStart ?? null);
@@ -61,7 +63,6 @@ export function GroupMeetingFormScreen() {
     leaders.length > 0;
 
   const handleCoverUploadPress = async () => {
-    // TODO(업로드): 이미지 업로드 인프라 전 — 화면에서만 보여준다 (셀 생성 폼과 동일).
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
     if (result.canceled) return;
     setCoverUri(result.assets[0].uri);
@@ -75,8 +76,17 @@ export function GroupMeetingFormScreen() {
     setLeaders((prev) => [...prev, { id: member.id, name: member.name }]);
   };
 
-  const handleSubmitPress = () => {
+  const handleSubmitPress = async () => {
     if (!recruitStart || !recruitEnd) return;
+
+    let coverImageUrl: string | null = null;
+    try {
+      coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      return;
+    }
+
     const payload = {
       title: title.trim(),
       description: description.trim(),
@@ -85,6 +95,7 @@ export function GroupMeetingFormScreen() {
       place: place.trim(),
       cost: cost.trim(),
       leaderIds: leaders.map((leader) => leader.id),
+      coverImageUrl,
     };
     const mutation = meetingId ? updateMeeting : createMeeting;
     mutation.mutate(payload, {

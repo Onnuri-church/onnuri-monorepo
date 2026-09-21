@@ -27,6 +27,23 @@ export interface CellDetailResponse {
   members: CellMemberInfo[];
 }
 
+// ── 셀 갤러리 (Image 테이블 — 직접 업로드 + 셀 소식 사진 자동 포함, 2026-09-04 확정) ──
+
+export interface CellGalleryPhotoInfo {
+  /** Image id — 삭제 요청에 쓴다 */
+  id: string;
+  url: string;
+  /** 직접 업로드(GALLERY)만 갤러리 편집에서 지울 수 있다 — 게시글 사진은 글에서 지운다 */
+  deletable: boolean;
+}
+
+/** GET /cells/:id/gallery 응답 항목 — 최신 달부터 */
+export interface CellGalleryMonth {
+  /** "2026년 7월" */
+  month: string;
+  photos: CellGalleryPhotoInfo[];
+}
+
 // ── 출석 관리 (예배 WorshipAttendance + 셀모임 CellMeetingAttendance) ────────────
 
 /** 출석 관리 명단 한 명 — 구성원 정렬(셀장→부셀장→이름순)은 셀 상세와 같다 */
