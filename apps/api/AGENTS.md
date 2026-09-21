@@ -5,8 +5,10 @@
 ## 로컬 세팅
 
 1. `apps/api/.env.example`을 복사해 `apps/api/.env` 생성 후 값 채우기 — `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`은 **32자 이상**이어야 부팅 시 환경변수 검증을 통과한다 (`openssl rand -hex 32`로 생성)
-2. 로컬 Postgres 준비: `apps/api`에서 `docker compose up -d` (Docker Desktop 필요). 계정·DB명이 `.env.example`의 `DATABASE_URL`과 맞춰져 있어 `.env`의 해당 값은 그대로 쓰면 된다
-3. `prisma:migrate` → `prisma:generate` → (선택) `prisma:seed`(프로필 설정의 셀/팀 선택지 데이터) → `start:dev` 순으로 실행
+2. DB 준비 — 둘 중 하나 (차이는 ARCHITECTURE.md "Deployment"의 DB 항목)
+   - **공용 개발 Supabase**: `DATABASE_URL`만 채우면 된다. 스키마가 이미 최신이라 마이그레이션을 돌릴 필요가 없다
+   - **로컬 격리**: `apps/api`에서 `docker compose up -d` (Docker Desktop 필요). 계정·DB명이 `.env.example`의 `DATABASE_URL`과 맞춰져 있어 `.env`의 해당 값은 그대로 쓰면 된다
+3. `prisma:migrate`(Docker를 쓸 때만) → `prisma:generate` → (선택) `prisma:seed`(프로필 설정의 셀/팀 선택지 + 큐티나눔 목록 데이터) → `start:dev` 순으로 실행
 
 ## 도메인 모듈 만들 때
 
@@ -15,6 +17,8 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 ## Prisma
 
 `prisma/schema.prisma`를 바꾸면 반드시 `pnpm --filter @onnuri/api run prisma:generate`를 다시 돌린다 — 안 돌리면 타입이 스키마와 안 맞는다.
+
+마이그레이션은 **Docker Postgres(로컬)에서 `prisma:migrate`로 만들고, 공용 Supabase에는 `prisma migrate deploy`로 적용한다.** 공용 DB에 `prisma migrate dev`를 돌리지 않는다 — 리셋 제안을 승인하면 팀 전체 개발 데이터가 사라진다 (ARCHITECTURE.md "Known Issues").
 
 ## 지켜야 하는 기존 동작
 

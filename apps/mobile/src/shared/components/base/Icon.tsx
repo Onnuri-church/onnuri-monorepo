@@ -21,6 +21,7 @@ import ExpandRight from "../../assets/icons/expand-right.svg";
 import Export from "../../assets/icons/export.svg";
 import EyeOff from "../../assets/icons/eye-off.svg";
 import FavoriteLight from "../../assets/icons/favorite-light.svg";
+import FavoriteFill from "../../assets/icons/favorite-fill.svg";
 import Home from "../../assets/icons/home.svg";
 import Jubo from "../../assets/icons/jubo.svg";
 import Lock from "../../assets/icons/lock.svg";
@@ -77,6 +78,7 @@ const ICONS = {
   export: Export,
   "eye-off": EyeOff,
   "favorite-light": FavoriteLight,
+  "favorite-fill": FavoriteFill,
   home: Home,
   jubo: Jubo,
   lock: Lock,
