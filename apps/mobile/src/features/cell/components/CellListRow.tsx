@@ -1,10 +1,10 @@
+import type { CellSummary } from "@onnuri/shared";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
-import type { Cell } from "../cells";
 
 interface CellListRowProps {
-  cell: Cell;
+  cell: CellSummary;
   /** 내가 속한 셀이면 "나의 셀" 뱃지를 단다. */
   isMyCell: boolean;
   onPress?: () => void;
@@ -12,9 +12,10 @@ interface CellListRowProps {
 
 // 전체 셀 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
 export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
+  // 셀장 멤버십이 아직 없는 셀(시드 직후 등)은 "미지정"으로 표시한다.
   const leaderLine = cell.viceLeaderName
-    ? `셀장 ${cell.leaderName} / 부셀장 ${cell.viceLeaderName}`
-    : `셀장 ${cell.leaderName}`;
+    ? `셀장 ${cell.leaderName ?? "미지정"} / 부셀장 ${cell.viceLeaderName}`
+    : `셀장 ${cell.leaderName ?? "미지정"}`;
 
   return (
     <Pressable

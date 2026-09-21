@@ -38,10 +38,13 @@ export interface MeResponse extends User {
   team: { id: string; name: string; role: TeamRole } | null;
 }
 
-/** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지 */
+/** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지와 전체 셀 목록이 같이 쓴다 */
 export interface CellSummary {
   id: string;
   name: string;
+  /** 진행 중(endedAt 없음) 멤버십 기준 셀장 이름 — 아직 지정 전이면 null */
+  leaderName: string | null;
+  viceLeaderName: string | null;
 }
 
 /** GET /teams 응답 항목 — 프로필 설정의 소속 팀 선택지 */

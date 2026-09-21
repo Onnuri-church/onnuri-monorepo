@@ -9,7 +9,7 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { getCellDetail } from "./cellDetail";
-import { findCell } from "./cells";
+import { useCell } from "./api";
 
 // 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터 + 좌우 화살표).
 // 배경이 어두워 공통 sub 헤더를 못 쓰고 화면이 직접 그린다 — 등록부는 headerShown: false.
@@ -19,7 +19,7 @@ export function CellGalleryPhotoScreen() {
   const insets = useSafeAreaInsets();
   const { cellId, index: initialIndex } = route.params;
 
-  const cell = findCell(cellId);
+  const cell = useCell(cellId);
   const totalCount = getCellDetail(cellId).gallery.reduce(
     (sum, section) => sum + section.photoIds.length,
     0,

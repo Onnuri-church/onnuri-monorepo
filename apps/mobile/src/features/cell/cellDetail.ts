@@ -1,43 +1,36 @@
-import { MY_CELL_ID, findCell } from "./cells";
+import type { CellRole, MeResponse } from "@onnuri/shared";
 
-// 개별 셀 페이지(소식/갤러리/구성원/관리) 목업. 셀 API가 생기면 이 파일을 지우고 서버 데이터로 교체한다.
-// 셀은 관리자가 생성/종료하는 유동 데이터라(생성 시 셀장·구성원·기간 지정 — 어드민 화면은 MVP 이후),
-// 화면은 cellId로 어떤 셀이든 그릴 수 있게 만들고 내용만 여기서 공급한다.
+// 개별 셀 페이지의 소식/갤러리 목업. 구성원·권한은 서버 데이터(GET /cells/:id, GET /users/me)로
+// 전환됐고, 소식·갤러리는 게시판(Post) API가 생기면 이 파일을 지우고 교체한다.
 
-/** 셀 안에서의 역할. 부셀장(viceLeader)은 셀장과 동일 권한 — 표시만 구분한다 (docs/erd.md). */
+/** 셀 안에서의 역할(화면 표시용). 부셀장(viceLeader)은 셀장과 동일 권한 — 표시만 구분한다 (docs/erd.md).
+ * 서버 enum(CellRole)에서의 변환은 api.ts의 toCellMemberRole. */
 export type CellMemberRole = "leader" | "viceLeader" | "member";
 
-// 권한 목업 — 셀 권한은 유저 등급이 아니라 "그 셀에서의 내 멤버십 역할"로 판별한다 (셀장은
-// 셀마다 다를 수 있으므로). role을 "viceLeader"로 바꿔도 관리 탭이 열려야 하고, null이면
-// 무소속(열람만)이다. 관리자 여부는 세션(로그인 계정의 isAdmin)에서 화면이 읽어 넘긴다 —
-// 관리자는 소속과 무관하게 모든 셀에 작성·관리할 수 있다 (2026-09-10 확정).
-// 멤버십(내 셀 역할)은 아직 목업 — 셀 멤버십 API 연동 시 서버 조회로 교체.
-export const MOCK_MY_MEMBERSHIP: { cellId: string; role: CellMemberRole } | null = {
-  cellId: MY_CELL_ID,
-  role: "leader",
-};
-
-function myRoleIn(cellId: string): CellMemberRole | null {
-  return MOCK_MY_MEMBERSHIP?.cellId === cellId ? MOCK_MY_MEMBERSHIP.role : null;
+// 셀 권한은 유저 등급이 아니라 "그 셀에서의 내 멤버십 역할"로 판별한다 (셀장은 셀마다 다를 수
+// 있으므로). 내 역할은 /users/me 응답(me.cell)에서 온다 — 화면이 useMe()로 읽어 넘긴다.
+// 게스트·무소속(me 없음/다른 셀)은 열람만 가능하다.
+function myRoleIn(cellId: string, me: MeResponse | undefined): CellRole | null {
+  return me?.cell?.id === cellId ? me.cell.role : null;
 }
 
 // 소식 작성·갤러리 업로드 권한: 그 셀의 셀원 + 그 셀의 셀장(들) + 관리자 (2026-08-26 확정).
-// 다른 셀 유저는 열람만 가능하다.
-export function canPostToCell(cellId: string, isAdmin: boolean): boolean {
-  return isAdmin || myRoleIn(cellId) !== null;
+// 관리자는 소속과 무관하게 모든 셀에 작성·관리할 수 있다 (2026-09-10 확정).
+export function canPostToCell(cellId: string, me: MeResponse | undefined): boolean {
+  return me?.isAdmin === true || myRoleIn(cellId, me) !== null;
 }
 
 // 관리 탭·갤러리 삭제(편집) 권한: 그 셀의 셀장·부셀장과 관리자만.
-export function canManageCell(cellId: string, isAdmin: boolean): boolean {
-  const role = myRoleIn(cellId);
-  return isAdmin || role === "leader" || role === "viceLeader";
+export function canManageCell(cellId: string, me: MeResponse | undefined): boolean {
+  const role = myRoleIn(cellId, me);
+  return me?.isAdmin === true || role === "LEADER" || role === "SUB_LEADER";
 }
 
 // 팔로워 노트 작성 권한: 그 셀의 셀장·부셀장만 — 관리자는 작성은 못 하고 댓글(목사님 댓글)만
 // 달 수 있다 (2026-09-10 확정, docs/erd.md FollowerNote/FollowerNoteComment 참고).
-export function canWriteFollowerNote(cellId: string): boolean {
-  const role = myRoleIn(cellId);
-  return role === "leader" || role === "viceLeader";
+export function canWriteFollowerNote(cellId: string, me: MeResponse | undefined): boolean {
+  const role = myRoleIn(cellId, me);
+  return role === "LEADER" || role === "SUB_LEADER";
 }
 
 export interface CellMember {
@@ -64,12 +57,9 @@ export interface GalleryMonth {
 }
 
 export interface CellDetail {
-  members: CellMember[];
   news: CellNews[];
   gallery: GalleryMonth[];
 }
-
-const MOCK_MEMBER_NAMES = ["고다원", "박서준", "최유진", "이하은", "정민재", "김소율", "오예준"];
 
 const MOCK_NEWS: CellNews[] = [
   {
@@ -110,21 +100,9 @@ const MOCK_GALLERY: GalleryMonth[] = [
   { month: "2026년 6월", photoIds: Array.from({ length: 9 }, (_, i) => `2026-06-${i}`) },
 ];
 
-export function getCellDetail(cellId: string): CellDetail {
-  const cell = findCell(cellId);
-
-  const members: CellMember[] = [];
-  if (cell) {
-    members.push({ id: "leader", name: cell.leaderName, role: "leader" });
-    if (cell.viceLeaderName) {
-      members.push({ id: "viceLeader", name: cell.viceLeaderName, role: "viceLeader" });
-    }
-  }
-  MOCK_MEMBER_NAMES.forEach((name, index) =>
-    members.push({ id: `member-${index}`, name, role: "member" }),
-  );
-
-  return { members, news: MOCK_NEWS, gallery: MOCK_GALLERY };
+// 소식·갤러리만 목업으로 남았다 — 모든 셀이 같은 내용을 보여준다 (Post API 연동 시 cellId로 조회).
+export function getCellDetail(_cellId: string): CellDetail {
+  return { news: MOCK_NEWS, gallery: MOCK_GALLERY };
 }
 
 export function findCellNews(cellId: string, newsId: string): CellNews | undefined {
