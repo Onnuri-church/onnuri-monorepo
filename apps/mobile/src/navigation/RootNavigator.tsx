@@ -7,6 +7,7 @@ import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
+import { AdminMemberEditScreen } from "../features/admin/AdminMemberEditScreen";
 import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
@@ -445,10 +446,26 @@ export function RootNavigator() {
           <Stack.Screen
             name="AdminMemberDetail"
             component={AdminMemberDetailScreen}
-            options={{
+            options={({ navigation: nav, route: detailRoute }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="회원 관리" rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="회원 관리"
+                  rightAction="text"
+                  rightLabel="편집"
+                  onPressRightLabel={() =>
+                    nav.navigate("AdminMemberEdit", { memberId: detailRoute.params.memberId })
+                  }
+                />
+              ),
+            })}
+          />
+          {/* 저장 버튼이 화면 상태에 의존해 헤더는 화면이 등록한다 (QtBoardDetail 패턴) */}
+          <Stack.Screen
+            name="AdminMemberEdit"
+            component={AdminMemberEditScreen}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="AdminAttendance"

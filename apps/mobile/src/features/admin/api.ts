@@ -1,4 +1,9 @@
-import type { AdminMemberSummary, CellDetailResponse } from "@onnuri/shared";
+import type {
+  AdminMemberDetail,
+  AdminMemberSummary,
+  CellDetailResponse,
+  UpdateAdminMemberRequest,
+} from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
@@ -9,6 +14,48 @@ export function useAdminMembers() {
     queryKey: ["admin", "members"],
     queryFn: () =>
       apiClient.get<AdminMemberSummary[]>("/users").then((res) => res.data),
+  });
+}
+
+// 회원 상세 (관리자 전용 GET /users/:id) — 상세 화면 문구 + 편집 프리필 원본.
+export function useAdminMember(memberId: string) {
+  return useQuery({
+    queryKey: ["admin", "members", memberId],
+    queryFn: () =>
+      apiClient.get<AdminMemberDetail>(`/users/${memberId}`).then((res) => res.data),
+  });
+}
+
+// 회원 수정·삭제는 소속·역할이 바뀌어 셀 목록(셀장 이름)까지 영향이 가므로 같이 무효화한다.
+function useInvalidateMembers() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ["admin", "members"] });
+    void queryClient.invalidateQueries({ queryKey: ["cells"] });
+  };
+}
+
+export function useUpdateAdminMember(memberId: string) {
+  const invalidateMembers = useInvalidateMembers();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateAdminMemberRequest) =>
+      apiClient
+        .patch<AdminMemberDetail>(`/users/${memberId}`, payload)
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["admin", "members", memberId], detail);
+      invalidateMembers();
+    },
+  });
+}
+
+export function useDeleteAdminMember() {
+  const invalidateMembers = useInvalidateMembers();
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      apiClient.delete<{ id: string }>(`/users/${memberId}`).then((res) => res.data),
+    onSuccess: invalidateMembers,
   });
 }
 

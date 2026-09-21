@@ -75,6 +75,7 @@ export type RootStackParamList = {
   AdminCellForm: { cellId?: string } | undefined;
   AdminMemberList: undefined;
   AdminMemberDetail: { memberId: string };
+  AdminMemberEdit: { memberId: string };
   AdminAttendance: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;

@@ -7,20 +7,21 @@ import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { ADMIN_MEMBERS } from "./adminMock";
+import { useAdminMembers } from "./api";
 import { MemberBadge } from "./components/MemberBadge";
 
-// 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준, adminMock 목업 — API 연동 시 교체.
+// 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
 export function AdminMemberListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState("");
+  const { data } = useAdminMembers();
 
   // 시안 검색바 플레이스홀더가 "이름 · 셀 · 팀으로 검색" — 세 필드 모두에 부분 일치.
-  const members = ADMIN_MEMBERS.filter((member) =>
+  const members = (data ?? []).filter((member) =>
     keyword === ""
       ? true
       : [member.name, member.cellName, member.teamName].some((field) =>
-          field.includes(keyword.trim()),
+          field?.includes(keyword.trim()),
         ),
   );
 
@@ -60,7 +61,7 @@ export function AdminMemberListScreen() {
                   {member.badge && <MemberBadge badge={member.badge} />}
                 </View>
                 <Text className="mt-0.5 text-caption-main text-text-alternative">
-                  {member.cellName} · {member.teamName}
+                  {member.cellName ?? "무소속"} · {member.teamName ?? "무소속"}
                 </Text>
               </View>
               <Icon name="expand-right" size={16} color={colors.icon.normal} />

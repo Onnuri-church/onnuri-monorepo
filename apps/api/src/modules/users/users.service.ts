@@ -1,8 +1,22 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import type { AdminMemberSummary, MeResponse, User } from '@onnuri/shared';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type {
+  AdminMemberDetail,
+  AdminMemberRole,
+  AdminMemberSummary,
+  CellRole,
+  MeResponse,
+  TeamRole,
+  User,
+} from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
+import { toDateLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
+import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
@@ -104,6 +118,235 @@ export class UsersService {
               : null,
       };
     });
+  }
+
+  // 회원 상세 (관리자 전용) — 상세 화면의 표시 문구와 편집 화면의 프리필 원본을 같이 내려준다.
+  async findDetailForAdmin(id: string): Promise<AdminMemberDetail> {
+    const user = await this.prisma.user.findFirst({
+      where: { id, withdrawnAt: null },
+      select: {
+        id: true,
+        name: true,
+        birthDate: true,
+        gender: true,
+        phone: true,
+        isAdmin: true,
+        createdAt: true,
+        cellMemberships: {
+          where: { endedAt: null, cell: { deletedAt: null } },
+          select: { role: true, cell: { select: { id: true, name: true } } },
+        },
+        teamMemberships: {
+          where: { endedAt: null, team: { deletedAt: null } },
+          select: { role: true, team: { select: { id: true, name: true } } },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
+
+    const cell = user.cellMemberships[0] ?? null;
+    const team = user.teamMemberships[0] ?? null;
+    const isTeamLeader = team?.role === 'LEADER';
+    const isCellLeader = cell !== null && cell.role !== 'MEMBER';
+    // 등급 표시는 관리자 > 팀장 > 팔로워 > 일반 우선순위 (겸직 가능하지만 뱃지·권한 행은 하나).
+    const role: AdminMemberRole = isTeamLeader
+      ? 'TEAM_LEADER'
+      : isCellLeader
+        ? 'CELL_LEADER'
+        : 'GENERAL';
+
+    return {
+      id: user.id,
+      name: user.name,
+      birthDateLabel: user.birthDate ? toDateLabel(user.birthDate) : null,
+      birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
+      gender: user.gender,
+      genderLabel: user.gender ? (user.gender === 'MALE' ? '남성' : '여성') : null,
+      phone: user.phone,
+      cell: cell ? { id: cell.cell.id, name: cell.cell.name } : null,
+      team: team ? { id: team.team.id, name: team.team.name } : null,
+      role,
+      roleLabel: user.isAdmin
+        ? '관리자'
+        : isTeamLeader
+          ? '팀장'
+          : isCellLeader
+            ? '팔로워'
+            : '일반',
+      badge: user.isAdmin
+        ? 'admin'
+        : isTeamLeader
+          ? 'teamLeader'
+          : isCellLeader
+            ? 'cellLeader'
+            : null,
+      joinedAtLabel: toDateLabel(user.createdAt),
+    };
+  }
+
+  // 회원 편집 (관리자 전용) — 보낸 필드만 반영. 권한(role)은 등급 컬럼이 아니라 소속
+  // 멤버십의 역할로 반영한다: 단일 선택 UI라 고른 쪽만 리더가 되고 다른 쪽 리더 역할은
+  // 내려간다. 관리자(isAdmin) 지정은 앱 대상에서 제외 (2026-09-21 확정).
+  async updateByAdmin(
+    id: string,
+    dto: UpdateAdminMemberDto,
+  ): Promise<AdminMemberDetail> {
+    const target = await this.prisma.user.findFirst({
+      where: { id, withdrawnAt: null },
+      select: { id: true },
+    });
+    if (!target) throw new NotFoundException('회원을 찾을 수 없습니다.');
+
+    await this.prisma.$transaction(async (tx) => {
+      if (dto.cellId) {
+        const cell = await tx.cell.findFirst({
+          where: { id: dto.cellId, deletedAt: null },
+          select: { id: true },
+        });
+        if (!cell) throw new BadRequestException('존재하지 않는 셀입니다.');
+      }
+      if (dto.teamId) {
+        const team = await tx.team.findFirst({
+          where: { id: dto.teamId, deletedAt: null },
+          select: { id: true },
+        });
+        if (!team) throw new BadRequestException('존재하지 않는 팀입니다.');
+      }
+
+      await tx.user.update({
+        where: { id },
+        data: {
+          ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.birthDate !== undefined && {
+            birthDate: new Date(dto.birthDate),
+          }),
+          ...(dto.gender !== undefined && { gender: dto.gender }),
+          ...(dto.phone !== undefined && { phone: dto.phone }),
+        },
+      });
+
+      if (dto.cellId !== undefined) {
+        await this.syncCellMembership(tx, id, dto.cellId);
+      }
+      if (dto.teamId !== undefined) {
+        await this.syncTeamMembership(tx, id, dto.teamId);
+      }
+      if (dto.role !== undefined) {
+        await this.applyAdminRole(tx, id, dto.role);
+      }
+    });
+
+    return this.findDetailForAdmin(id);
+  }
+
+  // 회원 삭제 (관리자 전용) — 탈퇴와 같은 soft delete. 출석·활동 기록은 기명 보존이고
+  // 프로필 파기는 30일 배치 소관 (2026-09-08 확정). 진행 중 소속은 종료 처리한다.
+  async withdrawByAdmin(id: string): Promise<{ id: string }> {
+    const target = await this.prisma.user.findFirst({
+      where: { id, withdrawnAt: null },
+      select: { id: true, isAdmin: true },
+    });
+    if (!target) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    if (target.isAdmin) {
+      throw new BadRequestException('관리자 계정은 여기서 삭제할 수 없습니다.');
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({ where: { id }, data: { withdrawnAt: now } }),
+      this.prisma.cellMembership.updateMany({
+        where: { userId: id, endedAt: null },
+        data: { endedAt: now },
+      }),
+      this.prisma.teamMembership.updateMany({
+        where: { userId: id, endedAt: null },
+        data: { endedAt: now },
+      }),
+    ]);
+    return { id };
+  }
+
+  // 권한 선택을 멤버십 역할로 옮긴다. 역할 변경도 행 종료 + 새 행 (이력 보존 패턴).
+  private async applyAdminRole(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    role: AdminMemberRole,
+  ) {
+    const [cellMembership, teamMembership] = await Promise.all([
+      tx.cellMembership.findFirst({
+        where: { userId, endedAt: null },
+        select: { id: true, cellId: true, role: true },
+      }),
+      tx.teamMembership.findFirst({
+        where: { userId, endedAt: null },
+        select: { id: true, teamId: true, role: true },
+      }),
+    ]);
+
+    const setCellRole = async (nextRole: CellRole) => {
+      if (!cellMembership || cellMembership.role === nextRole) return;
+      await tx.cellMembership.update({
+        where: { id: cellMembership.id },
+        data: { endedAt: new Date() },
+      });
+      await tx.cellMembership.create({
+        data: {
+          cellId: cellMembership.cellId,
+          userId,
+          role: nextRole,
+          startedAt: new Date(),
+        },
+      });
+    };
+    const setTeamRole = async (nextRole: TeamRole) => {
+      if (!teamMembership || teamMembership.role === nextRole) return;
+      await tx.teamMembership.update({
+        where: { id: teamMembership.id },
+        data: { endedAt: new Date() },
+      });
+      await tx.teamMembership.create({
+        data: {
+          teamId: teamMembership.teamId,
+          userId,
+          role: nextRole,
+          startedAt: new Date(),
+        },
+      });
+    };
+
+    if (role === 'GENERAL') {
+      await setCellRole('MEMBER');
+      await setTeamRole('MEMBER');
+      return;
+    }
+    if (role === 'TEAM_LEADER') {
+      if (!teamMembership) {
+        throw new BadRequestException('소속 팀이 있어야 팀장으로 지정할 수 있습니다.');
+      }
+      await setTeamRole('LEADER');
+      await setCellRole('MEMBER');
+      return;
+    }
+    // CELL_LEADER(팔로워) — 셀장은 셀당 한 명이라 이미 다른 셀장이 있으면 셀 편집으로 안내.
+    if (!cellMembership) {
+      throw new BadRequestException('소속 셀이 있어야 팔로워로 지정할 수 있습니다.');
+    }
+    const otherLeader = await tx.cellMembership.findFirst({
+      where: {
+        cellId: cellMembership.cellId,
+        endedAt: null,
+        role: 'LEADER',
+        userId: { not: userId },
+      },
+      select: { id: true },
+    });
+    if (otherLeader) {
+      throw new BadRequestException(
+        '이미 셀장이 있는 셀이에요. 셀 편집에서 셀장을 교체해주세요.',
+      );
+    }
+    await setCellRole('LEADER');
+    await setTeamRole('MEMBER');
   }
 
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라

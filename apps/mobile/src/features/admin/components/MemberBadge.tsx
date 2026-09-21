@@ -1,6 +1,6 @@
 import { Text, View } from "react-native";
 
-import type { AdminMemberBadge } from "../adminMock";
+import type { AdminMemberBadge } from "@onnuri/shared";
 
 interface MemberBadgeProps {
   badge: AdminMemberBadge;
