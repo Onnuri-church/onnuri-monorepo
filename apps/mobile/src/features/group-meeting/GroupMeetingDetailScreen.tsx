@@ -1,10 +1,15 @@
-import type { GroupMeetingDetail } from "@onnuri/shared";
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { fetchGroupMeetingDetail } from "./api";
+import {
+  fetchGroupMeetingDetail,
+  useAddGroupMeetingComment,
+  useCancelGroupMeetingJoin,
+  useDecideGroupMeetingMember,
+  useJoinGroupMeeting,
+} from "./api";
 import { Button } from "../../shared/components/base/Button";
 import { Chip } from "../../shared/components/base/Chip";
 import { Icon } from "../../shared/components/base/Icon";
@@ -13,8 +18,10 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { Thumbnail } from "../../shared/components/base/Thumbnail";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { toTimeAgo } from "../../shared/utils/date";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
+import { useMe } from "../profile/useMe";
 
 // 시안 확정값은 402pt 프레임 기준이다. 콘텐츠 폭 362 = 402 - 20*2 이므로
 // 폭을 박지 않고 좌우 여백 20만 주면 402에서 362가 그대로 나오고 다른 기기에도 맞는다.
@@ -57,6 +64,12 @@ export function GroupMeetingDetailScreen() {
   const { width } = useWindowDimensions();
   const thumb = getThumbLayout(width);
 
+  const me = useMe();
+  const addComment = useAddGroupMeetingComment(params.id);
+  const join = useJoinGroupMeeting(params.id);
+  const cancelJoin = useCancelGroupMeetingJoin(params.id);
+  const decideMember = useDecideGroupMeetingMember(params.id);
+
   const {
     data: meeting,
     isPending,
@@ -65,6 +78,33 @@ export function GroupMeetingDetailScreen() {
     queryKey: ["group-meetings", params.id],
     queryFn: () => fetchGroupMeetingDetail(params.id),
   });
+
+  const handleCommentSubmit = () => {
+    const content = comment.trim();
+    if (!content || addComment.isPending) return;
+    if (!me) {
+      Alert.alert("로그인이 필요해요", "댓글은 로그인 후 남길 수 있어요.");
+      return;
+    }
+    addComment.mutate(content, { onSuccess: () => setComment("") });
+  };
+
+  // 하단 버튼 — 참여는 승인제: 신청(PENDING) → 소그룹장/관리자 승인. 상태별로 문구가 바뀐다.
+  const handleJoinPress = () => {
+    if (!meeting || join.isPending || cancelJoin.isPending) return;
+    if (!me) {
+      Alert.alert("로그인이 필요해요", "참여 신청은 로그인 후 할 수 있어요.");
+      return;
+    }
+    const mutation = meeting.myStatus === null || meeting.myStatus === "REJECTED" ? join : cancelJoin;
+    mutation.mutate(undefined, {
+      onError: (error) => {
+        const message =
+          (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+        Alert.alert("요청 실패", message ?? "잠시 후 다시 시도해주세요.");
+      },
+    });
+  };
 
   if (isPending) {
     return (
@@ -120,6 +160,9 @@ export function GroupMeetingDetailScreen() {
             <Text className="text-label-medium text-text-alternative">{meeting.periodLabel}</Text>
           </View>
           <Text className="text-heading-main text-text-normal">{meeting.title}</Text>
+          {meeting.description !== "" && (
+            <Text className="text-body-medium text-text-neutral">{meeting.description}</Text>
+          )}
         </View>
 
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
@@ -195,7 +238,7 @@ export function GroupMeetingDetailScreen() {
               <CommentItem
                 key={item.id}
                 authorName={item.authorName}
-                timeAgo={item.timeAgo}
+                timeAgo={toTimeAgo(item.createdAt)}
                 content={item.content}
                 avatarUrl={item.authorAvatarUrl}
               />
@@ -205,14 +248,66 @@ export function GroupMeetingDetailScreen() {
             <CommentInput
               value={comment}
               onChangeText={setComment}
-              onSubmit={() => setComment("")}
+              onSubmit={handleCommentSubmit}
             />
           </View>
         </View>
 
-        <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
-          <Button label="등록하기" />
-        </View>
+        {/* 신청 대기 — 소그룹장·관리자에게만 보인다. 시안의 승인 흐름 UI가 확정되면 그 형태로 교체. */}
+        {meeting.canManage && meeting.pendingMembers.length > 0 && (
+          <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+            <Text className="text-heading-small text-text-normal">
+              신청 대기 {meeting.pendingMembers.length}명
+            </Text>
+            <View className="mt-2">
+              {meeting.pendingMembers.map((member) => (
+                <View
+                  key={member.id}
+                  className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
+                >
+                  <Text className="text-body-main text-text-normal">{member.name}</Text>
+                  <View className="flex-row gap-4">
+                    <Pressable
+                      onPress={() => decideMember.mutate({ userId: member.id, status: "APPROVED" })}
+                      hitSlop={8}
+                    >
+                      <Text className="text-body-small text-primary-normal">승인</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => decideMember.mutate({ userId: member.id, status: "REJECTED" })}
+                      hitSlop={8}
+                    >
+                      <Text className="text-body-small text-semantic-danger">거절</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* 참여 버튼 — 소그룹장/관리자는 신청 대상이 아니라 숨긴다 */}
+        {!meeting.canManage && (
+          <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+            <Button
+              label={
+                meeting.myStatus === "PENDING"
+                  ? "신청 취소하기"
+                  : meeting.myStatus === "APPROVED"
+                    ? "탈퇴하기"
+                    : meeting.status === "closed"
+                      ? "모집이 마감됐어요"
+                      : "참여 신청하기"
+              }
+              disabled={
+                (meeting.status === "closed" && meeting.myStatus === null) ||
+                join.isPending ||
+                cancelJoin.isPending
+              }
+              onPress={handleJoinPress}
+            />
+          </View>
+        )}
       </ScrollView>
     </View>
   );

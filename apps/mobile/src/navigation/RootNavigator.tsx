@@ -27,6 +27,7 @@ import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
+import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
@@ -207,10 +208,22 @@ export function RootNavigator() {
           <Stack.Screen
             name="GroupMeeting"
             component={GroupMeetingScreen}
-            options={{
+            /* 관리자에게만 우측 "편집"이 붙어 화면이 헤더를 단독 등록한다 (2026-09-21 관리자 시안) */
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="GroupMeetingForm"
+            component={GroupMeetingFormScreen}
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.meetingId ? "취향소그룹 편집" : "취향소그룹 생성"}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           {/* 기도 목록 3개 화면은 PrayerMenu가 헤더를 단독 등록한다 (⋮ 메뉴 포함) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
