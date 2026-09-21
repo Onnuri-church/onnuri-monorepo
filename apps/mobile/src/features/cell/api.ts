@@ -1,4 +1,5 @@
 import type {
+  CellAttendanceResponse,
   CellDetailResponse,
   CellNewsDetail,
   CellNewsListItem,
@@ -8,6 +9,7 @@ import type {
   CreateFollowerNoteRequest,
   FollowerNoteInfo,
   PostComment,
+  SaveCellAttendanceRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -89,6 +91,31 @@ export function useAddCellNewsComment(newsId: string) {
         .then((res) => res.data),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["cell-news-detail", newsId] }),
+  });
+}
+
+// ── 출석 관리 ───────────────────────────────────────────────────────────
+
+export function useCellAttendance(cellId: string, date: string) {
+  return useQuery({
+    queryKey: ["cell-attendance", cellId, date],
+    queryFn: () =>
+      apiClient
+        .get<CellAttendanceResponse>(`/cells/${cellId}/attendance`, { params: { date } })
+        .then((res) => res.data),
+  });
+}
+
+// 저장 응답이 갱신된 그 날짜 상태라 invalidate 대신 캐시를 바로 교체한다.
+export function useSaveCellAttendance(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: SaveCellAttendanceRequest) =>
+      apiClient
+        .put<CellAttendanceResponse>(`/cells/${cellId}/attendance`, payload)
+        .then((res) => res.data),
+    onSuccess: (response) =>
+      queryClient.setQueryData(["cell-attendance", cellId, response.date], response),
   });
 }
 

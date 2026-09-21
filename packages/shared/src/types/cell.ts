@@ -27,6 +27,34 @@ export interface CellDetailResponse {
   members: CellMemberInfo[];
 }
 
+// ── 출석 관리 (예배 WorshipAttendance + 셀모임 CellMeetingAttendance) ────────────
+
+/** 출석 관리 명단 한 명 — 구성원 정렬(셀장→부셀장→이름순)은 셀 상세와 같다 */
+export interface CellAttendanceMember {
+  /** userId */
+  id: string;
+  name: string;
+  role: CellRole;
+  /** 예배 출석 — QR 자동 기록 + 셀장 수동 정정 결과 */
+  worship: boolean;
+  /** 셀모임 참석 — 기본 결석, 셀장이 온 사람만 체크 (2026-09-03 확정) */
+  meeting: boolean;
+}
+
+/** GET /cells/:id/attendance?date= 응답 */
+export interface CellAttendanceResponse {
+  /** YYYY-MM-DD */
+  date: string;
+  members: CellAttendanceMember[];
+}
+
+/** PUT /cells/:id/attendance 요청 본문 (응답은 CellAttendanceResponse) — 등록하기 일괄 저장 */
+export interface SaveCellAttendanceRequest {
+  /** YYYY-MM-DD */
+  date: string;
+  records: { userId: string; worship: boolean; meeting: boolean }[];
+}
+
 // ── 팔로워 노트 (셀 케어 기록 — 게시판 Post와 분리, FollowerNote 테이블) ──────────
 
 export interface FollowerNoteCommentInfo {

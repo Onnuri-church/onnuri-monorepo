@@ -1,21 +1,21 @@
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
+import { toDateString } from "../../shared/components/composed/DateField";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import {
   formatSundayLabel,
-  getInitialAttendance,
   getLatestSunday,
   getSundaysOfMonth,
   type AttendanceStatus,
   type MemberAttendance,
 } from "./attendance";
-import { toCellMemberRole, useCell, useCellDetail } from "./api";
+import { useCell, useCellAttendance, useSaveCellAttendance } from "./api";
 import { AttendanceMemberRow } from "./components/AttendanceMemberRow";
 import { MonthPicker } from "./components/MonthPicker";
 
@@ -29,23 +29,23 @@ export function CellAttendanceScreen() {
   const [selectedDate, setSelectedDate] = useState(() => getLatestSunday(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(selectedDate.getMonth() + 1);
-  // 명단은 서버(셀 구성원)에서 온다 — 도착하면 초기 상태(예배 O·셀모임 X)로 채운다.
-  // TODO(API): 날짜별 출석 조회·저장 연동 전 — 체크 결과는 화면 로컬 상태로만 동작한다.
-  const { data: cellData } = useCellDetail(cellId);
+  // 명단·현재 출석 상태는 서버에서 온다 (예배 = QR 기록 + 수동 정정 결과, 셀모임 = 기본 결석).
+  // 토글은 로컬로 고치고 등록하기가 일괄 저장한다 (시안 흐름).
+  const { data: attendanceData } = useCellAttendance(cellId, toDateString(selectedDate));
+  const saveAttendance = useSaveCellAttendance(cellId);
   const [attendance, setAttendance] = useState<MemberAttendance[]>([]);
   useEffect(() => {
-    if (cellData) {
+    if (attendanceData) {
       setAttendance(
-        getInitialAttendance(
-          cellData.members.map((member) => ({
-            id: member.id,
-            name: member.name,
-            role: toCellMemberRole(member.role),
-          })),
-        ),
+        attendanceData.members.map((member) => ({
+          memberId: member.id,
+          name: member.name,
+          worship: member.worship ? "present" : "absent",
+          meeting: member.meeting ? "present" : "absent",
+        })),
       );
     }
-  }, [cellData]);
+  }, [attendanceData]);
 
   const worshipCount = attendance.filter((row) => row.worship === "present").length;
   const meetingCount = attendance.filter((row) => row.meeting === "present").length;
@@ -62,7 +62,21 @@ export function CellAttendanceScreen() {
   };
 
   const handleSubmitPress = () => {
-    // TODO(API): 출석 저장 연동 전 — 입력까지만 동작한다.
+    if (saveAttendance.isPending) return;
+    saveAttendance.mutate(
+      {
+        date: toDateString(selectedDate),
+        records: attendance.map((row) => ({
+          userId: row.memberId,
+          worship: row.worship === "present",
+          meeting: row.meeting === "present",
+        })),
+      },
+      {
+        onSuccess: () => Alert.alert("저장 완료", "출석이 저장됐어요."),
+        onError: () => Alert.alert("저장 실패", "잠시 후 다시 시도해주세요."),
+      },
+    );
   };
 
   return (
