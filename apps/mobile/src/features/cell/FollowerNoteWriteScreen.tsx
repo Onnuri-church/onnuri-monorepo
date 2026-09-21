@@ -12,8 +12,8 @@ import { NoteNumberBadge } from "./components/NoteNumberBadge";
 import { NOTE_QUESTIONS } from "./followerNotes";
 
 // 팔로워 노트 작성 (시안: 날짜 선택 + 3문항 박스 + 등록하기).
-// 노트는 셀모임 날짜(일요일) 단위 주간 보고로 확정됐는데 시안의 첫 필드 라벨은 "대상셀원"이다 —
-// 날짜 기반 결정과 어긋나 보여 라벨을 "셀모임 날짜"로 두고 구현했다. 디자이너 확인 필요.
+// 노트는 셀모임 날짜(일요일) 단위 주간 보고 — 시안 CSS의 "대상셀원" 라벨은 옛 레이어명이고
+// "날짜"가 맞다고 2026-09-21 지환님 재확정. 라벨은 "셀모임 날짜" 유지.
 export function FollowerNoteWriteScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 

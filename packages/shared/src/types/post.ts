@@ -17,7 +17,7 @@ export type PrayerCategory =
 
 export type HobbyGroupStatus = "RECRUITING" | "CLOSED";
 
-/** 소그룹 멤버십 역할. 작성자(개설자) = LEADER(소그룹장) — 참여 승인/거절 권한. */
+/** 소그룹 멤버십 역할. LEADER(소그룹장)는 생성 폼에서 한 명 이상 지정(다중 가능) — 전원이 참여 승인/거절 권한. */
 export type HobbyGroupRole = "LEADER" | "MEMBER";
 
 /** 소그룹 참여는 승인제 — PENDING(신청 취소 가능) / APPROVED(참여 중) / REJECTED. */

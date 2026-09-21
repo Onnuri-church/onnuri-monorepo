@@ -30,6 +30,7 @@ export function AdminMemberDetailScreen() {
     { label: "이름", value: member.name },
     { label: "생년월일", value: member.birthDate },
     { label: "성별", value: member.gender },
+    { label: "연락처", value: member.phone },
     { label: "소속 셀", value: member.cellName },
     { label: "소속 팀", value: member.teamName },
     { label: "권한", value: member.roleLabel },

@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { FlatList, Pressable, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
@@ -35,16 +35,9 @@ export function CellScreen() {
   if (me?.isAdmin) {
     return (
       <View className="flex-1 bg-background-normal" style={{ paddingTop: insets.top }}>
-        {/* 탭 화면이라 뒤로가기 없이 가운데 타이틀 + 우측 "생성" (스택 셀 관리 헤더와 같은 구성) */}
+        {/* 탭 화면이라 뒤로가기 없이 가운데 타이틀만 — 생성은 목록 끝의 점선 "셀 생성" 행 (2026-09-21 시안) */}
         <View className="h-14 items-center justify-center">
           <Text className="text-heading-small text-text-normal">셀 관리</Text>
-          <Pressable
-            className="absolute right-5"
-            onPress={() => navigation.navigate("AdminCellForm", {})}
-            hitSlop={8}
-          >
-            <Text className="text-body-main text-primary-normal">생성</Text>
-          </Pressable>
         </View>
         <CellManageList bottomInset={TAB_BAR_HEIGHT + insets.bottom} />
       </View>

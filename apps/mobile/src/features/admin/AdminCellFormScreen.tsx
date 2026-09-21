@@ -6,6 +6,7 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput,
 
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
+import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -14,10 +15,6 @@ import { ADMIN_MEMBERS } from "./adminMock";
 
 // 셀장/부셀장 선택지 — 회원 API가 붙으면 검색 선택으로 바뀔 수 있어 목업 회원 이름을 쓴다.
 const MEMBER_NAMES = ADMIN_MEMBERS.map((member) => member.name);
-
-// TODO(시안): 활동기간은 시안 placeholder가 "날짜를 선택하세요."라 데이트 피커일 수 있다 —
-//   API 연동 시 확인. 지금은 유통기한 후보를 고정 선택지로 둔다.
-const PERIOD_OPTIONS = ["2026.12.31 까지", "2027.02.28 까지", "2027.08.31 까지"];
 
 // 셀 관리의 셀 생성(헤더 "생성")·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
 // cellId가 있으면 편집 모드로 기존 값을 채워서 연다. 저장은 API 연동 전이라 뒤로가기만 한다.
@@ -34,8 +31,9 @@ export function AdminCellFormScreen() {
   const [viceLeader, setViceLeader] = useState<string | null>(editingCell?.viceLeaderName ?? null);
 
   // 시안의 비활성 등록하기 — 필수(셀이름·셀장·활동기간)를 채워야 활성. 부셀장은 체크 시에만 필수.
-  // 편집 모드는 목업에 기간 데이터가 없어 첫 선택지로 채워둔다 (API 연동 시 실제 값으로).
-  const [period, setPeriod] = useState<string | null>(editingCell ? PERIOD_OPTIONS[0] : null);
+  // 활동기간 = 셀 턴 종료일 하나 (2026-09-21 A안 시안: "셀 턴 종료일을 선택하세요"로 확정).
+  // 편집 모드는 목록 캐시에 기간이 없어 오늘로 채워둔다 (API 연동 시 실제 값으로).
+  const [period, setPeriod] = useState<string | null>(editingCell ? toDateString(new Date()) : null);
   const canSubmit =
     name.trim() !== "" && leader !== null && period !== null && (!hasViceLeader || viceLeader !== null);
 
@@ -124,10 +122,9 @@ export function AdminCellFormScreen() {
             />
           </View>
 
-          <SelectField
+          <DateField
             label="활동기간"
-            placeholder="날짜를 선택하세요."
-            options={PERIOD_OPTIONS}
+            placeholder="셀 턴 종료일을 선택하세요."
             value={period}
             onChange={setPeriod}
           />

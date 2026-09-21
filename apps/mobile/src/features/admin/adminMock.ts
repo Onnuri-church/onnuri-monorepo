@@ -13,6 +13,8 @@ export interface AdminMember {
   /** YYYY.MM.DD */
   birthDate: string;
   gender: "남성" | "여성";
+  /** 010-0000-0000 (2026-09-21 회원 정보 시안에 연락처 행 추가됨) */
+  phone: string;
   /** 상세의 "권한" 행 표기 */
   roleLabel: string;
   /** YYYY.MM.DD */
@@ -28,6 +30,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     badge: "admin",
     birthDate: "1999.05.21",
     gender: "여성",
+    phone: "010-1234-5678",
     roleLabel: "관리자",
     joinedAt: "2026.01.05",
   },
@@ -39,6 +42,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     badge: "teamLeader",
     birthDate: "2001.03.14",
     gender: "남성",
+    phone: "010-2345-6789",
     roleLabel: "팀장",
     joinedAt: "2026.01.12",
   },
@@ -50,6 +54,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     badge: "cellLeader",
     birthDate: "2000.11.02",
     gender: "남성",
+    phone: "010-3456-7890",
     roleLabel: "팔로워",
     joinedAt: "2026.01.12",
   },
@@ -60,6 +65,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     teamName: "디자인팀",
     birthDate: "2002.07.19",
     gender: "여성",
+    phone: "010-4567-8901",
     roleLabel: "일반",
     joinedAt: "2026.02.01",
   },
@@ -70,6 +76,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     teamName: "영상팀",
     birthDate: "2001.09.30",
     gender: "남성",
+    phone: "010-5678-9012",
     roleLabel: "일반",
     joinedAt: "2026.02.01",
   },
@@ -80,6 +87,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     teamName: "풋살팀",
     birthDate: "2003.01.08",
     gender: "여성",
+    phone: "010-6789-0123",
     roleLabel: "일반",
     joinedAt: "2026.02.15",
   },
@@ -90,6 +98,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     teamName: "중보기도팀",
     birthDate: "2002.12.25",
     gender: "여성",
+    phone: "010-7890-1234",
     roleLabel: "일반",
     joinedAt: "2026.03.02",
   },
@@ -100,6 +109,7 @@ export const ADMIN_MEMBERS: AdminMember[] = [
     teamName: "SNS팀",
     birthDate: "2000.04.17",
     gender: "남성",
+    phone: "010-8901-2345",
     roleLabel: "일반",
     joinedAt: "2026.03.02",
   },

@@ -403,21 +403,14 @@ export function RootNavigator() {
           />
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
               헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
+          {/* 생성 진입은 목록 끝의 점선 "셀 생성" 행(CellManageList) — 2026-09-21 시안으로 헤더 버튼에서 이동 */}
           <Stack.Screen
             name="AdminCellManage"
             component={AdminCellManageScreen}
-            options={({ navigation: nav }) => ({
+            options={{
               headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title="셀 관리"
-                  rightAction="text"
-                  rightLabel="생성"
-                  onPressRightLabel={() => nav.navigate("AdminCellForm", {})}
-                />
-              ),
-            })}
+              header: () => <Header variant="sub" title="셀 관리" />,
+            }}
           />
           <Stack.Screen
             name="AdminCellForm"
