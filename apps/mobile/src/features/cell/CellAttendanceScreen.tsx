@@ -1,6 +1,6 @@
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
@@ -15,7 +15,7 @@ import {
   type AttendanceStatus,
   type MemberAttendance,
 } from "./attendance";
-import { findCell } from "./cells";
+import { toCellMemberRole, useCell, useCellDetail } from "./api";
 import { AttendanceMemberRow } from "./components/AttendanceMemberRow";
 import { MonthPicker } from "./components/MonthPicker";
 
@@ -24,15 +24,28 @@ import { MonthPicker } from "./components/MonthPicker";
 export function CellAttendanceScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "CellAttendance">>();
   const { cellId } = route.params;
-  const cell = findCell(cellId);
+  const cell = useCell(cellId);
 
   const [selectedDate, setSelectedDate] = useState(() => getLatestSunday(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState(selectedDate.getMonth() + 1);
-  // TODO(API): 날짜별 출석 조회·저장 연동 전 — 화면 로컬 상태로만 동작한다.
-  const [attendance, setAttendance] = useState<MemberAttendance[]>(() =>
-    getInitialAttendance(cellId),
-  );
+  // 명단은 서버(셀 구성원)에서 온다 — 도착하면 초기 상태(예배 O·셀모임 X)로 채운다.
+  // TODO(API): 날짜별 출석 조회·저장 연동 전 — 체크 결과는 화면 로컬 상태로만 동작한다.
+  const { data: cellData } = useCellDetail(cellId);
+  const [attendance, setAttendance] = useState<MemberAttendance[]>([]);
+  useEffect(() => {
+    if (cellData) {
+      setAttendance(
+        getInitialAttendance(
+          cellData.members.map((member) => ({
+            id: member.id,
+            name: member.name,
+            role: toCellMemberRole(member.role),
+          })),
+        ),
+      );
+    }
+  }, [cellData]);
 
   const worshipCount = attendance.filter((row) => row.worship === "present").length;
   const meetingCount = attendance.filter((row) => row.meeting === "present").length;

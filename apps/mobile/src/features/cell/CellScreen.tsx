@@ -1,28 +1,55 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { CELLS, MY_CELL_ID } from "./cells";
+import { CellManageList } from "../admin/components/CellManageList";
+import { useMe } from "../profile/useMe";
+import { useCells } from "./api";
 import { CellListRow } from "./components/CellListRow";
 
 // 하단 탭 "셀 페이지"의 진입 화면 — 전체 셀 목록. 여기서 셀을 고르면 그 셀의 페이지
 // (소식/갤러리/구성원/관리 4탭)로 들어가는 구조다. 하단 탭바는 이 목록에서만 보이고,
 // 개별 셀 페이지부터는 루트 스택 push라 탭바가 없다.
+// 관리자는 이 탭이 바로 셀 관리(생성·편집·삭제 목록)로 뜬다 (2026-09-11 지환님 확정) —
+// 마이페이지 관리자 메뉴의 셀 관리와 같은 목록(CellManageList)을 탭 껍데기만 바꿔 그린다.
 export function CellScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [query, setQuery] = useState("");
 
+  const { data: cells, isLoading } = useCells();
+  // "나의 셀" 뱃지 기준은 /users/me의 현재 소속 — 게스트는 me가 없어 뱃지가 안 붙는다.
+  const me = useMe();
+
   const visibleCells = query.trim()
-    ? CELLS.filter((cell) => cell.name.includes(query.trim()))
-    : CELLS;
+    ? (cells ?? []).filter((cell) => cell.name.includes(query.trim()))
+    : (cells ?? []);
+
+  if (me?.isAdmin) {
+    return (
+      <View className="flex-1 bg-background-normal" style={{ paddingTop: insets.top }}>
+        {/* 탭 화면이라 뒤로가기 없이 가운데 타이틀 + 우측 "생성" (스택 셀 관리 헤더와 같은 구성) */}
+        <View className="h-14 items-center justify-center">
+          <Text className="text-heading-small text-text-normal">셀 관리</Text>
+          <Pressable
+            className="absolute right-5"
+            onPress={() => navigation.navigate("AdminCellForm", {})}
+            hitSlop={8}
+          >
+            <Text className="text-body-main text-primary-normal">생성</Text>
+          </Pressable>
+        </View>
+        <CellManageList bottomInset={TAB_BAR_HEIGHT + insets.bottom} />
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-background-normal" style={{ paddingTop: insets.top }}>
@@ -48,13 +75,13 @@ export function CellScreen() {
         renderItem={({ item }) => (
           <CellListRow
             cell={item}
-            isMyCell={item.id === MY_CELL_ID}
+            isMyCell={item.id === me?.cell?.id}
             onPress={() => navigation.navigate("CellDetail", { cellId: item.id })}
           />
         )}
         ListEmptyComponent={
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
-            검색 결과가 없어요.
+            {isLoading ? "셀 목록을 불러오고 있어요." : "검색 결과가 없어요."}
           </Text>
         }
       />

@@ -9,8 +9,9 @@ import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useMe } from "../profile/useMe";
+import { useCell } from "./api";
 import { canWriteFollowerNote } from "./cellDetail";
-import { findCell } from "./cells";
 import { MonthPicker } from "./components/MonthPicker";
 import { FollowerNoteCard } from "./components/FollowerNoteCard";
 import { getFollowerNotes, type FollowerNote } from "./followerNotes";
@@ -21,9 +22,10 @@ export function FollowerNoteBoardScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteBoard">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
-  const cell = findCell(cellId);
+  const cell = useCell(cellId);
   // 작성·편집·삭제는 그 셀의 셀장·부셀장만 — 관리자는 열람과 댓글(목사님 댓글)만 (2026-09-10 확정).
-  const canWrite = canWriteFollowerNote(cellId);
+  const me = useMe();
+  const canWrite = canWriteFollowerNote(cellId, me);
 
   // TODO(API): 노트 목록 연동 전 — 삭제까지 화면 로컬로만 동작한다.
   const [notes, setNotes] = useState<FollowerNote[]>(() => getFollowerNotes(cellId));

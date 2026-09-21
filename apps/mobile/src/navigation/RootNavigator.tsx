@@ -19,7 +19,7 @@ import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
 import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
 import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
-import { findCell } from "../features/cell/cells";
+import { useCell } from "../features/cell/api";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
@@ -63,6 +63,13 @@ import {DepartmentActivityWriteScreen} from "../features/department-activity/Dep
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
+
+// 셀 페이지 헤더 — 셀 이름이 서버 목록(useCell)에서 오므로 훅을 쓸 수 있게 컴포넌트로 뺐다
+// (등록부의 header 콜백 안에서는 훅을 못 쓴다).
+function CellDetailHeader({ cellId }: { cellId: string }) {
+  const cell = useCell(cellId);
+  return <Header variant="sub" title={cell?.name ?? "셀 페이지"} rightAction="home" />;
+}
 
 // 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
 // 자동으로 로그인 화면으로 전환된다.
@@ -329,13 +336,7 @@ export function RootNavigator() {
             component={CellDetailScreen}
             options={({ route }) => ({
               headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title={findCell(route.params.cellId)?.name ?? "셀 페이지"}
-                  rightAction="home"
-                />
-              ),
+              header: () => <CellDetailHeader cellId={route.params.cellId} />,
             })}
           />
           {/* 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 권한에 의존) — 여기 header를 두면 이중 정의. */}

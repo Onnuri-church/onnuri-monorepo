@@ -11,11 +11,11 @@ import { Header } from "../../shared/components/base/Header";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
-import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useMe } from "../profile/useMe";
+import { useCell } from "./api";
 import { canManageCell, findCellNews } from "./cellDetail";
-import { findCell } from "./cells";
 
 interface MockComment {
   id: string;
@@ -31,14 +31,13 @@ export function CellNewsDetailScreen() {
   const insets = useSafeAreaInsets();
   const { cellId, newsId } = route.params;
 
-  const cell = findCell(cellId);
+  const cell = useCell(cellId);
   const news = findCellNews(cellId, newsId);
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
   // 수정/삭제는 셀장·관리자 기준 — 작성자 API가 붙으면 "내 글이거나 셀장·관리자"로 교체.
-  const session = useAuthStore((state) => state.session);
-  const isAdmin = session.status === "authenticated" && session.user.isAdmin;
-  const canEdit = canManageCell(cellId, isAdmin);
+  const me = useMe();
+  const canEdit = canManageCell(cellId, me);
 
   const [comments, setComments] = useState<MockComment[]>([]);
   const [commentDraft, setCommentDraft] = useState("");

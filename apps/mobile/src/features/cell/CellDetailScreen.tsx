@@ -8,9 +8,10 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
-import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useMe } from "../profile/useMe";
+import { toCellMemberRole, useCellDetail } from "./api";
 import { canManageCell, canPostToCell, getCellDetail } from "./cellDetail";
 import type { CellMember, GalleryMonth } from "./cellDetail";
 import { CellMemberItem } from "./components/CellMemberItem";
@@ -44,13 +45,19 @@ export function CellDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
 
-  const { members, news, gallery } = getCellDetail(cellId);
+  const { news, gallery } = getCellDetail(cellId);
+  // 구성원은 서버에서 온다 (셀장 → 부셀장 → 이름순 정렬 — 서버 계약).
+  const { data: cellData } = useCellDetail(cellId);
+  const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
+    id: member.id,
+    name: member.name,
+    role: toCellMemberRole(member.role),
+  }));
   // 작성·업로드(canPost)는 그 셀에 속한 누구나, 삭제·관리 탭(canManage)은 셀장·관리자만.
-  // 관리자 여부는 세션에서 읽는다 — 관리자는 어느 셀이든 관리 탭에 들어갈 수 있다.
-  const session = useAuthStore((state) => state.session);
-  const isAdmin = session.status === "authenticated" && session.user.isAdmin;
-  const canPost = canPostToCell(cellId, isAdmin);
-  const canManage = canManageCell(cellId, isAdmin);
+  // 내 소속·관리자 여부는 /users/me에서 — 관리자는 어느 셀이든 관리 탭에 들어갈 수 있다.
+  const me = useMe();
+  const canPost = canPostToCell(cellId, me);
+  const canManage = canManageCell(cellId, me);
 
   const [activeTab, setActiveTab] = useState<CellTabKey>("news");
   const [galleryMonths, setGalleryMonths] = useState<GalleryMonthState[]>(() =>

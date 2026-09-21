@@ -9,7 +9,7 @@ import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { findCell } from "../cell/cells";
+import { useCell } from "../cell/api";
 import { ADMIN_MEMBERS } from "./adminMock";
 
 // 셀장/부셀장 선택지 — 회원 API가 붙으면 검색 선택으로 바뀔 수 있어 목업 회원 이름을 쓴다.
@@ -24,7 +24,8 @@ const PERIOD_OPTIONS = ["2026.12.31 까지", "2027.02.28 까지", "2027.08.31 �
 export function AdminCellFormScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminCellForm">>();
-  const editingCell = route.params?.cellId ? findCell(route.params.cellId) : undefined;
+  // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
+  const editingCell = useCell(route.params?.cellId ?? "");
 
   const [coverUri, setCoverUri] = useState<string | null>(null);
   const [name, setName] = useState(editingCell?.name ?? "");
