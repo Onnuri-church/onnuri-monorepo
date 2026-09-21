@@ -54,6 +54,30 @@ export interface QtShareListResponse {
   items: QtShareListItem[];
 }
 
+/** 큐티나눔 상세 (GET /posts/qt-shares/:id). */
+export interface QtShareDetail {
+  id: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 큐티 날짜 — "05월 27일". 목록의 dateLabel("2026.05.07")과 형식이 다르다 (상세 화면 문구) */
+  dateLabel: string;
+  /** 작성 시각(ISO). "38분 전" 같은 상대 표기는 시간이 지나면 변해서 서버 문구로 내리면
+   *  캐시에 굳으므로, 문구를 만들지 않고 앱이 계산하게 한다 */
+  createdAt: string;
+  title: string;
+  /** 말씀 구절 — "룻기 2:16-23" */
+  passage: string | null;
+  content: string;
+  /** 배경사진 — 작성 화면의 단일 업로드. Post의 컬럼이라 한 장뿐이다 */
+  coverImageUrl: string | null;
+  /** 본문사진 — 작성 화면에서 최대 5장. Image 테이블에 따로 쌓이므로 sortOrder 순으로 내려준다 */
+  imageUrls: string[];
+  likeCount: number;
+  likedByMe: boolean;
+  /** 내가 쓴 글인지 — 수정·삭제 메뉴를 띄울지 정한다. 권한 판단은 서버가 한다 */
+  isMine: boolean;
+}
+
 export interface Post {
   id: string;
   board: BoardType;

@@ -1,4 +1,4 @@
-import type { QtShareListResponse } from "@onnuri/shared";
+import type { QtShareDetail, QtShareListResponse } from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -18,4 +18,10 @@ export async function likePost(postId: string): Promise<void> {
 
 export async function unlikePost(postId: string): Promise<void> {
   await apiClient.delete(`/posts/${postId}/likes`);
+}
+
+// 큐티나눔 상세 (GET /posts/qt-shares/:id).
+export async function fetchQtDetails(postId: string): Promise<QtShareDetail> {
+  const {data} = await apiClient.get<QtShareDetail>(`/posts/qt-shares/${postId}`)
+  return data
 }

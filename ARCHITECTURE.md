@@ -94,6 +94,7 @@ apps/api/src/
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠
     ├── decorators/ CurrentUser
+    ├── utils/     날짜 라벨 포맷(date.ts) — 응답에 싣는 표시 문구를 서버가 만든다
     ├── filters/   (비어있음)
     └── interceptors/ (비어있음)
 ```
@@ -119,6 +120,7 @@ apps/mobile/src/
     ├── store/      Zustand (useAuthStore: session 판별 유니온 — user, access/refresh 토큰)
     ├── theme/      tokens.js(컬러·타입스케일 단일 소스), fonts.ts(폰트 로딩용 require 맵)
     ├── types/      navigation.ts (RootStackParamList, RootTabParamList, AuthStackParamList)
+    ├── utils/      date.ts(toTimeAgo — 표시용 상대 시각). 프론트만 쓰는 유틸은 여기, 백엔드와 같이 쓰는 것만 packages/shared
     └── hooks/      useAppBootstrap(앱 부팅 시 세션 복원 → status 확정)
 ```
 
