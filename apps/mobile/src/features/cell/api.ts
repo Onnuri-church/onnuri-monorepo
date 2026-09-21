@@ -1,5 +1,13 @@
-import type { CellDetailResponse, CellRole, CellSummary } from "@onnuri/shared";
-import { useQuery } from "@tanstack/react-query";
+import type {
+  CellDetailResponse,
+  CellNewsDetail,
+  CellNewsListItem,
+  CellRole,
+  CellSummary,
+  CreateCellNewsRequest,
+  PostComment,
+} from "@onnuri/shared";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
 import { fetchCells } from "../profile/api";
@@ -28,4 +36,88 @@ export function useCellDetail(cellId: string) {
 // 서버 enum(CellRole) → 셀 화면들의 표시 역할. 부셀장은 셀장과 동일 권한 — 표시만 구분 (docs/erd.md).
 export function toCellMemberRole(role: CellRole): CellMemberRole {
   return role === "LEADER" ? "leader" : role === "SUB_LEADER" ? "viceLeader" : "member";
+}
+
+// ── 셀 소식 (게시판 Post API) ────────────────────────────────────────────
+
+export function useCellNews(cellId: string) {
+  return useQuery({
+    queryKey: ["cell-news", cellId],
+    queryFn: () =>
+      apiClient
+        .get<CellNewsListItem[]>("/posts/cell-news", { params: { cellId } })
+        .then((res) => res.data),
+  });
+}
+
+export function useCellNewsDetail(newsId: string) {
+  return useQuery({
+    queryKey: ["cell-news-detail", newsId],
+    queryFn: () =>
+      apiClient.get<CellNewsDetail>(`/posts/cell-news/${newsId}`).then((res) => res.data),
+  });
+}
+
+export function useCreateCellNews(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: Omit<CreateCellNewsRequest, "cellId">) =>
+      apiClient
+        .post<CellNewsDetail>("/posts/cell-news", { cellId, ...payload })
+        .then((res) => res.data),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["cell-news", cellId] }),
+  });
+}
+
+export function useDeleteCellNews(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (newsId: string) =>
+      apiClient.delete<{ id: string }>(`/posts/cell-news/${newsId}`).then((res) => res.data),
+    onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["cell-news", cellId] }),
+  });
+}
+
+export function useAddCellNewsComment(newsId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) =>
+      apiClient
+        .post<PostComment>(`/posts/${newsId}/comments`, { content })
+        .then((res) => res.data),
+    onSuccess: () =>
+      void queryClient.invalidateQueries({ queryKey: ["cell-news-detail", newsId] }),
+  });
+}
+
+// 소식 좋아요 — 큐티와 같은 공용 /posts/:id/likes. 즉각 반응해야 해서 상세 캐시를 먼저
+// 고치고(optimistic), 실패하면 되돌린 뒤 서버 값으로 다시 맞춘다 (useToggleQtLike와 같은 이유).
+export function useToggleCellNewsLike(newsId: string) {
+  const queryClient = useQueryClient();
+  const detailKey = ["cell-news-detail", newsId];
+
+  return useMutation({
+    mutationFn: (likedByMe: boolean) =>
+      likedByMe
+        ? apiClient.delete(`/posts/${newsId}/likes`)
+        : apiClient.post(`/posts/${newsId}/likes`),
+    onMutate: async (likedByMe) => {
+      await queryClient.cancelQueries({ queryKey: detailKey });
+      const previous = queryClient.getQueryData<CellNewsDetail>(detailKey);
+      queryClient.setQueryData<CellNewsDetail>(
+        detailKey,
+        (old) =>
+          old && {
+            ...old,
+            likedByMe: !likedByMe,
+            likeCount: old.likeCount + (likedByMe ? -1 : 1),
+          },
+      );
+      return { previous };
+    },
+    onError: (_error, _likedByMe, context) => {
+      queryClient.setQueryData(detailKey, context?.previous);
+    },
+    onSettled: () => void queryClient.invalidateQueries({ queryKey: detailKey }),
+  });
 }

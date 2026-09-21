@@ -8,7 +8,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { getCellDetail } from "./cellDetail";
+import { getCellGallery } from "./cellDetail";
 import { useCell } from "./api";
 
 // 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터 + 좌우 화살표).
@@ -20,7 +20,7 @@ export function CellGalleryPhotoScreen() {
   const { cellId, index: initialIndex } = route.params;
 
   const cell = useCell(cellId);
-  const totalCount = getCellDetail(cellId).gallery.reduce(
+  const totalCount = getCellGallery(cellId).reduce(
     (sum, section) => sum + section.photoIds.length,
     0,
   );

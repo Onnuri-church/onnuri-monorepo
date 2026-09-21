@@ -78,6 +78,54 @@ export interface QtShareDetail {
   isMine: boolean;
 }
 
+/** 셀 소식 목록 항목 (GET /posts/cell-news?cellId=). */
+export interface CellNewsListItem {
+  id: string;
+  title: string;
+  /** 소식 날짜(eventDate) — "08월 21일" */
+  dateLabel: string;
+  /** 작성 시각(ISO). "38분 전"은 앱이 계산한다 (큐티 상세와 같은 이유 — 캐시에 굳지 않게) */
+  createdAt: string;
+}
+
+/** 게시글 댓글 — Comment 테이블은 게시판 공용이라 셀 소식 전용이 아니다. */
+export interface PostComment {
+  id: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  createdAt: string;
+  content: string;
+}
+
+/** 셀 소식 상세 (GET /posts/cell-news/:id). */
+export interface CellNewsDetail {
+  id: string;
+  cellId: string;
+  title: string;
+  content: string;
+  /** "08월 21일" */
+  dateLabel: string;
+  createdAt: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 본문사진 — 업로드 인프라가 붙기 전까지는 빈 배열 */
+  imageUrls: string[];
+  likeCount: number;
+  likedByMe: boolean;
+  /** 내가 쓴 글인지 — 수정·삭제 메뉴 노출 기준의 일부 (셀장·관리자도 삭제 가능) */
+  isMine: boolean;
+  comments: PostComment[];
+}
+
+/** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */
+export interface CreateCellNewsRequest {
+  cellId: string;
+  title: string;
+  content: string;
+  /** YYYY-MM-DD */
+  eventDate: string;
+}
+
 export interface Post {
   id: string;
   board: BoardType;

@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Delete,
   Get,
@@ -14,6 +15,9 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { CreateCellNewsDto } from './dto/create-cell-news.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
 import { PostsService } from './posts.service';
 
@@ -41,6 +45,48 @@ export class PostsController {
     @Param('id') id: string,
   ) {
     return this.postsService.findQtShare(id, user?.sub);
+  }
+
+  // 셀 소식 — 열람은 게스트도, 작성은 그 셀 셀원·관리자만, 삭제는 작성자·셀장·관리자만
+  // (권한 검증은 서비스).
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('cell-news')
+  findCellNews(@Query() query: FindCellNewsDto) {
+    return this.postsService.findCellNews(query.cellId);
+  }
+
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('cell-news/:id')
+  findCellNewsDetail(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.postsService.findCellNewsDetail(id, user?.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('cell-news')
+  createCellNews(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateCellNewsDto,
+  ) {
+    return this.postsService.createCellNews(user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('cell-news/:id')
+  deleteCellNews(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.postsService.deleteCellNews(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/comments')
+  addComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: CreateCommentDto,
+  ) {
+    return this.postsService.addComment(id, user.sub, dto.content);
   }
 
   @UseGuards(JwtAuthGuard)

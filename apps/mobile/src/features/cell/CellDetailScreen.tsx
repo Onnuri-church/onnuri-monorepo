@@ -11,8 +11,8 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
-import { toCellMemberRole, useCellDetail } from "./api";
-import { canManageCell, canPostToCell, getCellDetail } from "./cellDetail";
+import { toCellMemberRole, useCellDetail, useCellNews } from "./api";
+import { canManageCell, canPostToCell, getCellGallery } from "./cellDetail";
 import type { CellMember, GalleryMonth } from "./cellDetail";
 import { CellMemberItem } from "./components/CellMemberItem";
 import { CellNewsRow } from "./components/CellNewsRow";
@@ -45,7 +45,9 @@ export function CellDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
 
-  const { news, gallery } = getCellDetail(cellId);
+  const gallery = getCellGallery(cellId);
+  // 소식은 서버에서 온다 (소식 날짜 최신순 — 서버 계약).
+  const { data: news, isLoading: newsLoading } = useCellNews(cellId);
   // 구성원은 서버에서 온다 (셀장 → 부셀장 → 이름순 정렬 — 서버 계약).
   const { data: cellData } = useCellDetail(cellId);
   const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
@@ -152,13 +154,18 @@ export function CellDetailScreen() {
 
         {activeTab === "news" && (
           <View className="px-5 pb-10">
-            {news.map((item) => (
+            {(news ?? []).map((item) => (
               <CellNewsRow
                 key={item.id}
                 news={item}
                 onPress={() => navigation.navigate("CellNewsDetail", { cellId, newsId: item.id })}
               />
             ))}
+            {(news ?? []).length === 0 && (
+              <Text className="pt-10 text-center text-body-medium text-text-alternative">
+                {newsLoading ? "소식을 불러오고 있어요." : "아직 올라온 소식이 없어요."}
+              </Text>
+            )}
           </View>
         )}
 

@@ -13,18 +13,18 @@ import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { toTimeAgo } from "../../shared/utils/date";
 import { useMe } from "../profile/useMe";
-import { useCell } from "./api";
-import { canManageCell, findCellNews } from "./cellDetail";
+import {
+  useAddCellNewsComment,
+  useCell,
+  useCellNewsDetail,
+  useDeleteCellNews,
+  useToggleCellNewsLike,
+} from "./api";
+import { canManageCell } from "./cellDetail";
 
-interface MockComment {
-  id: string;
-  authorName: string;
-  timeAgo: string;
-  content: string;
-}
-
-// 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글).
+// 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "CellNewsDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -32,14 +32,16 @@ export function CellNewsDetailScreen() {
   const { cellId, newsId } = route.params;
 
   const cell = useCell(cellId);
-  const news = findCellNews(cellId, newsId);
+  const { data: news, isLoading } = useCellNewsDetail(newsId);
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
-  // 수정/삭제는 셀장·관리자 기준 — 작성자 API가 붙으면 "내 글이거나 셀장·관리자"로 교체.
+  // 수정/삭제 메뉴: 내 글이거나 셀장·관리자 (서버도 같은 규칙으로 거른다).
   const me = useMe();
-  const canEdit = canManageCell(cellId, me);
+  const canEdit = news?.isMine === true || canManageCell(cellId, me);
 
-  const [comments, setComments] = useState<MockComment[]>([]);
+  const deleteNews = useDeleteCellNews(cellId);
+  const addComment = useAddCellNewsComment(newsId);
+  const toggleLike = useToggleCellNewsLike(newsId);
   const [commentDraft, setCommentDraft] = useState("");
 
   // ⋮는 권한이 있을 때만 보이고 항목이 화면 데이터에 의존하므로 화면이 헤더를 단독 등록한다
@@ -55,6 +57,7 @@ export function CellNewsDetailScreen() {
             {
               icon: "edit",
               label: "수정하기",
+              // TODO(수정): 글쓰기 화면이 아직 기존 값을 못 받는다 — 편집 파라미터 추가 후 연결.
               onPress: () => navigation.navigate("CellNewsWrite", { cellId }),
             },
             {
@@ -69,26 +72,22 @@ export function CellNewsDetailScreen() {
   }, [navigation, cell?.name, canEdit, cellId]);
 
   const confirmDelete = () => {
-    // TODO(API): 삭제 연동 전 — 목록으로 돌아가기만 한다.
     deleteDialogRef.current?.close();
-    navigation.goBack();
+    deleteNews.mutate(newsId, { onSuccess: () => navigation.goBack() });
   };
 
   const handleCommentSubmit = () => {
     const content = commentDraft.trim();
-    if (!content) return;
-    // TODO(API): 댓글 등록 연동 전 — 화면 로컬 목록에만 쌓인다.
-    setComments((prev) => [
-      ...prev,
-      { id: String(prev.length + 1), authorName: "온누리", timeAgo: "방금 전", content },
-    ]);
-    setCommentDraft("");
+    if (!content || addComment.isPending) return;
+    addComment.mutate(content, { onSuccess: () => setCommentDraft("") });
   };
 
   if (!news) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">소식을 찾을 수 없어요.</Text>
+        <Text className="text-body-medium text-text-alternative">
+          {isLoading ? "소식을 불러오고 있어요." : "소식을 찾을 수 없어요."}
+        </Text>
       </View>
     );
   }
@@ -97,7 +96,7 @@ export function CellNewsDetailScreen() {
     <View className="flex-1 bg-background-normal">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView keyboardShouldPersistTaps="handled">
-          {/* TODO(사진): 소식 사진 연동 전 placeholder (시안 362x360 — 좌우 여백 포함 근사) */}
+          {/* TODO(사진): 소식 사진(imageUrls)은 업로드 인프라 연동 후 — placeholder (시안 362x360) */}
           <View className="mx-5 mt-1 aspect-square bg-background-assistive" />
 
           <View className="px-5 pt-4">
@@ -106,14 +105,21 @@ export function CellNewsDetailScreen() {
               <View className="h-10 w-10 rounded-full bg-background-assistive" />
               <View>
                 <Text className="text-heading-small text-text-normal">{news.authorName}</Text>
-                <Text className="text-body-small text-text-alternative">{news.dateLabel}</Text>
+                <Text className="text-body-small text-text-alternative">
+                  {news.dateLabel} · {toTimeAgo(news.createdAt)}
+                </Text>
               </View>
             </View>
 
             <Text className="mt-4 text-heading-medium text-text-normal">{news.title}</Text>
-            <Text className="mt-2 text-body-medium text-text-neutral">{news.body}</Text>
+            <Text className="mt-2 text-body-medium text-text-neutral">{news.content}</Text>
 
-            <FavoriteButton className="mt-6" count={news.heartCount} />
+            <FavoriteButton
+              className="mt-6"
+              count={news.likeCount}
+              favorited={news.likedByMe}
+              onPress={() => toggleLike.mutate(news.likedByMe)}
+            />
           </View>
 
           <View
@@ -123,16 +129,16 @@ export function CellNewsDetailScreen() {
               borderTopColor: colors.background.assistive,
             }}
           >
-            <Text className="text-body-main text-text-normal">댓글 {comments.length}</Text>
-            {comments.length === 0 ? (
+            <Text className="text-body-main text-text-normal">댓글 {news.comments.length}</Text>
+            {news.comments.length === 0 ? (
               <CommentEmpty />
             ) : (
               <View className="mt-2">
-                {comments.map((comment) => (
+                {news.comments.map((comment) => (
                   <CommentItem
                     key={comment.id}
                     authorName={comment.authorName}
-                    timeAgo={comment.timeAgo}
+                    timeAgo={toTimeAgo(comment.createdAt)}
                     content={comment.content}
                   />
                 ))}
