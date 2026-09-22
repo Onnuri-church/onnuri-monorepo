@@ -1,12 +1,11 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import * as ImagePicker from "expo-image-picker";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
+import { useTeam, useTeamGallery } from "./api";
 import { GallerySelectionBar } from "./components/GallerySelectionBar";
 import { PhotoGrid } from "./components/PhotoGrid";
-import { findTeam, makeUploadedPhoto, TEAM_PHOTO_GROUPS } from "./teams";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Header } from "../../shared/components/base/Header";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -16,10 +15,12 @@ export function TeamStoryGalleryScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryGallery">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const deleteDialogRef = useRef<AppDialogRef>(null);
-  const [groups, setGroups] = useState(TEAM_PHOTO_GROUPS);
+  const team = useTeam(params.teamId);
+  const { data: gallery } = useTeamGallery(params.teamId);
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
+  const groups = gallery ?? [];
   const total = groups.reduce((count, group) => count + group.photos.length, 0);
 
   const handleEditPress = () => {
@@ -38,30 +39,11 @@ export function TeamStoryGalleryScreen() {
     );
   };
 
-  // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (셀 갤러리와 동일).
-  // TODO(API): 업로드 연동 전이라 화면 로컬 목록에만 붙는다.
-  const handleAddPress = async () => {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-    });
-    if (result.canceled) return;
-    const photo = makeUploadedPhoto(result.assets[0].uri);
-    setGroups((prev) =>
-      prev.map((group, index) =>
-        index === 0 ? { ...group, photos: [photo, ...group.photos] } : group,
-      ),
-    );
-  };
+  // TODO(SCRUM-128): 사진 추가 연동. 업로드(POST /uploads) → 갤러리 등록까지 붙인다.
+  const handleAddPress = () => {};
 
   const handleDeleteConfirm = () => {
-    // TODO(API): 삭제 연동 전 — 화면 로컬 목록에서만 지운다.
-    setGroups((prev) =>
-      prev.map((group) => ({
-        ...group,
-        photos: group.photos.filter((photo) => !selectedIds.includes(photo.id)),
-      })),
-    );
+    // TODO(SCRUM-128): 사진 삭제 연동 (DELETE /teams/:id/gallery).
     setSelectedIds([]);
     deleteDialogRef.current?.close();
   };
@@ -72,7 +54,7 @@ export function TeamStoryGalleryScreen() {
       header: () => (
         <Header
           variant="sub"
-          title={`${findTeam(params.teamId)?.name ?? "팀"} 갤러리`}
+          title={`${team?.name ?? "팀"} 갤러리`}
           rightAction="text"
           rightLabel={selecting ? "완료" : "편집"}
           onPressRightLabel={handleEditPress}
@@ -89,8 +71,8 @@ export function TeamStoryGalleryScreen() {
         <View className="mt-10 gap-9">
           {groups.map((group, index) => (
             <PhotoGrid
-              key={group.label}
-              label={group.label}
+              key={group.month}
+              label={group.month}
               photos={group.photos}
               onPhotoPress={handlePhotoPress}
               selecting={selecting}

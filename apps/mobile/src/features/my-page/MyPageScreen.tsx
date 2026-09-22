@@ -16,7 +16,6 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { uploadImage } from "../../shared/api/upload";
 import { fetchMe, patchMyAvatar } from "../profile/api";
-import { findTeamByName } from "../team-story/teams";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
 import { RoleBadge } from "./components/RoleBadge";
@@ -154,9 +153,7 @@ export function MyPageScreen() {
   const cell = me?.cell?.name ?? "없음";
   const team = me?.team?.name ?? "없음";
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
-  // 팀 화면들이 아직 목업 데이터라 실제 팀 id 대신 이름으로 목업 id를 찾아 넘긴다
-  // (팀 화면이 API로 넘어오면 me.team.id를 그대로 쓴다).
-  const myTeamId = findTeamByName(team)?.id;
+  const myTeamId = me?.team?.id;
   const roleLinks = getRoleLinks(role, team, {
     onTeamMemberPress: myTeamId
       ? () => navigation.navigate("TeamMemberAdmin", { teamId: myTeamId })

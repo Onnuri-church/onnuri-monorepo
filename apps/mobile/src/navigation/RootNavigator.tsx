@@ -24,6 +24,7 @@ import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScree
 import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
+import { useTeam } from "../features/team-story/api";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
@@ -54,7 +55,6 @@ import { TeamFormScreen } from "../features/team-story/TeamFormScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
-import { findTeam } from "../features/team-story/teams";
 import { fetchMe } from "../features/profile/api";
 import { queryClient } from "../shared/api/queryClient";
 import { signOut } from "../shared/api/session";
@@ -74,6 +74,12 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 function CellDetailHeader({ cellId }: { cellId: string }) {
   const cell = useCell(cellId);
   return <Header variant="sub" title={cell?.name ?? "셀 페이지"} rightAction="home" />;
+}
+
+// 팀 상세 헤더 — 팀 이름이 서버 목록(useTeam)에서 오므로 같은 이유로 컴포넌트로 뺐다.
+function TeamStoryDetailHeader({ teamId }: { teamId: string }) {
+  const team = useTeam(teamId);
+  return <Header variant="sub" title={team?.name ?? "팀"} rightAction="home" />;
 }
 
 // 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
@@ -273,13 +279,7 @@ export function RootNavigator() {
             component={TeamStoryDetailScreen}
             options={({ route }) => ({
               headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title={findTeam(route.params.teamId)?.name ?? "팀"}
-                  rightAction="home"
-                />
-              ),
+              header: () => <TeamStoryDetailHeader teamId={route.params.teamId} />,
             })}
           />
           <Stack.Screen

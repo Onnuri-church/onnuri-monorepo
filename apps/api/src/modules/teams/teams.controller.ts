@@ -1,19 +1,19 @@
 import { Controller, Get, NotFoundException, Param, UseGuards } from '@nestjs/common';
 
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { TeamsService } from './teams.service';
 
 @Controller('teams')
 export class TeamsController {
   constructor(private readonly teamsService: TeamsService) {}
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get()
   findAll() {
     return this.teamsService.findAll();
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   async findOne(@Param('id') id: string) {
     const team = await this.teamsService.findOne(id);

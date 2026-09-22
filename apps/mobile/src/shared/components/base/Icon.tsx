@@ -106,8 +106,16 @@ const ICONS = {
   write: Write,
 } as const;
 
+export type IconName = keyof typeof ICONS;
+
+// 서버가 내려준 문자열을 아이콘 이름으로 좁힌다 (팀 아이콘처럼 이름을 DB에 저장하는 경우).
+// 등록되지 않은 이름이면 false — 호출부가 아이콘을 안 그리면 된다.
+export function isIconName(value: string | null | undefined): value is IconName {
+  return value != null && value in ICONS;
+}
+
 interface IconProps {
-  name: keyof typeof ICONS;
+  name: IconName;
   /** 정사각형 기준 한 변 길이(px). 원본 viewBox가 달라도 이 값으로 스케일된다. */
   size?: number;
   /** SVG 안의 색이 전부 currentColor로 치환돼 있어서(svgr.config.js) 여기서 결정된다. */
