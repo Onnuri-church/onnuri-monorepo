@@ -12,26 +12,35 @@ import { TextField } from "../../shared/components/base/TextField";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import { uploadImage } from "../../shared/api/upload";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { useCreateCellNews } from "./api";
+import { useCellNewsDetail, useCreateCellNews, useUpdateCellNews } from "./api";
 
 const MAX_PHOTOS = 5;
 
-// 셀 소식 글쓰기 (시안 게시판 글쓰기: 날짜 → 사진(최대 5장, 가로 스크롤) → 제목 → 내용 → 등록).
+// 셀 소식 글쓰기·수정 겸용 (시안 게시판 글쓰기: 날짜 → 사진(최대 5장) → 제목 → 내용 → 등록).
+// newsId가 있으면 수정 모드 — 상세를 거쳐 들어오므로 캐시가 있어 첫 렌더에 프리필된다.
 export function CellNewsWriteScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "CellNewsWrite">>();
-  const { cellId } = route.params;
+  const { cellId, newsId } = route.params;
 
-  const [selectDate, setSelectDate] = useState<string | null>(toDateString(new Date()));
-  const [photoUris, setPhotoUris] = useState<string[]>([]);
-  const [title, setTitle] = useState("");
-  const [content, setContent] = useState("");
+  const { data: editing } = useCellNewsDetail(newsId ?? "");
+  const isEditing = newsId !== undefined;
+
+  const [selectDate, setSelectDate] = useState<string | null>(
+    isEditing ? (editing?.eventDate ?? null) : toDateString(new Date()),
+  );
+  // 기존 사진(http)과 새로 고른 사진(file://)이 섞여 있어도 uploadImage가 http는 통과시킨다.
+  const [photoUris, setPhotoUris] = useState<string[]>(editing?.imageUrls ?? []);
+  const [title, setTitle] = useState(editing?.title ?? "");
+  const [content, setContent] = useState(editing?.content ?? "");
   const [uploading, setUploading] = useState(false);
 
   const createNews = useCreateCellNews(cellId);
+  const updateNews = useUpdateCellNews(cellId, newsId ?? "");
+  const saving = createNews.isPending || updateNews.isPending;
 
   const handleSubmitPress = async () => {
-    if (!selectDate || createNews.isPending || uploading) return;
+    if (!selectDate || saving || uploading) return;
 
     // 사진 먼저 전부 업로드해 주소로 바꾼 뒤 글을 만든다 — 하나라도 실패하면 등록하지 않는다.
     let imageUrls: string[];
@@ -45,13 +54,12 @@ export function CellNewsWriteScreen() {
       setUploading(false);
     }
 
-    createNews.mutate(
-      { title: title.trim(), content: content.trim(), eventDate: selectDate, imageUrls },
-      {
-        onSuccess: () => navigation.goBack(),
-        onError: () => Alert.alert("등록 실패", "잠시 후 다시 시도해주세요."),
-      },
-    );
+    const payload = { title: title.trim(), content: content.trim(), eventDate: selectDate, imageUrls };
+    const mutation = isEditing ? updateNews : createNews;
+    mutation.mutate(payload, {
+      onSuccess: () => navigation.goBack(),
+      onError: () => Alert.alert(isEditing ? "저장 실패" : "등록 실패", "잠시 후 다시 시도해주세요."),
+    });
   };
 
   return (
@@ -99,13 +107,10 @@ export function CellNewsWriteScreen() {
 
           <View className="mt-16">
             <Button
-              label="등록하기"
+              label={isEditing ? "저장하기" : "등록하기"}
               onPress={handleSubmitPress}
               disabled={
-                title.trim().length === 0 ||
-                content.trim().length === 0 ||
-                createNews.isPending ||
-                uploading
+                title.trim().length === 0 || content.trim().length === 0 || saving || uploading
               }
             />
           </View>

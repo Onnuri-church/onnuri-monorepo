@@ -57,8 +57,7 @@ export function CellNewsDetailScreen() {
             {
               icon: "edit",
               label: "수정하기",
-              // TODO(수정): 글쓰기 화면이 아직 기존 값을 못 받는다 — 편집 파라미터 추가 후 연결.
-              onPress: () => navigation.navigate("CellNewsWrite", { cellId }),
+              onPress: () => navigation.navigate("CellNewsWrite", { cellId, newsId }),
             },
             {
               icon: "trash-can",
@@ -69,7 +68,7 @@ export function CellNewsDetailScreen() {
         />
       ),
     });
-  }, [navigation, cell?.name, canEdit, cellId]);
+  }, [navigation, cell?.name, canEdit, cellId, newsId]);
 
   const confirmDelete = () => {
     deleteDialogRef.current?.close();

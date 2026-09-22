@@ -362,10 +362,16 @@ export function RootNavigator() {
           <Stack.Screen
             name="CellNewsWrite"
             component={CellNewsWriteScreen}
-            options={{
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="소식 글쓰기" rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.newsId ? "소식 수정" : "소식 글쓰기"}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
           <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
@@ -396,10 +402,16 @@ export function RootNavigator() {
           <Stack.Screen
             name="FollowerNoteWrite"
             component={FollowerNoteWriteScreen}
-            options={{
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="팔로워 노트 작성" rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.noteId ? "팔로워 노트 수정" : "팔로워 노트 작성"}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           {/* 헤더는 화면이 단독 등록한다 (⋮ 항목이 내 글 여부에 의존) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen

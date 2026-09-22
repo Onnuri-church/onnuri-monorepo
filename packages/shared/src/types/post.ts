@@ -105,6 +105,8 @@ export interface CellNewsDetail {
   content: string;
   /** "08월 21일" */
   dateLabel: string;
+  /** 소식 날짜 원본 (YYYY-MM-DD) — 수정 화면 프리필용 */
+  eventDate: string;
   createdAt: string;
   authorName: string;
   authorAvatarUrl: string | null;
@@ -125,6 +127,15 @@ export interface CreateCellNewsRequest {
   /** YYYY-MM-DD */
   eventDate: string;
   /** 본문 사진 (최대 5장) — POST /uploads로 받은 주소. 갤러리에 자동 포함된다 */
+  imageUrls?: string[];
+}
+
+/** PATCH /posts/cell-news/:id 요청 본문 — 보낸 필드만 반영, imageUrls는 전체 교체. */
+export interface UpdateCellNewsRequest {
+  title?: string;
+  content?: string;
+  /** YYYY-MM-DD */
+  eventDate?: string;
   imageUrls?: string[];
 }
 

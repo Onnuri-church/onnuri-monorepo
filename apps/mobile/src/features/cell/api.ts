@@ -11,6 +11,7 @@ import type {
   FollowerNoteInfo,
   PostComment,
   SaveCellAttendanceRequest,
+  UpdateCellNewsRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -60,6 +61,8 @@ export function useCellNewsDetail(newsId: string) {
     queryKey: ["cell-news-detail", newsId],
     queryFn: () =>
       apiClient.get<CellNewsDetail>(`/posts/cell-news/${newsId}`).then((res) => res.data),
+    // 글쓰기 화면이 생성 모드일 때 빈 id로 부른다 — 그때는 조회하지 않는다.
+    enabled: newsId !== "",
   });
 }
 
@@ -71,6 +74,22 @@ export function useCreateCellNews(cellId: string) {
         .post<CellNewsDetail>("/posts/cell-news", { cellId, ...payload })
         .then((res) => res.data),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["cell-news", cellId] }),
+  });
+}
+
+export function useUpdateCellNews(cellId: string, newsId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: UpdateCellNewsRequest) =>
+      apiClient
+        .patch<CellNewsDetail>(`/posts/cell-news/${newsId}`, payload)
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["cell-news-detail", newsId], detail);
+      void queryClient.invalidateQueries({ queryKey: ["cell-news", cellId] });
+      // 사진·날짜가 바뀌면 갤러리(소식 사진 자동 포함)도 달라진다.
+      void queryClient.invalidateQueries({ queryKey: ["cell-gallery", cellId] });
+    },
   });
 }
 
@@ -175,6 +194,17 @@ export function useCreateFollowerNote(cellId: string) {
     mutationFn: (payload: CreateFollowerNoteRequest) =>
       apiClient
         .post<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes`, payload)
+        .then((res) => res.data),
+    onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
+  });
+}
+
+export function useUpdateFollowerNote(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, answers }: { noteId: string; answers: string[] }) =>
+      apiClient
+        .patch<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes/${noteId}`, { answers })
         .then((res) => res.data),
     onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
   });
