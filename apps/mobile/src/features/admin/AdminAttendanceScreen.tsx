@@ -1,25 +1,22 @@
+import type { AdminAttendanceMark } from "@onnuri/shared";
+import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
-import {
-  ADMIN_CELL_NAMES,
-  ADMIN_TEAM_NAMES,
-  ATTENDANCE_BY_CELL,
-  ATTENDANCE_BY_TEAM,
-  ATTENDANCE_DATES,
-  type AttendanceGroup,
-  type AttendanceMark,
-} from "./adminMock";
+import { useCells } from "../cell/api";
+import { MonthPicker } from "../cell/components/MonthPicker";
+import { fetchTeams } from "../profile/api";
+import { useAdminAttendance } from "./api";
 import { RadioOption } from "./components/RadioOption";
 
 type AttendanceFilter = "all" | "cell" | "team";
 
 // 칸 하나 — 왼쪽 예배 / 오른쪽 셀모임. O=초록, X=회색, -=대시(셀모임 없던 주).
 // 시안 결석 #E4E4E4는 토큰에 없어 background.muted(#ECECEC)로 근사.
-function AttendanceMarkPair({ marks }: { marks: [AttendanceMark, AttendanceMark] }) {
+function AttendanceMarkPair({ marks }: { marks: [AdminAttendanceMark, AdminAttendanceMark] }) {
   return (
     <View className="w-8 flex-row items-center justify-center gap-1">
       {marks.map((mark, index) =>
@@ -38,30 +35,45 @@ function AttendanceMarkPair({ marks }: { marks: [AttendanceMark, AttendanceMark]
   );
 }
 
-// 마이페이지 관리자 메뉴 > 출석부. 2026-09-09 시안 기준, adminMock 목업 — API 연동 시 교체.
-// 헤더의 "다운로드"는 RootNavigator 등록부에서 데이터 다운로드 화면으로 연결한다.
+// 마이페이지 관리자 메뉴 > 출석부 — GET /admin/attendance 실데이터 (셀 출석 관리가 기록한
+// 값을 주차 × 회원 표로 집계). 헤더의 "다운로드"는 RootNavigator 등록부에서 연결한다.
 export function AdminAttendanceScreen() {
   const [filter, setFilter] = useState<AttendanceFilter>("all");
-  const [selectedCell, setSelectedCell] = useState(ADMIN_CELL_NAMES[0]);
-  const [selectedTeam, setSelectedTeam] = useState(ADMIN_TEAM_NAMES[6]);
+  const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const pickerSheetRef = useRef<AppSheetRef>(null);
 
-  // 목업이라 어떤 셀/팀을 골라도 같은 표본을 보여준다 — API 연동 시 선택값으로 조회.
-  const groups: AttendanceGroup[] =
-    filter === "all"
-      ? ATTENDANCE_BY_CELL
-      : filter === "cell"
-        ? ATTENDANCE_BY_CELL.slice(0, 1)
-        : ATTENDANCE_BY_TEAM;
+  // 달 선택 — 시안의 날짜 바를 누르면 월 그리드가 펼쳐진다 (출석 관리 주차별 보기와 동일 그리드).
+  const today = new Date();
+  const [month, setMonth] = useState(today.getMonth() + 1);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+  const monthParam = `${today.getFullYear()}-${String(month).padStart(2, "0")}`;
 
-  const pickerOptions = filter === "team" ? ADMIN_TEAM_NAMES : ADMIN_CELL_NAMES;
-  const pickerValue = filter === "team" ? selectedTeam : selectedCell;
+  // 셀/팀 선택지는 실데이터 — 아직 안 고른 상태면 첫 항목을 기본값으로 쓴다.
+  const { data: cells } = useCells();
+  const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: fetchTeams });
+  const cellId = selectedCellId ?? cells?.[0]?.id;
+  const teamId = selectedTeamId ?? teams?.[0]?.id;
 
-  const handlePickerSelect = (option: string) => {
+  const { data, isLoading } = useAdminAttendance({
+    month: monthParam,
+    scope: filter,
+    groupId: filter === "cell" ? cellId : filter === "team" ? teamId : undefined,
+  });
+  const dates = data?.dates ?? [];
+  const groups = data?.groups ?? [];
+
+  const pickerOptions = filter === "team" ? (teams ?? []) : (cells ?? []);
+  const pickerValue =
+    filter === "team"
+      ? (teams?.find((team) => team.id === teamId)?.name ?? "")
+      : (cells?.find((cell) => cell.id === cellId)?.name ?? "");
+
+  const handlePickerSelect = (optionId: string) => {
     if (filter === "team") {
-      setSelectedTeam(option);
+      setSelectedTeamId(optionId);
     } else {
-      setSelectedCell(option);
+      setSelectedCellId(optionId);
     }
     pickerSheetRef.current?.close();
   };
@@ -101,11 +113,27 @@ export function AdminAttendanceScreen() {
           </Pressable>
         )}
 
-        {/* 날짜 — 월 선택은 API 연동 시 (지금은 시안의 2026년 8월 고정) */}
-        <View className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-2.5 bg-background-muted">
-          <Text className="text-body-main text-text-normal">2026년 8월</Text>
+        {/* 날짜 — 누르면 월 그리드 펼침 */}
+        <Pressable
+          className="mt-4 h-11 flex-row items-center justify-center gap-2 rounded-2.5 bg-background-muted"
+          onPress={() => setMonthPickerOpen((prev) => !prev)}
+        >
+          <Text className="text-body-main text-text-normal">
+            {data?.monthLabel ?? `${today.getFullYear()}년 ${month}월`}
+          </Text>
           <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
-        </View>
+        </Pressable>
+        {monthPickerOpen && (
+          <View className="mt-4">
+            <MonthPicker
+              selectedMonth={month}
+              onSelectMonth={(next) => {
+                setMonth(next);
+                setMonthPickerOpen(false);
+              }}
+            />
+          </View>
+        )}
 
         {/* 범례 */}
         <View className="mt-4 flex-row items-center gap-2.5">
@@ -127,7 +155,7 @@ export function AdminAttendanceScreen() {
         {/* 표 머리 */}
         <View className="mt-4 flex-row items-center pb-2">
           <Text className="flex-1 text-caption-main text-text-alternative">이름</Text>
-          {ATTENDANCE_DATES.map((date) => (
+          {dates.map((date) => (
             <Text key={date} className="w-8 text-center text-caption-main text-text-alternative">
               {date}
             </Text>
@@ -160,12 +188,12 @@ export function AdminAttendanceScreen() {
                     </Text>
                     {row.role === "leader" && (
                       <View className="rounded bg-primary-normal px-1.5 py-0.5">
-                        <Text className="text-caption-small text-text-disable">셀장</Text>
+                        <Text className="text-caption-small text-text-disable">{row.roleLabel}</Text>
                       </View>
                     )}
                     {row.role === "viceLeader" && (
                       <View className="rounded border border-primary-normal bg-background-normal px-1.5 py-0.5">
-                        <Text className="text-caption-small text-primary-normal">부셀장</Text>
+                        <Text className="text-caption-small text-primary-normal">{row.roleLabel}</Text>
                       </View>
                     )}
                   </View>
@@ -177,6 +205,11 @@ export function AdminAttendanceScreen() {
             ))}
           </View>
         ))}
+        {groups.length === 0 && (
+          <Text className="pt-10 text-center text-body-medium text-text-alternative">
+            {isLoading ? "출석부를 불러오고 있어요." : "표시할 출석 기록이 없어요."}
+          </Text>
+        )}
       </ScrollView>
 
       {/* 셀/팀 선택 시트 (시안 액션시트) */}
@@ -194,19 +227,19 @@ export function AdminAttendanceScreen() {
         <View className="px-6 pb-2 pt-1">
           {pickerOptions.map((option) => (
             <Pressable
-              key={option}
+              key={option.id}
               className="py-3"
-              onPress={() => handlePickerSelect(option)}
+              onPress={() => handlePickerSelect(option.id)}
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
               <Text
                 className={
-                  option === pickerValue
+                  option.name === pickerValue
                     ? "text-body-main text-primary-normal"
                     : "text-body-regular text-text-normal"
                 }
               >
-                {option}
+                {option.name}
               </Text>
             </Pressable>
           ))}
