@@ -410,7 +410,7 @@ model HobbyGroupMember {
   postId   String
   user     User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId   String
-  role     HobbyGroupRole         @default(MEMBER) // 작성자(개설자) = LEADER
+  role     HobbyGroupRole         @default(MEMBER) // 소그룹장(LEADER)은 생성 폼에서 한 명 이상 지정 — 다중 가능 (2026-09-21)
   status   HobbyGroupMemberStatus @default(PENDING)
   joinedAt DateTime               @default(now()) // 신청 시각
 

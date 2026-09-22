@@ -13,6 +13,7 @@ import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.mod
 import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { TeamsModule } from './modules/teams/teams.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -30,6 +31,7 @@ import { UsersModule } from './modules/users/users.module';
     TeamsModule,
     GroupMeetingsModule,
     PostsModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [

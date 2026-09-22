@@ -2,18 +2,26 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { useRef, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { uploadImage } from "../../shared/api/upload";
 import { useMe } from "../profile/useMe";
-import { toCellMemberRole, useCellDetail } from "./api";
-import { canManageCell, canPostToCell, getCellDetail } from "./cellDetail";
-import type { CellMember, GalleryMonth } from "./cellDetail";
+import {
+  toCellMemberRole,
+  useAddGalleryPhoto,
+  useCellDetail,
+  useCellGallery,
+  useCellNews,
+  useRemoveGalleryPhotos,
+} from "./api";
+import { canManageCell, canPostToCell } from "./cellDetail";
+import type { CellMember } from "./cellDetail";
 import { CellMemberItem } from "./components/CellMemberItem";
 import { CellNewsRow } from "./components/CellNewsRow";
 import { CellTabBar, type CellTabKey } from "./components/CellTabBar";
@@ -27,14 +35,6 @@ interface GalleryMonthState {
   tiles: GalleryTile[];
 }
 
-// 사진 API 전이라 갤러리는 화면 로컬 상태로만 산다 — 목업 id를 타일로 바꿔 시작한다.
-function toGalleryState(gallery: GalleryMonth[]): GalleryMonthState[] {
-  return gallery.map((section) => ({
-    month: section.month,
-    tiles: section.photoIds.map((id) => ({ id })),
-  }));
-}
-
 // 개별 셀 페이지. 커버 사진 아래 소식/갤러리/구성원/관리 4탭이 붙고, 탭 바는 스크롤 시
 // 상단에 고정된다(stickyHeaderIndices). 어떤 셀이든 cellId만 받아 그린다 — 셀은 관리자가
 // 만들고 종료하는 유동 데이터라 화면이 특정 셀을 몰라야 한다.
@@ -45,7 +45,8 @@ export function CellDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
 
-  const { news, gallery } = getCellDetail(cellId);
+  // 소식은 서버에서 온다 (소식 날짜 최신순 — 서버 계약).
+  const { data: news, isLoading: newsLoading } = useCellNews(cellId);
   // 구성원은 서버에서 온다 (셀장 → 부셀장 → 이름순 정렬 — 서버 계약).
   const { data: cellData } = useCellDetail(cellId);
   const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
@@ -60,16 +61,32 @@ export function CellDetailScreen() {
   const canManage = canManageCell(cellId, me);
 
   const [activeTab, setActiveTab] = useState<CellTabKey>("news");
-  const [galleryMonths, setGalleryMonths] = useState<GalleryMonthState[]>(() =>
-    toGalleryState(gallery),
+  // 갤러리는 서버에서 온다 — 직접 업로드 + 소식 사진 자동 포함, 최신 달부터 (서버 계약).
+  const { data: galleryData } = useCellGallery(cellId);
+  const addGalleryPhoto = useAddGalleryPhoto(cellId);
+  const removeGalleryPhotos = useRemoveGalleryPhotos(cellId);
+  const galleryMonths: GalleryMonthState[] = (galleryData ?? []).map((section) => ({
+    month: section.month,
+    tiles: section.photos.map((photo) => ({ id: photo.id, uri: photo.url })),
+  }));
+  // 편집 삭제는 직접 업로드 사진만 — 게시글 사진은 글 삭제로만 빠진다 (서버도 거른다).
+  const deletableIds = new Set(
+    (galleryData ?? []).flatMap((section) =>
+      section.photos.filter((photo) => photo.deletable).map((photo) => photo.id),
+    ),
   );
   const [selecting, setSelecting] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   // 갤러리 월 필터 (시안: 월 라벨 드롭다운). null이면 "전체" — 모든 달을 이어 보여준다.
-  // 기본값은 가장 최근 달(목업의 첫 항목).
-  const [galleryMonthFilter, setGalleryMonthFilter] = useState<string | null>(
-    () => gallery[0]?.month ?? null,
-  );
+  // 기본값은 가장 최근 달 — 데이터가 도착한 첫 시점에 한 번만 잡는다.
+  const [galleryMonthFilter, setGalleryMonthFilter] = useState<string | null>(null);
+  const monthFilterInitialized = useRef(false);
+  useEffect(() => {
+    if (!monthFilterInitialized.current && galleryData && galleryData.length > 0) {
+      monthFilterInitialized.current = true;
+      setGalleryMonthFilter(galleryData[0].month);
+    }
+  }, [galleryData]);
   const [monthDropdownOpen, setMonthDropdownOpen] = useState(false);
   const deleteDialogRef = useRef<AppDialogRef>(null);
 
@@ -94,6 +111,8 @@ export function CellDetailScreen() {
 
   const handleTilePress = (tile: GalleryTile, flatIndex: number) => {
     if (selecting) {
+      // 게시글 사진은 여기서 못 지우므로 선택도 막는다.
+      if (!deletableIds.has(tile.id)) return;
       setSelectedIds((prev) =>
         prev.includes(tile.id) ? prev.filter((id) => id !== tile.id) : [...prev, tile.id],
       );
@@ -103,29 +122,24 @@ export function CellDetailScreen() {
   };
 
   // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (PhotoUploadBox와 동일).
-  // TODO(API): 업로드 연동 전이라 화면 로컬 목록에만 붙는다.
   const handleAddPhotoPress = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       quality: 0.8,
     });
-    if (result.canceled) return;
-    const uri = result.assets[0].uri;
-    setGalleryMonths((prev) =>
-      prev.map((section, index) =>
-        index === 0 ? { ...section, tiles: [{ id: uri, uri }, ...section.tiles] } : section,
-      ),
-    );
+    if (result.canceled || addGalleryPhoto.isPending) return;
+    try {
+      const url = await uploadImage(result.assets[0].uri);
+      addGalleryPhoto.mutate(url);
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+    }
   };
 
   const confirmDeleteSelected = () => {
-    // TODO(API): 삭제 연동 전 — 화면 로컬 목록에서만 지운다.
-    setGalleryMonths((prev) =>
-      prev.map((section) => ({
-        ...section,
-        tiles: section.tiles.filter((tile) => !selectedIds.includes(tile.id)),
-      })),
-    );
+    if (selectedIds.length > 0 && !removeGalleryPhotos.isPending) {
+      removeGalleryPhotos.mutate(selectedIds);
+    }
     setSelectedIds([]);
     setSelecting(false);
     deleteDialogRef.current?.close();
@@ -145,20 +159,33 @@ export function CellDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <ScrollView stickyHeaderIndices={[1]}>
-        {/* TODO(사진): 셀 커버 사진 연동 전 placeholder (시안 402x402) */}
-        <View className="aspect-square w-full bg-background-muted" />
+        {/* 셀 커버(단체) 사진 (시안 402x402) — 아직 없으면 회색 자리 */}
+        {cellData?.coverImageUrl ? (
+          <Image
+            source={{ uri: cellData.coverImageUrl }}
+            className="aspect-square w-full"
+            resizeMode="cover"
+          />
+        ) : (
+          <View className="aspect-square w-full bg-background-muted" />
+        )}
 
         <CellTabBar active={activeTab} onChange={handleTabChange} manageLocked={!canManage} />
 
         {activeTab === "news" && (
           <View className="px-5 pb-10">
-            {news.map((item) => (
+            {(news ?? []).map((item) => (
               <CellNewsRow
                 key={item.id}
                 news={item}
                 onPress={() => navigation.navigate("CellNewsDetail", { cellId, newsId: item.id })}
               />
             ))}
+            {(news ?? []).length === 0 && (
+              <Text className="pt-10 text-center text-body-medium text-text-alternative">
+                {newsLoading ? "소식을 불러오고 있어요." : "아직 올라온 소식이 없어요."}
+              </Text>
+            )}
           </View>
         )}
 
@@ -250,6 +277,18 @@ export function CellDetailScreen() {
                   }
                 />
               ))}
+              {/* 사진이 한 장도 없으면 섹션이 없어 추가 슬롯도 사라진다 — 첫 사진용 추가 슬롯만 그린다 */}
+              {visibleGallerySections.length === 0 && canPost && !selecting && (
+                <GalleryMonthGrid
+                  month=""
+                  tiles={[]}
+                  showMonthLabel={false}
+                  selecting={false}
+                  selectedIds={[]}
+                  onTilePress={() => {}}
+                  onAddPress={handleAddPhotoPress}
+                />
+              )}
             </View>
           </View>
         )}

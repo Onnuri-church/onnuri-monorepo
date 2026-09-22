@@ -1,7 +1,5 @@
-// 출석 관리 목업·날짜 헬퍼. 출석 API가 생기면 목업 부분을 서버 데이터로 교체한다.
+// 출석 관리 화면 타입·날짜 헬퍼. 출석 데이터는 /cells/:id/attendance 실데이터 (api.ts).
 // 셀모임은 일요일 단위라 날짜 선택지는 "그 달의 일요일들"이다.
-
-import type { CellMember } from "./cellDetail";
 
 export type AttendanceStatus = "present" | "absent";
 
@@ -39,16 +37,4 @@ export function getLatestSunday(base: Date): Date {
   const date = new Date(base);
   date.setDate(date.getDate() - date.getDay());
   return date;
-}
-
-// 확정 스펙(2026-09-03, docs/attendance-data-model.md §2): QR은 예배 출석만 자동 기록되고,
-// 셀모임은 기본 결석 — 셀장이 온 사람만 직접 체크한다. 예배가 전원 출석인 건
-// QR 자동 반영을 흉내낸 목업 전제다 (API 연동 시 그 주 QR 기록으로 교체).
-export function getInitialAttendance(members: CellMember[]): MemberAttendance[] {
-  return members.map((member) => ({
-    memberId: member.id,
-    name: member.name,
-    worship: "present",
-    meeting: "absent",
-  }));
 }

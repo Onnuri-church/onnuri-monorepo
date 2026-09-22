@@ -1,36 +1,55 @@
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { KeyboardAvoidingView, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
+import { toDateString } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useCreateFollowerNote } from "./api";
 import { formatSundayLabel, getSundaysOfMonth } from "./attendance";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
 import { NOTE_QUESTIONS } from "./followerNotes";
 
 // 팔로워 노트 작성 (시안: 날짜 선택 + 3문항 박스 + 등록하기).
-// 노트는 셀모임 날짜(일요일) 단위 주간 보고로 확정됐는데 시안의 첫 필드 라벨은 "대상셀원"이다 —
-// 날짜 기반 결정과 어긋나 보여 라벨을 "셀모임 날짜"로 두고 구현했다. 디자이너 확인 필요.
+// 노트는 셀모임 날짜(일요일) 단위 주간 보고 — 시안 CSS의 "대상셀원" 라벨은 옛 레이어명이고
+// "날짜"가 맞다고 2026-09-21 지환님 재확정. 라벨은 "셀모임 날짜" 유지.
 export function FollowerNoteWriteScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteWrite">>();
+  const { cellId } = route.params;
 
   const today = new Date();
-  const sundayOptions = getSundaysOfMonth(today.getFullYear(), today.getMonth() + 1).map(
-    formatSundayLabel,
-  );
+  const sundays = getSundaysOfMonth(today.getFullYear(), today.getMonth() + 1);
+  const sundayOptions = sundays.map(formatSundayLabel);
 
   const [selectedSunday, setSelectedSunday] = useState<string | null>(null);
   const [answers, setAnswers] = useState<string[]>(["", "", ""]);
+
+  const createNote = useCreateFollowerNote(cellId);
 
   const handleAnswerChange = (index: number) => (text: string) =>
     setAnswers((prev) => prev.map((answer, i) => (i === index ? text : answer)));
 
   const handleSubmitPress = () => {
-    // TODO(API): 등록 연동 전 — 게시판으로 돌아가기만 한다.
-    navigation.goBack();
+    // 선택지는 라벨 문자열이라 같은 인덱스의 Date에서 요청 날짜를 얻는다.
+    const meetingDate = sundays.find((sunday) => formatSundayLabel(sunday) === selectedSunday);
+    if (!meetingDate || createNote.isPending) return;
+    createNote.mutate(
+      { meetingDate: toDateString(meetingDate), answers },
+      {
+        onSuccess: () => navigation.goBack(),
+        onError: (error) => {
+          // 서버 검증 메시지(그 주 노트 중복 등)를 그대로 보여준다.
+          const message =
+            (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+          Alert.alert("등록 실패", message ?? "잠시 후 다시 시도해주세요.");
+        },
+      },
+    );
   };
 
   return (
@@ -72,7 +91,11 @@ export function FollowerNoteWriteScreen() {
             <Button
               label="등록하기"
               onPress={handleSubmitPress}
-              disabled={selectedSunday === null || answers[0].trim().length === 0}
+              disabled={
+                selectedSunday === null ||
+                answers[0].trim().length === 0 ||
+                createNote.isPending
+              }
             />
           </View>
         </ScrollView>

@@ -244,7 +244,7 @@ erDiagram
         string id PK
         string postId FK "userId와 복합 유니크"
         string userId FK
-        HobbyGroupRole role "LEADER(소그룹장, 작성자=개설자) / MEMBER — 2026-09-08 확정"
+        HobbyGroupRole role "LEADER(소그룹장, 생성 폼에서 한 명 이상 지정 — 다중 가능) / MEMBER — 2026-09-21 확정"
         HobbyGroupMemberStatus status "PENDING(승인 대기) / APPROVED(참여 중) / REJECTED(거절)"
         datetime joinedAt "신청 시각"
     }
@@ -326,7 +326,7 @@ erDiagram
 - **문서 vs 화면이 다른 곳은 화면 기준** — 생년월일 전체(DATE), 부셀장 역할, 배경사진·소개 컬럼. 화면이 더 최신·구체적이다.
 - **저장하지 않고 계산하는 것**: 나이, 출석 횟수·주수, 큐티나눔 수, 받은 하트 수 (근거: [attendance-data-model.md §5](attendance-data-model.md)).
 - 회원탈퇴·게시글 삭제·셀/팀 삭제는 soft delete — 출석·이력이 끊기지 않게. **보관 기간 (2026-09-03 확정, 2026-09-08 수정)**: 회원 탈퇴는 30일 후 프로필 등 개인정보를 파기하되 이름+출석·활동 기록은 **기명으로 보존**(통계용 — 익명화하지 않음), 게시글·댓글은 당분간 무기한 보관(정리 배치는 필요해질 때 추가). 출시 전 개인정보처리방침에 명시할 것.
-- **취향 소그룹 참여는 승인제 (2026-09-08 확정)** — 신청하면 `HobbyGroupMember`가 `PENDING`으로 생성되고, 소그룹장(`role = LEADER`, 글 작성자가 개설과 동시에 LEADER)이 승인(`APPROVED`)/거절(`REJECTED`)한다. PENDING 상태에서는 본인이 신청 취소(행 삭제) 가능, APPROVED 상태에서는 탈퇴 가능.
+- **취향 소그룹 참여는 승인제 (2026-09-08 확정)** — 신청하면 `HobbyGroupMember`가 `PENDING`으로 생성되고, 소그룹장(`role = LEADER`)이 승인(`APPROVED`)/거절(`REJECTED`)한다. 소그룹장은 **생성 폼에서 한 명 이상 지정하며 여러 명 가능** — 승인/거절 권한은 전원에게 (2026-09-21 확정, "작성자=개설자 자동 지정"에서 변경 — 스키마 변경 없음). PENDING 상태에서는 본인이 신청 취소(행 삭제) 가능, APPROVED 상태에서는 탈퇴 가능.
 
 ## 미결 (구조에 영향 없어 진행 가능, 확정 시 갱신)
 

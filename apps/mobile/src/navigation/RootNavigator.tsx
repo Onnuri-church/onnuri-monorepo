@@ -7,6 +7,7 @@ import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
+import { AdminMemberEditScreen } from "../features/admin/AdminMemberEditScreen";
 import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
@@ -26,6 +27,7 @@ import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
+import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
@@ -206,10 +208,22 @@ export function RootNavigator() {
           <Stack.Screen
             name="GroupMeeting"
             component={GroupMeetingScreen}
-            options={{
+            /* 관리자에게만 우측 "편집"이 붙어 화면이 헤더를 단독 등록한다 (2026-09-21 관리자 시안) */
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="GroupMeetingForm"
+            component={GroupMeetingFormScreen}
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.meetingId ? "취향소그룹 편집" : "취향소그룹 생성"}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           {/* 기도 목록 3개 화면은 PrayerMenu가 헤더를 단독 등록한다 (⋮ 메뉴 포함) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
@@ -403,21 +417,14 @@ export function RootNavigator() {
           />
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
               헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
+          {/* 생성 진입은 목록 끝의 점선 "셀 생성" 행(CellManageList) — 2026-09-21 시안으로 헤더 버튼에서 이동 */}
           <Stack.Screen
             name="AdminCellManage"
             component={AdminCellManageScreen}
-            options={({ navigation: nav }) => ({
+            options={{
               headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title="셀 관리"
-                  rightAction="text"
-                  rightLabel="생성"
-                  onPressRightLabel={() => nav.navigate("AdminCellForm", {})}
-                />
-              ),
-            })}
+              header: () => <Header variant="sub" title="셀 관리" />,
+            }}
           />
           <Stack.Screen
             name="AdminCellForm"
@@ -452,10 +459,26 @@ export function RootNavigator() {
           <Stack.Screen
             name="AdminMemberDetail"
             component={AdminMemberDetailScreen}
-            options={{
+            options={({ navigation: nav, route: detailRoute }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="회원 관리" rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title="회원 관리"
+                  rightAction="text"
+                  rightLabel="편집"
+                  onPressRightLabel={() =>
+                    nav.navigate("AdminMemberEdit", { memberId: detailRoute.params.memberId })
+                  }
+                />
+              ),
+            })}
+          />
+          {/* 저장 버튼이 화면 상태에 의존해 헤더는 화면이 등록한다 (QtBoardDetail 패턴) */}
+          <Stack.Screen
+            name="AdminMemberEdit"
+            component={AdminMemberEditScreen}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="AdminAttendance"

@@ -45,6 +45,68 @@ export interface CellSummary {
   /** 진행 중(endedAt 없음) 멤버십 기준 셀장 이름 — 아직 지정 전이면 null */
   leaderName: string | null;
   viceLeaderName: string | null;
+  /** 활동 종료일 (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용 */
+  expiresAt: string;
+  /** 셀 커버(단체) 사진 — 편집 폼 프리필용 */
+  coverImageUrl: string | null;
+}
+
+/** 회원 목록 뱃지 — 관리자 > 팀장 > 셀장(부셀장 포함) 우선순위로 하나만 단다 */
+export type AdminMemberBadge = "admin" | "teamLeader" | "cellLeader";
+
+/** GET /users 응답 항목 (관리자 전용) — 회원 관리 목록과 셀장/부셀장 선택지가 같이 쓴다 */
+export interface AdminMemberSummary {
+  id: string;
+  name: string;
+  /** 진행 중 소속 (없으면 null) */
+  cellName: string | null;
+  teamName: string | null;
+  badge: AdminMemberBadge | null;
+}
+
+/**
+ * 회원 편집의 권한 선택지 — 멤버십 역할로 반영된다 (전역 등급 컬럼이 없다, docs/erd.md).
+ * 관리자(isAdmin)는 시안에 있지만 앱 지정 대상에서 제외 (2026-09-21 확정).
+ */
+export type AdminMemberRole = "GENERAL" | "TEAM_LEADER" | "CELL_LEADER";
+
+/** GET /users/:id 응답 (관리자 전용) — 회원 상세(문구)와 편집(원본 값)이 같이 쓴다 */
+export interface AdminMemberDetail {
+  id: string;
+  name: string;
+  /** "2001.03.14" — 미입력이면 null */
+  birthDateLabel: string | null;
+  /** YYYY-MM-DD — 편집 프리필용 원본 */
+  birthDate: string | null;
+  gender: Gender | null;
+  /** "남성"/"여성" */
+  genderLabel: string | null;
+  phone: string | null;
+  cell: { id: string; name: string } | null;
+  team: { id: string; name: string } | null;
+  /** 현재 등급 — 관리자 > 팀장 > 팔로워 > 일반 우선순위로 하나 */
+  role: AdminMemberRole;
+  /** "관리자"/"팀장"/"팔로워"/"일반" */
+  roleLabel: string;
+  badge: AdminMemberBadge | null;
+  /** "2026.01.12" */
+  joinedAtLabel: string;
+}
+
+/**
+ * PATCH /users/:id 요청 본문 (관리자 전용, 응답은 AdminMemberDetail) — 보낸 필드만 반영.
+ * cellId/teamId의 null은 "소속 없음". role은 소속 멤버십 역할로 반영된다:
+ * TEAM_LEADER/CELL_LEADER는 해당 소속이 있어야 하고, 다른 쪽 리더 역할은 내려간다(단일 선택 UI).
+ */
+export interface UpdateAdminMemberRequest {
+  name?: string;
+  /** YYYY-MM-DD */
+  birthDate?: string;
+  gender?: Gender;
+  phone?: string;
+  cellId?: string | null;
+  teamId?: string | null;
+  role?: AdminMemberRole;
 }
 
 /** GET /teams 응답 항목 — 프로필 설정의 소속 팀 선택지 */

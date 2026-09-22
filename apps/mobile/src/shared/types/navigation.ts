@@ -27,6 +27,7 @@ export type RootStackParamList = {
   DepartmentActivityWrite: undefined;
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
+  GroupMeetingForm: { meetingId?: string };
   PrayerBoard: undefined;
   // 게시판 ⋮ 메뉴에서 들어가는 내 북마크 목록. 게시판과 화면이 비슷하지만 라우트를 나눈다 —
   // 무엇을 여는지 이름으로 드러나야 딥링크·화면 로그가 둘을 구분한다.
@@ -75,6 +76,7 @@ export type RootStackParamList = {
   AdminCellForm: { cellId?: string } | undefined;
   AdminMemberList: undefined;
   AdminMemberDetail: { memberId: string };
+  AdminMemberEdit: { memberId: string };
   AdminAttendance: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;

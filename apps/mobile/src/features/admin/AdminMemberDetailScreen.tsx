@@ -6,40 +6,44 @@ import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { findAdminMember } from "./adminMock";
+import { useAdminMember, useDeleteAdminMember } from "./api";
 import { MemberBadge } from "./components/MemberBadge";
 
-// 마이페이지 관리자 메뉴 > 회원 관리 > 회원 상세. 2026-09-09 시안 기준 목업.
-// 시안의 "편집"(생년월일·소속·권한 수정)은 후속 작업 — 헤더에 버튼을 아직 안 단다.
+// 마이페이지 관리자 메뉴 > 회원 관리 > 회원 상세 — GET /users/:id 실데이터.
+// 편집은 헤더 "편집" 버튼(RootNavigator 등록부)으로 AdminMemberEdit에 간다 (2026-09-21 시안).
 export function AdminMemberDetailScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminMemberDetail">>();
-  const member = findAdminMember(route.params.memberId);
+  const { data: member, isLoading } = useAdminMember(route.params.memberId);
 
+  const deleteMember = useDeleteAdminMember();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   if (!member) {
     return (
       <View className="flex-1 items-center justify-center bg-background-page">
-        <Text className="text-body-regular text-text-alternative">회원을 찾을 수 없어요.</Text>
+        <Text className="text-body-regular text-text-alternative">
+          {isLoading ? "회원 정보를 불러오고 있어요." : "회원을 찾을 수 없어요."}
+        </Text>
       </View>
     );
   }
 
   const infoRows = [
     { label: "이름", value: member.name },
-    { label: "생년월일", value: member.birthDate },
-    { label: "성별", value: member.gender },
-    { label: "소속 셀", value: member.cellName },
-    { label: "소속 팀", value: member.teamName },
+    { label: "생년월일", value: member.birthDateLabel ?? "미입력" },
+    { label: "성별", value: member.genderLabel ?? "미입력" },
+    { label: "연락처", value: member.phone ?? "미입력" },
+    { label: "소속 셀", value: member.cell?.name ?? "무소속" },
+    { label: "소속 팀", value: member.team?.name ?? "무소속" },
     { label: "권한", value: member.roleLabel },
-    { label: "가입일", value: member.joinedAt },
+    { label: "가입일", value: member.joinedAtLabel },
   ];
 
   const handleDeleteConfirmPress = () => {
-    // TODO(API): 회원 삭제(soft delete) 연동 — 목업이라 목록으로 돌아가기만 한다.
     setDeleteModalVisible(false);
-    navigation.goBack();
+    if (deleteMember.isPending) return;
+    deleteMember.mutate(member.id, { onSuccess: () => navigation.goBack() });
   };
 
   return (

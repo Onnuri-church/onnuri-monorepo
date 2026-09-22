@@ -2,14 +2,19 @@ import type { GroupMeeting, GroupMeetingStatus } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useLayoutEffect, useRef, useState } from "react";
+import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
-import { fetchGroupMeetings } from "./api";
+import { fetchGroupMeetings, useDeleteGroupMeeting } from "./api";
+import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
+import { Header } from "../../shared/components/base/Header";
+import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
+import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useMe } from "../profile/useMe";
 import { FilterChip } from "./components/FilterChip";
 
 type Filter = "all" | GroupMeetingStatus;
@@ -75,6 +80,14 @@ export function GroupMeetingScreen() {
   const { width } = useWindowDimensions();
   const cardWidth = getCardWidth(width);
 
+  // 관리자는 헤더 "편집"으로 카드 위 연필/휴지통을 켠다 (2026-09-21 관리자 시안).
+  const me = useMe();
+  const isAdmin = me?.isAdmin === true;
+  const [editing, setEditing] = useState(false);
+  const deleteDialogRef = useRef<AppDialogRef>(null);
+  const [deleteTarget, setDeleteTarget] = useState<GroupMeeting | null>(null);
+  const deleteMeeting = useDeleteGroupMeeting();
+
   const {
     data: meetings,
     isPending,
@@ -83,6 +96,36 @@ export function GroupMeetingScreen() {
     queryKey: ["group-meetings"],
     queryFn: fetchGroupMeetings,
   });
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      header: () =>
+        isAdmin ? (
+          <Header
+            variant="sub"
+            title="취향소그룹 게시판"
+            rightAction="text"
+            rightLabel={editing ? "완료" : "편집"}
+            onPressRightLabel={() => setEditing((prev) => !prev)}
+          />
+        ) : (
+          <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />
+        ),
+    });
+  }, [navigation, isAdmin, editing]);
+
+  const handleDeletePress = (meeting: GroupMeeting) => {
+    setDeleteTarget(meeting);
+    deleteDialogRef.current?.open();
+  };
+
+  const confirmDelete = () => {
+    deleteDialogRef.current?.close();
+    if (deleteTarget && !deleteMeeting.isPending) {
+      deleteMeeting.mutate(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+  };
 
   const filterRow = (
     <View className="flex-row gap-2 py-3" style={{ paddingHorizontal: LIST_PADDING }}>
@@ -130,28 +173,68 @@ export function GroupMeetingScreen() {
         contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
       >
         {visible.map((meeting) => (
-          <Card
-            key={meeting.id}
-            style={{ width: cardWidth }}
-            imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
-            badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
-            dimmed={meeting.status === "closed"}
-            onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
-          >
-            <Text className="text-label-small text-text-alternative">{meeting.category}</Text>
-            <Text className="text-body-main text-text-normal">{meeting.title}</Text>
-            <View className="mt-auto flex-row items-center justify-between pt-4">
-              <Text className="text-label-small text-text-neutral">
-                {formatDeadline(meeting.deadline)}
-              </Text>
-              <ParticipantAvatars
-                count={meeting.participantCount}
-                avatarUrls={meeting.participantAvatarUrls}
-              />
-            </View>
-          </Card>
+          <View key={meeting.id} style={{ width: cardWidth }}>
+            <Card
+              imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
+              badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
+              dimmed={meeting.status === "closed"}
+              onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
+            >
+              <Text className="text-body-main text-text-normal">{meeting.title}</Text>
+              <View className="mt-auto flex-row items-center justify-between pt-4">
+                <Text className="text-label-small text-text-neutral">
+                  {meeting.deadline ? formatDeadline(meeting.deadline) : ""}
+                </Text>
+                <ParticipantAvatars
+                  count={meeting.participantCount}
+                  avatarUrls={meeting.participantAvatarUrls}
+                />
+              </View>
+            </Card>
+            {/* 편집 모드: 카드 우상단 연필/휴지통 오버레이 (시안 카드 액션) */}
+            {editing && (
+              <View className="absolute right-2 top-2 flex-row gap-1">
+                <Pressable
+                  className="h-7 w-7 items-center justify-center rounded-full bg-background-normal"
+                  onPress={() => navigation.navigate("GroupMeetingForm", { meetingId: meeting.id })}
+                  hitSlop={4}
+                >
+                  <Icon name="edit" size={14} color={colors.icon.normal} />
+                </Pressable>
+                <Pressable
+                  className="h-7 w-7 items-center justify-center rounded-full bg-background-normal"
+                  onPress={() => handleDeletePress(meeting)}
+                  hitSlop={4}
+                >
+                  <Icon name="trash-can" size={14} color={colors.semantic.danger} />
+                </Pressable>
+              </View>
+            )}
+          </View>
         ))}
+
+        {/* 소그룹 생성 — 관리자에게만 보이는 점선 카드 (시안: 카드 목록 끝) */}
+        {isAdmin && (
+          <Pressable
+            className="items-center justify-center gap-2 rounded-2xl border border-dashed border-background-assistive"
+            style={{ width: cardWidth, minHeight: 214 }}
+            onPress={() => navigation.navigate("GroupMeetingForm", {})}
+          >
+            <Icon name="plus" size={16} color={colors.icon.normal} />
+            <Text className="text-body-regular text-text-alternative">소그룹 생성</Text>
+          </Pressable>
+        )}
       </ScrollView>
+
+      {/* 삭제 확정 문구 (2026-09-21 시안) — 소그룹은 hard delete라 참여 기록까지 지워진다 */}
+      <AppDialog
+        ref={deleteDialogRef}
+        title={`'${deleteTarget?.title ?? ""}'를 삭제하시겠습니까?`}
+        description={"게시글과 참여 기록이 모두 삭제되며\n복구할 수 없습니다."}
+        confirmLabel="삭제"
+        cancelLabel="취소"
+        onConfirm={confirmDelete}
+      />
     </View>
   );
 }

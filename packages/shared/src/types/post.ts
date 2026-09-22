@@ -17,7 +17,7 @@ export type PrayerCategory =
 
 export type HobbyGroupStatus = "RECRUITING" | "CLOSED";
 
-/** 소그룹 멤버십 역할. 작성자(개설자) = LEADER(소그룹장) — 참여 승인/거절 권한. */
+/** 소그룹 멤버십 역할. LEADER(소그룹장)는 생성 폼에서 한 명 이상 지정(다중 가능) — 전원이 참여 승인/거절 권한. */
 export type HobbyGroupRole = "LEADER" | "MEMBER";
 
 /** 소그룹 참여는 승인제 — PENDING(신청 취소 가능) / APPROVED(참여 중) / REJECTED. */
@@ -76,6 +76,56 @@ export interface QtShareDetail {
   likedByMe: boolean;
   /** 내가 쓴 글인지 — 수정·삭제 메뉴를 띄울지 정한다. 권한 판단은 서버가 한다 */
   isMine: boolean;
+}
+
+/** 셀 소식 목록 항목 (GET /posts/cell-news?cellId=). */
+export interface CellNewsListItem {
+  id: string;
+  title: string;
+  /** 소식 날짜(eventDate) — "08월 21일" */
+  dateLabel: string;
+  /** 작성 시각(ISO). "38분 전"은 앱이 계산한다 (큐티 상세와 같은 이유 — 캐시에 굳지 않게) */
+  createdAt: string;
+}
+
+/** 게시글 댓글 — Comment 테이블은 게시판 공용이라 셀 소식 전용이 아니다. */
+export interface PostComment {
+  id: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  createdAt: string;
+  content: string;
+}
+
+/** 셀 소식 상세 (GET /posts/cell-news/:id). */
+export interface CellNewsDetail {
+  id: string;
+  cellId: string;
+  title: string;
+  content: string;
+  /** "08월 21일" */
+  dateLabel: string;
+  createdAt: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 본문사진 — 업로드 인프라가 붙기 전까지는 빈 배열 */
+  imageUrls: string[];
+  likeCount: number;
+  likedByMe: boolean;
+  /** 내가 쓴 글인지 — 수정·삭제 메뉴 노출 기준의 일부 (셀장·관리자도 삭제 가능) */
+  isMine: boolean;
+  comments: PostComment[];
+}
+
+/** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */
+export interface CreateCellNewsRequest {
+  cellId: string;
+  title: string;
+  content: string;
+  /** YYYY-MM-DD */
+  eventDate: string;
+  /** 본문 사진 (최대 5장) — POST /uploads로 받은 주소. 갤러리에 자동 포함된다 */
+  imageUrls?: string[];
 }
 
 export interface Post {

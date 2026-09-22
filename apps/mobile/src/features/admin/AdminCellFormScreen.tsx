@@ -2,42 +2,55 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
+import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { uploadImage } from "../../shared/api/upload";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
-import { ADMIN_MEMBERS } from "./adminMock";
+import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
 
-// 셀장/부셀장 선택지 — 회원 API가 붙으면 검색 선택으로 바뀔 수 있어 목업 회원 이름을 쓴다.
-const MEMBER_NAMES = ADMIN_MEMBERS.map((member) => member.name);
-
-// TODO(시안): 활동기간은 시안 placeholder가 "날짜를 선택하세요."라 데이트 피커일 수 있다 —
-//   API 연동 시 확인. 지금은 유통기한 후보를 고정 선택지로 둔다.
-const PERIOD_OPTIONS = ["2026.12.31 까지", "2027.02.28 까지", "2027.08.31 까지"];
-
-// 셀 관리의 셀 생성(헤더 "생성")·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
-// cellId가 있으면 편집 모드로 기존 값을 채워서 연다. 저장은 API 연동 전이라 뒤로가기만 한다.
+// 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
+// cellId가 있으면 편집 모드로 기존 값을 채워서 연다.
 export function AdminCellFormScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminCellForm">>();
   // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
   const editingCell = useCell(route.params?.cellId ?? "");
 
-  const [coverUri, setCoverUri] = useState<string | null>(null);
+  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록. SelectField가 문자열만 다뤄서 이름으로
+  // 고르고 id로 되돌린다. TODO(동명이인): 이름이 겹치면 먼저 찾은 회원이 잡힌다 —
+  // 검색 선택 UI로 바꿀 때 함께 해결.
+  const { data: members } = useAdminMembers();
+  const memberNames = (members ?? []).map((member) => member.name);
+  const findMemberIdByName = (name: string | null) =>
+    (members ?? []).find((member) => member.name === name)?.id ?? null;
+
+  // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
+  // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
+  const [coverUri, setCoverUri] = useState<string | null>(editingCell?.coverImageUrl ?? null);
   const [name, setName] = useState(editingCell?.name ?? "");
-  const [leader, setLeader] = useState<string | null>(editingCell?.leaderName ?? null);
+  const [leaderName, setLeaderName] = useState<string | null>(editingCell?.leaderName ?? null);
   const [hasViceLeader, setHasViceLeader] = useState(editingCell ? editingCell.viceLeaderName !== null : true);
-  const [viceLeader, setViceLeader] = useState<string | null>(editingCell?.viceLeaderName ?? null);
+  const [viceLeaderName, setViceLeaderName] = useState<string | null>(editingCell?.viceLeaderName ?? null);
 
   // 시안의 비활성 등록하기 — 필수(셀이름·셀장·활동기간)를 채워야 활성. 부셀장은 체크 시에만 필수.
-  // 편집 모드는 목업에 기간 데이터가 없어 첫 선택지로 채워둔다 (API 연동 시 실제 값으로).
-  const [period, setPeriod] = useState<string | null>(editingCell ? PERIOD_OPTIONS[0] : null);
+  // 활동기간 = 셀 턴 종료일 하나 (2026-09-21 A안 시안: "셀 턴 종료일을 선택하세요"로 확정).
+  const [period, setPeriod] = useState<string | null>(editingCell?.expiresAt ?? null);
+
+  const createCell = useCreateCell();
+  const updateCell = useUpdateCell(route.params?.cellId ?? "");
+  const saving = createCell.isPending || updateCell.isPending;
   const canSubmit =
-    name.trim() !== "" && leader !== null && period !== null && (!hasViceLeader || viceLeader !== null);
+    !saving &&
+    name.trim() !== "" &&
+    leaderName !== null &&
+    period !== null &&
+    (!hasViceLeader || viceLeaderName !== null);
 
   const handleCoverUploadPress = async () => {
     // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
@@ -46,9 +59,31 @@ export function AdminCellFormScreen() {
     setCoverUri(result.assets[0].uri);
   };
 
-  const handleSubmitPress = () => {
-    // TODO(API): 셀 생성/수정 연동 — 목업 단계라 목록으로 돌아가기만 한다.
-    navigation.goBack();
+  const handleSubmitPress = async () => {
+    const leaderId = findMemberIdByName(leaderName);
+    if (!leaderId || !period) return;
+
+    let coverImageUrl: string | null = null;
+    try {
+      coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      return;
+    }
+
+    const payload = {
+      name: name.trim(),
+      leaderId,
+      viceLeaderId: hasViceLeader ? findMemberIdByName(viceLeaderName) : null,
+      expiresAt: period,
+      coverImageUrl,
+    };
+
+    const mutation = editingCell ? updateCell : createCell;
+    mutation.mutate(payload, {
+      onSuccess: () => navigation.goBack(),
+      onError: () => Alert.alert("저장 실패", "잠시 후 다시 시도해주세요."),
+    });
   };
 
   return (
@@ -74,9 +109,9 @@ export function AdminCellFormScreen() {
           <SelectField
             label="셀장"
             placeholder="셀장을 선택하세요."
-            options={MEMBER_NAMES}
-            value={leader}
-            onChange={setLeader}
+            options={memberNames}
+            value={leaderName}
+            onChange={setLeaderName}
           />
 
           {/* 부셀장 — 라벨 옆 체크박스. 해제하면 선택줄이 사라지고 부셀장 없이 생성된다 (시안). */}
@@ -101,9 +136,9 @@ export function AdminCellFormScreen() {
                 <SelectField
                   label=""
                   placeholder="부셀장을 선택하세요."
-                  options={MEMBER_NAMES.filter((memberName) => memberName !== leader)}
-                  value={viceLeader}
-                  onChange={setViceLeader}
+                  options={memberNames.filter((memberName) => memberName !== leaderName)}
+                  value={viceLeaderName}
+                  onChange={setViceLeaderName}
                 />
               </View>
             ) : (
@@ -124,10 +159,9 @@ export function AdminCellFormScreen() {
             />
           </View>
 
-          <SelectField
+          <DateField
             label="활동기간"
-            placeholder="날짜를 선택하세요."
-            options={PERIOD_OPTIONS}
+            placeholder="셀 턴 종료일을 선택하세요."
             value={period}
             onChange={setPeriod}
           />

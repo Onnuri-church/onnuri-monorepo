@@ -69,6 +69,24 @@ export class EnvironmentVariables {
   @IsString()
   GOOGLE_CLIENT_IDS?: string;
 
+  // Supabase Storage (이미지 업로드) — SERVICE_ROLE_KEY가 비어 있으면 업로드 API가
+  // 503을 돌려준다 (나머지 기능은 정상). URL은 비워두면 DATABASE_URL의 프로젝트
+  // ref(postgres.<ref>)에서 https://<ref>.supabase.co 를 만들어 쓴다.
+  @ValidateIf((e: EnvironmentVariables) => Boolean(e.SUPABASE_URL))
+  @Matches(/^https:\/\//, {
+    message: 'SUPABASE_URL은 https:// 로 시작해야 합니다.',
+  })
+  SUPABASE_URL?: string;
+
+  @IsOptional()
+  @IsString()
+  SUPABASE_SERVICE_ROLE_KEY?: string;
+
+  // 업로드 파일을 담을 버킷 이름 — 없으면 첫 업로드 때 public 버킷으로 자동 생성한다.
+  @IsOptional()
+  @IsString()
+  SUPABASE_STORAGE_BUCKET?: string;
+
   // 비어 있으면 Sentry 전송이 꺼진다. 값이 있을 때만 형식을 검사한다.
   @ValidateIf((e: EnvironmentVariables) => Boolean(e.SENTRY_DSN))
   @Matches(/^https:\/\/[^@]+@[^/]+\/\d+$/, {

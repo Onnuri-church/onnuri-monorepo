@@ -1,10 +1,11 @@
+import type { CellNewsListItem } from "@onnuri/shared";
 import { Pressable, StyleSheet, Text } from "react-native";
 
 import { colors } from "../../../shared/theme/tokens";
-import type { CellNews } from "../cellDetail";
+import { toTimeAgo } from "../../../shared/utils/date";
 
 interface CellNewsRowProps {
-  news: CellNews;
+  news: CellNewsListItem;
   onPress?: () => void;
 }
 
@@ -22,7 +23,9 @@ export function CellNewsRow({ news, onPress }: CellNewsRowProps) {
       <Text className="text-body-main text-text-normal" numberOfLines={1}>
         {news.title}
       </Text>
-      <Text className="text-caption-main text-text-alternative">{news.dateLabel}</Text>
+      <Text className="text-caption-main text-text-alternative">
+        {news.dateLabel} · {toTimeAgo(news.createdAt)}
+      </Text>
     </Pressable>
   );
 }
