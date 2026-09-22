@@ -64,30 +64,33 @@ export class UploadsService {
   }
 
   private putObject(path: string, file: Express.Multer.File) {
-    const { url, serviceRoleKey, bucket } = this.storage;
+    const { url, bucket } = this.storage;
     return fetch(`${url}/storage/v1/object/${bucket}/${path}`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        'Content-Type': file.mimetype,
-      },
+      headers: { ...this.authHeaders(), 'Content-Type': file.mimetype },
       body: new Uint8Array(file.buffer),
     });
   }
 
   private async createBucket() {
-    const { url, serviceRoleKey, bucket } = this.storage;
+    const { url, bucket } = this.storage;
     const response = await fetch(`${url}/storage/v1/bucket`, {
       method: 'POST',
-      headers: {
-        Authorization: `Bearer ${serviceRoleKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
       // 공개 버킷 — 앱이 인증 없이 <public URL>로 사진을 그리는 구조라서다.
       body: JSON.stringify({ id: bucket, name: bucket, public: true }),
     });
     if (!response.ok && response.status !== 409) {
       this.logger.error(`bucket create failed: ${response.status} ${await response.text()}`);
     }
+  }
+
+  // 키 형식이 두 세대다: 새 형식(sb_secret_…)은 apikey 헤더로, 옛 형식(JWT — 점 2개)은
+  // Bearer로 보낸다. 새 키를 Bearer에 넣으면 "Invalid Compact JWS"로 거절된다 (실측).
+  private authHeaders(): Record<string, string> {
+    const key = this.storage.serviceRoleKey!;
+    return key.includes('.')
+      ? { Authorization: `Bearer ${key}` }
+      : { apikey: key };
   }
 }
