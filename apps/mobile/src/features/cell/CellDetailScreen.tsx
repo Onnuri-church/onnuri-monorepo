@@ -277,6 +277,18 @@ export function CellDetailScreen() {
                   }
                 />
               ))}
+              {/* 사진이 한 장도 없으면 섹션이 없어 추가 슬롯도 사라진다 — 첫 사진용 추가 슬롯만 그린다 */}
+              {visibleGallerySections.length === 0 && canPost && !selecting && (
+                <GalleryMonthGrid
+                  month=""
+                  tiles={[]}
+                  showMonthLabel={false}
+                  selecting={false}
+                  selectedIds={[]}
+                  onTilePress={() => {}}
+                  onAddPress={handleAddPhotoPress}
+                />
+              )}
             </View>
           </View>
         )}
