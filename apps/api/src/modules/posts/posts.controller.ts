@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -17,6 +18,7 @@ import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guar
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
 import { PostsService } from './posts.service';
@@ -71,6 +73,16 @@ export class PostsController {
     @Body() dto: CreateCellNewsDto,
   ) {
     return this.postsService.createCellNews(user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('cell-news/:id')
+  updateCellNews(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateCellNewsDto,
+  ) {
+    return this.postsService.updateCellNews(id, user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)

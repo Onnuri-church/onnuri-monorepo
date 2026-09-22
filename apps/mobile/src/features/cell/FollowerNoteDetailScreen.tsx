@@ -51,7 +51,7 @@ export function FollowerNoteDetailScreen() {
             {
               icon: "edit",
               label: "수정하기",
-              onPress: () => navigation.navigate("FollowerNoteWrite", { cellId }),
+              onPress: () => navigation.navigate("FollowerNoteWrite", { cellId, noteId }),
             },
             {
               icon: "trash-can",
@@ -62,7 +62,7 @@ export function FollowerNoteDetailScreen() {
         />
       ),
     });
-  }, [navigation, cellId]);
+  }, [navigation, cellId, noteId]);
 
   const confirmDelete = () => {
     deleteDialogRef.current?.close();

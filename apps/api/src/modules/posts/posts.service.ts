@@ -16,6 +16,7 @@ import type {
 import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
+import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 
 // "내 좋아요"를 고르는 조건. 게스트(userId 없음)는 좋아요가 있을 수 없는데, Prisma는
 // where의 undefined를 "조건 없음"으로 보기 때문에 그냥 넘기면 남의 좋아요까지 딸려와
@@ -197,6 +198,8 @@ export class PostsService {
       title: post.title ?? '',
       content: post.content,
       dateLabel: post.eventDate ? toDayLabel(post.eventDate) : '',
+      // 소식은 작성 시 eventDate가 필수라 실데이터에선 항상 있다 — 방어만 해둔다.
+      eventDate: post.eventDate?.toISOString().slice(0, 10) ?? '',
       createdAt: post.createdAt.toISOString(),
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,
@@ -252,11 +255,60 @@ export class PostsService {
     return this.findCellNewsDetail(post.id, userId);
   }
 
+  // 셀 소식 수정 — 권한은 삭제와 동일(작성자·셀장/부셀장·관리자). imageUrls를 보내면
+  // 본문 사진을 통째로 교체한다 (남길 사진도 목록에 포함해서 보내는 계약).
+  async updateCellNews(
+    id: string,
+    userId: string,
+    dto: UpdateCellNewsDto,
+  ): Promise<CellNewsDetail> {
+    const post = await this.findEditableCellNews(id, userId);
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.post.update({
+        where: { id },
+        data: {
+          ...(dto.title !== undefined && { title: dto.title }),
+          ...(dto.content !== undefined && { content: dto.content }),
+          ...(dto.eventDate !== undefined && {
+            eventDate: new Date(dto.eventDate),
+          }),
+        },
+      });
+      if (dto.imageUrls !== undefined) {
+        await tx.image.deleteMany({ where: { postId: id, kind: 'POST_CONTENT' } });
+        const takenOn = new Date(dto.eventDate ?? post.eventDate ?? new Date());
+        await tx.image.createMany({
+          data: dto.imageUrls.map((url, index) => ({
+            url,
+            kind: 'POST_CONTENT' as const,
+            postId: id,
+            uploadedById: userId,
+            takenOn,
+            sortOrder: index,
+          })),
+        });
+      }
+    });
+
+    return this.findCellNewsDetail(id, userId);
+  }
+
   // 셀 소식 삭제 (soft) — 작성자 본인, 그 셀의 셀장/부셀장, 관리자만.
   async deleteCellNews(id: string, userId: string): Promise<{ id: string }> {
+    await this.findEditableCellNews(id, userId);
+    await this.prisma.post.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+    return { id };
+  }
+
+  // 수정·삭제 공통 권한: 작성자 본인, 그 셀의 셀장/부셀장, 관리자.
+  private async findEditableCellNews(id: string, userId: string) {
     const post = await this.prisma.post.findFirst({
       where: { id, board: 'CELL_NEWS', deletedAt: null },
-      select: { id: true, cellId: true, authorId: true },
+      select: { id: true, cellId: true, authorId: true, eventDate: true },
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
 
@@ -277,15 +329,10 @@ export class PostsService {
       });
       const isCellLeader = (requester?.cellMemberships.length ?? 0) > 0;
       if (!requester?.isAdmin && !isCellLeader) {
-        throw new ForbiddenException('삭제 권한이 없습니다.');
+        throw new ForbiddenException('수정·삭제 권한이 없습니다.');
       }
     }
-
-    await this.prisma.post.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-    return { id };
+    return post;
   }
 
   // 댓글 작성 — 게시판 공용 (Comment 테이블). 로그인한 사용자면 누구나 달 수 있다.

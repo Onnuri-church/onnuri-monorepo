@@ -60,14 +60,14 @@ export type RootStackParamList = {
   // 셀은 관리자가 만들고 종료하는 유동 데이터라 화면 하나가 cellId로 어떤 셀이든 그린다.
   CellDetail: { cellId: string };
   CellNewsDetail: { cellId: string; newsId: string };
-  CellNewsWrite: { cellId: string };
+  CellNewsWrite: { cellId: string; newsId?: string };
   // 갤러리 사진 뷰어. index는 월 섹션을 이어붙인 평탄화 순번이다.
   CellGalleryPhoto: { cellId: string; index: number };
   // 관리 탭에서 진입하는 셀장·관리자 전용 화면들.
   CellMemberManage: { cellId: string };
   CellAttendance: { cellId: string };
   FollowerNoteBoard: { cellId: string };
-  FollowerNoteWrite: { cellId: string };
+  FollowerNoteWrite: { cellId: string; noteId?: string };
   FollowerNoteDetail: { cellId: string; noteId: string };
   // 마이페이지 관리자 메뉴에서 진입하는 관리자 전용 화면들 (2026-09-09 시안).
   // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라

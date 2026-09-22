@@ -10,6 +10,7 @@ import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
+import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -120,6 +121,31 @@ export class FollowerNotesService {
       });
     });
 
+    return this.findAll(requesterId, cellId);
+  }
+
+  // 노트 수정 — 답변만 바꾼다 (셀모임 날짜는 주간 보고의 정체성이라 수정 불가 —
+  // 날짜를 바꾸려면 삭제 후 재작성). 권한은 작성과 동일.
+  async update(
+    requesterId: string,
+    cellId: string,
+    noteId: string,
+    dto: UpdateFollowerNoteDto,
+  ): Promise<FollowerNoteInfo[]> {
+    await this.assertIsCellLeader(requesterId, cellId);
+    if (!dto.answers[0]?.trim()) {
+      throw new BadRequestException('첫 문항(요즘 상황과 기도제목)은 필수입니다.');
+    }
+    const note = await this.findNoteInCell(noteId, cellId);
+
+    await this.prisma.followerNote.update({
+      where: { id: note.id },
+      data: {
+        answer1: dto.answers[0],
+        answer2: dto.answers[1]?.trim() ? dto.answers[1] : null,
+        answer3: dto.answers[2]?.trim() ? dto.answers[2] : null,
+      },
+    });
     return this.findAll(requesterId, cellId);
   }
 

@@ -99,9 +99,10 @@ export function FollowerNoteBoardScreen() {
               onPress={() =>
                 navigation.navigate("FollowerNoteDetail", { cellId, noteId: note.id })
               }
-              // 작성자(셀장) 본인 글 목업 — 작성자 API가 붙으면 내 글 여부로 교체.
               onEditPress={
-                canWrite ? () => navigation.navigate("FollowerNoteWrite", { cellId }) : undefined
+                canWrite
+                  ? () => navigation.navigate("FollowerNoteWrite", { cellId, noteId: note.id })
+                  : undefined
               }
               onDeletePress={canWrite ? () => handleDeletePress(note.id) : undefined}
               onCommentSubmit={(content) => addComment.mutate({ noteId: note.id, content })}

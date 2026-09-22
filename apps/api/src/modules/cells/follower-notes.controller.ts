@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
+import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 import { FollowerNotesService } from './follower-notes.service';
 
 // 팔로워 노트는 열람부터 제한된 케어 기록이라(셀장·관리자만) 전부 필수 인증이다 —
@@ -34,6 +36,16 @@ export class FollowerNotesController {
     @Body() dto: CreateFollowerNoteDto,
   ) {
     return this.followerNotesService.create(user.sub, cellId, dto);
+  }
+
+  @Patch(':noteId')
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Param('cellId') cellId: string,
+    @Param('noteId') noteId: string,
+    @Body() dto: UpdateFollowerNoteDto,
+  ) {
+    return this.followerNotesService.update(user.sub, cellId, noteId, dto);
   }
 
   @Delete(':noteId')

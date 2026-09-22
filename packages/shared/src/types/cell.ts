@@ -112,3 +112,11 @@ export interface CreateFollowerNoteRequest {
   /** 3문항 답변 — 첫 문항은 필수 (화면 검증과 동일) */
   answers: string[];
 }
+
+/**
+ * PATCH /cells/:id/follower-notes/:noteId 요청 본문 — 답변만 수정한다
+ * (셀모임 날짜는 수정 불가: 날짜를 바꾸려면 삭제 후 재작성).
+ */
+export interface UpdateFollowerNoteRequest {
+  answers: string[];
+}
