@@ -1,4 +1,5 @@
 import type {
+  AdminAttendanceResponse,
   AdminMemberDetail,
   AdminMemberSummary,
   CellDetailResponse,
@@ -56,6 +57,27 @@ export function useDeleteAdminMember() {
     mutationFn: (memberId: string) =>
       apiClient.delete<{ id: string }>(`/users/${memberId}`).then((res) => res.data),
     onSuccess: invalidateMembers,
+  });
+}
+
+/** GET /admin/attendance 파라미터 — scope가 cell/team이면 groupId 필수 (서버 검증) */
+export interface AdminAttendanceParams {
+  /** YYYY-MM */
+  month: string;
+  scope: "all" | "cell" | "team";
+  groupId?: string;
+}
+
+// 출석부 집계 (관리자 전용) — 셀·개인 출석 기록을 주차 × 회원 O/X/- 표로 묶어 내려준다.
+export function useAdminAttendance(params: AdminAttendanceParams) {
+  return useQuery({
+    queryKey: ["admin", "attendance", params],
+    queryFn: () =>
+      apiClient
+        .get<AdminAttendanceResponse>("/admin/attendance", { params })
+        .then((res) => res.data),
+    // 특정 셀/팀 필터인데 아직 선택지가 안 뽑혔으면(목록 로딩 전) 기다린다.
+    enabled: params.scope === "all" || params.groupId !== undefined,
   });
 }
 

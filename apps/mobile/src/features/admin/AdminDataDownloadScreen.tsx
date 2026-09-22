@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
@@ -5,7 +6,8 @@ import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppShee
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
-import { ADMIN_CELL_NAMES, ADMIN_TEAM_NAMES } from "./adminMock";
+import { useCells } from "../cell/api";
+import { fetchTeams } from "../profile/api";
 import { RadioOption } from "./components/RadioOption";
 
 type DataKind = "member" | "attendance" | "both";
@@ -33,7 +35,13 @@ export function AdminDataDownloadScreen() {
   const [selectedTeam, setSelectedTeam] = useState<string | null>(null);
   const pickerSheetRef = useRef<AppSheetRef>(null);
 
-  const pickerOptions = target === "team" ? ADMIN_TEAM_NAMES : ADMIN_CELL_NAMES;
+  // 셀/팀 선택지는 실데이터 (다운로드 생성 자체는 아직 미연동).
+  const { data: cells } = useCells();
+  const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: fetchTeams });
+  const pickerOptions =
+    target === "team"
+      ? (teams ?? []).map((team) => team.name)
+      : (cells ?? []).map((cell) => cell.name);
   const pickerValue = target === "team" ? selectedTeam : selectedCell;
 
   // 세 질문에 다 답해야 활성 — 특정 셀/팀이면 대상 선택까지 (시안의 비활성 회색 버튼).
