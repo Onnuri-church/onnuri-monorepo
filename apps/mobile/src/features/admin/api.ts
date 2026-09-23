@@ -3,6 +3,8 @@ import type {
   AdminMemberDetail,
   AdminMemberSummary,
   CellDetailResponse,
+  CreateHomeBannerRequest,
+  HomeBanner,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -140,5 +142,44 @@ export function useRemoveCellMember(cellId: string) {
         .delete<{ id: string }>(`/cells/${cellId}/members/${userId}`)
         .then((res) => res.data),
     onSuccess: invalidateCells,
+  });
+}
+
+// ---------------------------------------------------------------------
+// 홈 배너 관리 — 활성 배너 = 최신 등록 1건, 내리기 = 삭제(이전 배너가 다시 표시).
+// ---------------------------------------------------------------------
+
+// 등록·삭제가 관리 목록과 홈 배너를 함께 바꾼다.
+function useInvalidateBanners() {
+  const queryClient = useQueryClient();
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: ["admin", "banners"] });
+    void queryClient.invalidateQueries({ queryKey: ["banner"] });
+  };
+}
+
+export function useHomeBanners() {
+  return useQuery({
+    queryKey: ["admin", "banners"],
+    queryFn: () =>
+      apiClient.get<HomeBanner[]>("/notices/banners").then((res) => res.data),
+  });
+}
+
+export function useCreateHomeBanner() {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: (payload: CreateHomeBannerRequest) =>
+      apiClient.post<HomeBanner>("/notices/banners", payload).then((res) => res.data),
+    onSuccess: invalidateBanners,
+  });
+}
+
+export function useDeleteHomeBanner() {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: (bannerId: string) =>
+      apiClient.delete(`/notices/banners/${bannerId}`).then((res) => res.data),
+    onSuccess: invalidateBanners,
   });
 }
