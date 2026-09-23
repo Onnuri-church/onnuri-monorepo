@@ -40,13 +40,14 @@ function deriveRole(me: MeResponse | undefined, isAdmin: boolean): UserRole {
 }
 
 // 등급별 관리 메뉴 (시안 확정). 일반 유저는 관리 카드가 없다.
-// TODO(라우트): 나머지 대상 화면들(게시판 관리·팔로워 노트·출석 관리·기도제목 관리)이
+// TODO(라우트): 나머지 대상 화면들(게시판 관리·팔로워 노트·출석 관리)이
 //   아직 없어 onPress를 비워둔다. 화면이 생기면 라우트 등록과 함께 연결.
 interface RoleLinkHandlers {
   onTeamMemberPress?: () => void;
   onCellManagePress?: () => void;
   onMemberListPress?: () => void;
   onAttendanceSheetPress?: () => void;
+  onPrayerManagePress?: () => void;
 }
 
 function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers): MenuLink[] {
@@ -60,12 +61,13 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
       return [{ label: "팔로워 노트" }, { label: "출석 관리" }];
     case "admin":
       // 2026-09-09 관리자 시안 기준 4개 — 첫 항목은 "팔로워 노트"였다가 셀 관리로 변경
-      // (2026-09-10 지환님: 셀 전체 목록에서 생성·편집·삭제). 기도제목 관리는 시안 미도착.
+      // (2026-09-10 지환님: 셀 전체 목록에서 생성·편집·삭제). 기도제목 관리는 별도 화면이
+      // 아니라 같은 게시판이다 — 관리자에겐 실명 표시·삭제 줄이 붙는다 (2026-09-23 확정).
       return [
         { label: "셀 관리", onPress: handlers.onCellManagePress },
         { label: "회원 관리", onPress: handlers.onMemberListPress },
         { label: "출석부", onPress: handlers.onAttendanceSheetPress },
-        { label: "기도제목 관리" },
+        { label: "기도제목 관리", onPress: handlers.onPrayerManagePress },
       ];
     case "member":
       return [];
@@ -102,6 +104,7 @@ export function MyPageScreen() {
     onCellManagePress: () => navigation.navigate("AdminCellManage"),
     onMemberListPress: () => navigation.navigate("AdminMemberList"),
     onAttendanceSheetPress: () => navigation.navigate("AdminAttendance"),
+    onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
   });
 
   const handleLogoutPress = () => {
