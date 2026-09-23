@@ -29,10 +29,6 @@ const SCREEN_PADDING = 20;
 // 취향 소그룹 띠배너 시안 확정값 362x104. 폭은 좌우 여백이 정하므로 비율로만 고정한다.
 const GROUP_BANNER_ASPECT_RATIO = 362 / 104;
 
-// 배너 슬롯 비율 — WeeklySermonBanner의 시안 확정값(362x240)과 같다. 포스터 배너도
-// 같은 자리를 쓰므로 같은 비율로 자르고, 원본 비율은 크게 보기(BannerViewer)에서 보여준다.
-const BANNER_ASPECT_RATIO = 362 / 240;
-
 // 관리자가 등록한 배너가 하나도 없을 때의 기본 문구 (홈 배너 관리에서 등록하면 교체된다).
 const DEFAULT_SERMON = {
   seriesLabel: "8월 설교 시리즈",
@@ -94,28 +90,25 @@ export function HomeScreen() {
     <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="pb-10">
       <View className="px-5 pt-8">
         {banner?.kind === "POSTER" && banner.imageUrl !== null ? (
-          /* 포스터 배너 — 탭하면 원본 비율로 크게 보기 */
-          <Pressable
-            className="overflow-hidden rounded-2.5 active:opacity-80"
-            style={{ aspectRatio: BANNER_ASPECT_RATIO }}
-            onPress={() =>
+          /* 포스터 배너 — 텍스트 없이 이미지 + 주보 버튼만 남는다 (2026-09-23 확정).
+             이미지를 탭하면 원본 비율로 크게 보기. */
+          <WeeklySermonBanner
+            poster
+            imageUrl={banner.imageUrl}
+            onPressImage={() =>
               navigation.navigate("BannerViewer", {
                 imageUrl: banner.imageUrl as string,
                 title: banner.title,
               })
             }
-          >
-            <Image
-              source={{ uri: banner.imageUrl }}
-              style={StyleSheet.absoluteFill}
-              resizeMode="cover"
-            />
-          </Pressable>
+            onPressShortcut={() => navigation.navigate("Bulletin")}
+          />
         ) : (
           <WeeklySermonBanner
             seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
             passage={banner?.passage ?? DEFAULT_SERMON.passage}
             title={banner?.title ?? DEFAULT_SERMON.title}
+            imageUrl={banner?.imageUrl ?? undefined}
             onPressShortcut={() => navigation.navigate("Bulletin")}
           />
         )}

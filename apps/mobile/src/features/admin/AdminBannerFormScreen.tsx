@@ -27,6 +27,7 @@ export function AdminBannerFormScreen() {
   const [posterUri, setPosterUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // 말씀 배너의 배경사진은 선택, 포스터 배너의 이미지는 필수.
   const canSubmit =
     !saving &&
     title.trim() !== "" &&
@@ -43,13 +44,12 @@ export function AdminBannerFormScreen() {
     if (!canSubmit) return;
     setSaving(true);
     try {
-      let imageUrl: string | undefined;
-      if (kind === "POSTER" && posterUri) {
-        imageUrl = await uploadImage(posterUri);
-      }
+      // 두 유형 다 이미지를 가질 수 있다 — 말씀 배너는 배경사진(선택), 포스터는 필수.
+      const imageUrl = posterUri ? await uploadImage(posterUri) : undefined;
       await createBanner.mutateAsync({
         title: title.trim(),
-        ...(kind === "SERMON" ? { passage: passage.trim() } : { imageUrl }),
+        ...(kind === "SERMON" && { passage: passage.trim() }),
+        ...(imageUrl && { imageUrl }),
       });
       navigation.goBack();
     } catch {
@@ -99,6 +99,20 @@ export function AdminBannerFormScreen() {
               <Text className="-mt-2 text-caption-main text-text-alternative">
                 "{new Date().getMonth() + 1}월 설교 시리즈" 라벨은 자동으로 붙어요
               </Text>
+              <View className="py-3">
+                <Text className="text-body-main text-text-normal">배경사진 (선택)</Text>
+                <View className="mt-4 h-43">
+                  <ImageSlot
+                    imageUri={posterUri}
+                    outline
+                    onUploadPress={handlePosterUploadPress}
+                    onDeletePress={() => setPosterUri(null)}
+                  />
+                </View>
+                <Text className="mt-2 text-caption-main text-text-alternative">
+                  없으면 지금처럼 회색 배경에 글만 올라가요
+                </Text>
+              </View>
             </>
           ) : (
             <>

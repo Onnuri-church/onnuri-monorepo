@@ -38,12 +38,13 @@ export class NoticesService {
   constructor(private readonly prisma: PrismaService) {}
 
   private toBanner(row: BannerRow): HomeBanner {
-    const kind = row.imageUrl ? 'POSTER' : 'SERMON';
+    // 유형 판별은 구절(content) 유무 — 말씀 배너도 배경사진을 가질 수 있어 이미지로는 못 가른다.
+    const kind = row.content !== null ? 'SERMON' : 'POSTER';
     return {
       id: row.id,
       kind,
       title: row.title,
-      passage: kind === 'SERMON' ? row.content : null,
+      passage: row.content,
       seriesLabel: kind === 'SERMON' ? toSeriesLabel(row.createdAt) : null,
       imageUrl: row.imageUrl,
       createdAt: row.createdAt.toISOString(),
@@ -81,7 +82,8 @@ export class NoticesService {
         type: 'BANNER',
         title: dto.title,
         // 말씀 배너의 구절은 content 컬럼에 담는다 — Notice에 전용 컬럼이 없어서다.
-        content: dto.imageUrl ? null : (dto.passage ?? null),
+        // 이미지는 두 유형 다 가질 수 있다 (말씀 배너의 배경사진 / 포스터).
+        content: dto.passage ?? null,
         imageUrl: dto.imageUrl ?? null,
         authorId: adminId,
       },
