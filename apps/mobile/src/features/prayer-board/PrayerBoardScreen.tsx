@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FilterBar } from "../../shared/components/base/FilterBar";
@@ -12,14 +12,8 @@ import { SearchBar } from "../../shared/components/base/SearchBar";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import {
-  MOCK_MY_ROLE,
-  PRAYER_CATEGORIES,
-  deletePrayer,
-  fetchPrayers,
-  fetchPrayersForAdmin,
-  type PrayerCategory,
-} from "./api";
+import { PRAYER_CATEGORIES, deletePrayer, fetchPrayers, type PrayerCategory } from "./api";
+import { useMe } from "../profile/useMe";
 import { useToggleBookmark } from "./useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./components/PrayerCard";
 import { PrayerMenu } from "./components/PrayerMenu";
@@ -39,11 +33,13 @@ export function PrayerBoardScreen() {
 
   // 관리자용 게시판(시안: 기도제목 게시판-관리자용)은 별도 화면이 아니라 같은 게시판의 role 분기다.
   // 등록 개수 문구 대신 경고 문구, 북마크·글쓰기 FAB 없음, 카드마다 삭제 줄이 항상 붙는다.
-  const isAdmin = MOCK_MY_ROLE === "admin";
+  // 익명 글의 실명 노출은 서버가 요청자 기준으로 판단한다 — 여기서는 화면 분기만 한다.
+  const isAdmin = useMe()?.isAdmin === true;
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["prayers", category, isAdmin],
-    queryFn: () => (isAdmin ? fetchPrayersForAdmin(category) : fetchPrayers(category)),
+    // isAdmin이 로그인 정보 로딩 후 뒤늦게 true가 되면 실명 붙은 목록으로 다시 받는다.
+    queryKey: ["prayers", "board", category, isAdmin],
+    queryFn: () => fetchPrayers(category),
   });
 
   const handleDeletePress = (prayer: PrayerRequest) => {
@@ -52,7 +48,11 @@ export function PrayerBoardScreen() {
   };
 
   const handleDeleteConfirm = async () => {
-    if (pendingDelete) await deletePrayer(pendingDelete.id);
+    try {
+      if (pendingDelete) await deletePrayer(pendingDelete.id);
+    } catch {
+      Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
+    }
     dialogRef.current?.close();
     setPendingDelete(null);
     // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
@@ -107,7 +107,7 @@ export function PrayerBoardScreen() {
               editing={isAdmin}
               deleteOnly
               onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
-              onToggleBookmark={() => toggleBookmark(prayer.id)}
+              onToggleBookmark={() => toggleBookmark(prayer.id, prayer.bookmarked ?? false)}
               onDelete={() => handleDeletePress(prayer)}
             />
           ))}

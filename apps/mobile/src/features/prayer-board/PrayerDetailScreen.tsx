@@ -52,7 +52,7 @@ export function PrayerDetailScreen() {
           title="기도제목"
           rightAction="bookmark"
           bookmarked={data?.bookmarked}
-          onPressBookmark={() => toggleBookmark(id)}
+          onPressBookmark={() => toggleBookmark(id, data?.bookmarked ?? false)}
         />
       ),
     });
@@ -133,13 +133,15 @@ export function PrayerDetailScreen() {
             {data.content}
           </Text>
 
-          {/* 사진. 목업에 이미지가 없어 지금은 시안처럼 회색 자리만 잡힌다.
-              시안은 각진 모서리라 Thumbnail의 기본 라운드를 끈다. */}
-          <Thumbnail
-            ratio={PHOTO_RATIO}
-            className="rounded-none"
-            style={{ marginTop: GAP_BODY_TO_PHOTO }}
-          />
+          {/* 첨부 사진 — 없으면 영역을 그리지 않는다. 시안은 각진 모서리라 기본 라운드를 끈다. */}
+          {data.photoUrl !== null && (
+            <Thumbnail
+              source={{ uri: data.photoUrl }}
+              ratio={PHOTO_RATIO}
+              className="rounded-none"
+              style={{ marginTop: GAP_BODY_TO_PHOTO }}
+            />
+          )}
         </>
       )}
     </ScrollView>

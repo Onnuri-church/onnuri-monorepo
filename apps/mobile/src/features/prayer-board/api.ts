@@ -1,8 +1,17 @@
-import type { UserRole } from "../my-page/types";
+import type {
+  CreatePrayerRequest,
+  PrayerCategoryValue,
+  PrayerDetailResponse,
+  PrayerListItem,
+  PrayerListResponse,
+  UpdatePrayerRequest,
+} from "@onnuri/shared";
+
+import { apiClient } from "../../shared/api/client";
 import type { PrayerRequest } from "./components/PrayerCard";
 
-// API 연동 전 임시 데이터. 서버를 따로 띄우지 않아도 화면을 확인할 수 있게 앱 안에서 돌려준다
-// (취향 소그룹·부서활동과 같은 방식). 연동할 때 아래 함수 본문만 apiClient 호출로 바꾼다.
+// 서버는 enum 값·ISO 날짜만 내리고 표시 문구(카테고리 한글명·작성일·D-day)는 여기서 조립한다.
+// 예외는 authorName — 익명/관리자 실명 노출 판단이 서버 권한이라 완성 문구로 내려온다.
 
 export const PRAYER_CATEGORIES = [
   { value: "all", label: "전체" },
@@ -15,10 +24,60 @@ export const PRAYER_CATEGORIES = [
 
 export type PrayerCategory = (typeof PRAYER_CATEGORIES)[number]["value"];
 
-// 내 등급 목업 — cellDetail의 MOCK_MY_ROLE과 같은 임시 값이다. "admin"으로 바꾸면 
-// 게시판이 관리자용(작성자 실명 표시·카드 삭제 줄)으로 보인다. 유저 정보 연동 시 함께 정리.
-// 등급 member가 기본 값임
-export const MOCK_MY_ROLE: UserRole = "member";
+// 필터 키 ↔ 서버 enum. 라벨은 카드·작성 폼이 같이 쓴다.
+const CATEGORY_TO_SERVER: Record<Exclude<PrayerCategory, "all">, PrayerCategoryValue> = {
+  personal: "PERSONAL_SPIRITUAL",
+  health: "HEALTH_DAILY",
+  community: "RELATIONSHIP_COMMUNITY",
+  intercession: "INTERCESSION_SERVICE",
+  etc: "OTHER",
+};
+
+const CATEGORY_LABEL: Record<PrayerCategoryValue, string> = {
+  PERSONAL_SPIRITUAL: "개인 및 영성",
+  HEALTH_DAILY: "건강 및 일상",
+  RELATIONSHIP_COMMUNITY: "관계 및 공동체",
+  INTERCESSION_SERVICE: "중보 및 섬김",
+  OTHER: "기타",
+};
+
+export function categoryLabelToValue(label: string | null): PrayerCategoryValue | null {
+  const found = (Object.entries(CATEGORY_LABEL) as [PrayerCategoryValue, string][]).find(
+    ([, itemLabel]) => itemLabel === label,
+  );
+  return found?.[0] ?? null;
+}
+
+function categoryQuery(category: PrayerCategory): string {
+  return category === "all" ? "" : `?category=${CATEGORY_TO_SERVER[category]}`;
+}
+
+// "2026-08-03T…" → "2026.08.03"
+function toDotDate(iso: string): string {
+  return iso.slice(0, 10).replaceAll("-", ".");
+}
+
+// 공개기간 종료일까지 남은 날. 지난 글(내/저장한 목록에만 남는다)은 D-day를 떼서
+// 카드가 그 자리를 그리지 않게 한다.
+function toDdayLabel(visibleUntil: string): string | null {
+  const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+  const end = new Date(visibleUntil).getTime();
+  const days = Math.round((end - today) / 86_400_000);
+  return days >= 0 ? `D-${days}` : null;
+}
+
+function toCard(item: PrayerListItem): PrayerRequest {
+  return {
+    id: item.id,
+    number: item.number,
+    authorName: item.authorName,
+    category: CATEGORY_LABEL[item.category],
+    title: item.title,
+    createdAtLabel: `작성일 ${toDotDate(item.createdAt)}`,
+    ddayLabel: toDdayLabel(item.visibleUntil),
+    bookmarked: item.bookmarked,
+  };
+}
 
 interface PrayerListResult {
   /** 화면 상단 문구에 쓰는 전체 등록 수 (필터와 무관한 총계) */
@@ -26,95 +85,72 @@ interface PrayerListResult {
   items: PrayerRequest[];
 }
 
-const MOCK_PRAYERS: (PrayerRequest & { category_key: PrayerCategory; mine: boolean })[] =
-  Array.from({ length: 5 }, (_, index) => ({
-    id: `p${index + 1}`,
-    number: 128 - index,
-    authorName: "익명",
-    category: "건강 및 일상",
-    category_key: "health" as PrayerCategory,
-    title: "이번 달 수술 앞둔 아버지를 위해 기도해주세요.",
-    createdAtLabel: "작성일 2026.08.03",
-    ddayLabel: "D-2",
-    bookmarked: index % 2 === 0,
-    // 내가 쓴 글인지. 서버가 붙으면 로그인 유저와 작성자를 비교해 서버가 내려준다.
-    mine: index < 3,
-  }));
-
-// 삭제·북마크 상태. 서버가 없어서 목업 배열을 직접 고치는 대신 여기 모아두고 조회할 때 반영한다
-// (앱을 새로고침하면 처음 상태로 돌아온다). 연동할 때 두 함수는 DELETE/POST 요청으로 바뀐다.
-const deletedIds = new Set<string>();
-const bookmarkedIds = new Set(
-  MOCK_PRAYERS.filter((prayer) => prayer.bookmarked).map((prayer) => prayer.id),
-);
-
-export async function deletePrayer(id: string): Promise<void> {
-  deletedIds.add(id);
-}
-
-export async function toggleBookmark(id: string): Promise<void> {
-  if (bookmarkedIds.has(id)) bookmarkedIds.delete(id);
-  else bookmarkedIds.add(id);
-}
-
-// 목업 배열의 bookmarked는 처음 상태일 뿐이라, 조회할 때마다 현재 값으로 덮어준다.
-function withBookmark<T extends PrayerRequest>(prayer: T): T {
-  return { ...prayer, bookmarked: bookmarkedIds.has(prayer.id) };
-}
-
+// 관리자 여부는 서버가 요청자 기준으로 판단한다 — 익명 글의 authorName이 "익명(실명)"으로 온다.
 export async function fetchPrayers(category: PrayerCategory): Promise<PrayerListResult> {
-  const items =
-    category === "all" ? MOCK_PRAYERS : MOCK_PRAYERS.filter((p) => p.category_key === category);
-  return { totalCount: 128, items: items.map(withBookmark) };
-}
-
-// 관리자에게는 익명 글도 실제 작성자가 붙은 문구가 내려온다 (예: "익명(김민준)").
-// 표시 문구 조립은 서버 몫이라(익명 여부 판단 포함) 여기서도 완성된 문자열로 바꿔치기만 한다.
-export async function fetchPrayersForAdmin(category: PrayerCategory): Promise<PrayerListResult> {
-  const result = await fetchPrayers(category);
-  return {
-    ...result,
-    items: result.items.map((prayer) => ({ ...prayer, authorName: `${prayer.authorName}(김민준)` })),
-  };
-}
-
-// 저장한 기도제목 = 내가 북마크한 것만. 지금은 목업 배열의 bookmarked 플래그로 거른다.
-// 서버가 붙으면 북마크 여부는 유저별이라 목록 조회 자체를 별도 엔드포인트로 받게 된다.
-export async function fetchBookmarkedPrayers(category: PrayerCategory): Promise<PrayerRequest[]> {
-  const bookmarked = MOCK_PRAYERS.filter(
-    (prayer) => bookmarkedIds.has(prayer.id) && !deletedIds.has(prayer.id),
-  ).map(withBookmark);
-  return category === "all"
-    ? bookmarked
-    : bookmarked.filter((prayer) => prayer.category_key === category);
-}
-
-// 내 기도제목 = 내가 쓴 것만. 북마크와 같은 이유로 지금은 목업 플래그로 거른다.
-export async function fetchMyPrayers(category: PrayerCategory): Promise<PrayerRequest[]> {
-  const mine = MOCK_PRAYERS.filter((prayer) => prayer.mine && !deletedIds.has(prayer.id)).map(
-    withBookmark,
+  const { data } = await apiClient.get<PrayerListResponse>(
+    `/posts/prayers${categoryQuery(category)}`,
   );
-  return category === "all" ? mine : mine.filter((prayer) => prayer.category_key === category);
+  return { totalCount: data.totalCount, items: data.items.map(toCard) };
+}
+
+export async function fetchMyPrayers(category: PrayerCategory): Promise<PrayerRequest[]> {
+  const { data } = await apiClient.get<PrayerListItem[]>(
+    `/posts/prayers/mine${categoryQuery(category)}`,
+  );
+  return data.map(toCard);
+}
+
+export async function fetchBookmarkedPrayers(
+  category: PrayerCategory,
+): Promise<PrayerRequest[]> {
+  const { data } = await apiClient.get<PrayerListItem[]>(
+    `/posts/prayers/bookmarked${categoryQuery(category)}`,
+  );
+  return data.map(toCard);
 }
 
 export interface PrayerDetail extends PrayerRequest {
-  /** 기도 기간 (예: "2026.07.24 - 2026.08.04") */
+  /** 기도 기간 (예: "2026.07.24 - 2026.08.04") — 작성일부터 공개 종료일까지 */
   periodLabel: string;
   viewCount: number;
   content: string;
-  /** 첨부 사진. 지금은 목업에 이미지가 없어서 자리만 잡는다. */
-  photoUrl?: string | null;
+  /** 상세 화면에 붙는 첨부 사진 (시안: 한 장 영역) */
+  photoUrl: string | null;
+  /** 수정 프리필용 */
+  isAnonymous: boolean;
+  visibleUntil: string;
+  photoUrls: string[];
+  isMine: boolean;
 }
 
 export async function fetchPrayerDetail(id: string): Promise<PrayerDetail> {
-  const found = MOCK_PRAYERS.find((prayer) => prayer.id === id);
-  if (!found) throw new Error(`기도제목을 찾을 수 없습니다: ${id}`);
+  const { data } = await apiClient.get<PrayerDetailResponse>(`/posts/prayers/${id}`);
   return {
-    ...withBookmark(found),
-    periodLabel: "2026.07.24 - 2026.08.04",
-    viewCount: 24,
-    content:
-      "다음 주 수요일에 아버지께서 큰 수술을 받으십니다. 담당 선생님과 의료진에게 지혜를 주시고, 수술이 잘 마무리되어 회복까지 순조롭게 이어지도록 기도 부탁드려요. 가족 모두가 두려움 없이 이 시간을 잘 통과할 수 있게 함께 마음 모아주시면 감사하겠습니다.",
-    photoUrl: null,
+    ...toCard(data),
+    periodLabel: `${toDotDate(data.createdAt)} - ${toDotDate(data.visibleUntil)}`,
+    viewCount: data.viewCount,
+    content: data.content,
+    photoUrl: data.photoUrls[0] ?? null,
+    isAnonymous: data.isAnonymous,
+    visibleUntil: data.visibleUntil,
+    photoUrls: data.photoUrls,
+    isMine: data.isMine,
   };
+}
+
+export async function createPrayer(body: CreatePrayerRequest): Promise<void> {
+  await apiClient.post("/posts/prayers", body);
+}
+
+export async function updatePrayer(id: string, body: UpdatePrayerRequest): Promise<void> {
+  await apiClient.patch(`/posts/prayers/${id}`, body);
+}
+
+export async function deletePrayer(id: string): Promise<void> {
+  await apiClient.delete(`/posts/prayers/${id}`);
+}
+
+export async function toggleBookmark(id: string, bookmarked: boolean): Promise<void> {
+  if (bookmarked) await apiClient.delete(`/posts/prayers/${id}/bookmarks`);
+  else await apiClient.post(`/posts/prayers/${id}/bookmarks`);
 }
