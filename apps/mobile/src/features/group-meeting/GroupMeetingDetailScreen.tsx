@@ -1,6 +1,7 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import type { GroupMeetingMember } from "@onnuri/shared";
+import { useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import {
@@ -10,6 +11,7 @@ import {
   useDecideGroupMeetingMember,
   useJoinGroupMeeting,
 } from "./api";
+import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Button } from "../../shared/components/base/Button";
 import { Chip } from "../../shared/components/base/Chip";
 import { Icon } from "../../shared/components/base/Icon";
@@ -69,6 +71,28 @@ export function GroupMeetingDetailScreen() {
   const join = useJoinGroupMeeting(params.id);
   const cancelJoin = useCancelGroupMeetingJoin(params.id);
   const decideMember = useDecideGroupMeetingMember(params.id);
+
+  // 거절은 신청을 지우는 동작이라 다이얼로그로 한 번 확인한다 (셀원 삭제와 같은 패턴).
+  const rejectDialogRef = useRef<AppDialogRef>(null);
+  const [pendingReject, setPendingReject] = useState<GroupMeetingMember | null>(null);
+
+  const handleDecide = (userId: string, status: "APPROVED" | "REJECTED") => {
+    if (decideMember.isPending) return;
+    decideMember.mutate(
+      { userId, status },
+      { onError: () => Alert.alert("처리 실패", "잠시 후 다시 시도해주세요.") },
+    );
+  };
+
+  const handleRejectPress = (member: GroupMeetingMember) => {
+    setPendingReject(member);
+    rejectDialogRef.current?.open();
+  };
+
+  const confirmReject = () => {
+    rejectDialogRef.current?.close();
+    if (pendingReject) handleDecide(pendingReject.id, "REJECTED");
+  };
 
   const {
     data: meeting,
@@ -193,6 +217,49 @@ export function GroupMeetingDetailScreen() {
           </View>
         </View>
 
+        {/* 신청 대기 — 소그룹장·관리자에게만 보인다 (자체 디자인: 셀원 관리 행 패턴 + 알약 버튼,
+            시안이 나오면 그 형태로 교체). */}
+        {meeting.canManage && meeting.pendingMembers.length > 0 && (
+          <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+            <View className="flex-row items-center gap-1.5">
+              <Text className="text-heading-small text-text-normal">신청 대기</Text>
+              <Text className="text-heading-small text-primary-normal">
+                {meeting.pendingMembers.length}
+              </Text>
+            </View>
+            <View className="mt-1">
+              {meeting.pendingMembers.map((member) => (
+                <View
+                  key={member.id}
+                  className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
+                >
+                  <View className="flex-row items-center gap-4">
+                    {/* TODO(사진): 프로필 사진 연동 전 placeholder (셀원 관리 행과 동일) */}
+                    <View className="h-10 w-10 rounded-full bg-background-assistive" />
+                    <Text className="text-body-main text-text-normal">{member.name}</Text>
+                  </View>
+                  <View className="flex-row items-center gap-2">
+                    <Pressable
+                      className="h-8 items-center justify-center rounded-lg bg-primary-normal px-3"
+                      onPress={() => handleDecide(member.id, "APPROVED")}
+                      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+                    >
+                      <Text className="text-body-small text-text-disable">승인</Text>
+                    </Pressable>
+                    <Pressable
+                      className="h-8 items-center justify-center rounded-lg border border-semantic-danger px-3"
+                      onPress={() => handleRejectPress(member)}
+                      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+                    >
+                      <Text className="text-body-small text-semantic-danger">거절</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
         {leadPhoto && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
             <Text className="text-heading-small text-text-normal">활동 사진</Text>
@@ -253,39 +320,6 @@ export function GroupMeetingDetailScreen() {
           </View>
         </View>
 
-        {/* 신청 대기 — 소그룹장·관리자에게만 보인다. 시안의 승인 흐름 UI가 확정되면 그 형태로 교체. */}
-        {meeting.canManage && meeting.pendingMembers.length > 0 && (
-          <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
-            <Text className="text-heading-small text-text-normal">
-              신청 대기 {meeting.pendingMembers.length}명
-            </Text>
-            <View className="mt-2">
-              {meeting.pendingMembers.map((member) => (
-                <View
-                  key={member.id}
-                  className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
-                >
-                  <Text className="text-body-main text-text-normal">{member.name}</Text>
-                  <View className="flex-row gap-4">
-                    <Pressable
-                      onPress={() => decideMember.mutate({ userId: member.id, status: "APPROVED" })}
-                      hitSlop={8}
-                    >
-                      <Text className="text-body-small text-primary-normal">승인</Text>
-                    </Pressable>
-                    <Pressable
-                      onPress={() => decideMember.mutate({ userId: member.id, status: "REJECTED" })}
-                      hitSlop={8}
-                    >
-                      <Text className="text-body-small text-semantic-danger">거절</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
         {/* 참여 버튼 — 소그룹장/관리자는 신청 대상이 아니라 숨긴다 */}
         {!meeting.canManage && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
@@ -309,6 +343,14 @@ export function GroupMeetingDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      <AppDialog
+        ref={rejectDialogRef}
+        title={`${pendingReject?.name ?? ""}님의 신청을 거절하시겠습니까?`}
+        confirmLabel="거절"
+        cancelLabel="취소"
+        onConfirm={confirmReject}
+      />
     </View>
   );
 }
