@@ -42,8 +42,10 @@ export interface MeResponse extends User {
 export interface CellSummary {
   id: string;
   name: string;
-  /** 진행 중(endedAt 없음) 멤버십 기준 셀장 이름 — 아직 지정 전이면 null */
+  /** 진행 중(endedAt 없음) 멤버십 기준 셀장 — 아직 지정 전이면 null. id는 셀 편집 폼 프리필용 */
+  leaderId: string | null;
   leaderName: string | null;
+  viceLeaderId: string | null;
   viceLeaderName: string | null;
   /** 활동 종료일 (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용 */
   expiresAt: string;

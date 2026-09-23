@@ -13,6 +13,7 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
 import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
+import { buildMemberOptions, findOptionByLabel, findOptionById } from "./memberOptions";
 
 // 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
 // cellId가 있으면 편집 모드로 기존 값을 채워서 연다.
@@ -22,21 +23,18 @@ export function AdminCellFormScreen() {
   // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
   const editingCell = useCell(route.params?.cellId ?? "");
 
-  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록. SelectField가 문자열만 다뤄서 이름으로
-  // 고르고 id로 되돌린다. TODO(동명이인): 이름이 겹치면 먼저 찾은 회원이 잡힌다 —
-  // 검색 선택 UI로 바꿀 때 함께 해결.
+  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록. 동명이인 구별을 위해 "이름 (소속)" 라벨로
+  // 보여주고 상태는 id로 든다 (memberOptions.ts).
   const { data: members } = useAdminMembers();
-  const memberNames = (members ?? []).map((member) => member.name);
-  const findMemberIdByName = (name: string | null) =>
-    (members ?? []).find((member) => member.name === name)?.id ?? null;
+  const memberOptions = buildMemberOptions(members);
 
   // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
   // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
   const [coverUri, setCoverUri] = useState<string | null>(editingCell?.coverImageUrl ?? null);
   const [name, setName] = useState(editingCell?.name ?? "");
-  const [leaderName, setLeaderName] = useState<string | null>(editingCell?.leaderName ?? null);
-  const [hasViceLeader, setHasViceLeader] = useState(editingCell ? editingCell.viceLeaderName !== null : true);
-  const [viceLeaderName, setViceLeaderName] = useState<string | null>(editingCell?.viceLeaderName ?? null);
+  const [leaderId, setLeaderId] = useState<string | null>(editingCell?.leaderId ?? null);
+  const [hasViceLeader, setHasViceLeader] = useState(editingCell ? editingCell.viceLeaderId !== null : true);
+  const [viceLeaderId, setViceLeaderId] = useState<string | null>(editingCell?.viceLeaderId ?? null);
 
   // 시안의 비활성 등록하기 — 필수(셀이름·셀장·활동기간)를 채워야 활성. 부셀장은 체크 시에만 필수.
   // 활동기간 = 셀 턴 종료일 하나 (2026-09-21 A안 시안: "셀 턴 종료일을 선택하세요"로 확정).
@@ -48,9 +46,9 @@ export function AdminCellFormScreen() {
   const canSubmit =
     !saving &&
     name.trim() !== "" &&
-    leaderName !== null &&
+    leaderId !== null &&
     period !== null &&
-    (!hasViceLeader || viceLeaderName !== null);
+    (!hasViceLeader || viceLeaderId !== null);
 
   const handleCoverUploadPress = async () => {
     // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
@@ -60,7 +58,6 @@ export function AdminCellFormScreen() {
   };
 
   const handleSubmitPress = async () => {
-    const leaderId = findMemberIdByName(leaderName);
     if (!leaderId || !period) return;
 
     let coverImageUrl: string | null = null;
@@ -74,7 +71,7 @@ export function AdminCellFormScreen() {
     const payload = {
       name: name.trim(),
       leaderId,
-      viceLeaderId: hasViceLeader ? findMemberIdByName(viceLeaderName) : null,
+      viceLeaderId: hasViceLeader ? viceLeaderId : null,
       expiresAt: period,
       coverImageUrl,
     };
@@ -109,9 +106,9 @@ export function AdminCellFormScreen() {
           <SelectField
             label="셀장"
             placeholder="셀장을 선택하세요."
-            options={memberNames}
-            value={leaderName}
-            onChange={setLeaderName}
+            options={memberOptions.map((option) => option.label)}
+            value={findOptionById(memberOptions, leaderId)?.label ?? null}
+            onChange={(label) => setLeaderId(findOptionByLabel(memberOptions, label)?.id ?? null)}
           />
 
           {/* 부셀장 — 라벨 옆 체크박스. 해제하면 선택줄이 사라지고 부셀장 없이 생성된다 (시안). */}
@@ -136,9 +133,13 @@ export function AdminCellFormScreen() {
                 <SelectField
                   label=""
                   placeholder="부셀장을 선택하세요."
-                  options={memberNames.filter((memberName) => memberName !== leaderName)}
-                  value={viceLeaderName}
-                  onChange={setViceLeaderName}
+                  options={memberOptions
+                    .filter((option) => option.id !== leaderId)
+                    .map((option) => option.label)}
+                  value={findOptionById(memberOptions, viceLeaderId)?.label ?? null}
+                  onChange={(label) =>
+                    setViceLeaderId(findOptionByLabel(memberOptions, label)?.id ?? null)
+                  }
                 />
               </View>
             ) : (

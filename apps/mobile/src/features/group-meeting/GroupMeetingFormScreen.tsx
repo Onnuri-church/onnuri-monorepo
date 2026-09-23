@@ -16,6 +16,7 @@ import { uploadImage } from "../../shared/api/upload";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
+import { buildMemberOptions, findOptionByLabel } from "../admin/memberOptions";
 import { fetchGroupMeetingDetail, useCreateGroupMeeting, useUpdateGroupMeeting } from "./api";
 
 interface LeaderPick {
@@ -69,9 +70,11 @@ export function GroupMeetingFormScreen() {
   };
 
   // 소그룹장 추가 — SelectField를 "추가" 트리거로 쓴다 (고르면 목록에 붙고 선택값은 비운다).
-  // TODO(동명이인): 셀장 선택과 같은 한계 — 검색 선택 UI로 바꿀 때 해결.
-  const handleLeaderAdd = (name: string) => {
-    const member = (members ?? []).find((item) => item.name === name);
+  // 동명이인 구별: "이름 (소속)" 라벨로 고르고 id로 다룬다 (admin/memberOptions.ts).
+  const memberOptions = buildMemberOptions(members);
+  const handleLeaderAdd = (label: string) => {
+    const option = findOptionByLabel(memberOptions, label);
+    const member = (members ?? []).find((item) => item.id === option?.id);
     if (!member || leaders.some((leader) => leader.id === member.id)) return;
     setLeaders((prev) => [...prev, { id: member.id, name: member.name }]);
   };
@@ -186,9 +189,9 @@ export function GroupMeetingFormScreen() {
               <SelectField
                 label=""
                 placeholder="소그룹장 추가"
-                options={(members ?? [])
-                  .map((member) => member.name)
-                  .filter((name) => !leaders.some((leader) => leader.name === name))}
+                options={memberOptions
+                  .filter((option) => !leaders.some((leader) => leader.id === option.id))
+                  .map((option) => option.label)}
                 value={null}
                 onChange={handleLeaderAdd}
               />
