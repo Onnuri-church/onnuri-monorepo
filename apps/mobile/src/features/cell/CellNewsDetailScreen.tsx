@@ -2,12 +2,13 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FavoriteButton } from "../../shared/components/base/FavoriteButton";
 import { Header } from "../../shared/components/base/Header";
+import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
@@ -43,6 +44,11 @@ export function CellNewsDetailScreen() {
   const addComment = useAddCellNewsComment(newsId);
   const toggleLike = useToggleCellNewsLike(newsId);
   const [commentDraft, setCommentDraft] = useState("");
+
+  // 사진 여러 장 넘겨보기 — 시안의 정사각 영역(좌우 20 여백) 안에서 가로 페이징한다.
+  const { width } = useWindowDimensions();
+  const photoWidth = width - 40;
+  const [photoIndex, setPhotoIndex] = useState(0);
 
   // ⋮는 권한이 있을 때만 보이고 항목이 화면 데이터에 의존하므로 화면이 헤더를 단독 등록한다
   // (QtBoardDetail과 같은 패턴 — 등록부에는 headerShown: true만 둔다).
@@ -95,13 +101,37 @@ export function CellNewsDetailScreen() {
     <View className="flex-1 bg-background-normal">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <ScrollView keyboardShouldPersistTaps="handled">
-          {/* 소식 사진 (시안 362x360 한 장 영역) — 여러 장이면 첫 장만. 없으면 회색 자리 유지 */}
+          {/* 소식 사진 (시안 362x360 영역) — 여러 장이면 옆으로 넘겨 보고 아래 점으로 위치를 찍는다.
+              없으면 회색 자리 유지 */}
           {news.imageUrls.length > 0 ? (
-            <Image
-              source={{ uri: news.imageUrls[0] }}
-              className="mx-5 mt-1 aspect-square"
-              resizeMode="cover"
-            />
+            <View className="mx-5 mt-1">
+              <ScrollView
+                horizontal
+                pagingEnabled
+                showsHorizontalScrollIndicator={false}
+                // 관성이 안 붙는 느린 스와이프에도 점이 따라오도록 onScroll로 계산 (ImagePager와 동일)
+                scrollEventThrottle={16}
+                onScroll={(event) =>
+                  setPhotoIndex(Math.round(event.nativeEvent.contentOffset.x / photoWidth))
+                }
+              >
+                {news.imageUrls.map((url) => (
+                  <Image
+                    key={url}
+                    source={{ uri: url }}
+                    style={{ width: photoWidth, aspectRatio: 1 }}
+                    resizeMode="cover"
+                  />
+                ))}
+              </ScrollView>
+              {news.imageUrls.length > 1 && (
+                <PageIndicator
+                  className="mt-2.5"
+                  count={news.imageUrls.length}
+                  current={photoIndex}
+                />
+              )}
+            </View>
           ) : (
             <View className="mx-5 mt-1 aspect-square bg-background-assistive" />
           )}

@@ -30,24 +30,29 @@ export class CellsService {
         coverImageUrl: true,
         memberships: {
           where: { endedAt: null, role: { in: ['LEADER', 'SUB_LEADER'] } },
-          select: { role: true, user: { select: { name: true } } },
+          select: { role: true, user: { select: { id: true, name: true } } },
         },
       },
       orderBy: { name: 'asc' },
     });
 
-    return cells.map((cell) => ({
-      id: cell.id,
-      name: cell.name,
-      leaderName:
-        cell.memberships.find((m) => m.role === 'LEADER')?.user.name ?? null,
-      viceLeaderName:
-        cell.memberships.find((m) => m.role === 'SUB_LEADER')?.user.name ??
-        null,
-      // 계약: ISO date (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용
-      expiresAt: cell.expiresAt.toISOString().slice(0, 10),
-      coverImageUrl: cell.coverImageUrl,
-    }));
+    return cells.map((cell) => {
+      const leader = cell.memberships.find((m) => m.role === 'LEADER')?.user;
+      const viceLeader = cell.memberships.find(
+        (m) => m.role === 'SUB_LEADER',
+      )?.user;
+      return {
+        id: cell.id,
+        name: cell.name,
+        leaderId: leader?.id ?? null,
+        leaderName: leader?.name ?? null,
+        viceLeaderId: viceLeader?.id ?? null,
+        viceLeaderName: viceLeader?.name ?? null,
+        // 계약: ISO date (YYYY-MM-DD) — 셀 편집 폼의 활동기간 프리필용
+        expiresAt: cell.expiresAt.toISOString().slice(0, 10),
+        coverImageUrl: cell.coverImageUrl,
+      };
+    });
   }
 
   // 개별 셀 페이지(헤더·구성원 탭). 소프트 삭제된 셀은 없는 것으로 취급한다 —

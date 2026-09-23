@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../../shared/components/base/AppDialog";
 import { FilterBar } from "../../../shared/components/base/FilterBar";
@@ -54,7 +54,11 @@ export function PrayerFilterList({
   };
 
   const confirmDelete = async () => {
-    if (pendingDelete) await deletePrayer(pendingDelete.id);
+    try {
+      if (pendingDelete) await deletePrayer(pendingDelete.id);
+    } catch {
+      Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
+    }
     dialogRef.current?.close();
     setPendingDelete(null);
     // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
@@ -95,7 +99,7 @@ export function PrayerFilterList({
             showBookmark={showBookmark}
             editing={editing}
             onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
-            onToggleBookmark={() => toggleBookmark(prayer.id)}
+            onToggleBookmark={() => toggleBookmark(prayer.id, prayer.bookmarked ?? false)}
             onEdit={() => navigation.navigate("PrayerWrite", { id: prayer.id })}
             onDelete={() => askDelete(prayer)}
           />
