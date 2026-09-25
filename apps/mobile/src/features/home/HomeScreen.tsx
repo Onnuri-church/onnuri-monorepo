@@ -1,11 +1,13 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Image,
   Pressable,
   ScrollView,
   StyleSheet,
+  Text,
   View,
   useWindowDimensions,
   type NativeScrollEvent,
@@ -14,7 +16,9 @@ import {
 
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { PrayerCard, type PrayerRequest } from "../prayer-board/components/PrayerCard";
+import { fetchPrayers } from "../prayer-board/api";
+import { PrayerCard } from "../prayer-board/components/PrayerCard";
+import { useHomeBanner } from "./api";
 import { DepartmentActivityCard } from "./components/DepartmentActivityCard";
 import { QtShareRow } from "./components/QtShareRow";
 import { SectionHeader } from "./components/SectionHeader";
@@ -25,37 +29,15 @@ const SCREEN_PADDING = 20;
 // 취향 소그룹 띠배너 시안 확정값 362x104. 폭은 좌우 여백이 정하므로 비율로만 고정한다.
 const GROUP_BANNER_ASPECT_RATIO = 362 / 104;
 
-// API 연동 전 임시 데이터. 홈 요약 엔드포인트가 생기면 교체한다.
-const WEEKLY_SERMON = {
+// 관리자가 등록한 배너가 하나도 없을 때의 기본 문구 (홈 배너 관리에서 등록하면 교체된다).
+const DEFAULT_SERMON = {
   seriesLabel: "8월 설교 시리즈",
   passage: "마태복음 6:5-8",
   title: "나를 따르라",
 };
 
-// 홈 카드는 작성일·D-day를 쓰지 않는다 — 그 자리에 페이지 인디케이터가 온다 (시안).
-const PRAYER_REQUESTS: PrayerRequest[] = [
-  {
-    id: "1",
-    number: 128,
-    authorName: "익명",
-    category: "건강 및 일상",
-    title: "이번 달 수술 앞둔 아버지를 위해 기도해주세요.",
-  },
-  {
-    id: "2",
-    number: 127,
-    authorName: "김서연",
-    category: "진로 및 학업",
-    title: "새 학기 진로를 놓고 지혜를 구합니다.",
-  },
-  {
-    id: "3",
-    number: 126,
-    authorName: "익명",
-    category: "가정",
-    title: "가족이 함께 예배드릴 수 있도록 기도해주세요.",
-  },
-];
+// 홈 캐러셀에 보여줄 장수 — 시안이 3장 기준이다.
+const PRAYER_CAROUSEL_SIZE = 3;
 
 const QT_SHARES = [
   { id: "1", author: "원준호", passage: "룻기 2:16-23", title: "절망, 자기 우상화의 열매" },
@@ -79,6 +61,22 @@ export function HomeScreen() {
   const { width } = useWindowDimensions();
   const [prayerPage, setPrayerPage] = useState(0);
 
+  // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (말씀 텍스트형 또는 포스터형).
+  const { data: banner } = useHomeBanner();
+
+  // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
+  // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
+  // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
+  const { data: prayers } = useQuery({
+    queryKey: ["prayers", "home"],
+    queryFn: async () => {
+      const { items } = await fetchPrayers("all");
+      return items
+        .slice(0, PRAYER_CAROUSEL_SIZE)
+        .map((prayer) => ({ ...prayer, createdAtLabel: undefined, ddayLabel: undefined }));
+    },
+  });
+
   // 캐러셀 한 장의 폭. pagingEnabled가 스크롤뷰 폭 단위로 멈추므로 카드도 같은 폭이어야 한다.
   const prayerPageWidth = width - SCREEN_PADDING * 2;
 
@@ -91,37 +89,64 @@ export function HomeScreen() {
   return (
     <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="pb-10">
       <View className="px-5 pt-8">
-        <WeeklySermonBanner
-          {...WEEKLY_SERMON}
-          onPressShortcut={() => navigation.navigate("Bulletin")}
-        />
+        {banner?.kind === "POSTER" && banner.imageUrl !== null ? (
+          /* 포스터 배너 — 텍스트 없이 이미지 + 주보 버튼만 남는다 (2026-09-23 확정).
+             이미지를 탭하면 원본 비율로 크게 보기. */
+          <WeeklySermonBanner
+            poster
+            imageUrl={banner.imageUrl}
+            onPressImage={() =>
+              navigation.navigate("BannerViewer", {
+                imageUrl: banner.imageUrl as string,
+                title: banner.title,
+              })
+            }
+            onPressShortcut={() => navigation.navigate("Bulletin")}
+          />
+        ) : (
+          <WeeklySermonBanner
+            seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
+            passage={banner?.passage ?? DEFAULT_SERMON.passage}
+            title={banner?.title ?? DEFAULT_SERMON.title}
+            imageUrl={banner?.imageUrl ?? undefined}
+            onPressShortcut={() => navigation.navigate("Bulletin")}
+          />
+        )}
       </View>
 
       <View className="mt-8 px-5">
         <SectionHeader title="기도제목" onPress={() => navigation.navigate("PrayerBoard")} />
-        <View className="mt-4">
-          <ScrollView
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            onScroll={handlePrayerScroll}
-            scrollEventThrottle={16}
-          >
-            {PRAYER_REQUESTS.map((prayer) => (
-              <View key={prayer.id} style={{ width: prayerPageWidth }}>
-                <PrayerCard
-                  prayer={prayer}
-                  onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
-                />
-              </View>
-            ))}
-          </ScrollView>
-          {/* 인디케이터는 카드 위에 얹는다 — 카드 안에 두면 스와이프할 때 카드와 같이 밀린다.
-              터치는 아래 카드로 통과시킨다. */}
-          <View className="absolute bottom-4 left-0 right-0" pointerEvents="none">
-            <PageIndicator count={PRAYER_REQUESTS.length} current={prayerPage} />
+        {(prayers ?? []).length === 0 ? (
+          <View className="mt-4 items-center py-8">
+            <Text className="text-body-medium text-text-alternative">
+              등록된 기도제목이 없어요
+            </Text>
           </View>
-        </View>
+        ) : (
+          <View className="mt-4">
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handlePrayerScroll}
+              scrollEventThrottle={16}
+            >
+              {(prayers ?? []).map((prayer) => (
+                <View key={prayer.id} style={{ width: prayerPageWidth }}>
+                  <PrayerCard
+                    prayer={prayer}
+                    onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            {/* 인디케이터는 카드 위에 얹는다 — 카드 안에 두면 스와이프할 때 카드와 같이 밀린다.
+                터치는 아래 카드로 통과시킨다. */}
+            <View className="absolute bottom-4 left-0 right-0" pointerEvents="none">
+              <PageIndicator count={(prayers ?? []).length} current={prayerPage} />
+            </View>
+          </View>
+        )}
       </View>
 
       <View className="mt-9 px-5">

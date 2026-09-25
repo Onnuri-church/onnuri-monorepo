@@ -48,6 +48,7 @@ interface RoleLinkHandlers {
   onMemberListPress?: () => void;
   onAttendanceSheetPress?: () => void;
   onPrayerManagePress?: () => void;
+  onBannerManagePress?: () => void;
 }
 
 function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers): MenuLink[] {
@@ -68,6 +69,7 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
         { label: "회원 관리", onPress: handlers.onMemberListPress },
         { label: "출석부", onPress: handlers.onAttendanceSheetPress },
         { label: "기도제목 관리", onPress: handlers.onPrayerManagePress },
+        { label: "홈 배너 관리", onPress: handlers.onBannerManagePress },
       ];
     case "member":
       return [];
@@ -105,6 +107,7 @@ export function MyPageScreen() {
     onMemberListPress: () => navigation.navigate("AdminMemberList"),
     onAttendanceSheetPress: () => navigation.navigate("AdminAttendance"),
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
+    onBannerManagePress: () => navigation.navigate("AdminBannerManage"),
   });
 
   const handleLogoutPress = () => {

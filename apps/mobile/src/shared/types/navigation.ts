@@ -80,6 +80,11 @@ export type RootStackParamList = {
   AdminAttendance: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;
+  // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.
+  AdminBannerManage: undefined;
+  AdminBannerForm: undefined;
+  // 홈 포스터 배너 크게 보기 (검정 배경 뷰어).
+  BannerViewer: { imageUrl: string; title: string };
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —

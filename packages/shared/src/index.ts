@@ -4,6 +4,7 @@ export * from "./types/cell";
 export * from "./types/auth";
 export * from "./types/post";
 export * from "./types/prayer";
+export * from "./types/notice";
 export * from "./types/group-meeting";
 export * from "./types/api";
 export * from "./constants";
