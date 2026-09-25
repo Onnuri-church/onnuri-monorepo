@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -15,12 +16,14 @@ import { useDeleteCell } from "../api";
 interface CellManageListProps {
   /** 탭 안에서 쓸 때 목록 끝이 탭바에 가리지 않게 주는 바닥 여백 (스택 화면은 0). */
   bottomInset?: number;
+  /** 탭 안에서 쓸 때 탭바 숨김 핸들러(useHideTabBarOnScroll)를 꽂는 자리 (스택 화면은 불필요). */
+  onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
 // 셀 관리 목록 — 검색바 + 행 스와이프로 편집(연필)·삭제(휴지통), 행 탭은 그 셀 페이지로,
 // 생성은 목록 끝의 점선 "+ 셀 생성" 행 (2026-09-21 A안 시안 — 헤더 생성 버튼에서 이동).
 // 관리자 마이페이지의 셀 관리 화면과, 관리자용 하단 탭 "셀 페이지"가 같이 쓴다.
-export function CellManageList({ bottomInset = 0 }: CellManageListProps) {
+export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
   // 셀 캐시가 무효화돼 목록에서 빠진다.
@@ -50,6 +53,8 @@ export function CellManageList({ bottomInset = 0 }: CellManageListProps) {
       // 기본 바닥 여백 40(pb-10) + 탭 안에서는 탭바만큼 추가
       contentContainerStyle={{ paddingBottom: 40 + bottomInset }}
       keyboardShouldPersistTaps="handled"
+      onScroll={onScroll}
+      scrollEventThrottle={16}
     >
       <View className="px-5 pb-2">
         <SearchBar value={query} onChangeText={setQuery} placeholder="셀 이름으로 검색" />
