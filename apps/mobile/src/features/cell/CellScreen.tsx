@@ -39,7 +39,10 @@ export function CellScreen() {
         <View className="h-14 items-center justify-center">
           <Text className="text-heading-small text-text-normal">셀 관리</Text>
         </View>
-        <CellManageList bottomInset={TAB_BAR_HEIGHT + insets.bottom} />
+        <CellManageList
+          bottomInset={TAB_BAR_HEIGHT + insets.bottom}
+          onScroll={handleHideTabBarScroll}
+        />
       </View>
     );
   }
