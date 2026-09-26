@@ -73,7 +73,6 @@
 - 2026-09-26: 브랜치 `feat/department-activity`를 `origin/dev`(e33cdd1)에서 생성. `pnpm install`·`prisma generate` 완료. 계획 문서 작성 (Contract 승인 대기)
 - 2026-09-26: 시안 3장 수령(목록·상세 댓글0·상세 댓글2). 팀 필터 칩이 시안에 있어 범위에 추가, 댓글 수는 최상위만 센다는 것과 대댓글 모양(세로선+들여쓰기) 확정. 답글 진입점은 여전히 미정
 - 2026-09-26: 1~5단계(백엔드) 완료. `packages/shared`에 `TeamActivityListItem`·`TeamActivityListResponse`·`TeamActivityDetail` 추가, `PostComment`에 `isMine`·`replies` 추가(셀 소식 매핑도 같이 맞춤). `GET /posts/team-activities`(+`teamId` 필터)·`/:id`(조회수 +1), 댓글에 `parentId`·`DELETE /posts/:id/comments/:commentId` 추가. 시드에 부서활동 4건·댓글 2건·대댓글 1건. e2e 45개 통과(부서활동 15개 신규)
-- 2026-09-27: 상세 화면에서 키보드가 댓글 입력줄을 가리는 문제 수정. `KeyboardAvoidingView`를 걷어내고 `Keyboard` 이벤트로 받은 높이를 입력줄 패딩으로 넣는다 — edge-to-edge가 항상 켜져 있어 창이 줄지 않으므로(매니페스트에 `adjustResize`가 있는데도) 창 크기로 키보드를 역산하는 `KeyboardAvoidingView`가 동작하지 않는다. 같은 구성인 `CellNewsDetailScreen`·`AdminBannerFormScreen`·`AdminCellFormScreen`·`AdminMemberEditScreen`도 같은 문제가 있을 것으로 보이나 범위 밖이라 두었다
 - 2026-09-26: 6~7단계(모바일) 완료. `features/department-activity/api.ts` 신규, 목록은 `FilterBar`로 팀 필터(맨 앞 "전체") + 실데이터, 상세는 실데이터 + 좋아요 토글 + 댓글/대댓글 + 답글 모드. 공용 `CommentItem`에 선택 prop `onReplyPress`·`onDeletePress` 추가(안 주면 기존 화면 그대로). `tsc --noEmit` 에러 0. 실기기 확인만 남음
 
 ## 열린 질문 / 리스크
