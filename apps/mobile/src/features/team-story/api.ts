@@ -1,4 +1,11 @@
-import type { TeamDetailResponse, TeamGalleryMonth, TeamRole, TeamSummary } from "@onnuri/shared";
+import type {
+  CreateTeamRequest,
+  TeamDetailResponse,
+  TeamGalleryMonth,
+  TeamRole,
+  TeamSummary,
+  UpdateTeamRequest,
+} from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
@@ -22,6 +29,9 @@ export function useTeamDetail(teamId: string) {
     queryKey: ["teams", teamId],
     queryFn: () =>
       apiClient.get<TeamDetailResponse>(`/teams/${teamId}`).then((res) => res.data),
+    // 팀 폼이 생성 모드일 때 빈 id로 부른다 — 그때는 조회하지 않는다
+    // (빈 id는 /teams/ 가 되어 목록이 돌아온다).
+    enabled: teamId !== "",
   });
 }
 
@@ -62,4 +72,32 @@ export function useRemoveTeamPhotos(teamId: string) {
         .then((res) => res.data),
     onSuccess: (months) => queryClient.setQueryData(["team-gallery", teamId], months),
   });
+}
+
+// ── 팀 관리 (관리자 전용) ────────────────────────────────────────────────
+// 팀장 지정이 소속 팀을 바꾸므로 /users/me(내 소속)와 회원 목록(소속 표시)까지 같이 무효화한다.
+function useTeamMutation<TArgs>(run: (args: TArgs) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams"] });
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "members"] });
+    },
+  });
+}
+
+export function useCreateTeam() {
+  return useTeamMutation((body: CreateTeamRequest) => apiClient.post("/teams", body));
+}
+
+export function useUpdateTeam(teamId: string) {
+  return useTeamMutation((body: UpdateTeamRequest) =>
+    apiClient.patch(`/teams/${teamId}`, body),
+  );
+}
+
+export function useDeleteTeam() {
+  return useTeamMutation((teamId: string) => apiClient.delete(`/teams/${teamId}`));
 }
