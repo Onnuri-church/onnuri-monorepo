@@ -16,12 +16,16 @@ import type {
 import type { Prisma } from '../../../generated/prisma';
 import { toDateLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
   async findById(id: string): Promise<User | null> {
@@ -360,11 +364,21 @@ export class UsersService {
     userId: string,
     avatarUrl: string | null,
   ): Promise<MeResponse> {
+    const before = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
     await this.prisma.user.update({
       where: { id: userId },
       data: { avatarUrl },
       select: { id: true },
     });
+    // 교체·제거로 더는 안 쓰이는 옛 파일은 그 자리에서 창고에서도 지운다 — 아바타는
+    // 다른 곳에서 재사용되지 않는 전용 파일이라 안전하다. 실패해도 교체는 성공한다.
+    const oldUrl = before?.avatarUrl;
+    if (oldUrl && oldUrl !== avatarUrl) {
+      await this.uploadsService.deleteByUrl(oldUrl);
+    }
     return (await this.findMe(userId))!;
   }
 
