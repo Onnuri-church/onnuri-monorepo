@@ -1,3 +1,5 @@
+import type { QrCheckInResponse } from "@onnuri/shared";
+
 export type RootTabParamList = {
   Home: undefined;
   TeamStory: undefined;
@@ -18,7 +20,7 @@ export type RootStackParamList = {
   Qr: undefined;
   // QR을 찍은 뒤 보는 결과. duplicate면 "이미 출석했다" 안내로 바뀐다 —
   // 두 화면이 배치가 같고 아이콘·문구·카드 행만 달라서 라우트를 나누지 않는다.
-  QrResult: { duplicate: boolean };
+  QrResult: { result: QrCheckInResponse };
   // 말씀 탭에서 카드를 눌러 들어가는 설교영상 상세. 탭 밖으로 push된다.
   SermonDetail: { id: string };
   Bulletin: undefined;
