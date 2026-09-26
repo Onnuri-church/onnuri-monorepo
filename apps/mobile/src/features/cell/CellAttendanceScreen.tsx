@@ -40,6 +40,7 @@ export function CellAttendanceScreen() {
         attendanceData.members.map((member) => ({
           memberId: member.id,
           name: member.name,
+          avatarUrl: member.avatarUrl,
           worship: member.worship ? "present" : "absent",
           meeting: member.meeting ? "present" : "absent",
         })),

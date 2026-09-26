@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import { ScrollView, Text, View } from "react-native";
 
+import { Avatar } from "../../shared/components/base/Avatar";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
@@ -96,7 +97,7 @@ export function PrayerDetailScreen() {
             style={{ marginTop: GAP_TITLE_TO_PROFILE }}
           >
             <View className="flex-row items-center gap-2">
-              <View className="h-9 w-9 rounded-full bg-background-assistive" />
+              <Avatar imageUrl={data.authorAvatarUrl} size={36} />
               <View>
                 <Text
                   className="text-body-small text-text-normal"

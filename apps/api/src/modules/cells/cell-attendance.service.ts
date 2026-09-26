@@ -162,14 +162,14 @@ export class CellAttendanceService {
       select: {
         memberships: {
           where: { endedAt: null },
-          select: { role: true, user: { select: { id: true, name: true } } },
+          select: { role: true, user: { select: { id: true, name: true, avatarUrl: true } } },
         },
       },
     });
     if (!cell) throw new NotFoundException('존재하지 않는 셀입니다.');
 
     return cell.memberships
-      .map((m) => ({ id: m.user.id, name: m.user.name, role: m.role }))
+      .map((m) => ({ id: m.user.id, name: m.user.name, avatarUrl: m.user.avatarUrl, role: m.role }))
       .sort(
         (a, b) =>
           ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||

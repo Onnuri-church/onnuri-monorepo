@@ -6,6 +6,7 @@ export type AttendanceStatus = "present" | "absent";
 export interface MemberAttendance {
   memberId: string;
   name: string;
+  avatarUrl: string | null;
   /** 예배 출석 */
   worship: AttendanceStatus;
   /** 셀모임 참석 */

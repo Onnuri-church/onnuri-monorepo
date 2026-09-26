@@ -88,6 +88,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        avatarUrl: true,
         isAdmin: true,
         cellMemberships: {
           where: { endedAt: null, cell: { deletedAt: null } },
@@ -107,6 +108,7 @@ export class UsersService {
       return {
         id: user.id,
         name: user.name,
+        avatarUrl: user.avatarUrl,
         cellName: cell?.cell.name ?? null,
         teamName: team?.team.name ?? null,
         badge: user.isAdmin
@@ -127,6 +129,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        avatarUrl: true,
         birthDate: true,
         gender: true,
         phone: true,
@@ -158,6 +161,7 @@ export class UsersService {
     return {
       id: user.id,
       name: user.name,
+      avatarUrl: user.avatarUrl,
       birthDateLabel: user.birthDate ? toDateLabel(user.birthDate) : null,
       birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
       gender: user.gender,
@@ -351,6 +355,19 @@ export class UsersService {
 
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라
   // 멤버십 행으로 표현하므로(docs/erd.md — 레거시 cellName/teamId 제거 근거) 여기서 같이 반영한다.
+  // 프로필 사진 변경 — 마이페이지 아바타 탭에서 바로 저장한다 (null이면 사진 제거).
+  async updateMyAvatar(
+    userId: string,
+    avatarUrl: string | null,
+  ): Promise<MeResponse> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+      select: { id: true },
+    });
+    return (await this.findMe(userId))!;
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,

@@ -1,5 +1,6 @@
 import { Text, View } from "react-native";
 
+import { Avatar } from "../../../shared/components/base/Avatar";
 import type { CellMember } from "../cellDetail";
 
 // 셀장·부셀장 뱃지 색 (시안 확정: 셀장 = Primary/Normal, 부셀장 = Icon/Strong).
@@ -18,8 +19,7 @@ export function CellMemberItem({ member }: CellMemberItemProps) {
 
   return (
     <View className="w-15 items-center">
-      {/* TODO(사진): 프로필 사진 연동 전 placeholder */}
-      <View className="h-15 w-15 rounded-full bg-background-assistive" />
+      <Avatar imageUrl={member.avatarUrl} size={60} />
       <Text className="mt-2 text-caption-main text-text-normal" numberOfLines={1}>
         {member.name}
       </Text>

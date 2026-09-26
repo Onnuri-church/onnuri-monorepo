@@ -40,6 +40,7 @@ export interface GroupMeetingMember {
   /** userId */
   id: string;
   name: string;
+  avatarUrl: string | null;
 }
 
 // 상세 페이지. 목록(GroupMeeting)에 없는 필드만 더한다.

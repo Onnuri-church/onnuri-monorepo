@@ -1,5 +1,6 @@
 import { Pressable, Text, View } from "react-native";
 
+import { Avatar } from "../../../shared/components/base/Avatar";
 import type { AttendanceStatus, MemberAttendance } from "../attendance";
 
 interface AttendanceMemberRowProps {
@@ -17,8 +18,7 @@ export function AttendanceMemberRow({
   return (
     <View className="gap-4 py-4">
       <View className="flex-row items-center gap-2">
-        {/* TODO(사진): 프로필 사진 연동 전 placeholder */}
-        <View className="h-7.5 w-7.5 rounded-full bg-background-assistive" />
+        <Avatar imageUrl={attendance.avatarUrl} size={30} />
         <Text className="text-body-main text-text-normal">{attendance.name}</Text>
       </View>
 

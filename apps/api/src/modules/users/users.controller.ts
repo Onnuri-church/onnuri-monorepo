@@ -13,6 +13,7 @@ import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
+import { UpdateMyAvatarDto } from './dto/update-my-avatar.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UsersService } from './users.service';
 
@@ -37,6 +38,16 @@ export class UsersController {
   @Patch('me')
   updateMe(@CurrentUser() user: JwtPayload, @Body() dto: UpdateMyProfileDto) {
     return this.usersService.updateMyProfile(user.sub, dto);
+  }
+
+  // 프로필 사진만 따로 바꾼다 — PATCH me는 전체 필드 계약이라 사진 변경에 쓰기엔 무겁다.
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/avatar')
+  updateMyAvatar(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateMyAvatarDto,
+  ) {
+    return this.usersService.updateMyAvatar(user.sub, dto.avatarUrl);
   }
 
   // :id 라우트들은 'me'보다 뒤에 둔다 — Express는 등록 순서대로 매칭해서 앞에 두면

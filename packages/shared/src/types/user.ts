@@ -60,6 +60,7 @@ export type AdminMemberBadge = "admin" | "teamLeader" | "cellLeader";
 export interface AdminMemberSummary {
   id: string;
   name: string;
+  avatarUrl: string | null;
   /** 진행 중 소속 (없으면 null) */
   cellName: string | null;
   teamName: string | null;
@@ -76,6 +77,7 @@ export type AdminMemberRole = "GENERAL" | "TEAM_LEADER" | "CELL_LEADER";
 export interface AdminMemberDetail {
   id: string;
   name: string;
+  avatarUrl: string | null;
   /** "2001.03.14" — 미입력이면 null */
   birthDateLabel: string | null;
   /** YYYY-MM-DD — 편집 프리필용 원본 */
@@ -93,6 +95,11 @@ export interface AdminMemberDetail {
   badge: AdminMemberBadge | null;
   /** "2026.01.12" */
   joinedAtLabel: string;
+}
+
+/** PATCH /users/me/avatar 요청 본문 (응답은 MeResponse) — null이면 사진 제거 */
+export interface UpdateMyAvatarRequest {
+  avatarUrl: string | null;
 }
 
 /**

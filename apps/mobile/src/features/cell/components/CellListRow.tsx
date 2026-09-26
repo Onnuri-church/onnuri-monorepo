@@ -1,6 +1,7 @@
 import type { CellSummary } from "@onnuri/shared";
 import { Pressable, Text, View } from "react-native";
 
+import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
 
 interface CellListRowProps {
@@ -22,8 +23,8 @@ export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
       className="flex-row items-center border-b border-background-assistive py-2.5"
       onPress={onPress}
     >
-      {/* TODO(사진): 셀 대표 사진 연동 전 placeholder */}
-      <View className="h-10 w-10 rounded-full bg-background-assistive" />
+      {/* 셀 대표 사진 = 셀 커버 (관리자가 셀 편집에서 올린 단체 사진) */}
+      <Avatar imageUrl={cell.coverImageUrl} size={40} />
       {/* 이름-셀장 정보 간격은 시안 5px인데 스케일에 없어 4px(gap-1)로 근사 */}
       <View className="ml-2.5 flex-1 flex-row items-center gap-1">
         <Text className="text-body-main text-text-normal">{cell.name}</Text>
