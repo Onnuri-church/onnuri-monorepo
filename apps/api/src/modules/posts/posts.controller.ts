@@ -21,6 +21,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
+import { FindTeamActivitiesDto } from './dto/find-team-activities.dto';
 import { PostsService } from './posts.service';
 
 // 게시판별 엔드포인트를 먼저 두고 :id 라우트를 뒤에 둔다 — 나중에 GET /posts/:id(상세)가
@@ -89,6 +90,13 @@ export class PostsController {
   @Delete('cell-news/:id')
   deleteCellNews(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.postsService.deleteCellNews(id, user.sub);
+  }
+
+  // 부서활동은 게스트도 열람한다 (큐티나눔과 같은 기준). 작성 API는 아직 없다.
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('team-activities')
+  findTeamActivities(@Query() query: FindTeamActivitiesDto) {
+    return this.postsService.findTeamActivities(query.teamId);
   }
 
   @UseGuards(JwtAuthGuard)

@@ -11,6 +11,8 @@ import type {
   QtShareListItem,
   QtShareListResponse,
   QtShareMonth,
+  TeamActivityListItem,
+  TeamActivityListResponse,
 } from '@onnuri/shared';
 
 import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
@@ -34,6 +36,24 @@ function toMonthValue(date: Date): string {
 function toMonthLabel(monthValue: string): string {
   const [year, month] = monthValue.split('.');
   return `${year.slice(2)}년 ${Number(month)}월`;
+}
+
+// 팀 이름 → 부서 키. 앱의 departmentColor.ts가 이 키로 칩 색을 고른다. 팀 이름은 관리자가
+// 바꿀 수 있는 값이라 색을 이름에 직접 걸지 않고 안정적인 키를 서버가 만들어 내려준다.
+// 여기 없는 팀은 키가 빈 문자열이고, 앱이 폴백 색으로 그린다.
+const DEPARTMENT_KEY_BY_TEAM_NAME: Record<string, string> = {
+  SNS팀: 'sns',
+  찬양팀: 'praise',
+  방송팀: 'broadcast',
+  풋살팀: 'futsal',
+  디자인팀: 'design',
+  중보기도팀: 'intercession',
+  영상팀: 'video',
+};
+
+// 목록 카드의 본문 미리보기. 카드가 한 줄만 보여주므로 줄바꿈 이후는 버린다.
+function toDescription(content: string): string {
+  return content.split('\n')[0];
 }
 
 @Injectable()
@@ -215,6 +235,67 @@ export class PostsService {
         content: comment.content,
       })),
     };
+  }
+
+  // 부서활동 목록. 필터 칩에 쓸 팀 목록을 같이 내려준다 — 이 게시판은 게스트도 열람하는데
+  // GET /teams는 로그인이 필요해서 앱이 팀 목록을 따로 받을 수 없다 (큐티나눔 월 목록과 같은 방식).
+  async findTeamActivities(
+    teamId?: string,
+  ): Promise<TeamActivityListResponse> {
+    const teams = await this.prisma.team.findMany({
+      where: { deletedAt: null },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    });
+    // 없는 팀(또는 지워진 팀)으로 걸러달라는 요청은 전체로 되돌린다 — 빈 화면이 나오면
+    // 글이 없는 건지 팀이 잘못된 건지 앱에서 구분되지 않는다.
+    const selectedTeamId = teams.some((team) => team.id === teamId)
+      ? (teamId as string)
+      : null;
+
+    const posts = await this.prisma.post.findMany({
+      where: {
+        board: 'TEAM_ACTIVITY',
+        deletedAt: null,
+        ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
+      },
+      select: {
+        id: true,
+        teamId: true,
+        title: true,
+        content: true,
+        eventDate: true,
+        createdAt: true,
+        viewCount: true,
+        team: { select: { name: true } },
+        _count: {
+          select: {
+            likes: true,
+            // 카드의 댓글 수는 최상위 댓글만 센다 (시안: 댓글 3줄에 "댓글 2").
+            comments: { where: { deletedAt: null, parentId: null } },
+          },
+        },
+      },
+      orderBy: [{ createdAt: 'desc' }],
+    });
+
+    const items: TeamActivityListItem[] = posts.map((post) => ({
+      id: post.id,
+      // 부서활동 글은 항상 팀에 속한다 — 스키마상 nullable이라 방어만 해둔다.
+      teamId: post.teamId ?? '',
+      teamName: post.team?.name ?? '',
+      department: DEPARTMENT_KEY_BY_TEAM_NAME[post.team?.name ?? ''] ?? '',
+      // 활동 날짜가 없는 글은 작성 시각으로 대신한다 (eventDate는 스키마상 선택값).
+      dateLabel: toDateLabel(post.eventDate ?? post.createdAt),
+      title: post.title ?? '',
+      description: toDescription(post.content),
+      createdAt: post.createdAt.toISOString(),
+      viewCount: post.viewCount,
+      commentCount: post._count.comments,
+      likeCount: post._count.likes,
+    }));
+
+    return { teams, selectedTeamId, items };
   }
 
   // 셀 소식 작성 — 그 셀의 셀원(셀장 포함) 또는 관리자만 (2026-08-26 확정, cellDetail.ts
