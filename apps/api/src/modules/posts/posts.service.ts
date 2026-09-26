@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -11,6 +12,7 @@ import type {
   QtShareListItem,
   QtShareListResponse,
   QtShareMonth,
+  TeamActivityDetail,
   TeamActivityListItem,
   TeamActivityListResponse,
 } from '@onnuri/shared';
@@ -54,6 +56,29 @@ const DEPARTMENT_KEY_BY_TEAM_NAME: Record<string, string> = {
 // 목록 카드의 본문 미리보기. 카드가 한 줄만 보여주므로 줄바꿈 이후는 버린다.
 function toDescription(content: string): string {
   return content.split('\n')[0];
+}
+
+// 댓글 한 건을 앱 계약 모양으로 바꾼다. replies는 부르는 쪽이 채운다 — 대댓글은 깊이가
+// 1단계까지라 항상 빈 배열이다.
+function toPostComment(
+  comment: {
+    id: string;
+    content: string;
+    createdAt: Date;
+    authorId: string;
+    author: { name: string; avatarUrl: string | null };
+  },
+  userId?: string,
+): PostComment {
+  return {
+    id: comment.id,
+    authorName: comment.author.name,
+    authorAvatarUrl: comment.author.avatarUrl,
+    createdAt: comment.createdAt.toISOString(),
+    content: comment.content,
+    isMine: comment.authorId === userId,
+    replies: [],
+  };
 }
 
 @Injectable()
@@ -203,6 +228,7 @@ export class PostsService {
             id: true,
             content: true,
             createdAt: true,
+            authorId: true,
             author: { select: { name: true, avatarUrl: true } },
           },
           orderBy: { createdAt: 'asc' },
@@ -227,13 +253,8 @@ export class PostsService {
       likeCount: post._count.likes,
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
-      comments: post.comments.map((comment) => ({
-        id: comment.id,
-        authorName: comment.author.name,
-        authorAvatarUrl: comment.author.avatarUrl,
-        createdAt: comment.createdAt.toISOString(),
-        content: comment.content,
-      })),
+      // 셀 소식은 대댓글을 쓰지 않아 replies가 항상 빈 배열이다 (부서활동만 1단계로 쓴다).
+      comments: post.comments.map((comment) => toPostComment(comment, userId)),
     };
   }
 
@@ -296,6 +317,103 @@ export class PostsService {
     }));
 
     return { teams, selectedTeamId, items };
+  }
+
+  // 부서활동 상세 — 댓글·대댓글까지 같이 내려준다 (셀 소식 상세와 같은 방식).
+  // 여는 순간 조회수가 1 오른다.
+  async findTeamActivity(
+    id: string,
+    userId: string | undefined,
+  ): Promise<TeamActivityDetail> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
+      select: {
+        id: true,
+        teamId: true,
+        title: true,
+        content: true,
+        eventDate: true,
+        coverImageUrl: true,
+        createdAt: true,
+        authorId: true,
+        author: { select: { name: true, avatarUrl: true } },
+        team: { select: { name: true } },
+        _count: { select: { likes: true } },
+        likes: { where: myLikeFilter(userId), select: { id: true } },
+        // 최상위 댓글만 받고 대댓글은 그 안에 담는다 — 깊이가 1단계뿐이라 평탄화해서
+        // 앱이 다시 묶는 것보다 이 모양이 화면과 그대로 맞는다.
+        comments: {
+          where: { deletedAt: null, parentId: null },
+          select: {
+            id: true,
+            content: true,
+            createdAt: true,
+            authorId: true,
+            author: { select: { name: true, avatarUrl: true } },
+            replies: {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                authorId: true,
+                author: { select: { name: true, avatarUrl: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+
+    // 조회수는 응답을 만든 뒤에 올린다 — 이 요청으로 본 1은 화면에 안 쓰이고(상세에
+    // 조회수 표시가 없다) 목록으로 돌아갔을 때 반영된다.
+    await this.prisma.post.update({
+      where: { id },
+      data: { viewCount: { increment: 1 } },
+    });
+
+    return {
+      id: post.id,
+      teamId: post.teamId ?? '',
+      teamName: post.team?.name ?? '',
+      department: DEPARTMENT_KEY_BY_TEAM_NAME[post.team?.name ?? ''] ?? '',
+      title: post.title ?? '',
+      content: post.content,
+      dateLabel: toDayLabel(post.eventDate ?? post.createdAt),
+      createdAt: post.createdAt.toISOString(),
+      authorName: post.author.name,
+      authorAvatarUrl: post.author.avatarUrl,
+      coverImageUrl: post.coverImageUrl,
+      likeCount: post._count.likes,
+      likedByMe: post.likes.length > 0,
+      isMine: post.authorId === userId,
+      comments: post.comments.map((comment) => ({
+        ...toPostComment(comment, userId),
+        replies: comment.replies.map((reply) => toPostComment(reply, userId)),
+      })),
+    };
+  }
+
+  // 부서활동 삭제 — 내 글만. 글은 지우지 않고 deletedAt만 채운다(목록·상세가 걸러낸다).
+  async removeTeamActivity(id: string, userId: string): Promise<void> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
+      select: { authorId: true },
+    });
+    // 없는 글과 남의 글을 구분한다 — 남의 글에 404를 주면 앱에서 "글이 사라졌다"로 보여
+    // 잘못된 안내가 나간다 (큐티나눔과 같은 기준).
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    if (post.authorId !== userId) {
+      throw new ForbiddenException('내가 쓴 글만 삭제할 수 있습니다.');
+    }
+
+    await this.prisma.post.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
   }
 
   // 셀 소식 작성 — 그 셀의 셀원(셀장 포함) 또는 관리자만 (2026-08-26 확정, cellDetail.ts
@@ -417,28 +535,61 @@ export class PostsService {
   }
 
   // 댓글 작성 — 게시판 공용 (Comment 테이블). 로그인한 사용자면 누구나 달 수 있다.
+  // parentId를 주면 그 댓글의 대댓글이 된다.
   async addComment(
     postId: string,
     userId: string,
     content: string,
+    parentId?: string,
   ): Promise<PostComment> {
     await this.assertPostExists(postId);
+    if (parentId) await this.assertCanReplyTo(parentId, postId);
+
     const comment = await this.prisma.comment.create({
-      data: { postId, authorId: userId, content },
+      data: { postId, authorId: userId, content, parentId },
       select: {
         id: true,
         content: true,
         createdAt: true,
+        authorId: true,
         author: { select: { name: true, avatarUrl: true } },
       },
     });
-    return {
-      id: comment.id,
-      authorName: comment.author.name,
-      authorAvatarUrl: comment.author.avatarUrl,
-      createdAt: comment.createdAt.toISOString(),
-      content: comment.content,
-    };
+    return toPostComment(comment, userId);
+  }
+
+  // 댓글 삭제 — 내 댓글만. 글처럼 soft delete다 (대댓글이 달려 있으면 행을 지울 수 없다).
+  async removeComment(commentId: string, userId: string): Promise<void> {
+    const comment = await this.prisma.comment.findFirst({
+      where: { id: commentId, deletedAt: null },
+      select: { authorId: true },
+    });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    if (comment.authorId !== userId) {
+      throw new ForbiddenException('내가 쓴 댓글만 삭제할 수 있습니다.');
+    }
+    await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  // 대댓글은 1단계까지만 (스키마 주석의 "1단계 깊이만 (앱 검증)"을 서버가 강제한다).
+  // 부모가 다른 글의 댓글이면 남의 글 댓글에 답글이 붙으므로 같이 막는다.
+  private async assertCanReplyTo(
+    parentId: string,
+    postId: string,
+  ): Promise<void> {
+    const parent = await this.prisma.comment.findFirst({
+      where: { id: parentId, deletedAt: null },
+      select: { postId: true, parentId: true },
+    });
+    if (!parent || parent.postId !== postId) {
+      throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    }
+    if (parent.parentId) {
+      throw new BadRequestException('대댓글에는 답글을 달 수 없습니다.');
+    }
   }
 
   // 소식 작성 권한: 관리자거나 그 셀의 진행 중 멤버십이 있어야 한다.

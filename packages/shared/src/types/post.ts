@@ -97,6 +97,10 @@ export interface PostComment {
   authorAvatarUrl: string | null;
   createdAt: string;
   content: string;
+  /** 내가 쓴 댓글인지 — 삭제 버튼 노출 기준. 게스트로 보면 항상 false */
+  isMine: boolean;
+  /** 대댓글. 깊이는 1단계까지라 여기 담긴 댓글의 replies는 항상 빈 배열이다 */
+  replies: PostComment[];
 }
 
 /** 셀 소식 상세 (GET /posts/cell-news/:id). */
@@ -152,6 +156,28 @@ export interface TeamActivityListResponse {
   /** null이면 전체 — "전체" 칩은 앱이 맨 앞에 붙인다 */
   selectedTeamId: string | null;
   items: TeamActivityListItem[];
+}
+
+/** 부서활동 상세 (GET /posts/team-activities/:id). */
+export interface TeamActivityDetail {
+  id: string;
+  teamId: string;
+  teamName: string;
+  department: string;
+  title: string;
+  content: string;
+  /** 활동 날짜 — "05월 27일" */
+  dateLabel: string;
+  createdAt: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 상단 이미지 */
+  coverImageUrl: string | null;
+  likeCount: number;
+  likedByMe: boolean;
+  isMine: boolean;
+  /** 최상위 댓글만 담긴다. 대댓글은 각 댓글의 replies에 있다 */
+  comments: PostComment[];
 }
 
 /** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */
