@@ -18,6 +18,8 @@ interface PhotoGridProps {
   selectedIds?: string[];
   /** 첫 칸을 차지하는 "추가" 슬롯 (시안 갤러리-관리). 안 넘기면 안 그린다. */
   onAddPress?: () => void;
+  /** 사진이 없어 월 묶음이 없을 때 추가 슬롯만 그리는 경우 라벨을 숨긴다. */
+  showLabel?: boolean;
 }
 
 const COLUMNS = 3;
@@ -40,6 +42,7 @@ export function PhotoGrid({
   selecting = false,
   selectedIds = [],
   onAddPress,
+  showLabel = true,
 }: PhotoGridProps) {
   // 추가 슬롯은 첫 칸을 차지한다 — null을 앞에 끼워 넣고 렌더에서 구분한다.
   const slots: (GridPhoto | null)[] = onAddPress ? [null, ...photos] : photos;
@@ -47,7 +50,7 @@ export function PhotoGrid({
 
   return (
     <View className="gap-0.5">
-      <Text className="text-body-main text-text-normal">{label}</Text>
+      {showLabel && <Text className="text-body-main text-text-normal">{label}</Text>}
       <View className="gap-1">
         {rows.map((row, rowIndex) => (
           <View key={rowIndex} className="flex-row gap-1">
