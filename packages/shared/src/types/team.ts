@@ -46,3 +46,18 @@ export interface TeamGalleryMonth {
   month: string;
   photos: TeamGalleryPhotoInfo[];
 }
+
+// ── 팀 관리 (관리자 전용) ────────────────────────────────────────────────
+
+/** POST /teams 요청 본문 — 팀 생성 폼(팀 이름/팀장/배경사진/한 줄 소개/팀 소개). */
+export interface CreateTeamRequest {
+  name: string;
+  /** 팀장으로 지정할 userId — LEADER 멤버십으로 반영된다 */
+  leaderId: string;
+  tagline?: string | null;
+  description?: string | null;
+  coverImageUrl?: string | null;
+}
+
+/** PATCH /teams/:id 요청 본문 — 보낸 필드만 반영된다. */
+export type UpdateTeamRequest = Partial<CreateTeamRequest>;
