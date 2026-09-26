@@ -15,6 +15,7 @@ import {
 } from "react-native";
 
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
+import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchPrayers } from "../prayer-board/api";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
@@ -59,6 +60,7 @@ const DEPARTMENT_ACTIVITIES = [
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
+  const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [prayerPage, setPrayerPage] = useState(0);
 
   // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (말씀 텍스트형 또는 포스터형).
@@ -87,7 +89,12 @@ export function HomeScreen() {
   };
 
   return (
-    <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="pb-10">
+    <ScrollView
+      className="flex-1 bg-background-normal"
+      contentContainerClassName="pb-10"
+      onScroll={handleHideTabBarScroll}
+      scrollEventThrottle={16}
+    >
       <View className="px-5 pt-8">
         {banner?.kind === "POSTER" && banner.imageUrl !== null ? (
           /* 포스터 배너 — 텍스트 없이 이미지 + 주보 버튼만 남는다 (2026-09-23 확정).
