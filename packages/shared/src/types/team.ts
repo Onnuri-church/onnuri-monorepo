@@ -61,3 +61,24 @@ export interface CreateTeamRequest {
 
 /** PATCH /teams/:id 요청 본문 — 보낸 필드만 반영된다. */
 export type UpdateTeamRequest = Partial<CreateTeamRequest>;
+
+// ── 팀원 관리 (팀장·관리자) ──────────────────────────────────────────────
+
+/**
+ * GET /teams/:id/members/candidates 응답 항목 — 팀원 추가 화면의 후보 명단.
+ * 관리자 전용 회원 목록(GET /users) 대신 팀 단위로 열어, 팀장도 자기 팀에 넣을 사람만 본다.
+ * 이미 이 팀에 있는 사람은 빠진 채로 내려온다.
+ */
+export interface TeamMemberCandidate {
+  /** userId */
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  /** 지금 속한 팀 이름 — 없으면 null (화면은 "소속 팀 없음"으로 그린다) */
+  teamName: string | null;
+}
+
+/** POST /teams/:id/members 요청 본문 — 추가 화면에서 여러 명을 한 번에 고른다. */
+export interface AddTeamMembersRequest {
+  userIds: string[];
+}
