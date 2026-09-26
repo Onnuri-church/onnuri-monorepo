@@ -311,23 +311,11 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="팀원 관리" rightAction="home" />,
             }}
           />
-          {/* "완료"는 고른 사람을 반영하고 돌아가는 동작이라 화면 상태가 필요하다 —
-              API가 붙기 전까지는 뒤로가기만 한다. */}
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
             name="TeamMemberAdd"
             component={TeamMemberAddScreen}
-            options={({ navigation }) => ({
-              headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title="팀원 추가"
-                  rightAction="text"
-                  rightLabel="완료"
-                  onPressRightLabel={() => navigation.goBack()}
-                />
-              ),
-            })}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="TeamMemberList"

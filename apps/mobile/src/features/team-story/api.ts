@@ -1,7 +1,9 @@
 import type {
+  AddTeamMembersRequest,
   CreateTeamRequest,
   TeamDetailResponse,
   TeamGalleryMonth,
+  TeamMemberCandidate,
   TeamRole,
   TeamSummary,
   UpdateTeamRequest,
@@ -100,4 +102,42 @@ export function useUpdateTeam(teamId: string) {
 
 export function useDeleteTeam() {
   return useTeamMutation((teamId: string) => apiClient.delete(`/teams/${teamId}`));
+}
+
+// ── 팀원 관리 (팀장·관리자) ──────────────────────────────────────────────
+// 팀원이 바뀌면 상세(팀원 목록)와 /users/me(내 소속), 회원 목록(소속 표시)이 같이 영향받는다.
+function useTeamMemberMutation<TArgs>(teamId: string, run: (args: TArgs) => Promise<unknown>) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: run,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["teams", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["team-candidates", teamId] });
+      queryClient.invalidateQueries({ queryKey: ["me"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "members"] });
+    },
+  });
+}
+
+// 팀원 추가 화면의 후보 명단 — 이미 그 팀에 있는 사람은 서버가 빼고 내려준다.
+export function useTeamMemberCandidates(teamId: string) {
+  return useQuery({
+    queryKey: ["team-candidates", teamId],
+    queryFn: () =>
+      apiClient
+        .get<TeamMemberCandidate[]>(`/teams/${teamId}/members/candidates`)
+        .then((res) => res.data),
+  });
+}
+
+export function useAddTeamMembers(teamId: string) {
+  return useTeamMemberMutation(teamId, (userIds: string[]) =>
+    apiClient.post(`/teams/${teamId}/members`, { userIds } satisfies AddTeamMembersRequest),
+  );
+}
+
+export function useRemoveTeamMember(teamId: string) {
+  return useTeamMemberMutation(teamId, (userId: string) =>
+    apiClient.delete(`/teams/${teamId}/members/${userId}`),
+  );
 }

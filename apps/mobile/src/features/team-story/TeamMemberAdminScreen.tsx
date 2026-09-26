@@ -1,35 +1,38 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { TeamMemberInfo } from "@onnuri/shared";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { toTeamRoleLabel, useRemoveTeamMember, useTeamDetail } from "./api";
 import { MemberRow } from "./components/MemberRow";
-import { TEAM_MEMBERS, type TeamMember } from "./teams";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
-// 팀장은 자기 자신을 뺄 수 없어서 삭제 버튼이 붙지 않는다 (시안: 팀장 행만 "팀장" 문구).
-const LEADER_ROLE_LABEL = "팀장";
-
 // 팀장이 팀원을 빼고 새로 넣는 화면. 목록은 팀 상세·팀원 리스트와 같은 행을 쓴다.
+// 팀장은 이 화면에서 뺄 수 없다 (팀장 교체는 팀 편집에서) — 시안도 팀장 행에만 "팀장" 문구다.
 export function TeamMemberAdminScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamMemberAdmin">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const deleteDialogRef = useRef<AppDialogRef>(null);
+  const { data: team } = useTeamDetail(params.teamId);
+  const removeMember = useRemoveTeamMember(params.teamId);
   const [query, setQuery] = useState("");
-  const [pendingMember, setPendingMember] = useState<TeamMember | null>(null);
+  const [pendingMember, setPendingMember] = useState<TeamMemberInfo | null>(null);
 
-  const visibleMembers = TEAM_MEMBERS.filter((member) => member.name.includes(query.trim()));
+  const members = team?.members ?? [];
+  const visibleMembers = members.filter((member) => member.name.includes(query.trim()));
 
-  const handleDeletePress = (member: TeamMember) => {
+  const handleDeletePress = (member: TeamMemberInfo) => {
     setPendingMember(member);
     deleteDialogRef.current?.open();
   };
 
   const handleDeleteConfirm = () => {
-    // TODO(API): 팀원 삭제 연동 전 — 팝업 흐름까지만 동작한다.
+    if (pendingMember) removeMember.mutate(pendingMember.id);
+    setPendingMember(null);
     deleteDialogRef.current?.close();
   };
 
@@ -38,7 +41,7 @@ export function TeamMemberAdminScreen() {
       <ScrollView contentContainerClassName="px-5 pb-6">
         {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
         <Text className="text-center text-caption-main text-text-alternative">
-          총 {TEAM_MEMBERS.length}명
+          총 {members.length}명
         </Text>
 
         <View className="mt-4">
@@ -50,11 +53,9 @@ export function TeamMemberAdminScreen() {
             <MemberRow
               key={member.id}
               name={member.name}
-              roleLabel={member.roleLabel}
+              roleLabel={toTeamRoleLabel(member.role)}
               onDeletePress={
-                member.roleLabel === LEADER_ROLE_LABEL
-                  ? undefined
-                  : () => handleDeletePress(member)
+                member.role === "LEADER" ? undefined : () => handleDeletePress(member)
               }
             />
           ))}
