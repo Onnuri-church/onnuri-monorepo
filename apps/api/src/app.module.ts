@@ -11,6 +11,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
 import { NoticesModule } from './modules/notices/notices.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
@@ -36,6 +37,7 @@ import { UsersModule } from './modules/users/users.module';
     UploadsModule,
     AdminModule,
     NoticesModule,
+    AttendanceModule,
   ],
   controllers: [AppController],
   providers: [
