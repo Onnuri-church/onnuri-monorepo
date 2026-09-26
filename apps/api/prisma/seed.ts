@@ -22,14 +22,19 @@ const CELL_NAMES = [
   '혜민셀',
   '효원셀',
 ];
-const TEAM_NAMES = [
-  '디자인팀',
-  '방송팀',
-  '영상팀',
-  '중보기도팀',
-  '찬양팀',
-  '풋살팀',
-  'SNS팀',
+// 시안 확정값. iconUrl에는 이미지 주소가 아니라 앱이 번들 SVG를 고르는 아이콘 이름을 넣는다
+// (팀 아이콘 7종이 고정이고 관리자가 바꾸는 화면도 없다 — TeamSummary 주석 참고).
+// description(상세 본문)은 시안에 디자인팀 문구 하나만 있어서 모든 팀이 같은 글을 쓴다.
+const TEAM_INTRO =
+  '부서에 필요한 포스터, 카드뉴스 등 다양한 콘텐츠를 만들어요. 매주 필요한 디자인 요청을 받아 함께 논의하고 제작해요. 그림이나 편집 툴에 관심 있다면 편하게 들어와도 좋아요.';
+const TEAMS = [
+  { name: '디자인팀', iconUrl: 'palette', tagline: '부서 콘텐츠와 홍보물을 디자인해요' },
+  { name: '방송팀', iconUrl: 'video-on', tagline: '예배와 행사 영상, 음향 송출을 담당해요' },
+  { name: '영상팀', iconUrl: 'media-strip', tagline: '부서 행사와 활동 모습을 촬영, 편집해요' },
+  { name: '중보기도팀', iconUrl: 'pray', tagline: '부서와 지체들을 위해 함께 기도해요' },
+  { name: '찬양팀', iconUrl: 'note', tagline: '예배 찬양을 준비하고 인도해요' },
+  { name: '풋살팀', iconUrl: 'soccer', tagline: '함께 몸을 움직이며 친교를 나눠요' },
+  { name: 'SNS팀', iconUrl: 'thumb-up', tagline: '부서 소식을 온라인으로 전해요' },
 ];
 
 // 큐티나눔 작성자 — 소셜 로그인 전용이라 이 이메일로는 로그인할 수 없다(관리자 계정과 같다).
@@ -93,8 +98,10 @@ async function main() {
     create: { email: 'admin@onnuri.local', name: '관리자', isAdmin: true },
   });
 
-  for (const name of TEAM_NAMES) {
-    await prisma.team.upsert({ where: { name }, update: {}, create: { name } });
+  // 이미 이름만 들어가 있는 팀들도 채워야 하므로 update를 비워두지 않는다.
+  for (const team of TEAMS) {
+    const data = { ...team, description: TEAM_INTRO };
+    await prisma.team.upsert({ where: { name: team.name }, update: data, create: data });
   }
 
   // 셀 이름은 유니크가 아니라 upsert 대신 있으면 건너뛴다.
@@ -151,7 +158,7 @@ async function main() {
   }
 
   console.log(
-    `시드 완료: 셀 ${CELL_NAMES.length}개 · 팀 ${TEAM_NAMES.length}개 · 큐티나눔 ${QT_POSTS.length}개 기준으로 맞춤`,
+    `시드 완료: 셀 ${CELL_NAMES.length}개 · 팀 ${TEAMS.length}개 · 큐티나눔 ${QT_POSTS.length}개 기준으로 맞춤`,
   );
 }
 

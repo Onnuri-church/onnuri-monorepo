@@ -118,10 +118,21 @@ export interface UpdateAdminMemberRequest {
   role?: AdminMemberRole;
 }
 
-/** GET /teams 응답 항목 — 프로필 설정의 소속 팀 선택지 */
+/**
+ * GET /teams 응답 항목 — 프로필 설정의 소속 팀 선택지와 팀스토리 목록이 같이 쓴다.
+ * 선택지 쪽은 id·name만 읽으므로 나머지가 null이어도 상관없다.
+ */
 export interface TeamSummary {
   id: string;
   name: string;
+  /**
+   * 앱이 번들 SVG를 고르는 아이콘 이름 (예: "palette"). 시안의 팀 아이콘 7종이 고정이고
+   * 관리자가 바꾸는 화면도 없어서, 이미지를 올리는 대신 이름을 Team.iconUrl에 저장한다.
+   * 아이콘을 자유롭게 바꿔야 하면 그때 전용 컬럼으로 옮긴다.
+   */
+  iconName: string | null;
+  /** 목록에 한 줄로 찍는 소개 */
+  tagline: string | null;
 }
 
 /**

@@ -1,9 +1,9 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { allPhotos, findPhotoIndex, findTeam } from "./teams";
+import { useTeam, useTeamGallery } from "./api";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -16,8 +16,17 @@ export function TeamStoryPhotoViewerScreen() {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
 
-  const photos = allPhotos();
-  const [index, setIndex] = useState(() => Math.max(findPhotoIndex(params.photoId), 0));
+  const team = useTeam(params.teamId);
+  // 갤러리를 거쳐 들어오므로 캐시에 있다 — 갤러리와 같은 순서로 평탄화한다.
+  const { data: gallery } = useTeamGallery(params.teamId);
+  const photos = (gallery ?? []).flatMap((month) => month.photos);
+
+  const [index, setIndex] = useState(0);
+  // 사진 목록이 캐시에서 도착하면 눌렀던 사진으로 맞춘다.
+  useEffect(() => {
+    const found = photos.findIndex((item) => item.id === params.photoId);
+    if (found >= 0) setIndex(found);
+  }, [gallery]);
   const photo = photos[index];
 
   const handlePrevPress = () => setIndex((current) => Math.max(current - 1, 0));
@@ -31,7 +40,7 @@ export function TeamStoryPhotoViewerScreen() {
           <Icon name="back" size={28} color={colors.icon.strong} />
         </Pressable>
         <Text className="text-heading-main text-text-disable">
-          {findTeam(params.teamId)?.name ?? "팀"} 사진
+          {team?.name ?? "팀"} 사진
         </Text>
         {/* 자리를 남겨야 타이틀이 가운데 온다 */}
         <View className="w-7" />
@@ -63,11 +72,6 @@ export function TeamStoryPhotoViewerScreen() {
         >
           <Icon name="expand-right" size={28} />
         </Pressable>
-      </View>
-
-      <View className="gap-px px-5 pb-10 pt-5" style={{ paddingBottom: insets.bottom + 40 }}>
-        <Text className="text-heading-small text-text-disable">{photo?.title}</Text>
-        <Text className="text-body-small text-text-disable">{photo?.meta}</Text>
       </View>
     </View>
   );

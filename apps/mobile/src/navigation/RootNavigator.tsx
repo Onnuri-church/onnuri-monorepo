@@ -24,6 +24,7 @@ import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScree
 import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
+import { useTeam } from "../features/team-story/api";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
@@ -49,12 +50,10 @@ import { SplashScreen } from "../features/splash/SplashScreen";
 import { TeamMemberAddScreen } from "../features/team-story/TeamMemberAddScreen";
 import { TeamMemberAdminScreen } from "../features/team-story/TeamMemberAdminScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
-import { TeamAdminScreen } from "../features/team-story/TeamAdminScreen";
 import { TeamFormScreen } from "../features/team-story/TeamFormScreen";
 import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
 import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
 import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
-import { findTeam } from "../features/team-story/teams";
 import { fetchMe } from "../features/profile/api";
 import { queryClient } from "../shared/api/queryClient";
 import { signOut } from "../shared/api/session";
@@ -74,6 +73,12 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 function CellDetailHeader({ cellId }: { cellId: string }) {
   const cell = useCell(cellId);
   return <Header variant="sub" title={cell?.name ?? "셀 페이지"} rightAction="home" />;
+}
+
+// 팀 상세 헤더 — 팀 이름이 서버 목록(useTeam)에서 오므로 같은 이유로 컴포넌트로 뺐다.
+function TeamStoryDetailHeader({ teamId }: { teamId: string }) {
+  const team = useTeam(teamId);
+  return <Header variant="sub" title={team?.name ?? "팀"} rightAction="home" />;
 }
 
 // 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
@@ -273,13 +278,7 @@ export function RootNavigator() {
             component={TeamStoryDetailScreen}
             options={({ route }) => ({
               headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title={findTeam(route.params.teamId)?.name ?? "팀"}
-                  rightAction="home"
-                />
-              ),
+              header: () => <TeamStoryDetailHeader teamId={route.params.teamId} />,
             })}
           />
           <Stack.Screen
@@ -290,14 +289,6 @@ export function RootNavigator() {
           />
           {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
           <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
-          <Stack.Screen
-            name="TeamAdmin"
-            component={TeamAdminScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="팀 관리" rightAction="none" />,
-            }}
-          />
           <Stack.Screen
             name="TeamForm"
             component={TeamFormScreen}
@@ -320,23 +311,11 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="팀원 관리" rightAction="home" />,
             }}
           />
-          {/* "완료"는 고른 사람을 반영하고 돌아가는 동작이라 화면 상태가 필요하다 —
-              API가 붙기 전까지는 뒤로가기만 한다. */}
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
             name="TeamMemberAdd"
             component={TeamMemberAddScreen}
-            options={({ navigation }) => ({
-              headerShown: true,
-              header: () => (
-                <Header
-                  variant="sub"
-                  title="팀원 추가"
-                  rightAction="text"
-                  rightLabel="완료"
-                  onPressRightLabel={() => navigation.goBack()}
-                />
-              ),
-            })}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="TeamMemberList"

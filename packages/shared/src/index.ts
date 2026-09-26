@@ -1,6 +1,7 @@
 export * from "./types/user";
 export * from "./types/admin";
 export * from "./types/cell";
+export * from "./types/team";
 export * from "./types/auth";
 export * from "./types/post";
 export * from "./types/prayer";
