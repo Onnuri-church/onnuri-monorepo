@@ -200,10 +200,8 @@ export function RootNavigator() {
           <Stack.Screen
             name="DepartmentActivityDetail"
             component={DepartmentActivityDetailScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="부서활동 게시판" />,
-            }}
+            // 헤더는 화면이 단독 등록한다 (⋮ 노출이 글 작성자에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="DepartmentActivityWrite"
