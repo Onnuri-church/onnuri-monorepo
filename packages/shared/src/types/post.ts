@@ -63,6 +63,9 @@ export interface QtShareDetail {
   authorAvatarUrl: string | null;
   /** 큐티 날짜 — "05월 27일". 목록의 dateLabel("2026.05.07")과 형식이 다르다 (상세 화면 문구) */
   dateLabel: string;
+  /** 같은 날짜의 원본값 — "2026-05-07". 수정 화면이 날짜 입력에 다시 채워 넣을 때 쓴다
+   *  (라벨에는 연도가 없어 되돌릴 수 없다) */
+  eventDate: string | null;
   /** 작성 시각(ISO). "38분 전" 같은 상대 표기는 시간이 지나면 변해서 서버 문구로 내리면
    *  캐시에 굳으므로, 문구를 만들지 않고 앱이 계산하게 한다 */
   createdAt: string;
@@ -243,6 +246,31 @@ export interface UpdateCellNewsRequest {
   eventDate?: string;
   imageUrls?: string[];
 }
+
+/**
+ * 큐티나눔 작성 (POST /posts/qt-shares) 요청 본문. 응답은 QtShareDetail.
+ * 사진은 본문에 담기 전에 POST /uploads/images로 먼저 올려 URL로 바꾼다 — 글쓰기 요청은
+ * 파일이 아니라 URL만 받는다(사진 여러 장과 글 저장이 한 요청에 묶이지 않게).
+ */
+export interface CreateQtShareRequest {
+  /** 큐티 날짜 — "2026-05-07" (YYYY-MM-DD). 목록의 월 필터 기준이라 필수다 */
+  eventDate: string;
+  title: string;
+  content: string;
+  /** 말씀 구절 — "룻기 2:16-23" */
+  passage: string | null;
+  /** 배경사진 (1장) */
+  coverImageUrl: string | null;
+  /** 본문사진 (최대 5장). 보낸 순서가 그대로 표시 순서가 된다 */
+  imageUrls: string[];
+}
+
+/**
+ * 큐티나눔 수정 (PATCH /posts/qt-shares/:id). 보낸 항목만 바뀐다.
+ * imageUrls를 보내면 기존 본문사진을 통째로 이 목록으로 바꾼다 — 작성 화면이 사진 목록
+ * 전체를 들고 있어서, 어떤 장이 빠졌는지 서버가 따로 계산할 필요가 없다.
+ */
+export type UpdateQtShareRequest = Partial<CreateQtShareRequest>;
 
 export interface Post {
   id: string;

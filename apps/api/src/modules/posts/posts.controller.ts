@@ -23,6 +23,8 @@ import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
 import { FindTeamActivitiesDto } from './dto/find-team-activities.dto';
+import { CreateQtShareDto } from './dto/create-qt-share.dto';
+import { UpdateQtShareDto } from './dto/update-qt-share.dto';
 import { PostsService } from './posts.service';
 
 // 게시판별 엔드포인트를 먼저 두고 :id 라우트를 뒤에 둔다 — 나중에 GET /posts/:id(상세)가
@@ -126,6 +128,26 @@ export class PostsController {
     return this.postsService.createTeamActivity(user.sub, dto);
   }
 
+  // 작성·수정·삭제는 로그인이 필요하다. 수정·삭제 권한(내 글인지)은 서비스가 본다.
+  @UseGuards(JwtAuthGuard)
+  @Post('qt-shares')
+  createQtShare(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: CreateQtShareDto,
+  ) {
+    return this.postsService.createQtShare(user.sub, body);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('qt-shares/:id')
+  updateQtShare(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() body: UpdateQtShareDto,
+  ) {
+    return this.postsService.updateQtShare(id, user.sub, body);
+  }
+
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('team-activities/:id')
@@ -156,6 +178,13 @@ export class PostsController {
     @Param('commentId') commentId: string,
   ) {
     return this.postsService.removeComment(commentId, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('qt-shares/:id')
+  removeQtShare(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.postsService.removeQtShare(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

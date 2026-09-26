@@ -26,14 +26,37 @@ import {
 } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
+import { CreateQtShareDto } from './dto/create-qt-share.dto';
 import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
+import { UpdateQtShareDto } from './dto/update-qt-share.dto';
 
 // "내 좋아요"를 고르는 조건. 게스트(userId 없음)는 좋아요가 있을 수 없는데, Prisma는
 // where의 undefined를 "조건 없음"으로 보기 때문에 그냥 넘기면 남의 좋아요까지 딸려와
 // likedByMe가 조용히 true가 된다. 빈 문자열은 어떤 cuid와도 안 맞아 0건이 된다.
 function myLikeFilter(userId?: string) {
   return { userId: userId ?? '' };
+}
+
+// "2026-05-07" → UTC 자정. @db.Date 컬럼은 UTC로 읽고 쓴다(common/utils/date 주석) —
+// 로컬 타임존으로 만들면 KST에서 하루 전 날짜로 저장돼 목록의 월 필터까지 밀린다.
+function toEventDate(value: string): Date {
+  return new Date(`${value}T00:00:00.000Z`);
+}
+
+// 위의 역방향 — 수정 화면 프리필용 "2026-05-07". UTC 자정이라 ISO 앞 10자가 곧 저장된 날짜다.
+function toDateValue(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+// 본문사진 행. 보낸 순서가 곧 표시 순서다 — 상세가 sortOrder 오름차순으로 읽는다.
+function toImageRows(imageUrls: string[], uploadedById: string) {
+  return imageUrls.map((url, index) => ({
+    url,
+    kind: 'POST_CONTENT' as const,
+    sortOrder: index + 1,
+    uploadedById,
+  }));
 }
 
 // 팀 이름 → 부서 키. 앱의 departmentColor.ts가 이 키로 칩 색을 고른다. 팀 이름은 관리자가
@@ -224,6 +247,8 @@ export class PostsService {
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,
       dateLabel: post.eventDate ? toDayLabel(post.eventDate) : '',
+      // 수정 화면 프리필용 원본 날짜 (YYYY-MM-DD)
+      eventDate: post.eventDate ? toDateValue(post.eventDate) : null,
       createdAt: post.createdAt.toISOString(),
       title: post.title ?? '',
       passage: post.qtShare?.passage ?? null,
@@ -234,6 +259,91 @@ export class PostsService {
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
     };
+  }
+
+  // 큐티나눔 작성. 저장한 글을 상세 모양 그대로 돌려준다 — 앱이 등록 직후 상세로 갈 때
+  // 같은 데이터를 다시 받지 않아도 되고, 저장이 실제로 어떻게 들어갔는지도 바로 확인된다.
+  async createQtShare(
+    userId: string,
+    dto: CreateQtShareDto,
+  ): Promise<QtShareDetail> {
+    const post = await this.prisma.post.create({
+      data: {
+        board: 'QT_SHARE',
+        authorId: userId,
+        title: dto.title,
+        content: dto.content,
+        eventDate: toEventDate(dto.eventDate),
+        coverImageUrl: dto.coverImageUrl,
+        qtShare: { create: { passage: dto.passage } },
+        images: { create: toImageRows(dto.imageUrls, userId) },
+      },
+      select: { id: true },
+    });
+
+    return this.findQtShare(post.id, userId);
+  }
+
+  // 큐티나눔 수정. 보낸 항목만 바꾼다 (undefined는 Prisma가 "건드리지 않음"으로 본다).
+  async updateQtShare(
+    id: string,
+    userId: string,
+    dto: UpdateQtShareDto,
+  ): Promise<QtShareDetail> {
+    await this.assertMyQtShare(id, userId);
+
+    await this.prisma.post.update({
+      where: { id },
+      data: {
+        title: dto.title,
+        content: dto.content,
+        eventDate: dto.eventDate ? toEventDate(dto.eventDate) : undefined,
+        coverImageUrl: dto.coverImageUrl,
+        // 큐티 글에는 QtShare 행이 항상 있지만, 없더라도 말씀만 조용히 사라지지 않게 upsert한다.
+        qtShare:
+          dto.passage === undefined
+            ? undefined
+            : {
+                upsert: {
+                  create: { passage: dto.passage },
+                  update: { passage: dto.passage },
+                },
+              },
+        // 사진은 통째로 교체한다 — 앱이 남은 목록 전체를 보내므로 어떤 장이 빠졌는지
+        // 서버가 맞춰볼 필요가 없다. 같은 update 안이라 지우기와 넣기가 함께 커밋된다.
+        images:
+          dto.imageUrls === undefined
+            ? undefined
+            : {
+                deleteMany: { kind: 'POST_CONTENT' },
+                create: toImageRows(dto.imageUrls, userId),
+              },
+      },
+    });
+
+    return this.findQtShare(id, userId);
+  }
+
+  // 삭제는 soft delete — 목록·상세가 deletedAt으로 거른다.
+  async removeQtShare(id: string, userId: string): Promise<void> {
+    await this.assertMyQtShare(id, userId);
+    await this.prisma.post.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+
+  // 수정·삭제 권한 검사. 없는 글과 남의 글을 구분한다 — 남의 글에 404를 주면 앱에서
+  // "글이 사라졌다"로 보여 잘못된 안내가 나간다.
+  private async assertMyQtShare(id: string, userId: string): Promise<void> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'QT_SHARE', deletedAt: null },
+      select: { authorId: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    if (post.authorId !== userId) {
+      throw new ForbiddenException('내가 쓴 글만 수정·삭제할 수 있습니다.');
+    }
   }
 
   // 셀 소식 목록 — 소식 날짜(eventDate) 최신순. 열람은 게스트도 된다 (셀 페이지 열람 범위).
