@@ -89,6 +89,61 @@ const QT_POSTS = [
   },
 ];
 
+// 부서활동 글. 내용은 시안의 임시 데이터에서 가져왔다. 칩 색이 팀마다 다르게 나오는지
+// 보려고 여러 팀에 나눠 둔다 — 팀 필터도 이 데이터로 확인한다.
+const TEAM_ACTIVITY_POSTS = [
+  {
+    teamName: 'SNS팀',
+    authorEmail: 'wonjunho@onnuri.local',
+    eventDate: '2026-05-27',
+    title: '인스타 스토리, 블로그 포스팅 일정',
+    content:
+      '예배사항과 다음주 시작될 저녁 기도회 안내 입니다!\n오늘 저녁 예배 마치고 혹은 내일까지 가능하시면\n인스타 포스팅/인스타 스토리 (포스팅을 스토리로 공지)\n블로그 포스팅 담당자들께서 공지 올려주시면 됩니다😀',
+    // 댓글·대댓글이 화면에 어떻게 쌓이는지 보려고 이 글에만 달아둔다.
+    comments: [
+      {
+        authorEmail: 'kimseoyeon@onnuri.local',
+        content: '포스팅 가이드는 이전과 동일하게 하면 될까요?',
+        replies: [
+          {
+            authorEmail: 'wonjunho@onnuri.local',
+            content: '네, 동일하게 부탁드려요!',
+          },
+        ],
+      },
+      {
+        authorEmail: 'leejeongmin@onnuri.local',
+        content: '확인했습니다👍',
+        replies: [],
+      },
+    ],
+  },
+  {
+    teamName: '풋살팀',
+    authorEmail: 'kimseoyeon@onnuri.local',
+    eventDate: '2026-05-24',
+    title: '이번 주 풋살 모임 장소 변경',
+    content: '비 예보가 있어서 실내 구장으로 옮겼습니다. 늦지 않게 와주세요!',
+    comments: [],
+  },
+  {
+    teamName: '방송팀',
+    authorEmail: 'leejeongmin@onnuri.local',
+    eventDate: '2026-05-21',
+    title: '주일 예배 음향 세팅 점검',
+    content: '토요일 오후에 미리 모여서 마이크 상태만 같이 봤으면 합니다.',
+    comments: [],
+  },
+  {
+    teamName: '디자인팀',
+    authorEmail: 'wonjunho@onnuri.local',
+    eventDate: '2026-05-18',
+    title: '여름 수련회 포스터 시안 공유',
+    content: '시안 두 가지 올려둘 테니 의견 남겨주세요. 금요일까지 정하면 좋겠습니다.',
+    comments: [],
+  },
+];
+
 async function main() {
   // Cell.createdById가 유저를 요구해서 시드용 관리자 계정을 만든다. 소셜 로그인 전용이라
   // 이 이메일로는 로그인할 수 없다 (개발용 로그인은 AUTH_DEV_LOGIN=true 환경에서만 열린다).
@@ -157,8 +212,63 @@ async function main() {
     });
   }
 
+  // 부서활동 글. 큐티나눔과 같은 방식으로 제목 기준으로 있으면 건너뛴다.
+  // 댓글·좋아요·조회수도 글을 새로 만들 때만 넣는다 — 다시 돌려도 수가 늘지 않는다.
+  for (const [index, post] of TEAM_ACTIVITY_POSTS.entries()) {
+    const existing = await prisma.post.findFirst({
+      where: { board: 'TEAM_ACTIVITY', title: post.title },
+    });
+    if (existing) continue;
+
+    const team = await prisma.team.findUnique({
+      where: { name: post.teamName },
+      select: { id: true },
+    });
+    if (!team) continue;
+
+    const created = await prisma.post.create({
+      data: {
+        board: 'TEAM_ACTIVITY',
+        authorId: authors.get(post.authorEmail)!,
+        teamId: team.id,
+        title: post.title,
+        content: post.content,
+        eventDate: new Date(post.eventDate),
+        viewCount: 24 - index,
+        likes: {
+          create: likers
+            .slice(0, index % likers.length)
+            .map((userId) => ({ userId })),
+        },
+      },
+      select: { id: true },
+    });
+
+    // 대댓글은 부모 id가 있어야 해서 중첩 create로 한 번에 넣지 않고 순서대로 만든다.
+    for (const comment of post.comments) {
+      const parent = await prisma.comment.create({
+        data: {
+          postId: created.id,
+          authorId: authors.get(comment.authorEmail)!,
+          content: comment.content,
+        },
+        select: { id: true },
+      });
+      for (const reply of comment.replies) {
+        await prisma.comment.create({
+          data: {
+            postId: created.id,
+            authorId: authors.get(reply.authorEmail)!,
+            parentId: parent.id,
+            content: reply.content,
+          },
+        });
+      }
+    }
+  }
+
   console.log(
-    `시드 완료: 셀 ${CELL_NAMES.length}개 · 팀 ${TEAMS.length}개 · 큐티나눔 ${QT_POSTS.length}개 기준으로 맞춤`,
+    `시드 완료: 셀 ${CELL_NAMES.length}개 · 팀 ${TEAMS.length}개 · 큐티나눔 ${QT_POSTS.length}개 · 부서활동 ${TEAM_ACTIVITY_POSTS.length}개 기준으로 맞춤`,
   );
 }
 

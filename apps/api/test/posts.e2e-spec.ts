@@ -1,6 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { QtShareDetail, QtShareListResponse } from '@onnuri/shared';
+import type {
+  QtShareDetail,
+  QtShareListResponse,
+  TeamActivityListResponse,
+} from '@onnuri/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -410,5 +414,91 @@ describe('Posts (e2e)', () => {
       expect(after?.likeCount).toBe(1);
       expect(after?.likedByMe).toBe(false);
     });
+  });
+
+  describe('부서활동 (GET /posts/team-activities)', () => {
+    let snsTeamId: string;
+    let praiseTeamId: string;
+    let snsPostId: string;
+    let rootCommentId: string;
+
+    beforeAll(async () => {
+      // 팀은 시드가 넣는 실데이터를 쓴다(이름이 유니크라 픽스처로 또 만들 수 없다).
+      const sns = await prisma.team.findUnique({ where: { name: 'SNS팀' } });
+      const praise = await prisma.team.findUnique({ where: { name: '찬양팀' } });
+      snsTeamId = sns!.id;
+      praiseTeamId = praise!.id;
+
+      const snsPost = await prisma.post.create({
+        data: {
+          board: 'TEAM_ACTIVITY',
+          authorId: userId,
+          teamId: snsTeamId,
+          title: `${FIXTURE_PREFIX}SNS활동`,
+          content: '첫 줄\n둘째 줄',
+          eventDate: new Date('2025-03-27'),
+        },
+      });
+      snsPostId = snsPost.id;
+
+      await prisma.post.create({
+        data: {
+          board: 'TEAM_ACTIVITY',
+          authorId: userId,
+          teamId: praiseTeamId,
+          title: `${FIXTURE_PREFIX}찬양활동`,
+          content: '찬양팀 본문',
+          eventDate: new Date('2025-03-26'),
+        },
+      });
+    }, 30_000);
+
+    const getActivities = (query = '') =>
+      request(app.getHttpServer()).get(`/posts/team-activities${query}`);
+
+    const findFixture = async (query = '', title = `${FIXTURE_PREFIX}SNS활동`) => {
+      const { body } = await getActivities(query).expect(200);
+      const list = body as TeamActivityListResponse;
+      return { list, item: list.items.find((post) => post.title === title) };
+    };
+
+    it('토큰 없이도 볼 수 있다', () => getActivities().expect(200));
+
+    it('팀 이름이 아니라 색 키(department)를 내려준다', async () => {
+      const { item } = await findFixture();
+      expect(item?.department).toBe('sns');
+      expect(item?.teamName).toBe('SNS팀');
+    });
+
+    it('필터 칩용 팀 목록을 같이 준다 (게스트는 GET /teams를 못 부른다)', async () => {
+      const { list } = await findFixture();
+      expect(list.teams.map((team) => team.name)).toContain('SNS팀');
+      expect(list.selectedTeamId).toBeNull();
+    });
+
+    it('teamId를 주면 그 팀 글만 남는다', async () => {
+      const { body } = await getActivities(`?teamId=${snsTeamId}`).expect(200);
+      const list = body as TeamActivityListResponse;
+      expect(list.selectedTeamId).toBe(snsTeamId);
+      const fixtures = list.items.filter((post) =>
+        post.title.startsWith(FIXTURE_PREFIX),
+      );
+      expect(fixtures.map((post) => post.title)).toEqual([
+        `${FIXTURE_PREFIX}SNS활동`,
+      ]);
+    });
+
+    it('없는 팀으로 거르면 빈 목록이 아니라 전체로 되돌린다', async () => {
+      const { body } = await getActivities('?teamId=no-such-team').expect(200);
+      const list = body as TeamActivityListResponse;
+      expect(list.selectedTeamId).toBeNull();
+      expect(list.items.length).toBeGreaterThan(0);
+    });
+
+    it('카드 미리보기는 본문 첫 줄만 쓴다', async () => {
+      const { item } = await findFixture();
+      expect(item?.description).toBe('첫 줄');
+    });
+
   });
 });

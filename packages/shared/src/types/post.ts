@@ -1,6 +1,8 @@
 // DB 스키마(apps/api/prisma/schema.prisma)의 Post·게시판 enum을 따른다. 게시판별 고유 필드
 // (익명 여부, 공개기간, 모집 상태 등)는 1:1 확장 테이블 소관이라 각 API DTO에서 내려준다.
 
+import type { TeamSummary } from "./user";
+
 export type BoardType =
   | "QT_SHARE" // 큐티나눔
   | "CELL_NEWS" // 셀 소식
@@ -117,6 +119,39 @@ export interface CellNewsDetail {
   /** 내가 쓴 글인지 — 수정·삭제 메뉴 노출 기준의 일부 (셀장·관리자도 삭제 가능) */
   isMine: boolean;
   comments: PostComment[];
+}
+
+/** 부서활동 목록 카드 (GET /posts/team-activities). */
+export interface TeamActivityListItem {
+  id: string;
+  teamId: string;
+  /** 팀 이름(칩 문구) — "SNS팀" */
+  teamName: string;
+  /** 칩 색을 고르는 키 — "sns"·"praise" 등. 모르는 값이면 앱이 폴백 색을 쓴다 */
+  department: string;
+  /** 활동 날짜 — "2026.05.27" */
+  dateLabel: string;
+  title: string;
+  /** 본문 한 줄 미리보기 */
+  description: string;
+  /** 작성 시각(ISO). "22시간 전"은 앱이 계산한다 */
+  createdAt: string;
+  viewCount: number;
+  /** 최상위 댓글 수 — 대댓글은 세지 않는다 (시안: 댓글 3줄에 "댓글 2") */
+  commentCount: number;
+  likeCount: number;
+}
+
+/**
+ * 부서활동 목록 응답. 필터 칩에 쓸 팀 목록을 같이 내려준다 — GET /teams는 로그인이
+ * 필요한데 이 게시판은 게스트도 열람하므로, 앱이 팀 목록을 따로 못 받는다.
+ * (큐티나눔이 월 목록을 함께 내려주는 것과 같은 방식.)
+ */
+export interface TeamActivityListResponse {
+  teams: TeamSummary[];
+  /** null이면 전체 — "전체" 칩은 앱이 맨 앞에 붙인다 */
+  selectedTeamId: string | null;
+  items: TeamActivityListItem[];
 }
 
 /** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */
