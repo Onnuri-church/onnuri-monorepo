@@ -99,6 +99,26 @@ export class PostsController {
     return this.postsService.findTeamActivities(query.teamId);
   }
 
+  @UseGuards(OptionalJwtAuthGuard)
+  @Get('team-activities/:id')
+  findTeamActivity(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+  ) {
+    return this.postsService.findTeamActivity(id, user?.sub);
+  }
+
+  // 작성·수정은 아직 없고 삭제만 있다 (상세 ⋮ > 삭제하기).
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('team-activities/:id')
+  removeTeamActivity(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+  ) {
+    return this.postsService.removeTeamActivity(id, user.sub);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post(':id/comments')
   addComment(
@@ -106,7 +126,19 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: CreateCommentDto,
   ) {
-    return this.postsService.addComment(id, user.sub, dto.content);
+    return this.postsService.addComment(id, user.sub, dto.content, dto.parentId);
+  }
+
+  // 댓글 삭제는 글이 아니라 댓글에 달리지만, 경로는 글 밑에 둔다 — 어떤 글의 댓글인지가
+  // 주소에 드러나야 로그에서 읽힌다.
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id/comments/:commentId')
+  removeComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.postsService.removeComment(commentId, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

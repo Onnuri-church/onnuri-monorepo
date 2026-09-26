@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import type {
   QtShareDetail,
   QtShareListResponse,
+  TeamActivityDetail,
   TeamActivityListResponse,
 } from '@onnuri/shared';
 import request from 'supertest';
@@ -13,6 +14,7 @@ import { PrismaService } from '../src/modules/prisma/prisma.service';
 
 // 테스트 데이터 식별용 접두사/도메인 — 시작/종료 시 이 값들로 만든 행을 정리한다.
 // 공용 개발 DB를 쓰므로(ARCHITECTURE.md Known Issues) 시드/실데이터와 안 겹치게 접두사를 붙인다.
+// 부서활동 픽스처가 만든 댓글은 글과 함께 지워진다 (Comment는 postId에 onDelete: Cascade).
 const EMAIL_DOMAIN = 'posts-e2e.test';
 const USER_EMAIL = `qt@${EMAIL_DOMAIN}`;
 const FIXTURE_PREFIX = 'posts-e2e-';
@@ -500,5 +502,216 @@ describe('Posts (e2e)', () => {
       expect(item?.description).toBe('첫 줄');
     });
 
+    it('상세를 열면 조회수가 오른다', async () => {
+      const before = await findFixture();
+      await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+
+      const after = await findFixture();
+      expect(after.item!.viewCount).toBe(before.item!.viewCount + 1);
+    });
+
+    it('큐티 글 id로 부르면 404 (게시판을 거른다)', () =>
+      request(app.getHttpServer())
+        .get(`/posts/team-activities/${marchPostId}`)
+        .expect(404));
+
+    it('토큰 없이 댓글을 달면 401', () =>
+      request(app.getHttpServer())
+        .post(`/posts/${snsPostId}/comments`)
+        .send({ content: '게스트 댓글' })
+        .expect(401));
+
+    it('댓글을 달면 상세에 보이고 isMine이 true다', async () => {
+      const { body } = await request(app.getHttpServer())
+        .post(`/posts/${snsPostId}/comments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: '포스팅 가이드는 이전과 동일할까요?' })
+        .expect(201);
+      rootCommentId = (body as { id: string }).id;
+
+      const detail = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const comments = (detail.body as TeamActivityDetail).comments;
+      expect(comments).toHaveLength(1);
+      expect(comments[0].isMine).toBe(true);
+      expect(comments[0].replies).toEqual([]);
+    });
+
+    it('게스트로 보면 남의 댓글이라 isMine이 false다', async () => {
+      const { body } = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+      expect((body as TeamActivityDetail).comments[0].isMine).toBe(false);
+    });
+
+    it('대댓글은 부모 댓글의 replies에 들어가고, 댓글 수에는 안 들어간다', async () => {
+      await request(app.getHttpServer())
+        .post(`/posts/${snsPostId}/comments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: '네, 동일하게 부탁드려요!', parentId: rootCommentId })
+        .expect(201);
+
+      const detail = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+      const comments = (detail.body as TeamActivityDetail).comments;
+      expect(comments).toHaveLength(1);
+      expect(comments[0].replies).toHaveLength(1);
+
+      // 시안의 "댓글 2"는 최상위만 센 값이다 — 대댓글까지 세면 화면 숫자가 어긋난다.
+      const { item } = await findFixture();
+      expect(item?.commentCount).toBe(1);
+    });
+
+    it('대댓글에 또 답글을 달면 400 (1단계까지만)', async () => {
+      const detail = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+      const replyId = (detail.body as TeamActivityDetail).comments[0].replies[0]
+        .id;
+
+      await request(app.getHttpServer())
+        .post(`/posts/${snsPostId}/comments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: '답글의 답글', parentId: replyId })
+        .expect(400);
+    });
+
+    it('다른 글의 댓글을 부모로 주면 404', () =>
+      request(app.getHttpServer())
+        .post(`/posts/${marchPostId}/comments`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ content: '엉뚱한 부모', parentId: rootCommentId })
+        .expect(404));
+
+    it('남의 댓글은 삭제할 수 없다 (403)', async () => {
+      const stranger = await prisma.user.create({
+        data: { email: `commenter@${EMAIL_DOMAIN}`, name: '남의댓글러' },
+      });
+      const othersComment = await prisma.comment.create({
+        data: {
+          postId: snsPostId,
+          authorId: stranger.id,
+          content: '남이 쓴 댓글',
+        },
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/posts/${snsPostId}/comments/${othersComment.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(403);
+
+      const detail = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+      const contents = (detail.body as TeamActivityDetail).comments.map(
+        (comment) => comment.content,
+      );
+      expect(contents).toContain('남이 쓴 댓글');
+    });
+
+    it('토큰 없이 글을 삭제하면 401', () =>
+      request(app.getHttpServer())
+        .delete(`/posts/team-activities/${snsPostId}`)
+        .expect(401));
+
+    it('남의 글은 삭제할 수 없다 (403)', async () => {
+      const otherAuthor = await prisma.user.create({
+        data: { email: `teamauthor@${EMAIL_DOMAIN}`, name: '남의부서글쓴이' },
+      });
+      const othersPost = await prisma.post.create({
+        data: {
+          board: 'TEAM_ACTIVITY',
+          authorId: otherAuthor.id,
+          teamId: praiseTeamId,
+          title: `${FIXTURE_PREFIX}남의부서활동`,
+          content: '남이 쓴 부서활동',
+        },
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/posts/team-activities/${othersPost.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(403);
+
+      // 튕겼으면 글이 그대로 남아 있어야 한다.
+      await request(app.getHttpServer())
+        .get(`/posts/team-activities/${othersPost.id}`)
+        .expect(200);
+    });
+
+    it('내 글을 지우면 상세가 404가 되고 목록에서도 빠진다', async () => {
+      const mine = await prisma.post.create({
+        data: {
+          board: 'TEAM_ACTIVITY',
+          authorId: userId,
+          teamId: praiseTeamId,
+          title: `${FIXTURE_PREFIX}지울부서활동`,
+          content: '지울 부서활동',
+        },
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/posts/team-activities/${mine.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      await request(app.getHttpServer())
+        .get(`/posts/team-activities/${mine.id}`)
+        .expect(404);
+
+      const { list } = await findFixture('', `${FIXTURE_PREFIX}지울부서활동`);
+      expect(list.items.map((post) => post.id)).not.toContain(mine.id);
+
+      // 행은 남고 deletedAt만 채운다.
+      const row = await prisma.post.findUnique({
+        where: { id: mine.id },
+        select: { deletedAt: true },
+      });
+      expect(row?.deletedAt).not.toBeNull();
+    });
+
+    it('이미 지운 글을 다시 지우면 404', async () => {
+      const mine = await prisma.post.create({
+        data: {
+          board: 'TEAM_ACTIVITY',
+          authorId: userId,
+          teamId: praiseTeamId,
+          title: `${FIXTURE_PREFIX}두번지울부서활동`,
+          content: '두 번 지울 부서활동',
+          deletedAt: new Date(),
+        },
+      });
+
+      await request(app.getHttpServer())
+        .delete(`/posts/team-activities/${mine.id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(404);
+    });
+
+    it('내 댓글을 지우면 상세에서 빠진다 (행은 남는다)', async () => {
+      await request(app.getHttpServer())
+        .delete(`/posts/${snsPostId}/comments/${rootCommentId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(204);
+
+      const detail = await request(app.getHttpServer())
+        .get(`/posts/team-activities/${snsPostId}`)
+        .expect(200);
+      const ids = (detail.body as TeamActivityDetail).comments.map(
+        (comment) => comment.id,
+      );
+      expect(ids).not.toContain(rootCommentId);
+
+      const row = await prisma.comment.findUnique({
+        where: { id: rootCommentId },
+        select: { deletedAt: true },
+      });
+      expect(row?.deletedAt).not.toBeNull();
+    });
   });
 });
