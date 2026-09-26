@@ -1,15 +1,15 @@
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import type {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useLayoutEffect, useRef} from "react";
-import {ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
+import {Alert, ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
 import {AppDialog, type AppDialogRef} from "../../shared/components/base/AppDialog";
 import {FavoriteButton} from "../../shared/components/base/FavoriteButton";
 import {Header} from "../../shared/components/base/Header";
 import {Skeleton} from "../../shared/components/base/Skeleton";
 import type {RootStackParamList} from "../../shared/types/navigation";
-import {useQuery} from "@tanstack/react-query";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {toTimeAgo} from "../../shared/utils/date";
-import {fetchQtDetails} from "./api";
+import {deleteQtShare, fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
 
@@ -26,15 +26,31 @@ export function QtBoardDetailScreen() {
     // 회전·폴더블로 화면 폭이 바뀌어도 따라온다.
     const {width} = useWindowDimensions();
     const imageSize = width - CAROUSEL_MARGIN_X * 2;
-    // 서버 연동 전 목업 — API가 붙으면 글 작성자 id와 내 id 비교로 교체한다.
-    const isMine = true;
 
     const { data, isPending, isError } = useQuery({
         queryKey: ["qt-share", id],
         queryFn: () => fetchQtDetails(id)
     })
 
+    // 내 글인지는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다). 아직 못 받았으면
+    // 없는 것으로 본다 — 남의 글에 ⋮가 잠깐 보였다 사라지는 편보다 낫다.
+    const isMine = data?.isMine ?? false;
+
     const toggleLike = useToggleQtLike();
+    const queryClient = useQueryClient();
+
+    const { mutate: remove } = useMutation({
+        mutationFn: () => deleteQtShare(id),
+        onSuccess: () => {
+            // 지운 글의 상세 캐시는 버린다 — 남겨두면 뒤로 간 화면에서 잠깐 다시 보인다.
+            void queryClient.invalidateQueries({ queryKey: ["qt-shares"] });
+            queryClient.removeQueries({ queryKey: ["qt-share", id] });
+            navigation.goBack();
+        },
+        onError: () => {
+            Alert.alert("삭제하지 못했어요", "잠시 후 다시 시도해주세요.");
+        },
+    });
 
     // ⋮는 내 글일 때만 보이고 항목이 화면 데이터(작성자)에 의존하므로,
     // 등록부(RootNavigator)가 아니라 화면이 헤더를 단독 등록한다.
@@ -49,7 +65,7 @@ export function QtBoardDetailScreen() {
                         {
                             icon: "edit",
                             label: "수정하기",
-                            onPress: () => navigation.navigate("QtBoardWrite"),
+                            onPress: () => navigation.navigate("QtBoardWrite", {id}),
                         },
                         {
                             icon: "trash-can",
@@ -60,12 +76,11 @@ export function QtBoardDetailScreen() {
                 />
             ),
         });
-    }, [navigation, isMine]);
+    }, [navigation, isMine, id]);
 
     const confirmDelete = () => {
-        // 서버 연동 전 — 삭제 API가 붙으면 여기서 호출하고 목록 캐시를 갱신한다.
         dialogRef.current?.close();
-        navigation.goBack();
+        remove();
     };
 
     // 훅을 다 부른 뒤에 분기한다. 여기서 걸러내야 아래에서 data가 undefined가 아니게 된다.

@@ -15,7 +15,8 @@ export type RootStackParamList = {
   Main: undefined;
   QtBoard: undefined;
   QtBoardDetail: { id: string };
-  QtBoardWrite: undefined;
+  // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (상세의 ⋮ > 수정하기에서 진입).
+  QtBoardWrite: { id: string } | undefined;
   Live: undefined;
   Qr: undefined;
   // QR을 찍은 뒤 보는 결과. duplicate면 "이미 출석했다" 안내로 바뀐다 —
