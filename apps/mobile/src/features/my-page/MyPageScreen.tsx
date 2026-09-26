@@ -1,17 +1,21 @@
 import type { MeResponse } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
+import { useRef, useState } from "react";
+import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { fetchMe } from "../profile/api";
+import { uploadImage } from "../../shared/api/upload";
+import { fetchMe, patchMyAvatar } from "../profile/api";
 import { findTeamByName } from "../team-story/teams";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
@@ -90,6 +94,60 @@ export function MyPageScreen() {
     enabled: session.status === "authenticated",
   });
 
+  // 아바타 탭 → 사진 선택 → 업로드 → 저장. 정사각 크롭은 시스템 피커의 편집 화면에 맡긴다.
+  const queryClient = useQueryClient();
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  const avatarSheetRef = useRef<AppSheetRef>(null);
+
+  // 사진이 이미 있으면 시트에서 고르고(변경/기본 이미지), 없으면 바로 앨범을 연다 —
+  // 선택지가 하나뿐일 때 시트를 띄우는 건 손만 늘리는 일이라서다.
+  const handleAvatarPress = () => {
+    if (!me || avatarUploading) return;
+    if (me.avatarUrl) {
+      avatarSheetRef.current?.open();
+    } else {
+      void handleAvatarPickPress();
+    }
+  };
+
+  const handleAvatarPickPress = async () => {
+    avatarSheetRef.current?.close();
+    if (!me || avatarUploading) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsEditing: true,
+      aspect: [1, 1],
+    });
+    if (result.canceled) return;
+    setAvatarUploading(true);
+    try {
+      const url = await uploadImage(result.assets[0].uri);
+      await patchMyAvatar(url);
+      // 다른 화면(셀원 목록·댓글 등)의 아바타는 각자 쿼리라 다음 조회 때 따라온다.
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
+  // 기본 이미지로 변경 — 창고의 옛 파일도 서버가 그 자리에서 지운다.
+  const handleAvatarResetPress = async () => {
+    avatarSheetRef.current?.close();
+    if (!me || avatarUploading) return;
+    setAvatarUploading(true);
+    try {
+      await patchMyAvatar(null);
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+    } catch {
+      Alert.alert("변경 실패", "잠시 후 다시 시도해주세요.");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   // /users/me가 오기 전까지는 세션의 유저(로그인 응답)로 이름을 먼저 그린다.
   const sessionUser = session.status === "authenticated" ? session.user : null;
   const name = me?.name ?? sessionUser?.name ?? "게스트";
@@ -141,10 +199,25 @@ export function MyPageScreen() {
 
         {/* 프로필 영역 */}
         <View className="mt-5 items-center">
-          {/* TODO(사진): 프로필 사진 연동 전 임시 placeholder — 흰 원 + user 아이콘 */}
-          <View className="h-25 w-25 items-center justify-center rounded-full bg-background-normal">
-            <Icon name="user" size={48} />
-          </View>
+          {/* 탭하면 사진 변경 — 우하단 연필 뱃지가 그 표시다. 게스트는 me가 없어 눌리지 않는다. */}
+          <Pressable
+            onPress={handleAvatarPress}
+            disabled={!me || avatarUploading}
+            style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}
+          >
+            {me?.avatarUrl ? (
+              <Image source={{ uri: me.avatarUrl }} className="h-25 w-25 rounded-full" />
+            ) : (
+              <View className="h-25 w-25 items-center justify-center rounded-full bg-background-normal">
+                <Icon name="user" size={48} />
+              </View>
+            )}
+            {me && (
+              <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full border border-background-assistive bg-background-normal">
+                <Icon name="edit" size={14} color={colors.icon.normal} />
+              </View>
+            )}
+          </Pressable>
           <Text className="mt-2.5 text-center text-title text-text-normal">
             {name}님,{"\n"}안녕하세요!
           </Text>
@@ -174,6 +247,42 @@ export function MyPageScreen() {
           <Text className="text-caption-main text-text-alternative">로그아웃</Text>
         </Pressable>
       </ScrollView>
+
+      {/* 프로필 사진 변경 시트 — 사진이 있을 때만 열린다 (SelectField 시트와 같은 결) */}
+      <AppSheet
+        ref={avatarSheetRef}
+        footer={
+          <View className="bg-background-normal px-4 pb-4">
+            <View className="border-t-2 border-background-assistive" />
+            <Pressable
+              onPress={() => avatarSheetRef.current?.close()}
+              className="pt-4"
+              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+            >
+              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
+            </Pressable>
+          </View>
+        }
+      >
+        <View className="gap-6 p-4 pb-9">
+          <Pressable
+            onPress={() => void handleAvatarPickPress()}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
+            <Text className="text-center text-body-medium text-text-normal">
+              앨범에서 사진 선택
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => void handleAvatarResetPress()}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
+            <Text className="text-center text-body-medium text-semantic-danger">
+              기본 이미지로 변경
+            </Text>
+          </Pressable>
+        </View>
+      </AppSheet>
     </View>
   );
 }

@@ -143,7 +143,7 @@ export class GroupMeetingsService {
       schedule: group.meetingSchedule ?? '미정',
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
-      leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name })),
+      leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
       // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
       photos: group.post.images.map((image) => ({
         id: image.id,
@@ -163,7 +163,7 @@ export class GroupMeetingsService {
       pendingMembers: canManage
         ? group.members
             .filter((m) => m.status === 'PENDING')
-            .map((m) => ({ id: m.userId, name: m.user.name }))
+            .map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl }))
         : [],
     };
   }

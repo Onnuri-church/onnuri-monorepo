@@ -51,6 +51,7 @@ export interface CellAttendanceMember {
   /** userId */
   id: string;
   name: string;
+  avatarUrl: string | null;
   role: CellRole;
   /** 예배 출석 — QR 자동 기록 + 셀장 수동 정정 결과 */
   worship: boolean;
@@ -96,6 +97,7 @@ export interface FollowerNoteInfo {
   /** "(일) 셀모임" */
   meetingLabel: string;
   authorName: string;
+  authorAvatarUrl: string | null;
   /** 작성일 — "08월 03일". "3주 전"은 앱이 계산한다 */
   writtenDateLabel: string;
   createdAt: string;

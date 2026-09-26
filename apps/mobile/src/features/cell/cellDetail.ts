@@ -36,6 +36,7 @@ export function canWriteFollowerNote(cellId: string, me: MeResponse | undefined)
 export interface CellMember {
   id: string;
   name: string;
+  avatarUrl: string | null;
   role: CellMemberRole;
 }
 

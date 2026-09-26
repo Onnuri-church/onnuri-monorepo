@@ -11,6 +11,7 @@ import {
   useDecideGroupMeetingMember,
   useJoinGroupMeeting,
 } from "./api";
+import { Avatar } from "../../shared/components/base/Avatar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Button } from "../../shared/components/base/Button";
 import { Chip } from "../../shared/components/base/Chip";
@@ -234,8 +235,7 @@ export function GroupMeetingDetailScreen() {
                   className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
                 >
                   <View className="flex-row items-center gap-4">
-                    {/* TODO(사진): 프로필 사진 연동 전 placeholder (셀원 관리 행과 동일) */}
-                    <View className="h-10 w-10 rounded-full bg-background-assistive" />
+                    <Avatar imageUrl={member.avatarUrl} size={40} />
                     <Text className="text-body-main text-text-normal">{member.name}</Text>
                   </View>
                   <View className="flex-row items-center gap-2">

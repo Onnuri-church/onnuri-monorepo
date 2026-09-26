@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
+import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { colors } from "../../shared/theme/tokens";
@@ -51,10 +52,13 @@ export function AdminMemberListScreen() {
               onPress={() => handleMemberPress(member.id)}
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              {/* TODO(사진): 프로필 사진 연동 전 placeholder */}
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-background-muted">
-                <Icon name="user" size={20} />
-              </View>
+              {member.avatarUrl ? (
+                <Avatar imageUrl={member.avatarUrl} size={40} />
+              ) : (
+                <View className="h-10 w-10 items-center justify-center rounded-full bg-background-muted">
+                  <Icon name="user" size={20} />
+                </View>
+              )}
               <View className="flex-1">
                 <View className="flex-row items-center gap-1.5">
                   <Text className="text-body-main text-text-normal">{member.name}</Text>

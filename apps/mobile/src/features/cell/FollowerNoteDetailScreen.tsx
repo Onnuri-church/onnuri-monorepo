@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Avatar } from "../../shared/components/base/Avatar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Header } from "../../shared/components/base/Header";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
@@ -89,8 +90,7 @@ export function FollowerNoteDetailScreen() {
         <ScrollView keyboardShouldPersistTaps="handled">
           <View className="px-5 pt-4">
             <View className="flex-row items-center gap-2">
-              {/* TODO(사진): 작성자 프로필 placeholder (시안 42) */}
-              <View className="h-10.5 w-10.5 rounded-full bg-background-assistive" />
+              <Avatar imageUrl={note.authorAvatarUrl} size={42} />
               <View>
                 <View className="flex-row items-center gap-1">
                   <Text className="text-heading-small text-text-normal">{note.authorName}</Text>

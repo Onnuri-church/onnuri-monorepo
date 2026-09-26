@@ -39,6 +39,8 @@ export interface PrayerListResponse {
 
 /** GET /posts/prayers/:id 응답 */
 export interface PrayerDetailResponse extends PrayerListItem {
+  /** 작성자 프로필 사진 — 익명 글은 항상 null (관리자에게도 사진은 숨긴다) */
+  authorAvatarUrl: string | null;
   content: string;
   viewCount: number;
   photoUrls: string[];

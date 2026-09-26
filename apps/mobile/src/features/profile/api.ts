@@ -23,3 +23,8 @@ export function fetchTeams(): Promise<TeamSummary[]> {
 export function patchMyProfile(body: UpdateMyProfileRequest): Promise<User> {
   return apiClient.patch<User>("/users/me", body).then((res) => res.data);
 }
+
+// 프로필 사진만 따로 바꾼다 (null이면 제거) — 마이페이지 아바타 탭에서 쓴다.
+export function patchMyAvatar(avatarUrl: string | null): Promise<MeResponse> {
+  return apiClient.patch<MeResponse>("/users/me/avatar", { avatarUrl }).then((res) => res.data);
+}

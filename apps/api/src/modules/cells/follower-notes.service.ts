@@ -37,7 +37,7 @@ export class FollowerNotesService {
         answer2: true,
         answer3: true,
         createdAt: true,
-        author: { select: { name: true } },
+        author: { select: { name: true, avatarUrl: true } },
         meeting: { select: { service: { select: { date: true } } } },
         comments: {
           select: {
@@ -61,6 +61,7 @@ export class FollowerNotesService {
         month: meetingDate.getUTCMonth() + 1,
         meetingLabel: `(${WEEKDAY_LABELS[meetingDate.getUTCDay()]}) 셀모임`,
         authorName: note.author.name,
+        authorAvatarUrl: note.author.avatarUrl,
         writtenDateLabel: toDayLabel(note.createdAt),
         createdAt: note.createdAt.toISOString(),
         answers: [note.answer1 ?? '', note.answer2 ?? '', note.answer3 ?? ''],

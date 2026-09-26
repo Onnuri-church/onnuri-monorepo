@@ -63,6 +63,29 @@ export class UploadsService {
     return { url: `${url}/storage/v1/object/public/${bucket}/${path}` };
   }
 
+  // 우리 버킷의 공개 URL이면 창고에서 파일을 지운다 — 아바타 교체처럼 "이전 파일이 더는
+  // 안 쓰이는 게 확실한" 자리에서 부른다. 실패해도 본 동작(교체)을 막지 않도록 예외를
+  // 던지지 않고 경고만 남긴다 (파일이 남는 건 사용자에게 안 보이는 문제라서다).
+  async deleteByUrl(fileUrl: string): Promise<void> {
+    const { url, serviceRoleKey, bucket } = this.storage;
+    if (!url || !serviceRoleKey) return;
+    const publicPrefix = `${url}/storage/v1/object/public/${bucket}/`;
+    // 외부 주소(개발 시드의 picsum 등)는 우리 창고가 아니므로 건드리지 않는다.
+    if (!fileUrl.startsWith(publicPrefix)) return;
+    const path = fileUrl.slice(publicPrefix.length);
+    try {
+      const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, {
+        method: 'DELETE',
+        headers: this.authHeaders(),
+      });
+      if (!response.ok && response.status !== 404) {
+        this.logger.warn(`storage delete failed: ${response.status} ${await response.text()}`);
+      }
+    } catch (error) {
+      this.logger.warn(`storage delete failed: ${String(error)}`);
+    }
+  }
+
   private putObject(path: string, file: Express.Multer.File) {
     const { url, bucket } = this.storage;
     return fetch(`${url}/storage/v1/object/${bucket}/${path}`, {

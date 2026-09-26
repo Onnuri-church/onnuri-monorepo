@@ -52,6 +52,7 @@ export function CellDetailScreen() {
   const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
     id: member.id,
     name: member.name,
+    avatarUrl: member.avatarUrl,
     role: toCellMemberRole(member.role),
   }));
   // 작성·업로드(canPost)는 그 셀에 속한 누구나, 삭제·관리 탭(canManage)은 셀장·관리자만.

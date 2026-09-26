@@ -8,6 +8,7 @@ import { SearchBar } from "../../shared/components/base/SearchBar";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useRemoveCellMember } from "../admin/api";
 import { toCellMemberRole, useCellDetail } from "./api";
+import { Avatar } from "../../shared/components/base/Avatar";
 import { type CellMember } from "./cellDetail";
 
 // 셀원 관리 (관리 탭 > 셀원 관리 — 셀장·관리자 전용 경로로만 진입한다).
@@ -25,6 +26,7 @@ export function CellMemberManageScreen() {
   const members: CellMember[] = (cellData?.members ?? []).map((member) => ({
     id: member.id,
     name: member.name,
+    avatarUrl: member.avatarUrl,
     role: toCellMemberRole(member.role),
   }));
   const [query, setQuery] = useState("");
@@ -96,8 +98,7 @@ function MemberRow({ member, onDeletePress }: MemberRowProps) {
   return (
     <View className="flex-row items-center justify-between border-b border-background-assistive py-2.5">
       <View className="flex-row items-center gap-4">
-        {/* TODO(사진): 프로필 사진 연동 전 placeholder */}
-        <View className="h-10 w-10 rounded-full bg-background-assistive" />
+        <Avatar imageUrl={member.avatarUrl} size={40} />
         <Text className="text-body-main text-text-normal">{member.name}</Text>
       </View>
       {member.role === "member" ? (

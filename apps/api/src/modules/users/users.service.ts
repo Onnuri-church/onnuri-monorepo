@@ -16,12 +16,16 @@ import type {
 import type { Prisma } from '../../../generated/prisma';
 import { toDateLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
   async findById(id: string): Promise<User | null> {
@@ -88,6 +92,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        avatarUrl: true,
         isAdmin: true,
         cellMemberships: {
           where: { endedAt: null, cell: { deletedAt: null } },
@@ -107,6 +112,7 @@ export class UsersService {
       return {
         id: user.id,
         name: user.name,
+        avatarUrl: user.avatarUrl,
         cellName: cell?.cell.name ?? null,
         teamName: team?.team.name ?? null,
         badge: user.isAdmin
@@ -127,6 +133,7 @@ export class UsersService {
       select: {
         id: true,
         name: true,
+        avatarUrl: true,
         birthDate: true,
         gender: true,
         phone: true,
@@ -158,6 +165,7 @@ export class UsersService {
     return {
       id: user.id,
       name: user.name,
+      avatarUrl: user.avatarUrl,
       birthDateLabel: user.birthDate ? toDateLabel(user.birthDate) : null,
       birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
       gender: user.gender,
@@ -351,6 +359,29 @@ export class UsersService {
 
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라
   // 멤버십 행으로 표현하므로(docs/erd.md — 레거시 cellName/teamId 제거 근거) 여기서 같이 반영한다.
+  // 프로필 사진 변경 — 마이페이지 아바타 탭에서 바로 저장한다 (null이면 사진 제거).
+  async updateMyAvatar(
+    userId: string,
+    avatarUrl: string | null,
+  ): Promise<MeResponse> {
+    const before = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { avatarUrl: true },
+    });
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl },
+      select: { id: true },
+    });
+    // 교체·제거로 더는 안 쓰이는 옛 파일은 그 자리에서 창고에서도 지운다 — 아바타는
+    // 다른 곳에서 재사용되지 않는 전용 파일이라 안전하다. 실패해도 교체는 성공한다.
+    const oldUrl = before?.avatarUrl;
+    if (oldUrl && oldUrl !== avatarUrl) {
+      await this.uploadsService.deleteByUrl(oldUrl);
+    }
+    return (await this.findMe(userId))!;
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,

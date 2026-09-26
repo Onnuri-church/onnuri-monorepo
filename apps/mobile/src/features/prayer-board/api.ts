@@ -110,6 +110,8 @@ export async function fetchBookmarkedPrayers(
 }
 
 export interface PrayerDetail extends PrayerRequest {
+  /** 작성자 프로필 사진 — 익명 글은 서버가 null로 내린다 */
+  authorAvatarUrl: string | null;
   /** 기도 기간 (예: "2026.07.24 - 2026.08.04") — 작성일부터 공개 종료일까지 */
   periodLabel: string;
   viewCount: number;
@@ -127,6 +129,7 @@ export async function fetchPrayerDetail(id: string): Promise<PrayerDetail> {
   const { data } = await apiClient.get<PrayerDetailResponse>(`/posts/prayers/${id}`);
   return {
     ...toCard(data),
+    authorAvatarUrl: data.authorAvatarUrl,
     periodLabel: `${toDotDate(data.createdAt)} - ${toDotDate(data.visibleUntil)}`,
     viewCount: data.viewCount,
     content: data.content,

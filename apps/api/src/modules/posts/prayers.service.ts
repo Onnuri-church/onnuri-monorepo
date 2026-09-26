@@ -20,7 +20,7 @@ const LIST_SELECT = {
   title: true,
   createdAt: true,
   authorId: true,
-  author: { select: { name: true } },
+  author: { select: { name: true, avatarUrl: true } },
   prayerRequest: {
     select: {
       number: true,
@@ -36,7 +36,7 @@ type ListRow = {
   title: string | null;
   createdAt: Date;
   authorId: string;
-  author: { name: string };
+  author: { name: string; avatarUrl: string | null };
   prayerRequest: {
     number: number;
     category: PrayerListItem['category'];
@@ -206,8 +206,11 @@ export class PrayersService {
     });
 
     const admin = await this.isAdmin(userId);
+    const anonymous = row.prayerRequest!.isAnonymous;
     return {
       ...this.toItem(row, userId, admin),
+      // 익명 글은 사진도 노출하지 않는다 — 이름과 달리 관리자에게도 숨긴다 (사진은 식별력이 세다).
+      authorAvatarUrl: anonymous ? null : row.author.avatarUrl,
       content: row.content,
       viewCount: row.viewCount + 1,
       photoUrls: row.images.map((image) => image.url),

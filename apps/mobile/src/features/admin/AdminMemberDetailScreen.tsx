@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 
+import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -51,10 +52,13 @@ export function AdminMemberDetailScreen() {
     <ScrollView className="bg-background-page" contentContainerClassName="px-5 pb-10 pt-6">
       {/* 프로필 영역 */}
       <View className="items-center">
-        {/* TODO(사진): 프로필 사진 연동 전 placeholder */}
-        <View className="h-20 w-20 items-center justify-center rounded-full bg-background-muted">
-          <Icon name="user" size={40} />
-        </View>
+        {member?.avatarUrl ? (
+          <Avatar imageUrl={member.avatarUrl} size={80} />
+        ) : (
+          <View className="h-20 w-20 items-center justify-center rounded-full bg-background-muted">
+            <Icon name="user" size={40} />
+          </View>
+        )}
         <Text className="mt-2.5 text-heading-main text-text-normal">{member.name}</Text>
         {member.badge && (
           <View className="mt-1.5">

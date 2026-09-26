@@ -5,6 +5,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Avatar } from "../../shared/components/base/Avatar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FavoriteButton } from "../../shared/components/base/FavoriteButton";
 import { Header } from "../../shared/components/base/Header";
@@ -138,8 +139,7 @@ export function CellNewsDetailScreen() {
 
           <View className="px-5 pt-4">
             <View className="flex-row items-center gap-2">
-              {/* TODO(사진): 작성자 프로필 placeholder (시안 42 — 40으로 근사) */}
-              <View className="h-10 w-10 rounded-full bg-background-assistive" />
+              <Avatar imageUrl={news.authorAvatarUrl} size={40} />
               <View>
                 <Text className="text-heading-small text-text-normal">{news.authorName}</Text>
                 <Text className="text-body-small text-text-alternative">
@@ -175,6 +175,7 @@ export function CellNewsDetailScreen() {
                   <CommentItem
                     key={comment.id}
                     authorName={comment.authorName}
+                    avatarUrl={comment.authorAvatarUrl}
                     timeAgo={toTimeAgo(comment.createdAt)}
                     content={comment.content}
                   />
