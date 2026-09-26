@@ -1,4 +1,8 @@
-import type { TeamActivityListResponse } from "@onnuri/shared";
+import type {
+  PostComment,
+  TeamActivityDetail,
+  TeamActivityListResponse,
+} from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -13,4 +17,54 @@ export async function fetchTeamActivities(
     { params: teamId ? { teamId } : undefined },
   );
   return data;
+}
+
+// 부서활동 상세 (GET /posts/team-activities/:id). 댓글·대댓글까지 함께 온다.
+// 서버가 이 요청으로 조회수를 1 올린다.
+export async function fetchTeamActivity(
+  postId: string,
+): Promise<TeamActivityDetail> {
+  const { data } = await apiClient.get<TeamActivityDetail>(
+    `/posts/team-activities/${postId}`,
+  );
+  return data;
+}
+
+// 댓글·대댓글 작성. parentId를 주면 그 댓글의 답글이 된다 (깊이는 1단계까지).
+// 댓글은 게시판 공용이라 경로가 /posts/:id다.
+export async function addComment(
+  postId: string,
+  content: string,
+  parentId?: string,
+): Promise<PostComment> {
+  const { data } = await apiClient.post<PostComment>(
+    `/posts/${postId}/comments`,
+    { content, parentId },
+  );
+  return data;
+}
+
+export async function deleteComment(
+  postId: string,
+  commentId: string,
+): Promise<void> {
+  await apiClient.delete(`/posts/${postId}/comments/${commentId}`);
+}
+
+// 부서활동 삭제 (상세 ⋮ > 삭제하기). 내 글만 지울 수 있고 서버는 soft delete한다.
+export async function deleteTeamActivity(postId: string): Promise<void> {
+  await apiClient.delete(`/posts/team-activities/${postId}`);
+}
+
+// 좋아요는 토글 한 번이 아니라 켜기/끄기를 따로 보낸다 — 같은 요청이 두 번 가도(재시도 등)
+// 결과가 뒤집히지 않는다. 좋아요도 게시판과 무관해서 경로가 /posts/:id다.
+export async function toggleLike(
+  postId: string,
+  likedByMe: boolean,
+): Promise<void> {
+  if (likedByMe) {
+    await apiClient.delete(`/posts/${postId}/likes`);
+    return;
+  }
+  await apiClient.post(`/posts/${postId}/likes`);
 }
