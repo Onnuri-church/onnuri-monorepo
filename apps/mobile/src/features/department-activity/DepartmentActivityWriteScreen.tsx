@@ -1,10 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, KeyboardAvoidingView, ScrollView, View } from "react-native";
 
 import { createTeamActivity, fetchTeamActivities } from "./api";
+import { writableTeamNames } from "./permissions";
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
 import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUploadBoxMultiple";
@@ -13,6 +14,7 @@ import { TextField } from "../../shared/components/base/TextField";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { uploadImage } from "../../shared/api/upload";
+import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
 export function DepartmentActivityWriteScreen() {
@@ -32,6 +34,15 @@ export function DepartmentActivityWriteScreen() {
     queryFn: () => fetchTeamActivities(undefined),
   });
   const teams = data?.teams ?? [];
+  // 고를 수 있는 부서는 내가 쓸 수 있는 곳뿐이다 (관리자는 전체). 서버가 같은 규칙으로
+  // 막으므로, 못 쓰는 부서를 선택지에 두면 고른 뒤에야 403을 만나게 된다.
+  const me = useMe();
+  const teamNames = writableTeamNames(me, teams.map((team) => team.name));
+
+  // 소속이 하나뿐이면 고를 게 없으니 미리 채워둔다.
+  useEffect(() => {
+    if (teamName === null && teamNames.length === 1) setTeamName(teamNames[0]);
+  }, [teamName, teamNames]);
 
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async (eventDate: string) => {
@@ -93,7 +104,7 @@ export function DepartmentActivityWriteScreen() {
           <SelectField
             label="부서"
             placeholder="부서를 선택하세요."
-            options={teams.map((team) => team.name)}
+            options={teamNames}
             value={teamName}
             onChange={setTeamName}
           />

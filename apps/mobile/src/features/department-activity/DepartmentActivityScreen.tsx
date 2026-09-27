@@ -5,12 +5,14 @@ import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
 
 import { fetchTeamActivities } from "./api";
+import { canWriteTeamActivity } from "./permissions";
 import { TeamPostCard } from "./components/TeamPostCard";
 import { FilterBar } from "../../shared/components/base/FilterBar";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
+import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 
@@ -20,6 +22,9 @@ const ALL_TEAMS = "";
 export function DepartmentActivityScreen() {
   const [teamId, setTeamId] = useState<string>(ALL_TEAMS);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // 글은 자기 부서에만 쓸 수 있다(관리자 제외). 소속이 없으면 어느 부서에도 못 쓰므로
+  // 버튼 자체를 감춘다 — 누를 수 있는데 서버가 403으로 막으면 이유를 알 수 없다.
+  const canWrite = canWriteTeamActivity(useMe());
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["team-activities", teamId],
@@ -94,9 +99,11 @@ export function DepartmentActivityScreen() {
           />
         ))}
       </ScrollView>
-      <FloatingButton onPress={handleWritePress}>
-        <Icon name="write" color={colors.icon.disable} />
-      </FloatingButton>
+      {canWrite && (
+        <FloatingButton onPress={handleWritePress}>
+          <Icon name="write" color={colors.icon.disable} />
+        </FloatingButton>
+      )}
     </View>
   );
 }
