@@ -1,8 +1,10 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../shared/components/base/Icon";
+import { YouTubePlayer } from "../../shared/components/base/YouTubePlayer";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchSermon } from "./api";
@@ -25,6 +27,8 @@ export function SermonDetailScreen() {
     queryKey: ["sermon", params.id],
     queryFn: () => fetchSermon(params.id),
   });
+  // 처음에는 썸네일만 보여주고, 터치하면 그 자리에 플레이어를 띄운다 (안내 문구 "화면을 터치하면 재생돼요").
+  const [isPlaying, setIsPlaying] = useState(false);
 
   if (isPending) {
     return (
@@ -44,24 +48,29 @@ export function SermonDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background-page" contentContainerClassName="pb-6">
-      {/* 재생은 아직 붙이지 않았다 — YouTube iframe을 WebView로 띄우는 방식이고(DESIGN.md 미디어 규칙),
-          iOS(WKWebView)에서 playsinline·자동재생 동작이 달라 두 플랫폼을 같이 확인해야 한다. */}
+      {/* iOS(WKWebView)는 playsinline·자동재생 동작이 Android와 달라 두 플랫폼을 따로 확인해야 한다. */}
       <View className="w-full bg-background-dark" style={{ aspectRatio: VIDEO_ASPECT_RATIO }}>
-        {video.thumbnailUrl && (
-          <Image
-            source={{ uri: video.thumbnailUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="contain"
-          />
+        {isPlaying ? (
+          <YouTubePlayer videoId={video.videoId} />
+        ) : (
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsPlaying(true)}>
+            {video.thumbnailUrl && (
+              <Image
+                source={{ uri: video.thumbnailUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="contain"
+              />
+            )}
+            <View className="absolute inset-0 items-center justify-center">
+              <Icon name="play" size={PLAY_ICON_SIZE} color={colors.icon.disable} />
+            </View>
+            <VideoStatusBadges
+              className="absolute left-4 top-4"
+              isLive={video.isLive}
+              viewCount={video.viewCount}
+            />
+          </Pressable>
         )}
-        <View className="absolute inset-0 items-center justify-center">
-          <Icon name="play" size={PLAY_ICON_SIZE} color={colors.icon.disable} />
-        </View>
-        <VideoStatusBadges
-          className="absolute left-4 top-4"
-          isLive={video.isLive}
-          viewCount={video.viewCount}
-        />
       </View>
 
       {/* 시안: 영상 아래 37, 좌우 20, 세 덩이 사이 간격 15. */}
