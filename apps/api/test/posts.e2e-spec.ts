@@ -693,6 +693,103 @@ describe('Posts (e2e)', () => {
         .expect(404);
     });
 
+    describe('작성 (POST /posts/team-activities)', () => {
+      const body = {
+        teamId: '',
+        title: `${FIXTURE_PREFIX}작성한글`,
+        content: '작성 테스트 본문',
+        eventDate: '2025-03-28',
+      };
+
+      const create = (payload: Record<string, unknown>) =>
+        request(app.getHttpServer())
+          .post('/posts/team-activities')
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send(payload);
+
+      it('토큰 없이 작성하면 401 (열람은 게스트도 되지만 작성은 아니다)', () =>
+        request(app.getHttpServer())
+          .post('/posts/team-activities')
+          .send({ ...body, teamId: snsTeamId })
+          .expect(401));
+
+      it('그 팀 팀원이 아니면 403', () =>
+        create({ ...body, teamId: snsTeamId }).expect(403));
+
+      it('없는 부서면 404', () =>
+        create({ ...body, teamId: 'no-such-team' }).expect(404));
+
+      it('날짜가 YYYY-MM-DD가 아니면 400', () =>
+        create({ ...body, teamId: snsTeamId, eventDate: '2025.03.28' }).expect(
+          400,
+        ));
+
+      it('제목이 비어 있으면 400', () =>
+        create({ ...body, teamId: snsTeamId, title: '' }).expect(400));
+
+      it('사진이 5장을 넘으면 400 (작성 화면과 같은 상한)', () =>
+        create({
+          ...body,
+          teamId: snsTeamId,
+          imageUrls: Array.from({ length: 6 }, (_, i) => `https://img.test/${i}.jpg`),
+        }).expect(400));
+
+      it('팀원이면 작성되고, 상세 모양 그대로 돌아온다 (사진은 보낸 순서)', async () => {
+        // 이 테스트 유저를 SNS팀에 넣어 작성 권한을 준다.
+        await prisma.teamMembership.create({
+          data: { teamId: snsTeamId, userId, startedAt: new Date() },
+        });
+
+        const res = await create({
+          ...body,
+          teamId: snsTeamId,
+          imageUrls: ['https://img.test/a.jpg', 'https://img.test/b.jpg'],
+        }).expect(201);
+
+        const detail = res.body as TeamActivityDetail;
+        expect(detail.teamName).toBe('SNS팀');
+        expect(detail.department).toBe('sns');
+        expect(detail.title).toBe(`${FIXTURE_PREFIX}작성한글`);
+        expect(detail.imageUrls).toEqual([
+          'https://img.test/a.jpg',
+          'https://img.test/b.jpg',
+        ]);
+        expect(detail.isMine).toBe(true);
+        expect(detail.comments).toEqual([]);
+      });
+
+      it('작성한 글이 목록에 보인다', async () => {
+        const { item } = await findFixture('', `${FIXTURE_PREFIX}작성한글`);
+        expect(item).toBeDefined();
+        expect(item?.dateLabel).toBe('2025.03.28');
+      });
+
+      it('관리자는 팀원이 아니어도 쓸 수 있다', async () => {
+        const admin = await prisma.user.create({
+          data: {
+            email: `teamadmin@${EMAIL_DOMAIN}`,
+            name: '부서관리자',
+            isAdmin: true,
+          },
+        });
+        const login = await request(app.getHttpServer())
+          .post('/auth/login/dev')
+          .send({ email: admin.email })
+          .expect(201);
+        const adminToken = (login.body as { accessToken: string }).accessToken;
+
+        await request(app.getHttpServer())
+          .post('/posts/team-activities')
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({
+            ...body,
+            teamId: praiseTeamId,
+            title: `${FIXTURE_PREFIX}관리자글`,
+          })
+          .expect(201);
+      });
+    });
+
     it('내 댓글을 지우면 상세에서 빠진다 (행은 남는다)', async () => {
       await request(app.getHttpServer())
         .delete(`/posts/${snsPostId}/comments/${rootCommentId}`)

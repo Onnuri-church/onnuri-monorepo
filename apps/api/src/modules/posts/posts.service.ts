@@ -20,6 +20,7 @@ import type {
 import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
+import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 
 // "내 좋아요"를 고르는 조건. 게스트(userId 없음)는 좋아요가 있을 수 없는데, Prisma는
@@ -347,6 +348,12 @@ export class PostsService {
         authorId: true,
         author: { select: { name: true, avatarUrl: true } },
         team: { select: { name: true } },
+        // 작성 화면에서 올린 사진. 보낸 순서가 곧 캐러셀 순서다.
+        images: {
+          where: { kind: 'POST_CONTENT' },
+          select: { url: true },
+          orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        },
         _count: { select: { likes: true } },
         likes: { where: myLikeFilter(userId), select: { id: true } },
         // 최상위 댓글만 받고 대댓글은 그 안에 담는다 — 깊이가 1단계뿐이라 평탄화해서
@@ -396,6 +403,7 @@ export class PostsService {
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,
       coverImageUrl: post.coverImageUrl,
+      imageUrls: post.images.map((image) => image.url),
       likeCount: post._count.likes,
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
@@ -404,6 +412,64 @@ export class PostsService {
         replies: comment.replies.map((reply) => toPostComment(reply, userId)),
       })),
     };
+  }
+
+  // 부서활동 작성 — 그 팀의 팀원 또는 관리자만 (셀 소식이 "그 셀 셀원만"인 것과 같은 기준,
+  // README의 "부서 전용 게시판 권한 관리"). 사진은 파일이 아니라 POST /uploads가 돌려준
+  // 주소로 받는다. 저장한 글을 상세 모양 그대로 돌려줘서 앱이 등록 직후 다시 받지 않아도 된다.
+  async createTeamActivity(
+    userId: string,
+    dto: CreateTeamActivityDto,
+  ): Promise<TeamActivityDetail> {
+    const team = await this.prisma.team.findFirst({
+      where: { id: dto.teamId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!team) throw new NotFoundException('존재하지 않는 부서입니다.');
+
+    await this.assertCanPostToTeam(userId, dto.teamId);
+
+    const post = await this.prisma.post.create({
+      data: {
+        board: 'TEAM_ACTIVITY',
+        teamId: dto.teamId,
+        authorId: userId,
+        title: dto.title,
+        content: dto.content,
+        eventDate: new Date(dto.eventDate),
+        // 보낸 순서가 곧 상세 캐러셀 순서다.
+        images: {
+          create: (dto.imageUrls ?? []).map((url, index) => ({
+            url,
+            kind: 'POST_CONTENT' as const,
+            uploadedById: userId,
+            takenOn: new Date(dto.eventDate),
+            sortOrder: index,
+          })),
+        },
+      },
+      select: { id: true },
+    });
+
+    return this.findTeamActivity(post.id, userId);
+  }
+
+  // 작성 권한: 관리자거나 그 팀의 진행 중 멤버십이 있어야 한다 (assertCanPostToCell과 같은 모양).
+  private async assertCanPostToTeam(userId: string, teamId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        isAdmin: true,
+        teamMemberships: {
+          where: { teamId, endedAt: null },
+          select: { id: true },
+        },
+      },
+    });
+    const isTeamMember = (user?.teamMemberships.length ?? 0) > 0;
+    if (!user?.isAdmin && !isTeamMember) {
+      throw new ForbiddenException('이 부서의 팀원만 글을 쓸 수 있습니다.');
+    }
   }
 
   // 부서활동 삭제 — 내 글만. 글은 지우지 않고 deletedAt만 채운다(목록·상세가 걸러낸다).
