@@ -6,7 +6,7 @@ import { colors } from "../../../shared/theme/tokens";
 interface VideoStatusBadgesProps {
   isLive?: boolean;
   /** 표시용 시청자 수 (예: "10K"). 없으면 배지를 그리지 않는다. */
-  viewCount?: string;
+  viewCount?: string | null;
   className?: string;
 }
 

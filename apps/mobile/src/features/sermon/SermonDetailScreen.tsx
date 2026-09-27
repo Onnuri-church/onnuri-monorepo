@@ -1,10 +1,11 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
 import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { SERMON_VIDEOS } from "./SermonScreen";
+import { fetchSermon } from "./api";
 import { VideoStatusBadges } from "./components/VideoStatusBadges";
 
 // 시안 확정값 402x288. 16:9(1.78)보다 세로로 넉넉한데, 영상이 16:9로 들어오면 위아래에
@@ -20,9 +21,20 @@ const REPLAY_NOTICE = "지난 예배 다시보기예요. 언제든 편하게 시
 // 설교영상 상세.
 export function SermonDetailScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "SermonDetail">>();
-  const video = SERMON_VIDEOS.find((item) => item.id === params.id);
+  const { data: video, isPending, isError } = useQuery({
+    queryKey: ["sermon", params.id],
+    queryFn: () => fetchSermon(params.id),
+  });
 
-  if (!video) {
+  if (isPending) {
+    return (
+      <View className="flex-1 bg-background-page">
+        <View className="w-full bg-background-dark" style={{ aspectRatio: VIDEO_ASPECT_RATIO }} />
+      </View>
+    );
+  }
+
+  if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-page">
         <Text className="text-body-medium text-text-alternative">영상을 불러오지 못했어요</Text>

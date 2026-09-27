@@ -1,28 +1,10 @@
+import type { SermonVideo } from "@onnuri/shared";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 
 import { VideoStatusBadges } from "./VideoStatusBadges";
 
 // 시안 확정값: 카드 362x280 중 썸네일이 362x200. 카드 폭은 호출부의 좌우 여백이 정한다.
 const THUMBNAIL_ASPECT_RATIO = 362 / 200;
-
-export interface SermonVideo {
-  /** YouTube videoId */
-  id: string;
-  title: string;
-  /** 설교자. 영상 제목에서 뽑아내는데 제목에 아예 없는 회차가 있어 빈 문자열일 수 있다. */
-  preacher: string;
-  /** 표시용 날짜 문자열 (예: "2026.05.03") */
-  date: string;
-  /** 예배 이름 (예: "주일 4부 예배"). 상세 화면 제목으로 쓴다. */
-  serviceName: string;
-  /** 예배 일시 (예: "2026.08.09 (일) 오후 2:01"). 상세 화면에서 쓴다. */
-  dateTimeLabel: string;
-  thumbnailUrl?: string;
-  /** 표시용 조회수 문자열 (예: "10K"). 없으면 배지를 그리지 않는다. */
-  viewCount?: string;
-  /** 지금 라이브 중인 영상 */
-  isLive?: boolean;
-}
 
 interface SermonVideoCardProps {
   video: SermonVideo;
