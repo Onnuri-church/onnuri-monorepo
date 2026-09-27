@@ -17,3 +17,14 @@ export function toDateLabel(date: Date): string {
 export function toDayLabel(date: Date): string {
   return `${pad(date.getUTCMonth() + 1)}월 ${pad(date.getUTCDate())}일`;
 }
+
+/** "2026.05" — 월 필터 값 (큐티나눔·말씀 게시판) */
+export function toMonthValue(date: Date): string {
+  return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}`;
+}
+
+/** "2026.05" → "26년 5월" */
+export function toMonthLabel(monthValue: string): string {
+  const [year, month] = monthValue.split('.');
+  return `${year.slice(2)}년 ${Number(month)}월`;
+}

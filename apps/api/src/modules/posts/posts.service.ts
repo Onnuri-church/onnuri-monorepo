@@ -17,7 +17,12 @@ import type {
   TeamActivityListResponse,
 } from '@onnuri/shared';
 
-import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
+import {
+  toDateLabel,
+  toDayLabel,
+  toMonthLabel,
+  toMonthValue,
+} from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
@@ -27,17 +32,6 @@ import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 // likedByMe가 조용히 true가 된다. 빈 문자열은 어떤 cuid와도 안 맞아 0건이 된다.
 function myLikeFilter(userId?: string) {
   return { userId: userId ?? '' };
-}
-
-// 월 필터는 큐티나눔 목록 전용이라 여기 둔다 (공용 날짜 라벨은 common/utils/date).
-function toMonthValue(date: Date): string {
-  return `${date.getUTCFullYear()}.${pad(date.getUTCMonth() + 1)}`;
-}
-
-// "2026.05" → "26년 5월"
-function toMonthLabel(monthValue: string): string {
-  const [year, month] = monthValue.split('.');
-  return `${year.slice(2)}년 ${Number(month)}월`;
 }
 
 // 팀 이름 → 부서 키. 앱의 departmentColor.ts가 이 키로 칩 색을 고른다. 팀 이름은 관리자가

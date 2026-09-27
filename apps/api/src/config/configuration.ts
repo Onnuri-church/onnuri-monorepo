@@ -45,6 +45,10 @@ const configuration = () => {
           .map((id) => id.trim())
           .filter(Boolean) ?? [],
     },
+    youtube: {
+      // 비어 있으면 설교영상 동기화를 건너뛴다
+      apiKey: e.YOUTUBE_API_KEY || null,
+    },
   };
 };
 
