@@ -158,6 +158,36 @@ export interface TeamActivityListResponse {
   items: TeamActivityListItem[];
 }
 
+/** 홈 큐티나눔 한 줄 — "제목 / 작성자 | 말씀 구절". */
+export interface HomeQtShare {
+  id: string;
+  authorName: string;
+  /** "룻기 2:16-23" — 스키마상 선택값이라 없는 글은 null */
+  passage: string | null;
+  title: string;
+}
+
+/** 홈 부서활동 가로 스크롤 카드 — 썸네일 + 팀 칩 + 제목. */
+export interface HomeTeamActivity {
+  id: string;
+  /** 팀 이름(칩 문구) — "찬양팀" */
+  teamName: string;
+  /** 칩 색을 고르는 키 — TeamActivityListItem.department와 같은 값 */
+  department: string;
+  title: string;
+  /** 본문 첫 사진, 없으면 상단 이미지(coverImageUrl). 둘 다 없으면 null — 상세와 같은 우선순위 */
+  thumbnailUrl: string | null;
+}
+
+/**
+ * 홈 게시글 섹션 (GET /posts/home). 게시판 목록 API와 필드·조회 조건이 달라서
+ * 홈 전용으로 따로 내려준다 — 큐티나눔 최신 3건, 부서활동 최신 5건.
+ */
+export interface HomePostsResponse {
+  qtShares: HomeQtShare[];
+  teamActivities: HomeTeamActivity[];
+}
+
 /** 부서활동 상세 (GET /posts/team-activities/:id). */
 export interface TeamActivityDetail {
   id: string;

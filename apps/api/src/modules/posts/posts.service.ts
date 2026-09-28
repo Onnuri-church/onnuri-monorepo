@@ -7,6 +7,7 @@ import {
 import type {
   CellNewsDetail,
   CellNewsListItem,
+  HomePostsResponse,
   PostComment,
   QtShareDetail,
   QtShareListItem,
@@ -48,6 +49,10 @@ const DEPARTMENT_KEY_BY_TEAM_NAME: Record<string, string> = {
   영상팀: 'video',
 };
 
+// 홈 섹션별 장수 — 큐티나눔은 시안대로 3건, 부서활동은 가로 스크롤이라 5건.
+const HOME_QT_SHARE_COUNT = 3;
+const HOME_TEAM_ACTIVITY_COUNT = 5;
+
 // 목록 카드의 본문 미리보기. 카드가 한 줄만 보여주므로 줄바꿈 이후는 버린다.
 function toDescription(content: string): string {
   return content.split('\n')[0];
@@ -79,6 +84,60 @@ function toPostComment(
 @Injectable()
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
+
+  // 홈의 큐티나눔·부서활동 섹션 — 각 게시판 최신 글을 홈 카드에 필요한 필드만 담아 준다.
+  // 게시판 목록과 달리 월·팀 필터 없이 전체에서 고르고, 좋아요 같은 내 상태도 없다.
+  async findHomePosts(): Promise<HomePostsResponse> {
+    const [qtShares, teamActivities] = await Promise.all([
+      this.prisma.post.findMany({
+        where: { board: 'QT_SHARE', deletedAt: null },
+        select: {
+          id: true,
+          title: true,
+          author: { select: { name: true } },
+          qtShare: { select: { passage: true } },
+        },
+        // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
+        orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
+        take: HOME_QT_SHARE_COUNT,
+      }),
+      this.prisma.post.findMany({
+        where: { board: 'TEAM_ACTIVITY', deletedAt: null },
+        select: {
+          id: true,
+          title: true,
+          coverImageUrl: true,
+          team: { select: { name: true } },
+          // 썸네일은 첫 장만 있으면 된다 — 상세 캐러셀과 같은 순서의 첫 장.
+          images: {
+            where: { kind: 'POST_CONTENT' },
+            select: { url: true },
+            orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+            take: 1,
+          },
+        },
+        orderBy: [{ createdAt: 'desc' }],
+        take: HOME_TEAM_ACTIVITY_COUNT,
+      }),
+    ]);
+
+    return {
+      qtShares: qtShares.map((post) => ({
+        id: post.id,
+        authorName: post.author.name,
+        passage: post.qtShare?.passage ?? null,
+        title: post.title ?? '',
+      })),
+      teamActivities: teamActivities.map((post) => ({
+        id: post.id,
+        teamName: post.team?.name ?? '',
+        department: DEPARTMENT_KEY_BY_TEAM_NAME[post.team?.name ?? ''] ?? '',
+        title: post.title ?? '',
+        // 상세와 같은 우선순위 — 작성 화면에서 올린 사진이 있으면 그걸, 없으면 시드의 상단 이미지.
+        thumbnailUrl: post.images[0]?.url ?? post.coverImageUrl,
+      })),
+    };
+  }
 
   // 큐티나눔 목록. 월 필터 항목도 함께 내려준다 — 앱이 월 목록을 직접 만들지 않게 하려는 것
   // (ARCHITECTURE.md App Responsibilities). 글이 없는 달은 선택지에 넣지 않는다.
