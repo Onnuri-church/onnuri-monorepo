@@ -183,10 +183,12 @@ export function HomeScreen() {
           style={{ aspectRatio: GROUP_BANNER_ASPECT_RATIO }}
           onPress={() => navigation.navigate("GroupMeeting")}
         >
-          {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다. */}
+          {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다.
+              웹 Image는 원본 픽셀 크기(362x104)를 폭·높이로 박으므로 절대 채움만으로는 안 늘어난다 —
+              폭·높이를 100%로 덮어써 상자에 맞춘다. */}
           <Image
             source={require("../../shared/assets/banners/group-meeting-banner.png")}
-            style={StyleSheet.absoluteFill}
+            style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
             resizeMode="cover"
           />
         </Pressable>
