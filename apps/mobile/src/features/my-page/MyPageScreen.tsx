@@ -48,6 +48,8 @@ function deriveRole(me: MeResponse | undefined, isAdmin: boolean): UserRole {
 interface RoleLinkHandlers {
   onTeamMemberPress?: () => void;
   onCellManagePress?: () => void;
+  onFollowerNotePress?: () => void;
+  onAttendancePress?: () => void;
   onMemberListPress?: () => void;
   onAttendanceSheetPress?: () => void;
   onPrayerManagePress?: () => void;
@@ -62,7 +64,11 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
         { label: `${team} 팀원 관리`, onPress: handlers.onTeamMemberPress },
       ];
     case "cellLeader":
-      return [{ label: "팔로워 노트" }, { label: "출석 관리" }];
+      // 셀 페이지 > 내 셀 > 관리 탭과 같은 화면으로 가는 지름길 — 내 셀 id로 연결한다.
+      return [
+        { label: "팔로워 노트", onPress: handlers.onFollowerNotePress },
+        { label: "출석 관리", onPress: handlers.onAttendancePress },
+      ];
     case "admin":
       // 2026-09-09 관리자 시안 기준 4개 — 첫 항목은 "팔로워 노트"였다가 셀 관리로 변경
       // (2026-09-10 지환님: 셀 전체 목록에서 생성·편집·삭제). 기도제목 관리는 별도 화면이
@@ -159,6 +165,13 @@ export function MyPageScreen() {
       ? () => navigation.navigate("TeamMemberAdmin", { teamId: myTeamId })
       : undefined,
     onCellManagePress: () => navigation.navigate("AdminCellManage"),
+    // 셀장 메뉴 — 내 셀이 있어야 갈 곳이 정해진다 (cellLeader 판정 자체가 me.cell 기준이라 항상 있다).
+    onFollowerNotePress: me?.cell
+      ? () => navigation.navigate("FollowerNoteBoard", { cellId: me.cell!.id })
+      : undefined,
+    onAttendancePress: me?.cell
+      ? () => navigation.navigate("CellAttendance", { cellId: me.cell!.id })
+      : undefined,
     onMemberListPress: () => navigation.navigate("AdminMemberList"),
     onAttendanceSheetPress: () => navigation.navigate("AdminAttendance"),
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
