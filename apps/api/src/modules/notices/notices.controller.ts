@@ -13,12 +13,20 @@ import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateBannerDto } from './dto/create-banner.dto';
+import { CreateNoticeDto } from './dto/create-notice.dto';
 import { NoticesService } from './notices.service';
 
-// 홈 배너 — 현재 배너 조회는 게스트도 되고(홈 화면), 관리(목록/등록/내리기)는 관리자만.
+// 홈 배너·공지사항 — 조회는 게스트도 되고, 등록·삭제는 관리자만.
+// 정적 라우트('banner'/'banners')를 ':id'보다 먼저 둔다 — Express는 등록 순서 매칭.
 @Controller('notices')
 export class NoticesController {
   constructor(private readonly noticesService: NoticesService) {}
+
+  // 공지 목록 (마이페이지 공지사항) — 게스트 열람 가능.
+  @Get()
+  findNotices() {
+    return this.noticesService.findNotices();
+  }
 
   @Get('banner')
   findActiveBanner() {
@@ -41,5 +49,17 @@ export class NoticesController {
   @Delete('banners/:id')
   removeBanner(@Param('id') id: string) {
     return this.noticesService.removeBanner(id);
+  }
+
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Post()
+  createNotice(@CurrentUser() user: JwtPayload, @Body() dto: CreateNoticeDto) {
+    return this.noticesService.createNotice(user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Delete(':id')
+  removeNotice(@Param('id') id: string) {
+    return this.noticesService.removeNotice(id);
   }
 }

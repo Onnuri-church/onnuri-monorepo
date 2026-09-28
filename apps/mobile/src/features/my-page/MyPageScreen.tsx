@@ -236,8 +236,9 @@ export function MyPageScreen() {
               { label: "소속 팀", value: team },
             ]}
           />
-          {/* TODO(라우트): 공지사항 화면 미구현 — 생기면 연결 */}
-          <MenuLinkCard links={[{ label: "공지사항" }]} />
+          <MenuLinkCard
+            links={[{ label: "공지사항", onPress: () => navigation.navigate("NoticeList") }]}
+          />
         </View>
 
         <Pressable className="mt-5 self-start pl-4.5" onPress={handleLogoutPress}>

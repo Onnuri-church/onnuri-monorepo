@@ -17,6 +17,9 @@ import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
 import { CellDetailScreen } from "../features/cell/CellDetailScreen";
 import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
 import { BannerViewerScreen } from "../features/home/BannerViewerScreen";
+import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
+import { NoticeListScreen } from "../features/notice/NoticeListScreen";
+import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
@@ -411,6 +414,30 @@ export function RootNavigator() {
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
               헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
           {/* 생성 진입은 목록 끝의 점선 "셀 생성" 행(CellManageList) — 2026-09-21 시안으로 헤더 버튼에서 이동 */}
+          <Stack.Screen
+            name="NoticeList"
+            component={NoticeListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="공지사항" />,
+            }}
+          />
+          <Stack.Screen
+            name="NoticeDetail"
+            component={NoticeDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="공지사항" />,
+            }}
+          />
+          <Stack.Screen
+            name="NoticeWrite"
+            component={NoticeWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="공지 등록" rightAction="none" />,
+            }}
+          />
           <Stack.Screen
             name="AdminBannerManage"
             component={AdminBannerManageScreen}
