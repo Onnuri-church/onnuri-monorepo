@@ -3,10 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { HomeBanner } from '@onnuri/shared';
+import type { HomeBanner, NoticeInfo } from '@onnuri/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
+import { CreateNoticeDto } from './dto/create-notice.dto';
 
 type BannerRow = {
   id: string;
@@ -90,6 +91,55 @@ export class NoticesService {
       select: BANNER_SELECT,
     });
     return this.toBanner(row);
+  }
+
+  // ── 공지사항 (type=NOTICE) — 마이페이지 공지사항 메뉴 ──────────────────────
+
+  private toNotice(row: BannerRow): NoticeInfo {
+    return {
+      id: row.id,
+      title: row.title,
+      content: row.content,
+      imageUrl: row.imageUrl,
+      createdAt: row.createdAt.toISOString(),
+    };
+  }
+
+  // 공지 목록 — 최신순. 게스트도 볼 수 있다 (게스트 열람 범위 확정).
+  async findNotices(): Promise<NoticeInfo[]> {
+    const rows = await this.prisma.notice.findMany({
+      where: { type: 'NOTICE' },
+      select: BANNER_SELECT,
+      orderBy: { createdAt: 'desc' },
+    });
+    return rows.map((row) => this.toNotice(row));
+  }
+
+  async createNotice(adminId: string, dto: CreateNoticeDto): Promise<NoticeInfo> {
+    if (!dto.content && !dto.imageUrl) {
+      throw new BadRequestException('내용이나 이미지 중 하나는 필요합니다.');
+    }
+    const row = await this.prisma.notice.create({
+      data: {
+        type: 'NOTICE',
+        title: dto.title,
+        content: dto.content ?? null,
+        imageUrl: dto.imageUrl ?? null,
+        authorId: adminId,
+      },
+      select: BANNER_SELECT,
+    });
+    return this.toNotice(row);
+  }
+
+  // 공지 삭제 — 배너와 같은 이유로 hard delete (기록 가치가 없는 안내문).
+  async removeNotice(id: string): Promise<void> {
+    const row = await this.prisma.notice.findFirst({
+      where: { id, type: 'NOTICE' },
+      select: { id: true },
+    });
+    if (!row) throw new NotFoundException('공지를 찾을 수 없습니다.');
+    await this.prisma.notice.delete({ where: { id } });
   }
 
   // 내리기 — 배너는 지나간 이벤트라 기록 가치가 없어 hard delete.

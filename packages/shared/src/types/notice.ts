@@ -29,3 +29,24 @@ export interface CreateHomeBannerRequest {
   /** POSTER형이면 필수, SERMON형이면 배경사진(선택) — POST /uploads가 돌려준 주소 */
   imageUrl?: string;
 }
+
+// ── 공지사항 (Notice type=NOTICE — 마이페이지 공지사항 메뉴) ─────────────────
+
+/** GET /notices 응답 항목 — 공지 수가 적어 목록이 전체 필드를 내려주고 상세는 캐시를 쓴다 */
+export interface NoticeInfo {
+  id: string;
+  title: string;
+  /** 본문 — 이미지만 있는 공지면 null */
+  content: string | null;
+  /** 첨부 이미지 (포스터 등) */
+  imageUrl: string | null;
+  /** ISO datetime — 표시 문구("2026.09.28")는 앱이 조립한다 */
+  createdAt: string;
+}
+
+/** POST /notices 요청 본문 (관리자 전용, 응답은 NoticeInfo) — 내용이나 이미지 중 하나는 필요 */
+export interface CreateNoticeRequest {
+  title: string;
+  content?: string;
+  imageUrl?: string;
+}

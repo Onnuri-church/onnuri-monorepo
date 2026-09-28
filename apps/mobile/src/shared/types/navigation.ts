@@ -84,6 +84,10 @@ export type RootStackParamList = {
   AdminBannerForm: undefined;
   // 홈 포스터 배너 크게 보기 (검정 배경 뷰어).
   BannerViewer: { imageUrl: string; title: string };
+  // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
+  NoticeList: undefined;
+  NoticeDetail: { id: string };
+  NoticeWrite: undefined;
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —
