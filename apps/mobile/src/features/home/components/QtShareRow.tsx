@@ -2,8 +2,8 @@ import { Pressable, Text, View } from "react-native";
 
 interface QtShareRowProps {
   author: string;
-  /** 본문 범위 (예: "룻기 2:16-23") */
-  passage: string;
+  /** 본문 범위 (예: "룻기 2:16-23"). 없는 글은 null — 작성자만 보여준다 */
+  passage: string | null;
   title: string;
   onPress?: () => void;
 }
@@ -21,7 +21,7 @@ export function QtShareRow({ author, passage, title, onPress }: QtShareRowProps)
           {title}
         </Text>
         <Text className="text-body-regular text-text-alternative" numberOfLines={1}>
-          {author} | {passage}
+          {passage ? `${author} | ${passage}` : author}
         </Text>
       </View>
     </Pressable>
