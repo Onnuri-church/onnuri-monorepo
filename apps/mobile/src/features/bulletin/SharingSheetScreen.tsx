@@ -1,23 +1,34 @@
-import { View } from "react-native";
+import { useRoute, type RouteProp } from "@react-navigation/native";
+import { useQuery } from "@tanstack/react-query";
+import { Text, View } from "react-native";
 
 import { ImagePager } from "../../shared/components/base/ImagePager";
-
-// API 연동 전 임시 데이터. 주보와 짝을 이루는 그 주의 나눔지다.
-const SHARING_SHEET_PAGES = [
-  {
-    id: "1",
-    url: "https://i.namu.wiki/i/3T-vwDpi1dUnhvtTMcm_qeHDJkysOCHZNCeyILaMa4GJWdSC-E1bqU9wMUWVarFBIN9VSBx6TkDqvVmbHXP9EQ.webp",
-  },
-];
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { fetchBulletin } from "./api";
 
 // 나눔지. 주보 상세와 화면이 같아서 ImagePager를 함께 쓰고, 여기서는 데이터만 고른다.
+// 주보와 한 응답(GET /bulletins/:id)에 같이 와서 캐시도 주보 상세와 같이 쓴다.
 // 나눔지에만 붙는 것(본문·나눔 질문 등)이 생기면 이 파일에만 더하면 된다.
-//
-// route의 id는 아직 쓰지 않는다 — 임시 데이터라 조회할 대상이 없다.
 export function SharingSheetScreen() {
+  const { params } = useRoute<RouteProp<RootStackParamList, "SharingSheet">>();
+  const { data, isPending, isError } = useQuery({
+    queryKey: ["bulletin", params.id],
+    queryFn: () => fetchBulletin(params.id),
+  });
+
+  if (isPending) return <View className="flex-1 bg-background-normal" />;
+
+  if (isError) {
+    return (
+      <View className="flex-1 items-center justify-center bg-background-normal">
+        <Text className="text-body-medium text-text-alternative">나눔지를 불러오지 못했어요</Text>
+      </View>
+    );
+  }
+
   return (
     <View className="flex-1 bg-background-normal">
-      <ImagePager className="mt-6" images={SHARING_SHEET_PAGES} />
+      <ImagePager className="mt-6" images={data.handoutImages} />
     </View>
   );
 }

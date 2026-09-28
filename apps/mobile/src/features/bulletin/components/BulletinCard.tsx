@@ -2,7 +2,8 @@ import { Pressable, Text, View } from "react-native";
 
 interface BulletinCardProps {
   date: string;
-  title: string;
+  /** 같은 날 설교 제목 — 설교영상이 아직 안 올라온 주는 null이라 날짜만 보인다 */
+  title: string | null;
   onBulletinPress?: () => void;
   onSharePress?: () => void;
 }
@@ -15,7 +16,7 @@ export function BulletinCard({ date, title, onBulletinPress, onSharePress }: Bul
     <View className="flex-row items-center justify-between border-b border-background-muted py-4.5">
       <View className="flex-1 gap-2">
         <Text className="text-body-small text-primary-normal">{date}</Text>
-        <Text className="text-body-main text-text-normal">{title}</Text>
+        {title && <Text className="text-body-main text-text-normal">{title}</Text>}
       </View>
       <View className="flex-row items-center gap-2.5">
         <Pressable
