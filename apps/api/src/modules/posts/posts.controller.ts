@@ -31,6 +31,13 @@ import { PostsService } from './posts.service';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
+  // 홈의 큐티나눔(최신 3건)·부서활동(최신 5건) 섹션. 홈은 게스트도 보고, 내 상태(좋아요 등)가
+  // 없어서 토큰을 읽지 않는다.
+  @Get('home')
+  findHomePosts() {
+    return this.postsService.findHomePosts();
+  }
+
   // 열람은 게스트도 된다 (README 기능 범위: "큐티나눔 게시판 — 열람 + 로그인 후 작성").
   // 좋아요처럼 로그인이 필요한 건 아래 동작 단위로 막는다.
   @UseGuards(OptionalJwtAuthGuard)
