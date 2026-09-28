@@ -87,6 +87,12 @@ export class EnvironmentVariables {
   @IsString()
   SUPABASE_STORAGE_BUCKET?: string;
 
+  // 말씀 게시판 영상 동기화(유튜브 채널 → DB)용 YouTube Data API 키.
+  // 비어 있으면 동기화만 건너뛴다 (이미 들어온 영상 조회는 정상).
+  @IsOptional()
+  @IsString()
+  YOUTUBE_API_KEY?: string;
+
   // 비어 있으면 Sentry 전송이 꺼진다. 값이 있을 때만 형식을 검사한다.
   @ValidateIf((e: EnvironmentVariables) => Boolean(e.SENTRY_DSN))
   @Matches(/^https:\/\/[^@]+@[^/]+\/\d+$/, {

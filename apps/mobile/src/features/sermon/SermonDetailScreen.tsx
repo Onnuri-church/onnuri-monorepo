@@ -1,10 +1,13 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
-import { Image, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../shared/components/base/Icon";
+import { YouTubePlayer } from "../../shared/components/base/YouTubePlayer";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { SERMON_VIDEOS } from "./SermonScreen";
+import { fetchSermon } from "./api";
 import { VideoStatusBadges } from "./components/VideoStatusBadges";
 
 // 시안 확정값 402x288. 16:9(1.78)보다 세로로 넉넉한데, 영상이 16:9로 들어오면 위아래에
@@ -20,9 +23,22 @@ const REPLAY_NOTICE = "지난 예배 다시보기예요. 언제든 편하게 시
 // 설교영상 상세.
 export function SermonDetailScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "SermonDetail">>();
-  const video = SERMON_VIDEOS.find((item) => item.id === params.id);
+  const { data: video, isPending, isError } = useQuery({
+    queryKey: ["sermon", params.id],
+    queryFn: () => fetchSermon(params.id),
+  });
+  // 처음에는 썸네일만 보여주고, 터치하면 그 자리에 플레이어를 띄운다 (안내 문구 "화면을 터치하면 재생돼요").
+  const [isPlaying, setIsPlaying] = useState(false);
 
-  if (!video) {
+  if (isPending) {
+    return (
+      <View className="flex-1 bg-background-page">
+        <View className="w-full bg-background-dark" style={{ aspectRatio: VIDEO_ASPECT_RATIO }} />
+      </View>
+    );
+  }
+
+  if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-page">
         <Text className="text-body-medium text-text-alternative">영상을 불러오지 못했어요</Text>
@@ -32,24 +48,29 @@ export function SermonDetailScreen() {
 
   return (
     <ScrollView className="flex-1 bg-background-page" contentContainerClassName="pb-6">
-      {/* 재생은 아직 붙이지 않았다 — YouTube iframe을 WebView로 띄우는 방식이고(DESIGN.md 미디어 규칙),
-          iOS(WKWebView)에서 playsinline·자동재생 동작이 달라 두 플랫폼을 같이 확인해야 한다. */}
+      {/* iOS(WKWebView)는 playsinline·자동재생 동작이 Android와 달라 두 플랫폼을 따로 확인해야 한다. */}
       <View className="w-full bg-background-dark" style={{ aspectRatio: VIDEO_ASPECT_RATIO }}>
-        {video.thumbnailUrl && (
-          <Image
-            source={{ uri: video.thumbnailUrl }}
-            style={StyleSheet.absoluteFill}
-            resizeMode="contain"
-          />
+        {isPlaying ? (
+          <YouTubePlayer videoId={video.videoId} />
+        ) : (
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsPlaying(true)}>
+            {video.thumbnailUrl && (
+              <Image
+                source={{ uri: video.thumbnailUrl }}
+                style={StyleSheet.absoluteFill}
+                resizeMode="contain"
+              />
+            )}
+            <View className="absolute inset-0 items-center justify-center">
+              <Icon name="play" size={PLAY_ICON_SIZE} color={colors.icon.disable} />
+            </View>
+            <VideoStatusBadges
+              className="absolute left-4 top-4"
+              isLive={video.isLive}
+              viewCount={video.viewCount}
+            />
+          </Pressable>
         )}
-        <View className="absolute inset-0 items-center justify-center">
-          <Icon name="play" size={PLAY_ICON_SIZE} color={colors.icon.disable} />
-        </View>
-        <VideoStatusBadges
-          className="absolute left-4 top-4"
-          isLive={video.isLive}
-          viewCount={video.viewCount}
-        />
       </View>
 
       {/* 시안: 영상 아래 37, 좌우 20, 세 덩이 사이 간격 15. */}

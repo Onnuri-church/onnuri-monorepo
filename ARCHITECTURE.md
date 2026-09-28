@@ -90,7 +90,8 @@ apps/api/src/
 │   ├── prisma/    PrismaService (전역 모듈) — DB 연결 실패해도 서버가 안 죽도록 onModuleInit에서 catch함
 │   ├── auth/      소셜 로그인(카카오/구글), 액세스/리프레시 토큰 발급·회전 (social/ 토큰 검증기, strategies/jwt.strategy.ts)
 │   ├── users/     findById(공개 프로필 select), GET /users/me, PATCH /users/me(프로필 등록·수정 — 소속은 셀/팀 멤버십 행으로 반영, 변경 시 endedAt으로 이력 보존)
-│   └── cells/ teams/  GET 목록 — 프로필 설정의 소속 선택지. 로컬 데이터는 prisma/seed.ts로 채운다(prisma:seed)
+│   ├── cells/ teams/  GET 목록 — 프로필 설정의 소속 선택지. 로컬 데이터는 prisma/seed.ts로 채운다(prisma:seed)
+│   └── sermons/   말씀 게시판 조회(GET /sermons, /sermons/:id). 영상은 앱에서 등록하지 않고 SermonSyncService가 5분마다(@nestjs/schedule) 교회 유튜브 채널을 읽어 넣는다 — YOUTUBE_API_KEY가 비면 건너뜀. 서버 안 cron이라 Render 무료 인스턴스가 잠든 동안은 돌지 않는다
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠
     ├── decorators/ CurrentUser
@@ -124,11 +125,12 @@ apps/mobile/src/
     └── hooks/      useAppBootstrap(앱 부팅 시 세션 복원 → status 확정)
 ```
 
-스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `expo-video`(영상 기능 착수 시 설치)/`react-native-image-zoom-viewer`/`react-native-webview`.
+스택: Expo `~57.0.7` / React Native `0.86.0`, NativeWind `^4.2.6` + Tailwind `^3.4.19`(규칙은 DESIGN.md), `@react-navigation`(Native Stack + Bottom Tabs), Zustand `^5.0.14`, TanStack Query + Axios, Pretendard 폰트, `@gorhom/bottom-sheet`(+ reanimated/gesture-handler/worklets), 미디어는 `react-native-image-zoom-viewer`/`react-native-webview`.
 
 ## Media Layer
 
-* 말씀 영상 재생(`expo-video`), 주보 핀치 줌(`react-native-image-zoom-viewer`), 라이브 스트림(`react-native-webview`)은 각각 성격이 다른 네이티브 레이어이므로 공통 wrapper로 억지로 통합하지 않는다. 각 라이브러리의 기본 API를 그대로 노출하는 얇은 wrapper만 둔다.
+* 주보 핀치 줌(`react-native-image-zoom-viewer`)과 영상(`react-native-webview`)은 성격이 다른 네이티브 레이어이므로 공통 wrapper로 억지로 통합하지 않는다. 각 라이브러리의 기본 API를 그대로 노출하는 얇은 wrapper만 둔다.
+* 말씀 영상은 유튜브 영상이라 `shared/components/base/YouTubePlayer`(WebView + 공식 iframe 임베드)로 재생한다. `expo-video`는 영상 파일 주소(mp4/HLS)가 있어야 해서 유튜브를 재생할 수 없다 — 원래 계획이었으나 영상 출처가 유튜브로 정해지며 폐기.
 * 라이브 스트림 WebView는 일요일 방송 시간 여부에 따라 렌더 분기(스트림 vs 안내 화면)한다 — 분기 로직은 화면 컴포넌트가 아니라 상위 훅(`useLiveServiceStatus` 등)에서 처리하고 화면은 상태만 받아 렌더링한다.
 * 영상/이미지 로딩·에러 상태(버퍼링, 로드 실패, 빈 데이터)는 별도 확인 없이 스켈레톤/에러 placeholder로 처리 가능하나, 해당 상태의 컬러·사이즈는 [DESIGN.md](apps/mobile/DESIGN.md)의 컬러/사이즈 규칙을 동일하게 따른다.
 

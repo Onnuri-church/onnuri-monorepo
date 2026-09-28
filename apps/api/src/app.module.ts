@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
 import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { AppController } from './app.controller';
@@ -15,6 +16,7 @@ import { AttendanceModule } from './modules/attendance/attendance.module';
 import { NoticesModule } from './modules/notices/notices.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { SermonsModule } from './modules/sermons/sermons.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
@@ -27,6 +29,8 @@ import { UsersModule } from './modules/users/users.module';
       validate,
     }),
     SentryModule.forRoot(),
+    // 설교영상 유튜브 동기화(SermonSyncService) 주기 실행용
+    ScheduleModule.forRoot(),
     PrismaModule,
     UsersModule,
     AuthModule,
@@ -38,6 +42,7 @@ import { UsersModule } from './modules/users/users.module';
     AdminModule,
     NoticesModule,
     AttendanceModule,
+    SermonsModule,
   ],
   controllers: [AppController],
   providers: [
