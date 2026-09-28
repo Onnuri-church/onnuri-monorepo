@@ -19,7 +19,7 @@ import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll"
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchPrayers } from "../prayer-board/api";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
-import { useHomeBanner } from "./api";
+import { useHomeBanner, useHomePosts } from "./api";
 import { DepartmentActivityCard } from "./components/DepartmentActivityCard";
 import { QtShareRow } from "./components/QtShareRow";
 import { SectionHeader } from "./components/SectionHeader";
@@ -40,19 +40,6 @@ const DEFAULT_SERMON = {
 // 홈 캐러셀에 보여줄 장수 — 시안이 3장 기준이다.
 const PRAYER_CAROUSEL_SIZE = 3;
 
-const QT_SHARES = [
-  { id: "1", author: "원준호", passage: "룻기 2:16-23", title: "절망, 자기 우상화의 열매" },
-  { id: "2", author: "이윤아", passage: "룻기 3:1-13", title: "그토록 붙잡고 싶으신 당신" },
-  { id: "3", author: "김서연", passage: "룻기 4:1-12", title: "돌아설 수 있다는 것이 은혜" },
-];
-
-// department는 부서 키다 — 배지 색이 부서활동 게시판과 같은 매핑을 타도록 이름이 아니라 키를 준다.
-const DEPARTMENT_ACTIVITIES = [
-  { id: "1", department: "praise", departmentName: "찬양팀", title: "5월 연습 공지" },
-  { id: "2", department: "futsal", departmentName: "풋살팀", title: "5월 연습 공지" },
-  { id: "3", department: "intercession", departmentName: "중보기도팀", title: "5월 연습 공지" },
-];
-
 // 하단 탭 "홈". 상단 헤더(로고·QR·알림·설정)와 하단 탭바는 네비게이터가 그리므로 여기서는 본문만 그린다.
 //
 // 여백은 시안 값이 4px 스케일에서 1px 벗어난 경우(31·33·35·15·17·23) 스케일 값으로 맞췄고,
@@ -65,6 +52,9 @@ export function HomeScreen() {
 
   // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (말씀 텍스트형 또는 포스터형).
   const { data: banner } = useHomeBanner();
+
+  // 큐티나눔 최신 3건·부서활동 최신 5건 — 홈 전용 API 한 번으로 받는다.
+  const { data: homePosts } = useHomePosts();
 
   // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
   // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
@@ -163,10 +153,10 @@ export function HomeScreen() {
         {/* 목록만 좌우로 8 더 들어간다 (시안). 행 간격 10은 행 높이를 48로 맞추고도
             목록 전체 높이(164 = 48*3 + 10*2)를 지키기 위한 값이다. */}
         <View className="mt-4 gap-2.5 px-2">
-          {QT_SHARES.map((qt) => (
+          {(homePosts?.qtShares ?? []).map((qt) => (
             <QtShareRow
               key={qt.id}
-              author={qt.author}
+              author={qt.authorName}
               passage={qt.passage}
               title={qt.title}
               onPress={() => navigation.navigate("QtBoardDetail", { id: qt.id })}
@@ -207,12 +197,13 @@ export function HomeScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerClassName="gap-2 px-5"
         >
-          {DEPARTMENT_ACTIVITIES.map((activity) => (
+          {(homePosts?.teamActivities ?? []).map((activity) => (
             <DepartmentActivityCard
               key={activity.id}
               department={activity.department}
-              departmentName={activity.departmentName}
+              departmentName={activity.teamName}
               title={activity.title}
+              imageUrl={activity.thumbnailUrl ?? undefined}
               onPress={() =>
                 navigation.navigate("DepartmentActivityDetail", { id: activity.id })
               }

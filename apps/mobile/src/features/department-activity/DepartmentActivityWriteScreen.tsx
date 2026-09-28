@@ -66,6 +66,7 @@ export function DepartmentActivityWriteScreen() {
       // 목록 카드의 날짜 문구·조회수는 서버가 만드는 값이라 다시 받는다.
       // 상세는 방금 받은 글이 곧 최신이라 요청 없이 캐시에 바로 넣는다.
       void queryClient.invalidateQueries({ queryKey: ["team-activities"] });
+      void queryClient.invalidateQueries({ queryKey: ["home-posts"] });
       queryClient.setQueryData(["team-activity", post.id], post);
       navigation.goBack();
     },
