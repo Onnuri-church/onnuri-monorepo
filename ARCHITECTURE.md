@@ -91,6 +91,7 @@ apps/api/src/
 │   ├── auth/      소셜 로그인(카카오/구글), 액세스/리프레시 토큰 발급·회전 (social/ 토큰 검증기, strategies/jwt.strategy.ts)
 │   ├── users/     findById(공개 프로필 select), GET /users/me, PATCH /users/me(프로필 등록·수정 — 소속은 셀/팀 멤버십 행으로 반영, 변경 시 endedAt으로 이력 보존)
 │   ├── cells/ teams/  GET 목록 — 프로필 설정의 소속 선택지. 로컬 데이터는 prisma/seed.ts로 채운다(prisma:seed)
+│   ├── bulletins/ 주보·나눔지(GET /bulletins, /bulletins/:id, POST /bulletins 관리자). 별도 테이블 없이 그 주 WorshipService에 붙은 Image(BULLETIN 2장·HANDOUT 1~5장) — 날짜당 한 건, 카드 제목은 같은 날 설교 제목
 │   └── sermons/   말씀 게시판 조회(GET /sermons, /sermons/:id). 영상은 앱에서 등록하지 않고 SermonSyncService가 5분마다(@nestjs/schedule) 교회 유튜브 채널을 읽어 넣는다 — YOUTUBE_API_KEY가 비면 건너뜀. 서버 안 cron이라 Render 무료 인스턴스가 잠든 동안은 돌지 않는다
 └── common/
     ├── guards/    JwtAuthGuard(필수 인증) · OptionalJwtAuthGuard(게스트 허용) — auth/users 모듈 간 순환참조 피하려고 common에 둠

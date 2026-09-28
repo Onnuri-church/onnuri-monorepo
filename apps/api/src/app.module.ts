@@ -10,6 +10,7 @@ import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BulletinsModule } from './modules/bulletins/bulletins.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
@@ -43,6 +44,7 @@ import { UsersModule } from './modules/users/users.module';
     NoticesModule,
     AttendanceModule,
     SermonsModule,
+    BulletinsModule,
   ],
   controllers: [AppController],
   providers: [
