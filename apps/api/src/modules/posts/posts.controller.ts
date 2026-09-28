@@ -18,6 +18,7 @@ import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guar
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
+import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
@@ -108,7 +109,16 @@ export class PostsController {
     return this.postsService.findTeamActivity(id, user?.sub);
   }
 
-  // 작성·수정은 아직 없고 삭제만 있다 (상세 ⋮ > 삭제하기).
+  // 작성은 그 팀의 팀원·관리자만 (권한 검증은 서비스). 수정은 아직 없다.
+  @UseGuards(JwtAuthGuard)
+  @Post('team-activities')
+  createTeamActivity(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: CreateTeamActivityDto,
+  ) {
+    return this.postsService.createTeamActivity(user.sub, dto);
+  }
+
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('team-activities/:id')

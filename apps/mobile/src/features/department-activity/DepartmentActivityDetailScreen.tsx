@@ -13,6 +13,7 @@ import {
   StyleSheet,
   Text,
   View,
+  useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -27,6 +28,7 @@ import { CommentThread } from "./components/CommentThread";
 import { PostAuthor } from "./components/PostAuthor";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FavoriteButton } from "../../shared/components/base/FavoriteButton";
+import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { Header } from "../../shared/components/base/Header";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
@@ -44,6 +46,10 @@ export function DepartmentActivityDetailScreen() {
   const dialogRef = useRef<AppDialogRef>(null);
 
   const [draft, setDraft] = useState("");
+  const [photoIndex, setPhotoIndex] = useState(0);
+  // 사진 폭 = 화면 폭 - 좌우 여백(px-5 = 20씩)
+  const { width } = useWindowDimensions();
+  const photoWidth = width - 40;
   // 답글 대상. null이면 일반 댓글이고, 값이 있으면 그 댓글의 대댓글로 달린다.
   const [replyTo, setReplyTo] = useState<PostComment | null>(null);
 
@@ -192,6 +198,14 @@ export function DepartmentActivityDetailScreen() {
     );
   }
 
+  // 작성 화면에서 올린 사진이 우선이고, 없으면 시드로 넣은 대표 이미지를 한 장 쓴다.
+  const photos =
+    data.imageUrls.length > 0
+      ? data.imageUrls
+      : data.coverImageUrl
+        ? [data.coverImageUrl]
+        : [];
+
   return (
     <View className="flex-1 bg-background-normal">
       {/* h-full(height:100%)을 주지 않는다 — 아래 입력줄과 형제라, 높이를 100%로 박으면
@@ -202,12 +216,38 @@ export function DepartmentActivityDetailScreen() {
         contentContainerClassName="justify-start py-5 px-5"
         keyboardShouldPersistTaps="handled"
       >
-        {data.coverImageUrl ? (
-          <Image
-            source={{ uri: data.coverImageUrl }}
-            className="w-full h-90 bg-background-assistive"
-            resizeMode="cover"
-          />
+        {photos.length > 0 ? (
+          <View>
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              // 관성이 안 붙는 느린 스와이프에도 점이 따라오도록 onScroll로 계산 (셀 소식 상세와 동일)
+              scrollEventThrottle={16}
+              onScroll={(event) =>
+                setPhotoIndex(
+                  Math.round(event.nativeEvent.contentOffset.x / photoWidth),
+                )
+              }
+            >
+              {photos.map((url) => (
+                <Image
+                  key={url}
+                  source={{ uri: url }}
+                  style={{ width: photoWidth, aspectRatio: 1 }}
+                  className="bg-background-assistive"
+                  resizeMode="cover"
+                />
+              ))}
+            </ScrollView>
+            {photos.length > 1 && (
+              <PageIndicator
+                className="mt-2.5"
+                count={photos.length}
+                current={photoIndex}
+              />
+            )}
+          </View>
         ) : (
           <View className="w-full h-90 bg-background-assistive" />
         )}

@@ -171,13 +171,27 @@ export interface TeamActivityDetail {
   createdAt: string;
   authorName: string;
   authorAvatarUrl: string | null;
-  /** 상단 이미지 */
+  /** 상단 이미지 — 작성 화면에서 받지 않는 값이라 시드로 넣은 글에만 있다. imageUrls가 비었을 때만 쓴다 */
   coverImageUrl: string | null;
+  /** 작성 화면에서 올린 사진(최대 5장). 상세는 이걸 캐러셀로 그린다 */
+  imageUrls: string[];
   likeCount: number;
   likedByMe: boolean;
   isMine: boolean;
   /** 최상위 댓글만 담긴다. 대댓글은 각 댓글의 replies에 있다 */
   comments: PostComment[];
+}
+
+/** POST /posts/team-activities 요청 본문 (응답은 TeamActivityDetail). */
+export interface CreateTeamActivityRequest {
+  /** 어느 팀 활동인지 — 목록 응답의 teams에서 고른다 */
+  teamId: string;
+  title: string;
+  content: string;
+  /** 활동 날짜 — YYYY-MM-DD */
+  eventDate: string;
+  /** 사진 (최대 5장) — POST /uploads로 받은 주소 */
+  imageUrls?: string[];
 }
 
 /** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */

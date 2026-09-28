@@ -1,4 +1,5 @@
 import type {
+  CreateTeamActivityRequest,
   PostComment,
   TeamActivityDetail,
   TeamActivityListResponse,
@@ -49,6 +50,18 @@ export async function deleteComment(
   commentId: string,
 ): Promise<void> {
   await apiClient.delete(`/posts/${postId}/comments/${commentId}`);
+}
+
+// 부서활동 작성 (POST /posts/team-activities). 그 팀의 팀원·관리자만 쓸 수 있다.
+// 사진은 URL로만 보낸다 (파일은 shared/api/upload의 uploadImage가 먼저 올린다).
+export async function createTeamActivity(
+  body: CreateTeamActivityRequest,
+): Promise<TeamActivityDetail> {
+  const { data } = await apiClient.post<TeamActivityDetail>(
+    "/posts/team-activities",
+    body,
+  );
+  return data;
 }
 
 // 부서활동 삭제 (상세 ⋮ > 삭제하기). 내 글만 지울 수 있고 서버는 soft delete한다.
