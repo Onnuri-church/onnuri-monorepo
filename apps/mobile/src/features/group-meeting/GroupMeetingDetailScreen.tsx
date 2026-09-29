@@ -1,12 +1,17 @@
-import { useRoute, type RouteProp } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { GroupMeetingMember } from "@onnuri/shared";
 import { useRef, useState } from "react";
 import { Alert, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
+import * as ImagePicker from "expo-image-picker";
+
+import { uploadImage } from "../../shared/api/upload";
 import {
   fetchGroupMeetingDetail,
   useAddGroupMeetingComment,
+  useAddGroupMeetingPhotos,
   useCancelGroupMeetingJoin,
   useDecideGroupMeetingMember,
   useJoinGroupMeeting,
@@ -63,6 +68,7 @@ function getThumbLayout(screenWidth: number) {
 
 export function GroupMeetingDetailScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingDetail">>();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [comment, setComment] = useState("");
   const { width } = useWindowDimensions();
   const thumb = getThumbLayout(width);
@@ -72,6 +78,29 @@ export function GroupMeetingDetailScreen() {
   const join = useJoinGroupMeeting(params.id);
   const cancelJoin = useCancelGroupMeetingJoin(params.id);
   const decideMember = useDecideGroupMeetingMember(params.id);
+  const addPhotos = useAddGroupMeetingPhotos(params.id);
+  const [photoUploading, setPhotoUploading] = useState(false);
+
+  // 활동 사진 추가 — 승인된 참여자·소그룹장·관리자 (서버도 같은 규칙으로 거른다).
+  const handlePhotoAddPress = async () => {
+    if (photoUploading) return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 0.8,
+      allowsMultipleSelection: true,
+      selectionLimit: 10,
+    });
+    if (result.canceled) return;
+    setPhotoUploading(true);
+    try {
+      const imageUrls = await Promise.all(result.assets.map((asset) => uploadImage(asset.uri)));
+      await addPhotos.mutateAsync(imageUrls);
+    } catch {
+      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+    } finally {
+      setPhotoUploading(false);
+    }
+  };
 
   // 거절은 신청을 지우는 동작이라 다이얼로그로 한 번 확인한다 (셀원 삭제와 같은 패턴).
   const rejectDialogRef = useRef<AppDialogRef>(null);
@@ -260,39 +289,83 @@ export function GroupMeetingDetailScreen() {
           </View>
         )}
 
-        {leadPhoto && (
+        {/* 활동 사진 — 승인된 참여자·소그룹장·관리자는 빈 상태에서도 올릴 수 있어야 해서
+            사진이 없어도 섹션을 그린다 (그 외에는 사진이 있을 때만). */}
+        {(leadPhoto || meeting.canManage || meeting.myStatus === "APPROVED") && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
-            <Text className="text-heading-small text-text-normal">활동 사진</Text>
-            <Thumbnail
-              className="mt-3"
-              source={{ uri: leadPhoto.url }}
-              ratio={LEAD_PHOTO_RATIO}
-              caption={leadPhoto.caption ?? undefined}
-              style={{ maxHeight: LEAD_PHOTO_MAX_HEIGHT }}
-            />
-            <View className="mt-2.5 flex-row flex-wrap" style={{ gap: THUMB_GAP }}>
-              {visiblePhotos.map((photo, index) => (
+            <View className="flex-row items-center justify-between">
+              <Text className="text-heading-small text-text-normal">활동 사진</Text>
+              {(meeting.canManage || meeting.myStatus === "APPROVED") && (
+                <Pressable
+                  onPress={() => void handlePhotoAddPress()}
+                  disabled={photoUploading}
+                  hitSlop={8}
+                >
+                  <Text className="text-body-small text-primary-normal">
+                    {photoUploading ? "올리는 중..." : "사진 추가"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+            {leadPhoto ? (
+              <>
                 <Thumbnail
-                  key={photo.id}
-                  style={{ width: thumb.width }}
-                  ratio={THUMB_RATIO}
-                  source={{ uri: photo.url }}
-                  overlayCount={
-                    hasMore && index === visiblePhotos.length - 1 ? remainingCount : undefined
+                  className="mt-3"
+                  source={{ uri: leadPhoto.url }}
+                  ratio={LEAD_PHOTO_RATIO}
+                  caption={leadPhoto.caption ?? undefined}
+                  style={{ maxHeight: LEAD_PHOTO_MAX_HEIGHT }}
+                  onPress={() =>
+                    navigation.navigate("GroupMeetingPhoto", { meetingId: params.id, index: 0 })
                   }
                 />
-              ))}
-            </View>
-            <Pressable className="mt-3 flex-row items-center justify-center gap-1">
-              <Text className="text-label-small text-text-alternative">
-                사진 {meeting.photoCount}장 모두 보기
-              </Text>
-              {/* 오른쪽 화살표 아이콘이 세트에 없어 back(왼쪽)을 뒤집어 쓴다 —
-                  손으로 새 SVG를 그리면 획 굵기·그리드가 세트와 어긋난다. */}
-              <View style={{ transform: [{ rotate: "180deg" }] }}>
-                <Icon name="back" size={16} color={colors.icon.normal} />
-              </View>
-            </Pressable>
+                <View className="mt-2.5 flex-row flex-wrap" style={{ gap: THUMB_GAP }}>
+                  {visiblePhotos.map((photo, index) => (
+                    <Thumbnail
+                      key={photo.id}
+                      style={{ width: thumb.width }}
+                      ratio={THUMB_RATIO}
+                      source={{ uri: photo.url }}
+                      overlayCount={
+                        hasMore && index === visiblePhotos.length - 1 ? remainingCount : undefined
+                      }
+                      onPress={() =>
+                        navigation.navigate("GroupMeetingPhoto", {
+                          meetingId: params.id,
+                          index: index + 1,
+                        })
+                      }
+                    />
+                  ))}
+                </View>
+                <Pressable
+                  className="mt-3 flex-row items-center justify-center gap-1"
+                  onPress={() =>
+                    navigation.navigate("GroupMeetingPhoto", { meetingId: params.id, index: 0 })
+                  }
+                >
+                  <Text className="text-label-small text-text-alternative">
+                    사진 {meeting.photoCount}장 모두 보기
+                  </Text>
+                  {/* 오른쪽 화살표 아이콘이 세트에 없어 back(왼쪽)을 뒤집어 쓴다 —
+                      손으로 새 SVG를 그리면 획 굵기·그리드가 세트와 어긋난다. */}
+                  <View style={{ transform: [{ rotate: "180deg" }] }}>
+                    <Icon name="back" size={16} color={colors.icon.normal} />
+                  </View>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable
+                className="mt-3 h-24 items-center justify-center rounded-2xl border border-dashed border-background-assistive"
+                onPress={() => void handlePhotoAddPress()}
+                disabled={photoUploading}
+                style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+              >
+                <Text className="text-body-regular text-text-alternative">
+                  {photoUploading ? "올리는 중..." : "+ 첫 활동 사진을 올려보세요"}
+                </Text>
+              </Pressable>
+            )}
           </View>
         )}
 

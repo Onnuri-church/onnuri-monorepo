@@ -8,6 +8,8 @@ import type { GroupMeeting, GroupMeetingDetail } from '@onnuri/shared';
 
 import { pad } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
+import { AddPhotosDto } from './dto/add-photos.dto';
 import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 
@@ -22,7 +24,10 @@ function toPeriodLabel(start: Date | null, end: Date | null): string {
 // 승인·거절한다 (2026-09-08 확정). 소그룹장은 생성 폼에서 한 명 이상 지정 (2026-09-21 확정).
 @Injectable()
 export class GroupMeetingsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+  ) {}
 
   async findAll(): Promise<GroupMeeting[]> {
     const groups = await this.prisma.hobbyGroup.findMany({
@@ -79,9 +84,10 @@ export class GroupMeetingsService {
             content: true,
             coverImageUrl: true,
             images: {
-              where: { kind: 'POST_CONTENT' },
+              // 활동 사진 = 직접 업로드(GALLERY). POST_CONTENT는 옛 계약 호환으로 남긴다.
+              where: { kind: { in: ['GALLERY', 'POST_CONTENT'] } },
               select: { id: true, url: true },
-              orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+              orderBy: { createdAt: 'desc' },
             },
             comments: {
               where: { deletedAt: null },
@@ -362,6 +368,61 @@ export class GroupMeetingsService {
       if (group.recruitEnd < todayDate) return 'closed';
     }
     return 'open';
+  }
+
+  // 활동 사진 추가 — 승인된 참여자·소그룹장·관리자 (셀 갤러리의 "그 셀 유저만"과 같은 결).
+  async addPhotos(
+    requesterId: string,
+    id: string,
+    dto: AddPhotosDto,
+  ): Promise<GroupMeetingDetail> {
+    const group = await this.prisma.hobbyGroup.findFirst({
+      where: { postId: id, post: { deletedAt: null } },
+      select: {
+        members: {
+          where: { userId: requesterId, status: 'APPROVED' },
+          select: { id: true },
+        },
+      },
+    });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+    if (group.members.length === 0) {
+      const requester = await this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { isAdmin: true },
+      });
+      if (!requester?.isAdmin) {
+        throw new ForbiddenException('참여 중인 멤버만 사진을 올릴 수 있습니다.');
+      }
+    }
+
+    await this.prisma.image.createMany({
+      data: dto.imageUrls.map((url) => ({
+        url,
+        kind: 'GALLERY' as const,
+        postId: id,
+        uploadedById: requesterId,
+        takenOn: new Date(),
+      })),
+    });
+    return this.findOne(id, requesterId);
+  }
+
+  // 활동 사진 삭제 — 소그룹장·관리자만. 창고의 파일도 그 자리에서 지운다 (아바타와 동일).
+  async removePhoto(
+    requesterId: string,
+    id: string,
+    imageId: string,
+  ): Promise<GroupMeetingDetail> {
+    await this.assertCanManage(requesterId, id);
+    const image = await this.prisma.image.findFirst({
+      where: { id: imageId, postId: id },
+      select: { id: true, url: true },
+    });
+    if (!image) throw new NotFoundException('사진을 찾을 수 없습니다.');
+    await this.prisma.image.delete({ where: { id: image.id } });
+    await this.uploadsService.deleteByUrl(image.url);
+    return this.findOne(id, requesterId);
   }
 
   private async assertCanManage(requesterId: string, postId: string) {
