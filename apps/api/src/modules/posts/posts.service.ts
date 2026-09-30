@@ -18,12 +18,14 @@ import type {
   TeamActivityListResponse,
 } from '@onnuri/shared';
 
+import type { BoardType } from '../../../generated/prisma';
 import {
   toDateLabel,
   toDayLabel,
   toMonthLabel,
   toMonthValue,
 } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateQtShareDto } from './dto/create-qt-share.dto';
@@ -36,6 +38,26 @@ import { UpdateQtShareDto } from './dto/update-qt-share.dto';
 // likedByMe가 조용히 true가 된다. 빈 문자열은 어떤 cuid와도 안 맞아 0건이 된다.
 function myLikeFilter(userId?: string) {
   return { userId: userId ?? '' };
+}
+
+// 댓글 알림의 탭 이동 경로 — 게시판별 상세 화면 (shared NotificationInfo.linkUrl 형식).
+function toPostLinkUrl(
+  board: BoardType,
+  postId: string,
+  cellId: string | null,
+): string | undefined {
+  switch (board) {
+    case 'QT_SHARE':
+      return `qt/${postId}`;
+    case 'PRAYER':
+      return `prayer/${postId}`;
+    case 'HOBBY_GROUP':
+      return `group-meeting/${postId}`;
+    case 'TEAM_ACTIVITY':
+      return `department-activity/${postId}`;
+    case 'CELL_NEWS':
+      return cellId ? `cell-news/${cellId}/${postId}` : undefined;
+  }
 }
 
 // "2026-05-07" → UTC 자정. @db.Date 컬럼은 UTC로 읽고 쓴다(common/utils/date 주석) —
@@ -106,7 +128,10 @@ function toPostComment(
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   // 홈의 큐티나눔·부서활동 섹션 — 각 게시판 최신 글을 홈 카드에 필요한 필드만 담아 준다.
   // 게시판 목록과 달리 월·팀 필터 없이 전체에서 고르고, 좋아요 같은 내 상태도 없다.
@@ -780,7 +805,12 @@ export class PostsService {
     content: string,
     parentId?: string,
   ): Promise<PostComment> {
-    await this.assertPostExists(postId);
+    // 알림에 쓸 글 정보까지 같이 확인한다 (assertPostExists와 같은 존재 검증).
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, deletedAt: null },
+      select: { authorId: true, board: true, title: true, cellId: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
     if (parentId) await this.assertCanReplyTo(parentId, postId);
 
     const comment = await this.prisma.comment.create({
@@ -793,6 +823,19 @@ export class PostsService {
         author: { select: { name: true, avatarUrl: true } },
       },
     });
+
+    // 글 작성자 알림 — 내 글에 내가 단 댓글은 제외.
+    if (post.authorId !== userId) {
+      await this.notifications.notify([post.authorId], {
+        type: 'COMMENT',
+        title: '댓글',
+        body: post.title
+          ? `${comment.author.name}님이 "${post.title}"에 댓글을 남겼어요.`
+          : `${comment.author.name}님이 회원님의 글에 댓글을 남겼어요.`,
+        linkUrl: toPostLinkUrl(post.board, postId, post.cellId),
+      });
+    }
+
     return toPostComment(comment, userId);
   }
 

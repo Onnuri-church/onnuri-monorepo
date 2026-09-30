@@ -119,7 +119,14 @@ export function Header(props: HeaderProps) {
                 >
                   <Icon name="qr" size={23} color={colors.icon.strong} />
                 </Pressable>
-                <Pressable onPress={props.onPressNotification} hitSlop={8}>
+                {/* 알림센터도 QR처럼 갈 곳이 정해져 있어 기본 동작을 준다. */}
+                <Pressable
+                  onPress={
+                    props.onPressNotification ??
+                    (() => navigation.navigate("Notifications" as never))
+                  }
+                  hitSlop={8}
+                >
                   <Icon name="bell" size={28} color={colors.icon.strong} />
                 </Pressable>
                 <Pressable onPress={props.onPressSettings} hitSlop={8}>

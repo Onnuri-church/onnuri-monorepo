@@ -15,6 +15,7 @@ import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
 import { NoticesModule } from './modules/notices/notices.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { SermonsModule } from './modules/sermons/sermons.module';
@@ -42,6 +43,7 @@ import { UsersModule } from './modules/users/users.module';
     UploadsModule,
     AdminModule,
     NoticesModule,
+    NotificationsModule,
     AttendanceModule,
     SermonsModule,
     BulletinsModule,
