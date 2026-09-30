@@ -811,4 +811,196 @@ describe('Posts (e2e)', () => {
       expect(row?.deletedAt).not.toBeNull();
     });
   });
+
+  describe('큐티나눔 작성 (POST /posts/qt-shares)', () => {
+    const body = () => ({
+      eventDate: '2025-03-21',
+      title: `${FIXTURE_PREFIX}작성글`,
+      content: '작성한 큐티 본문',
+      passage: '룻기 2:1-7',
+      coverImageUrl: 'https://img.test/new-cover.jpg',
+      imageUrls: ['https://img.test/new-1.jpg', 'https://img.test/new-2.jpg'],
+    });
+
+    const create = (data: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .post('/posts/qt-shares')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(data);
+
+    it('토큰 없이 작성하면 401 (열람은 게스트도 되지만 작성은 아니다)', () =>
+      request(app.getHttpServer())
+        .post('/posts/qt-shares')
+        .send(body())
+        .expect(401));
+
+    it('날짜가 YYYY-MM-DD가 아니면 400', () =>
+      create({ ...body(), eventDate: '2025.03.21' }).expect(400));
+
+    it('제목이 비어 있으면 400', () =>
+      create({ ...body(), title: '' }).expect(400));
+
+    it('본문사진이 5장을 넘으면 400 (작성 화면과 같은 상한)', () =>
+      create({
+        ...body(),
+        imageUrls: Array.from(
+          { length: 6 },
+          (_, i) => `https://img.test/over-${i}.jpg`,
+        ),
+      }).expect(400));
+
+    it('작성하면 상세 모양 그대로 돌아오고, 본문사진은 보낸 순서를 지킨다', async () => {
+      const res = await create(body()).expect(201);
+
+      const created = res.body as QtShareDetail;
+      expect(created.title).toBe(`${FIXTURE_PREFIX}작성글`);
+      expect(created.passage).toBe('룻기 2:1-7');
+      expect(created.coverImageUrl).toBe('https://img.test/new-cover.jpg');
+      expect(created.imageUrls).toEqual([
+        'https://img.test/new-1.jpg',
+        'https://img.test/new-2.jpg',
+      ]);
+      expect(created.isMine).toBe(true);
+      expect(created.likeCount).toBe(0);
+      // 저장할 때 로컬 타임존으로 날짜를 만들면 KST에서 하루 전으로 박힌다.
+      expect(created.dateLabel).toBe('03월 21일');
+    });
+
+    it('작성한 글이 그 달 목록에 보인다', async () => {
+      const res = await getList('?month=2025.03').expect(200);
+
+      const titles = (res.body as QtShareListResponse).items.map((i) => i.title);
+      expect(titles).toContain(`${FIXTURE_PREFIX}작성글`);
+    });
+  });
+
+  describe('큐티나눔 수정·삭제 (PATCH·DELETE /posts/qt-shares/:id)', () => {
+    let myPostId: string;
+
+    // 수정/삭제가 글을 바꾸므로 테스트마다 새 글로 시작한다.
+    beforeEach(async () => {
+      const created = await prisma.post.create({
+        data: {
+          board: 'QT_SHARE',
+          authorId: userId,
+          title: `${FIXTURE_PREFIX}수정대상`,
+          content: '수정 전 본문',
+          eventDate: new Date('2025-04-02'),
+          qtShare: { create: { passage: '룻기 3:1-5' } },
+          images: {
+            create: [
+              {
+                url: 'https://img.test/old-1.jpg',
+                kind: 'POST_CONTENT',
+                sortOrder: 1,
+                uploadedById: userId,
+              },
+            ],
+          },
+        },
+      });
+      myPostId = created.id;
+    });
+
+    const patch = (id: string, data: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .patch(`/posts/qt-shares/${id}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(data);
+
+    const remove = (id: string) =>
+      request(app.getHttpServer())
+        .delete(`/posts/qt-shares/${id}`)
+        .set('Authorization', `Bearer ${accessToken}`);
+
+    it('토큰 없이 수정하면 401', () =>
+      request(app.getHttpServer())
+        .patch(`/posts/qt-shares/${myPostId}`)
+        .send({ title: '몰래수정' })
+        .expect(401));
+
+    it('토큰 없이 삭제하면 401', () =>
+      request(app.getHttpServer())
+        .delete(`/posts/qt-shares/${myPostId}`)
+        .expect(401));
+
+    // 없는 글(404)과 구분한다 — 남의 글에 404를 주면 앱이 "사라진 글"로 잘못 안내한다.
+    it('남의 글을 수정하면 403', () =>
+      patch(othersPostId, { title: '남의글수정' }).expect(403));
+
+    it('남의 글을 삭제하면 403', () => remove(othersPostId).expect(403));
+
+    it('남의 글은 수정 요청이 튕겨도 내용이 그대로다', async () => {
+      await patch(othersPostId, { title: '남의글수정' }).expect(403);
+
+      const post = await prisma.post.findUnique({
+        where: { id: othersPostId },
+        select: { title: true },
+      });
+      expect(post?.title).toBe(`${FIXTURE_PREFIX}남의글`);
+    });
+
+    it('없는 글을 수정하면 404', () =>
+      patch('no-such-post', { title: '아무거나' }).expect(404));
+
+    it('보낸 항목만 바뀌고 나머지는 그대로다', async () => {
+      const res = await patch(myPostId, { title: `${FIXTURE_PREFIX}수정됨` });
+      expect(res.status).toBe(200);
+
+      const updated = res.body as QtShareDetail;
+      expect(updated.title).toBe(`${FIXTURE_PREFIX}수정됨`);
+      expect(updated.content).toBe('수정 전 본문');
+      expect(updated.passage).toBe('룻기 3:1-5');
+      expect(updated.imageUrls).toEqual(['https://img.test/old-1.jpg']);
+    });
+
+    it('imageUrls를 보내면 기존 본문사진을 통째로 바꾼다 (지운 장이 남지 않는다)', async () => {
+      const res = await patch(myPostId, {
+        imageUrls: ['https://img.test/new-a.jpg', 'https://img.test/new-b.jpg'],
+      }).expect(200);
+
+      expect((res.body as QtShareDetail).imageUrls).toEqual([
+        'https://img.test/new-a.jpg',
+        'https://img.test/new-b.jpg',
+      ]);
+    });
+
+    it('imageUrls를 빈 배열로 보내면 본문사진이 모두 사라진다', async () => {
+      const res = await patch(myPostId, { imageUrls: [] }).expect(200);
+      expect((res.body as QtShareDetail).imageUrls).toEqual([]);
+    });
+
+    it('passage를 null로 보내면 말씀이 지워진다', async () => {
+      const res = await patch(myPostId, { passage: null }).expect(200);
+      expect((res.body as QtShareDetail).passage).toBeNull();
+    });
+
+    it('삭제하면 상세가 404가 되고 목록에서도 빠진다', async () => {
+      await remove(myPostId).expect(204);
+
+      await request(app.getHttpServer())
+        .get(`/posts/qt-shares/${myPostId}`)
+        .expect(404);
+
+      const list = await getList('?month=2025.04').expect(200);
+      const ids = (list.body as QtShareListResponse).items.map((i) => i.id);
+      expect(ids).not.toContain(myPostId);
+    });
+
+    // soft delete여야 한다 — 행이 사라지면 좋아요·댓글까지 연쇄로 날아간다.
+    it('삭제는 행을 지우지 않고 deletedAt만 채운다', async () => {
+      await remove(myPostId).expect(204);
+
+      const post = await prisma.post.findUnique({
+        where: { id: myPostId },
+        select: { deletedAt: true },
+      });
+      expect(post?.deletedAt).not.toBeNull();
+    });
+
+    it('이미 삭제한 글을 다시 수정하면 404', async () => {
+      await remove(myPostId).expect(204);
+      await patch(myPostId, { title: '삭제후수정' }).expect(404);
+    });
+  });
 });

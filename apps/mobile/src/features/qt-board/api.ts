@@ -1,4 +1,9 @@
-import type { QtShareDetail, QtShareListResponse } from "@onnuri/shared";
+import type {
+  CreateQtShareRequest,
+  QtShareDetail,
+  QtShareListResponse,
+  UpdateQtShareRequest,
+} from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -24,4 +29,23 @@ export async function unlikePost(postId: string): Promise<void> {
 export async function fetchQtDetails(postId: string): Promise<QtShareDetail> {
   const {data} = await apiClient.get<QtShareDetail>(`/posts/qt-shares/${postId}`)
   return data
+}
+
+// 작성·수정은 저장된 글을 상세 모양으로 돌려준다 — 받은 값을 상세 캐시에 그대로 넣는다.
+// 사진은 URL로만 보낸다 (파일은 shared/api/upload의 uploadImage가 먼저 올린다).
+export async function createQtShare(body: CreateQtShareRequest): Promise<QtShareDetail> {
+  const { data } = await apiClient.post<QtShareDetail>("/posts/qt-shares", body);
+  return data;
+}
+
+export async function updateQtShare(
+  postId: string,
+  body: UpdateQtShareRequest,
+): Promise<QtShareDetail> {
+  const { data } = await apiClient.patch<QtShareDetail>(`/posts/qt-shares/${postId}`, body);
+  return data;
+}
+
+export async function deleteQtShare(postId: string): Promise<void> {
+  await apiClient.delete(`/posts/qt-shares/${postId}`);
 }
