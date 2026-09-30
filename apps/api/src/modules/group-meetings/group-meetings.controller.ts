@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
+import { AddPhotosDto } from './dto/add-photos.dto';
 import { DecideMemberDto } from './dto/decide-member.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 import { GroupMeetingsService } from './group-meetings.service';
@@ -72,6 +73,26 @@ export class GroupMeetingsController {
   @Delete(':id/join')
   cancelJoin(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.groupMeetingsService.cancelJoin(user.sub, id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post(':id/photos')
+  addPhotos(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: AddPhotosDto,
+  ) {
+    return this.groupMeetingsService.addPhotos(user.sub, id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/photos/:imageId')
+  removePhoto(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('imageId') imageId: string,
+  ) {
+    return this.groupMeetingsService.removePhoto(user.sub, id, imageId);
   }
 
   @UseGuards(JwtAuthGuard)

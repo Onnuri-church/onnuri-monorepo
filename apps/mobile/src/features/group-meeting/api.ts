@@ -93,6 +93,34 @@ export function useDecideGroupMeetingMember(meetingId: string) {
   });
 }
 
+// 활동 사진 추가 — 승인된 참여자·소그룹장·관리자 (권한 검증은 서버).
+export function useAddGroupMeetingPhotos(meetingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (imageUrls: string[]) =>
+      apiClient
+        .post<GroupMeetingDetail>(`/group-meetings/${meetingId}/photos`, { imageUrls })
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["group-meetings", meetingId], detail);
+    },
+  });
+}
+
+// 활동 사진 삭제 — 소그룹장·관리자만 (서버가 창고 파일도 같이 지운다).
+export function useRemoveGroupMeetingPhoto(meetingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (imageId: string) =>
+      apiClient
+        .delete<GroupMeetingDetail>(`/group-meetings/${meetingId}/photos/${imageId}`)
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["group-meetings", meetingId], detail);
+    },
+  });
+}
+
 // 소그룹 댓글 — 게시판 공용 /posts/:id/comments (소그룹 id = postId).
 export function useAddGroupMeetingComment(meetingId: string) {
   const queryClient = useQueryClient();

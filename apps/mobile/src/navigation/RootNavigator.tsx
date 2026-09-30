@@ -17,6 +17,7 @@ import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
 import { CellDetailScreen } from "../features/cell/CellDetailScreen";
 import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
 import { BannerViewerScreen } from "../features/home/BannerViewerScreen";
+import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingPhotoScreen";
 import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
 import { NoticeListScreen } from "../features/notice/NoticeListScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
@@ -359,6 +360,7 @@ export function RootNavigator() {
           {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
           <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
           <Stack.Screen name="BannerViewer" component={BannerViewerScreen} />
+          <Stack.Screen name="GroupMeetingPhoto" component={GroupMeetingPhotoScreen} />
           <Stack.Screen
             name="CellMemberManage"
             component={CellMemberManageScreen}

@@ -85,6 +85,8 @@ export type RootStackParamList = {
   AdminBannerForm: undefined;
   // 홈 포스터 배너 크게 보기 (검정 배경 뷰어).
   BannerViewer: { imageUrl: string; title: string };
+  // 소그룹 활동 사진 뷰어. index는 상세 photos(최신순) 기준 순번이다.
+  GroupMeetingPhoto: { meetingId: string; index: number };
   // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
   NoticeList: undefined;
   NoticeDetail: { id: string };

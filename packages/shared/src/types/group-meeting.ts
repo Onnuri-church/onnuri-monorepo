@@ -96,3 +96,10 @@ export interface UpdateGroupMeetingRequest {
   leaderIds?: string[];
   coverImageUrl?: string | null;
 }
+
+/** POST /group-meetings/:id/photos 요청 본문 (응답은 GroupMeetingDetail) —
+ *  승인된 참여자·소그룹장·관리자가 활동 사진을 올린다. 삭제는 소그룹장·관리자만. */
+export interface AddGroupMeetingPhotosRequest {
+  /** POST /uploads가 돌려준 주소들 */
+  imageUrls: string[];
+}
