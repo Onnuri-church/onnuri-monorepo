@@ -129,7 +129,14 @@ export function Header(props: HeaderProps) {
                 >
                   <Icon name="bell" size={28} color={colors.icon.strong} />
                 </Pressable>
-                <Pressable onPress={props.onPressSettings} hitSlop={8}>
+                {/* 설정도 갈 곳이 정해져 있어 기본 동작을 준다 (마이페이지 액션 바와 같은 화면). */}
+                <Pressable
+                  onPress={
+                    props.onPressSettings ??
+                    (() => navigation.navigate("Settings" as never))
+                  }
+                  hitSlop={8}
+                >
                   <Icon name="setting" size={28} color={colors.icon.strong} />
                 </Pressable>
               </View>
