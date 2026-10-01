@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   Patch,
   UseGuards,
@@ -40,6 +42,14 @@ export class UsersController {
   @Get('me/stats')
   myStats(@CurrentUser() user: JwtPayload) {
     return this.usersService.getMyStats(user.sub);
+  }
+
+  // 본인 탈퇴 (설정 > 회원탈퇴). soft 처리 — 글·댓글은 남는다 (관리자 탈퇴와 동일).
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('me')
+  withdrawMe(@CurrentUser() user: JwtPayload) {
+    return this.usersService.withdrawMe(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

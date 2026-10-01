@@ -1,8 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
+import { apiClient } from "../../shared/api/client";
+import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
@@ -59,6 +62,20 @@ export function SettingsScreen() {
 
   const handleLogoutPress = () => {
     clearSession();
+  };
+
+  // 회원탈퇴 — 확인 팝업을 거쳐 서버에 탈퇴(soft)를 보내고, 성공하면 세션을 지워
+  // 로그인 화면으로 돌아간다. 서버가 세션·푸시 토큰까지 지우므로 여기서는 로컬만 정리한다.
+  const withdrawDialogRef = useRef<AppDialogRef>(null);
+  const { mutate: withdraw, isPending: withdrawing } = useMutation({
+    mutationFn: () => apiClient.delete("/users/me"),
+    onSuccess: () => clearSession(),
+    onError: () => Alert.alert("탈퇴하지 못했어요", "잠시 후 다시 시도해주세요."),
+  });
+
+  const handleWithdrawConfirm = () => {
+    withdrawDialogRef.current?.close();
+    if (!withdrawing) withdraw();
   };
 
   return (
@@ -130,8 +147,7 @@ export function SettingsScreen() {
               right={<Icon name="expand-right" color={colors.primary.normal} />}
             />
             <SettingRow title="로그아웃" onPress={handleLogoutPress} />
-            {/* TODO(기능): 회원탈퇴 플로우(확인 팝업·API) 미정 — 행만 둔다 */}
-            <SettingRow title="회원탈퇴" />
+            <SettingRow title="회원탈퇴" onPress={() => withdrawDialogRef.current?.open()} />
           </View>
         </View>
       </View>
@@ -166,6 +182,15 @@ export function SettingsScreen() {
           ))}
         </View>
       </AppSheet>
+
+      <AppDialog
+        ref={withdrawDialogRef}
+        title="정말 탈퇴하시겠어요?"
+        description="탈퇴하면 계정을 복구할 수 없어요"
+        confirmLabel="탈퇴하기"
+        cancelLabel="취소"
+        onConfirm={handleWithdrawConfirm}
+      />
     </ScrollView>
   );
 }

@@ -383,6 +383,40 @@ export class UsersService {
     return (await this.findMe(userId))!;
   }
 
+  // 본인 탈퇴 — 관리자 탈퇴와 같은 soft 처리에 더해 세션·푸시 토큰을 지운다
+  // (안 지우면 탈퇴한 기기로 리프레시·푸시가 계속 간다). 관리자 계정은 권한 양도
+  // 절차가 없어서 막는다 (withdrawByAdmin과 같은 기준).
+  async withdrawMe(userId: string): Promise<void> {
+    const me = await this.prisma.user.findFirst({
+      where: { id: userId, withdrawnAt: null },
+      select: { id: true, isAdmin: true },
+    });
+    if (!me) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    if (me.isAdmin) {
+      throw new BadRequestException(
+        '관리자 계정은 탈퇴할 수 없습니다. 먼저 다른 관리자에게 권한을 넘겨주세요.',
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { withdrawnAt: now },
+      }),
+      this.prisma.cellMembership.updateMany({
+        where: { userId, endedAt: null },
+        data: { endedAt: now },
+      }),
+      this.prisma.teamMembership.updateMany({
+        where: { userId, endedAt: null },
+        data: { endedAt: now },
+      }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      this.prisma.pushToken.deleteMany({ where: { userId } }),
+    ]);
+  }
+
   // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라
   // 회차 수 = 주수다 (WorshipService.date unique).
   async getMyStats(userId: string): Promise<MyStatsResponse> {
