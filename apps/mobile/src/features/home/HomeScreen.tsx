@@ -16,6 +16,7 @@ import {
 
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchPrayers } from "../prayer-board/api";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
@@ -79,6 +80,10 @@ export function HomeScreen() {
   };
 
   return (
+    <>
+      {/* 로그인 직후 처음 보는 화면이 홈이라 푸시 등록 게이트를 여기 마운트한다 —
+          화면에는 권한 안내 다이얼로그만 그린다. */}
+      <PushNotificationGate />
     <ScrollView
       className="flex-1 bg-background-normal"
       contentContainerClassName="pb-10"
@@ -214,5 +219,6 @@ export function HomeScreen() {
         </ScrollView>
       </View>
     </ScrollView>
+    </>
   );
 }

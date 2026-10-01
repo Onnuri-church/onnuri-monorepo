@@ -382,6 +382,21 @@ export class UsersService {
     return (await this.findMe(userId))!;
   }
 
+  // 기기 푸시 토큰 등록 — token이 unique라서, 같은 기기에 다른 계정으로 로그인하면
+  // upsert가 토큰 주인을 새 계정으로 바꾼다 (이전 계정으로 푸시가 새지 않게).
+  async registerPushToken(userId: string, token: string): Promise<void> {
+    await this.prisma.pushToken.upsert({
+      where: { token },
+      update: { userId },
+      create: { userId, token },
+    });
+  }
+
+  // 내 것이 아닌 토큰은 건드리지 않는다 — deleteMany라 없으면 조용히 0건.
+  async removePushToken(userId: string, token: string): Promise<void> {
+    await this.prisma.pushToken.deleteMany({ where: { token, userId } });
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,

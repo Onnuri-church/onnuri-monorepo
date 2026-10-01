@@ -11,6 +11,7 @@
 erDiagram
     User ||--o{ SocialAccount : "로그인 수단"
     User ||--o{ RefreshToken : "세션"
+    User ||--o{ PushToken : "기기 푸시"
     User ||--o{ TeamMembership : "소속"
     Team ||--o{ TeamMembership : "구성"
     User ||--o{ CellMembership : "소속"
@@ -46,6 +47,12 @@ erDiagram
         string userId FK
         string tokenHash "sha256 — 원문 저장 안 함"
         datetime expiresAt "사용(회전)·로그아웃 시 행 삭제"
+    }
+
+    PushToken {
+        string id PK
+        string userId FK
+        string token UK "Expo 푸시 토큰 — 기기당 1행, 계정 전환 시 주인 교체(upsert)"
     }
 
     Team {

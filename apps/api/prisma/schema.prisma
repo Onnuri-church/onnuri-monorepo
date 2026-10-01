@@ -125,6 +125,7 @@ model User {
 
   socialAccounts         SocialAccount[]
   refreshTokens          RefreshToken[]
+  pushTokens             PushToken[]
   teamMemberships        TeamMembership[]
   cellMemberships        CellMembership[]
   worshipAttendances     WorshipAttendance[]     @relation("WorshipAttendee")
@@ -542,6 +543,19 @@ model Notice {
   updatedAt DateTime   @updatedAt
 
   @@index([type, createdAt])
+}
+
+// 기기별 Expo 푸시 토큰. 한 사람이 여러 기기를 쓸 수 있어 User와 분리한다.
+// 같은 기기에 다른 계정으로 로그인하면 토큰 주인이 바뀌므로 token을 unique로 두고 upsert한다.
+model PushToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  token     String   @unique // "ExponentPushToken[...]"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Notification {

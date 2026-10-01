@@ -12,6 +12,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyAvatarDto } from './dto/update-my-avatar.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
@@ -48,6 +49,27 @@ export class UsersController {
     @Body() dto: UpdateMyAvatarDto,
   ) {
     return this.usersService.updateMyAvatar(user.sub, dto.avatarUrl);
+  }
+
+  // 기기 푸시 토큰 등록 — 로그인 후 권한을 허용한 기기가 부른다. 같은 기기에 다른 계정으로
+  // 로그인하면 토큰 주인이 바뀐다 (서비스의 upsert 참고).
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/push-token')
+  registerPushToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    return this.usersService.registerPushToken(user.sub, dto.token);
+  }
+
+  // 로그아웃하는 기기의 토큰 해제 — 안 지우면 로그아웃한 사람에게 푸시가 계속 간다.
+  @UseGuards(JwtAuthGuard)
+  @Delete('me/push-token')
+  removePushToken(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: RegisterPushTokenDto,
+  ) {
+    return this.usersService.removePushToken(user.sub, dto.token);
   }
 
   // :id 라우트들은 'me'보다 뒤에 둔다 — Express는 등록 순서대로 매칭해서 앞에 두면
