@@ -87,6 +87,8 @@ export type RootStackParamList = {
   BannerViewer: { imageUrl: string; title: string };
   // 소그룹 활동 사진 뷰어. index는 상세 photos(최신순) 기준 순번이다.
   GroupMeetingPhoto: { meetingId: string; index: number };
+  // 메인 헤더 종 아이콘에서 진입하는 알림센터.
+  Notifications: undefined;
   // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
   NoticeList: undefined;
   NoticeDetail: { id: string };

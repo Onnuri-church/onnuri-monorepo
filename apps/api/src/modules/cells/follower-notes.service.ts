@@ -7,6 +7,7 @@ import {
 import type { FollowerNoteInfo } from '@onnuri/shared';
 
 import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
@@ -24,7 +25,10 @@ function toShortDateLabel(date: Date): string {
 // 열람: 그 셀 셀장/부셀장 + 관리자. 작성: 셀장/부셀장만 (관리자는 댓글만 — 2026-09-10 확정).
 @Injectable()
 export class FollowerNotesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   async findAll(requesterId: string, cellId: string): Promise<FollowerNoteInfo[]> {
     await this.assertCanView(requesterId, cellId);
@@ -91,7 +95,7 @@ export class FollowerNotesService {
     }
 
     const meetingDate = new Date(dto.meetingDate);
-    await this.prisma.$transaction(async (tx) => {
+    const noteId = await this.prisma.$transaction(async (tx) => {
       const service = await tx.worshipService.upsert({
         where: { date: meetingDate },
         update: {},
@@ -111,7 +115,7 @@ export class FollowerNotesService {
         throw new BadRequestException('그 주 노트가 이미 작성돼 있어요.');
       }
 
-      await tx.followerNote.create({
+      const note = await tx.followerNote.create({
         data: {
           meetingId: meeting.id,
           authorId: requesterId,
@@ -119,8 +123,30 @@ export class FollowerNotesService {
           answer2: dto.answers[1]?.trim() ? dto.answers[1] : null,
           answer3: dto.answers[2]?.trim() ? dto.answers[2] : null,
         },
+        select: { id: true },
       });
+      return note.id;
     });
+
+    // 관리자 알림 — 팔로워 노트는 관리자(목사님)가 확인하는 보고라 수신자가 관리자다.
+    const [author, cell, admins] = await Promise.all([
+      this.prisma.user.findUnique({ where: { id: requesterId }, select: { name: true } }),
+      this.prisma.cell.findUnique({ where: { id: cellId }, select: { name: true } }),
+      this.prisma.user.findMany({
+        where: { isAdmin: true, id: { not: requesterId }, withdrawnAt: null },
+        select: { id: true },
+      }),
+    ]);
+    await this.notifications.notify(
+      admins.map((admin) => admin.id),
+      {
+        type: 'FOLLOWER_NOTE',
+        title: '팔로워 노트',
+        // 셀 이름은 "지환셀"처럼 접미사를 이미 포함한다 (스키마 주석).
+        body: `${author?.name ?? '셀장'} 셀장님이 ${cell?.name ?? '셀'} 팔로워 노트를 작성했어요.`,
+        linkUrl: `follower-note/${cellId}/${noteId}`,
+      },
+    );
 
     return this.findAll(requesterId, cellId);
   }

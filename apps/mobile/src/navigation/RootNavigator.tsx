@@ -20,6 +20,7 @@ import { BannerViewerScreen } from "../features/home/BannerViewerScreen";
 import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingPhotoScreen";
 import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
 import { NoticeListScreen } from "../features/notice/NoticeListScreen";
+import { NotificationScreen } from "../features/notification/NotificationScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
@@ -416,6 +417,15 @@ export function RootNavigator() {
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
               헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
           {/* 생성 진입은 목록 끝의 점선 "셀 생성" 행(CellManageList) — 2026-09-21 시안으로 헤더 버튼에서 이동 */}
+          {/* 알림센터 — 헤더는 뒤로가기만 두고 큰 제목("알림")은 화면이 그린다 (시안). */}
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="" rightAction="none" />,
+            }}
+          />
           <Stack.Screen
             name="NoticeList"
             component={NoticeListScreen}

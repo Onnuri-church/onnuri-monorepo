@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import type { HomeBanner, NoticeInfo } from '@onnuri/shared';
 
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
 import { CreateNoticeDto } from './dto/create-notice.dto';
@@ -36,7 +37,10 @@ function toSeriesLabel(createdAt: Date): string {
 // 배너(설교)가 자동으로 다시 표시되는 스택 구조라 별도 활성 플래그가 없다.
 @Injectable()
 export class NoticesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   private toBanner(row: BannerRow): HomeBanner {
     // 유형 판별은 구절(content) 유무 — 말씀 배너도 배경사진을 가질 수 있어 이미지로는 못 가른다.
@@ -129,6 +133,22 @@ export class NoticesService {
       },
       select: BANNER_SELECT,
     });
+
+    // 전 회원 알림 — 작성한 관리자 본인은 제외. 탈퇴자에게는 쌓지 않는다.
+    const users = await this.prisma.user.findMany({
+      where: { id: { not: adminId }, withdrawnAt: null },
+      select: { id: true },
+    });
+    await this.notifications.notify(
+      users.map((user) => user.id),
+      {
+        type: 'NOTICE',
+        title: '공지사항',
+        body: `새 공지가 등록됐어요: ${row.title}`,
+        linkUrl: `notice/${row.id}`,
+      },
+    );
+
     return this.toNotice(row);
   }
 
