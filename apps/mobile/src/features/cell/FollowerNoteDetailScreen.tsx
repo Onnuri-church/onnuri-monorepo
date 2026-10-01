@@ -40,14 +40,15 @@ export function FollowerNoteDetailScreen() {
   const [commentDraft, setCommentDraft] = useState("");
 
   // ⋮ 항목이 내 글 여부에 의존하므로 화면이 헤더를 단독 등록한다 (QtBoardDetail 패턴).
-  // 이 게시판은 셀장·관리자만 들어오고 목업 작성자가 셀장이라 항상 보인다 — 작성자 API로 교체 예정.
+  // 수정·삭제는 작성자(셀장) 본인만 — 관리자는 열람·댓글만 한다 (서버 권한과 동일).
+  const isMine = note?.isMine ?? false;
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <Header
           variant="sub"
           title="팔로워 노트"
-          rightAction="more"
+          rightAction={isMine ? "more" : "none"}
           menuItems={[
             {
               icon: "edit",
@@ -63,7 +64,7 @@ export function FollowerNoteDetailScreen() {
         />
       ),
     });
-  }, [navigation, cellId, noteId]);
+  }, [navigation, cellId, noteId, isMine]);
 
   const confirmDelete = () => {
     deleteDialogRef.current?.close();
