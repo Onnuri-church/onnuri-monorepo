@@ -142,8 +142,7 @@ export function DepartmentActivityDetailScreen() {
             {
               icon: "edit",
               label: "수정하기",
-              // 부서활동은 아직 작성·수정 API가 없어서 빈 작성 화면이 열린다 (화면도 목업).
-              onPress: () => navigation.navigate("DepartmentActivityWrite"),
+              onPress: () => navigation.navigate("DepartmentActivityWrite", { postId: id }),
             },
             {
               icon: "trash-can",
@@ -154,7 +153,7 @@ export function DepartmentActivityDetailScreen() {
         />
       ),
     });
-  }, [navigation, isMine]);
+  }, [navigation, isMine, id]);
 
   const confirmDelete = () => {
     dialogRef.current?.close();

@@ -201,6 +201,8 @@ export interface TeamActivityDetail {
   content: string;
   /** 활동 날짜 — "05월 27일" */
   dateLabel: string;
+  /** 활동 날짜 원본 (YYYY-MM-DD) — 수정 화면 프리필용 */
+  eventDate: string;
   createdAt: string;
   authorName: string;
   authorAvatarUrl: string | null;
@@ -226,6 +228,12 @@ export interface CreateTeamActivityRequest {
   /** 사진 (최대 5장) — POST /uploads로 받은 주소 */
   imageUrls?: string[];
 }
+
+/**
+ * PATCH /posts/team-activities/:id 요청 본문 (응답은 TeamActivityDetail) — 보낸 필드만 반영.
+ * 팀은 글의 정체성이라 바꿀 수 없다. imageUrls를 보내면 사진 전체 교체다 (셀 소식과 동일).
+ */
+export type UpdateTeamActivityRequest = Partial<Omit<CreateTeamActivityRequest, "teamId">>;
 
 /** POST /posts/cell-news 요청 본문 (응답은 CellNewsDetail). */
 export interface CreateCellNewsRequest {

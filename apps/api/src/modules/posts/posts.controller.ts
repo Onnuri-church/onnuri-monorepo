@@ -20,6 +20,7 @@ import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
+import { UpdateTeamActivityDto } from './dto/update-team-activity.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
 import { FindTeamActivitiesDto } from './dto/find-team-activities.dto';
@@ -102,7 +103,7 @@ export class PostsController {
     return this.postsService.deleteCellNews(id, user.sub);
   }
 
-  // 부서활동은 게스트도 열람한다 (큐티나눔과 같은 기준). 작성 API는 아직 없다.
+  // 부서활동은 게스트도 열람한다 (큐티나눔과 같은 기준).
   @UseGuards(OptionalJwtAuthGuard)
   @Get('team-activities')
   findTeamActivities(@Query() query: FindTeamActivitiesDto) {
@@ -118,7 +119,7 @@ export class PostsController {
     return this.postsService.findTeamActivity(id, user?.sub);
   }
 
-  // 작성은 그 팀의 팀원·관리자만 (권한 검증은 서비스). 수정은 아직 없다.
+  // 작성은 그 팀의 팀원·관리자만 (권한 검증은 서비스).
   @UseGuards(JwtAuthGuard)
   @Post('team-activities')
   createTeamActivity(
@@ -126,6 +127,17 @@ export class PostsController {
     @Body() dto: CreateTeamActivityDto,
   ) {
     return this.postsService.createTeamActivity(user.sub, dto);
+  }
+
+  // 수정은 내 글만 (권한 검증은 서비스).
+  @UseGuards(JwtAuthGuard)
+  @Patch('team-activities/:id')
+  updateTeamActivity(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: UpdateTeamActivityDto,
+  ) {
+    return this.postsService.updateTeamActivity(id, user.sub, dto);
   }
 
   // 작성·수정·삭제는 로그인이 필요하다. 수정·삭제 권한(내 글인지)은 서비스가 본다.
