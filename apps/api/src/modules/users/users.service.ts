@@ -9,6 +9,7 @@ import type {
   AdminMemberSummary,
   CellRole,
   MeResponse,
+  MyStatsResponse,
   TeamRole,
   User,
 } from '@onnuri/shared';
@@ -380,6 +381,23 @@ export class UsersService {
       await this.uploadsService.deleteByUrl(oldUrl);
     }
     return (await this.findMe(userId))!;
+  }
+
+  // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라
+  // 회차 수 = 주수다 (WorshipService.date unique).
+  async getMyStats(userId: string): Promise<MyStatsResponse> {
+    const [qtShareCount, attendanceWeeks, receivedHearts] = await Promise.all([
+      this.prisma.post.count({
+        where: { board: 'QT_SHARE', authorId: userId, deletedAt: null },
+      }),
+      this.prisma.worshipAttendance.count({
+        where: { userId, attended: true },
+      }),
+      this.prisma.postLike.count({
+        where: { post: { authorId: userId, deletedAt: null } },
+      }),
+    ]);
+    return { qtShareCount, attendanceWeeks, receivedHearts };
   }
 
   // 기기 푸시 토큰 등록 — token이 unique라서, 같은 기기에 다른 계정으로 로그인하면

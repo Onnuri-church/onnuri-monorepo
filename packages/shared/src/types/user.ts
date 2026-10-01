@@ -102,6 +102,16 @@ export interface UpdateMyAvatarRequest {
   avatarUrl: string | null;
 }
 
+/** GET /users/me/stats 응답 — 마이페이지 통계 카드 3종 */
+export interface MyStatsResponse {
+  /** 내가 쓴 큐티나눔 글 수 (삭제 글 제외) */
+  qtShareCount: number;
+  /** 예배 출석 주수 — 출석 처리된 회차 수 (회차 = 주 1회) */
+  attendanceWeeks: number;
+  /** 내 글이 받은 좋아요 수 (삭제 글 제외) */
+  receivedHearts: number;
+}
+
 /**
  * PATCH /users/:id 요청 본문 (관리자 전용, 응답은 AdminMemberDetail) — 보낸 필드만 반영.
  * cellId/teamId의 null은 "소속 없음". role은 소속 멤버십 역할로 반영된다:

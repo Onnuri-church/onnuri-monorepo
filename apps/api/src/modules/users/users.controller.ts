@@ -35,6 +35,13 @@ export class UsersController {
     return this.usersService.findMe(user.sub);
   }
 
+  // 마이페이지 통계 카드 (큐티나눔·출석주수·받은하트).
+  @UseGuards(JwtAuthGuard)
+  @Get('me/stats')
+  myStats(@CurrentUser() user: JwtPayload) {
+    return this.usersService.getMyStats(user.sub);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Patch('me')
   updateMe(@CurrentUser() user: JwtPayload, @Body() dto: UpdateMyProfileDto) {
