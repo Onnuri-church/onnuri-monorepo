@@ -43,6 +43,14 @@ export interface GroupMeetingMember {
   avatarUrl: string | null;
 }
 
+/** GET /group-meetings/mine 응답 항목 — 마이페이지 "취향 소그룹"(내가 속한 모임 목록) */
+export interface MyGroupMeeting extends GroupMeeting {
+  /** 내 참여 상태 — 거절(REJECTED)된 모임은 목록에 없다 */
+  myStatus: "APPROVED" | "PENDING";
+  /** 내가 이 소그룹의 소그룹장인지 — 카드 "소그룹장" 뱃지용 */
+  isLeader: boolean;
+}
+
 // 상세 페이지. 목록(GroupMeeting)에 없는 필드만 더한다.
 export interface GroupMeetingDetail extends GroupMeeting {
   /** 소개 글 (생성 폼의 설명문) */

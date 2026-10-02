@@ -2,6 +2,7 @@ import type {
   CreateGroupMeetingRequest,
   GroupMeeting,
   GroupMeetingDetail,
+  MyGroupMeeting,
   UpdateGroupMeetingRequest,
 } from "@onnuri/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,11 @@ export function fetchGroupMeetings(): Promise<GroupMeeting[]> {
 
 export function fetchGroupMeetingDetail(id: string): Promise<GroupMeetingDetail> {
   return apiClient.get<GroupMeetingDetail>(`/group-meetings/${id}`).then((res) => res.data);
+}
+
+// 내가 신청·참여 중인 모임 (마이페이지 "취향 소그룹"). 거절된 모임은 안 온다.
+export function fetchMyGroupMeetings(): Promise<MyGroupMeeting[]> {
+  return apiClient.get<MyGroupMeeting[]>("/group-meetings/mine").then((res) => res.data);
 }
 
 function useInvalidateGroupMeetings() {

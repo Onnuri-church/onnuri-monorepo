@@ -256,7 +256,11 @@ export function MyPageScreen() {
             ]}
           />
           <MenuLinkCard
-            links={[{ label: "공지사항", onPress: () => navigation.navigate("NoticeList") }]}
+            links={[
+              // 내가 신청·참여 중인 모임 모아보기 — 게시판에서 매번 찾지 않게 하는 지름길.
+              { label: "취향 소그룹", onPress: () => navigation.navigate("MyGroupMeetings") },
+              { label: "공지사항", onPress: () => navigation.navigate("NoticeList") },
+            ]}
           />
         </View>
 

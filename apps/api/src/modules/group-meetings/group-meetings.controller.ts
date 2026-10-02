@@ -32,6 +32,13 @@ export class GroupMeetingsController {
     return this.groupMeetingsService.findAll();
   }
 
+  // 내가 신청·참여 중인 모임 (마이페이지 "취향 소그룹"). ':id'보다 먼저 둔다 — 등록 순서 매칭.
+  @UseGuards(JwtAuthGuard)
+  @Get('mine')
+  findMine(@CurrentUser() user: JwtPayload) {
+    return this.groupMeetingsService.findMine(user.sub);
+  }
+
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
   findOne(
