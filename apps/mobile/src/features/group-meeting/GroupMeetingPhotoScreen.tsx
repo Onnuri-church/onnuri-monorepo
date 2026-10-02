@@ -3,7 +3,17 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Alert, Image, Pressable, Text, View } from "react-native";
+import {
+  Alert,
+  FlatList,
+  Image,
+  Pressable,
+  Text,
+  View,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -13,6 +23,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchGroupMeetingDetail, useRemoveGroupMeetingPhoto } from "./api";
 
 // 소그룹 활동 사진 뷰어 (셀 갤러리 뷰어와 같은 검정 배경 + "N/전체" + 좌우 이동).
+// 좌우 스와이프로 넘기고, 화살표는 제스처를 모르는 사용자용 힌트로 남긴다 (2026-10-02 결정).
 // 소그룹장·관리자는 우상단 삭제로 현재 사진을 지운다 — 등록부는 headerShown: false.
 export function GroupMeetingPhotoScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "GroupMeetingPhoto">>();
@@ -31,6 +42,18 @@ export function GroupMeetingPhotoScreen() {
   const [index, setIndex] = useState(initialIndex);
   const removePhoto = useRemoveGroupMeetingPhoto(meetingId);
   const dialogRef = useRef<AppDialogRef>(null);
+  const { width } = useWindowDimensions();
+  const listRef = useRef<FlatList<(typeof photos)[number]>>(null);
+
+  // 화살표·삭제 모두 이 함수로 이동한다 — index 상태는 스크롤이 멈출 때 한 군데서만 갱신.
+  const goTo = (next: number, animated = true) => {
+    listRef.current?.scrollToIndex({ index: next, animated });
+    if (!animated) setIndex(next);
+  };
+
+  const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
+  };
 
   const handleDeleteConfirm = () => {
     dialogRef.current?.close();
@@ -43,7 +66,9 @@ export function GroupMeetingPhotoScreen() {
           navigation.goBack();
           return;
         }
-        setIndex((prev) => Math.min(prev, detail.photos.length - 1));
+        // 목록이 줄어든 다음 프레임에 스크롤을 맞춘다 — 같은 프레임이면 옛 길이 기준으로 튄다.
+        const next = Math.min(index, detail.photos.length - 1);
+        requestAnimationFrame(() => goTo(next, false));
       },
       onError: () => Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요."),
     });
@@ -76,28 +101,43 @@ export function GroupMeetingPhotoScreen() {
       </Text>
 
       <View className="flex-1 justify-center">
-        {photos[index] ? (
-          <Image
-            source={{ uri: photos[index].url }}
-            className="w-full"
-            style={{ aspectRatio: 402 / 617 }}
-            resizeMode="contain"
-          />
-        ) : (
-          <View className="w-full bg-background-assistive" style={{ aspectRatio: 402 / 617 }} />
-        )}
+        <FlatList
+          ref={listRef}
+          data={photos}
+          keyExtractor={(photo) => photo.id}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          initialScrollIndex={Math.min(initialIndex, Math.max(totalCount - 1, 0))}
+          getItemLayout={(_, itemIndex) => ({
+            length: width,
+            offset: width * itemIndex,
+            index: itemIndex,
+          })}
+          onMomentumScrollEnd={handleScrollEnd}
+          renderItem={({ item }) => (
+            <View className="justify-center" style={{ width }}>
+              <Image
+                source={{ uri: item.url }}
+                className="w-full"
+                style={{ aspectRatio: 402 / 617 }}
+                resizeMode="contain"
+              />
+            </View>
+          )}
+        />
 
         <Pressable
           className="absolute left-5 h-7 w-7 items-center justify-center"
           disabled={index === 0}
-          onPress={() => setIndex((prev) => prev - 1)}
+          onPress={() => goTo(index - 1)}
         >
           <Icon name="expand" size={28} color={colors.icon.normal} />
         </Pressable>
         <Pressable
           className="absolute right-5 h-7 w-7 items-center justify-center"
           disabled={index >= totalCount - 1}
-          onPress={() => setIndex((prev) => prev + 1)}
+          onPress={() => goTo(index + 1)}
         >
           <Icon name="expand-right" size={28} color={colors.icon.normal} />
         </Pressable>

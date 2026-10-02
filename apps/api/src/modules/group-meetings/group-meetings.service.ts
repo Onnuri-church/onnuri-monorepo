@@ -140,7 +140,12 @@ export class GroupMeetingsService {
               // 활동 사진 = 직접 업로드(GALLERY). POST_CONTENT는 옛 계약 호환으로 남긴다.
               where: { kind: { in: ['GALLERY', 'POST_CONTENT'] } },
               select: { id: true, url: true, takenOn: true },
-              orderBy: { createdAt: 'desc' },
+              // 갤러리 월 묶음이 takenOn 기준이라 정렬도 takenOn — createdAt 순이면
+              // 글 사진(takenOn=활동일)이 끼어들 때 같은 달이 여러 묶음으로 쪼개진다.
+              orderBy: [
+                { takenOn: { sort: 'desc', nulls: 'last' } },
+                { createdAt: 'desc' },
+              ],
             },
             comments: {
               where: { deletedAt: null },
@@ -204,13 +209,15 @@ export class GroupMeetingsService {
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
       leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
-      // 참여멤버 보기 화면용 전체 명단 — 가입순(members orderBy)을 그대로 쓴다.
-      members: approved.map((m) => ({
-        id: m.userId,
-        name: m.user.name,
-        avatarUrl: m.user.avatarUrl,
-        isLeader: m.role === 'LEADER',
-      })),
+      // 참여멤버 보기 화면용 전체 명단 — 소그룹장 먼저(시안 첫 행), 그 안에서는 가입순.
+      members: [...approved]
+        .sort((a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'))
+        .map((m) => ({
+          id: m.userId,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+          isLeader: m.role === 'LEADER',
+        })),
       // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
       photos: group.post.images.map((image) => ({
         id: image.id,

@@ -81,7 +81,9 @@ export function GroupMeetingGalleryScreen() {
     setUploading(true);
     try {
       const imageUrls = await Promise.all(result.assets.map((asset) => uploadImage(asset.uri)));
-      addPhotos.mutate(imageUrls);
+      addPhotos.mutate(imageUrls, {
+        onError: () => Alert.alert("사진을 등록하지 못했어요", "잠시 후 다시 시도해주세요."),
+      });
     } catch {
       Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
     } finally {

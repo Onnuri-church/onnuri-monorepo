@@ -228,8 +228,9 @@ export function GroupMeetingDetailScreen() {
             <Text className="text-label-medium text-primary-normal">{meeting.statusLabel}</Text>
             <Text className="text-label-medium text-text-alternative">{meeting.periodLabel}</Text>
           </View>
-          <View className="flex-row items-center justify-between">
-            <Text className="text-heading-main text-text-normal">{meeting.title}</Text>
+          <View className="flex-row items-center justify-between gap-2">
+            {/* 긴 제목이 수정 버튼을 밀어내지 않게 제목 쪽만 줄어든다. */}
+            <Text className="flex-1 text-heading-main text-text-normal">{meeting.title}</Text>
             {/* 소그룹장·관리자의 수정 진입 — 활동 사진의 +추가와 같은 회색 알약 모양 */}
             {meeting.canManage && (
               <Pressable

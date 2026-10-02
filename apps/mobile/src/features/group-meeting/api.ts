@@ -131,6 +131,10 @@ export function useRemoveGroupMeetingPhotos(meetingId: string) {
     onSuccess: (detail) => {
       if (detail) queryClient.setQueryData(["group-meetings", meetingId], detail);
     },
+    // 중간에 실패하면 일부는 이미 지워진 상태다 — 서버 값으로 다시 맞춘다.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: ["group-meetings", meetingId] });
+    },
   });
 }
 
