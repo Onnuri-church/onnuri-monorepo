@@ -27,7 +27,8 @@ export type RootStackParamList = {
   Bulletin: undefined;
   DepartmentActivity: undefined;
   DepartmentActivityDetail: { id: string };
-  DepartmentActivityWrite: undefined;
+  // postId가 있으면 그 글 수정, 없으면 새 글 작성.
+  DepartmentActivityWrite: { postId: string } | undefined;
   GroupMeeting: undefined;
   GroupMeetingDetail: { id: string };
   GroupMeetingForm: { meetingId?: string };

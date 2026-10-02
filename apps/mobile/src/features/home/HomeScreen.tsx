@@ -13,9 +13,12 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchPrayers } from "../prayer-board/api";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
@@ -47,6 +50,7 @@ const PRAYER_CAROUSEL_SIZE = 3;
 export function HomeScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [prayerPage, setPrayerPage] = useState(0);
 
@@ -79,9 +83,15 @@ export function HomeScreen() {
   };
 
   return (
+    <>
+      {/* 로그인 직후 처음 보는 화면이 홈이라 푸시 등록 게이트를 여기 마운트한다 —
+          화면에는 권한 안내 다이얼로그만 그린다. */}
+      <PushNotificationGate />
     <ScrollView
       className="flex-1 bg-background-normal"
-      contentContainerClassName="pb-10"
+      // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
+      // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-10 포함).
+      contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
       onScroll={handleHideTabBarScroll}
       scrollEventThrottle={16}
     >
@@ -214,5 +224,6 @@ export function HomeScreen() {
         </ScrollView>
       </View>
     </ScrollView>
+    </>
   );
 }

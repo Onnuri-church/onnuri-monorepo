@@ -9,6 +9,7 @@ import type {
   AdminMemberSummary,
   CellRole,
   MeResponse,
+  MyStatsResponse,
   TeamRole,
   User,
 } from '@onnuri/shared';
@@ -380,6 +381,72 @@ export class UsersService {
       await this.uploadsService.deleteByUrl(oldUrl);
     }
     return (await this.findMe(userId))!;
+  }
+
+  // 본인 탈퇴 — 관리자 탈퇴와 같은 soft 처리에 더해 세션·푸시 토큰을 지운다
+  // (안 지우면 탈퇴한 기기로 리프레시·푸시가 계속 간다). 관리자 계정은 권한 양도
+  // 절차가 없어서 막는다 (withdrawByAdmin과 같은 기준).
+  async withdrawMe(userId: string): Promise<void> {
+    const me = await this.prisma.user.findFirst({
+      where: { id: userId, withdrawnAt: null },
+      select: { id: true, isAdmin: true },
+    });
+    if (!me) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    if (me.isAdmin) {
+      throw new BadRequestException(
+        '관리자 계정은 탈퇴할 수 없습니다. 먼저 다른 관리자에게 권한을 넘겨주세요.',
+      );
+    }
+
+    const now = new Date();
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { withdrawnAt: now },
+      }),
+      this.prisma.cellMembership.updateMany({
+        where: { userId, endedAt: null },
+        data: { endedAt: now },
+      }),
+      this.prisma.teamMembership.updateMany({
+        where: { userId, endedAt: null },
+        data: { endedAt: now },
+      }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      this.prisma.pushToken.deleteMany({ where: { userId } }),
+    ]);
+  }
+
+  // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라
+  // 회차 수 = 주수다 (WorshipService.date unique).
+  async getMyStats(userId: string): Promise<MyStatsResponse> {
+    const [qtShareCount, attendanceWeeks, receivedHearts] = await Promise.all([
+      this.prisma.post.count({
+        where: { board: 'QT_SHARE', authorId: userId, deletedAt: null },
+      }),
+      this.prisma.worshipAttendance.count({
+        where: { userId, attended: true },
+      }),
+      this.prisma.postLike.count({
+        where: { post: { authorId: userId, deletedAt: null } },
+      }),
+    ]);
+    return { qtShareCount, attendanceWeeks, receivedHearts };
+  }
+
+  // 기기 푸시 토큰 등록 — token이 unique라서, 같은 기기에 다른 계정으로 로그인하면
+  // upsert가 토큰 주인을 새 계정으로 바꾼다 (이전 계정으로 푸시가 새지 않게).
+  async registerPushToken(userId: string, token: string): Promise<void> {
+    await this.prisma.pushToken.upsert({
+      where: { token },
+      update: { userId },
+      create: { userId, token },
+    });
+  }
+
+  // 내 것이 아닌 토큰은 건드리지 않는다 — deleteMany라 없으면 조용히 0건.
+  async removePushToken(userId: string, token: string): Promise<void> {
+    await this.prisma.pushToken.deleteMany({ where: { token, userId } });
   }
 
   async updateMyProfile(

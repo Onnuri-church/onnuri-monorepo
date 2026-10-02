@@ -13,6 +13,11 @@ export type NotificationType =
   | "NOTICE";
 
 /** GET /notifications 응답 항목 — 최신순 */
+/** PATCH·DELETE /users/me/push-token 요청 본문 — 기기의 Expo 푸시 토큰 */
+export interface RegisterPushTokenRequest {
+  token: string;
+}
+
 export interface NotificationInfo {
   id: string;
   type: NotificationType;

@@ -16,18 +16,13 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { uploadImage } from "../../shared/api/upload";
 import { fetchMe, patchMyAvatar } from "../profile/api";
+import { useMyStats } from "./api";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
 import { RoleBadge } from "./components/RoleBadge";
 import { StatsCard } from "./components/StatsCard";
 import type { UserRole } from "./types";
 
-// TODO(통계 API): 큐티나눔·출석주수·받은하트는 원본(게시글·출석) 데이터가 아직 없어 목업 유지.
-const MOCK_STATS = [
-  { label: "큐티나눔", value: 10 },
-  { label: "출석주수", value: 30 },
-  { label: "받은하트", value: 8 },
-];
 
 // 등급 = isAdmin + 멤버십 역할 (docs/erd.md — 부셀장은 셀장과 동일 권한이라 같은 등급으로 본다).
 // 겸직(예: 셀장+팀장)은 시안이 등급당 한 variant만 정의해 관리자 > 셀장 > 팀장 순으로
@@ -98,6 +93,14 @@ export function MyPageScreen() {
     queryFn: fetchMe,
     enabled: session.status === "authenticated",
   });
+
+  // 통계 3종 — 도착 전에는 0으로 그린다 (카드 자리를 비우면 레이아웃이 튄다).
+  const { data: myStats } = useMyStats(session.status === "authenticated");
+  const stats = [
+    { label: "큐티나눔", value: myStats?.qtShareCount ?? 0 },
+    { label: "출석주수", value: myStats?.attendanceWeeks ?? 0 },
+    { label: "받은하트", value: myStats?.receivedHearts ?? 0 },
+  ];
 
   // 아바타 탭 → 사진 선택 → 업로드 → 저장. 정사각 크롭은 시스템 피커의 편집 화면에 맡긴다.
   const queryClient = useQueryClient();
@@ -240,7 +243,7 @@ export function MyPageScreen() {
 
         {/* 카드 목록 — 시안 간격: 카드 사이 13px */}
         <View className="mt-9 gap-3.25">
-          <StatsCard stats={MOCK_STATS} />
+          <StatsCard stats={stats} />
           {roleLinks.length > 0 && <MenuLinkCard links={roleLinks} />}
           <ProfileInfoCard
             rows={[

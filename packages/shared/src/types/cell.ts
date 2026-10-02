@@ -98,6 +98,8 @@ export interface FollowerNoteInfo {
   meetingLabel: string;
   authorName: string;
   authorAvatarUrl: string | null;
+  /** 내가 쓴 노트 여부 — 상세 ⋮(수정·삭제) 노출 기준 */
+  isMine: boolean;
   /** 작성일 — "08월 03일". "3주 전"은 앱이 계산한다 */
   writtenDateLabel: string;
   createdAt: string;

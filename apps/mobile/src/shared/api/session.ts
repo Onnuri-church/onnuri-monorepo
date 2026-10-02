@@ -9,6 +9,7 @@ import {
   postLogout,
   postRefresh,
 } from "./authApi";
+import { unregisterPushToken } from "./push";
 import { clearTokens, loadTokens, saveTokens } from "./tokenStorage";
 
 // 로그인 응답 → 토큰 저장 → 세션 시작. 프로필 설정을 마치지 않은 유저(신규 가입 포함, 서버가
@@ -65,6 +66,8 @@ export async function restoreSession(): Promise<{ user: User; tokens: AuthTokens
 }
 
 export async function signOut(): Promise<void> {
+  // 이 기기의 푸시 토큰 해제 — 세션이 살아 있을 때(요청에 토큰이 필요) 최선 노력으로 지운다.
+  await unregisterPushToken().catch(() => undefined);
   const stored = await loadTokens();
   await clearTokens();
   useAuthStore.getState().clearSession();

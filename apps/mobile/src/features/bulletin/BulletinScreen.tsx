@@ -10,17 +10,11 @@ import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
+import { useHomeBanner } from "../home/api";
 import { useMe } from "../profile/useMe";
 import { fetchBulletins } from "./api";
 import { BulletinCard } from "./components/BulletinCard";
 import { SermonSeriesBanner } from "./components/SermonSeriesBanner";
-
-// API 연동 전 임시 데이터. 이번 달 시리즈 엔드포인트가 생기면 교체한다.
-const SERMON_SERIES = {
-  seriesLabel: "8월 설교 시리즈",
-  title: "하나님 나라의 왕",
-  description: "마태복음 5:1 - 7:29 · 산상수훈을 따라가는 8월",
-};
 
 export function BulletinScreen() {
   // 처음에는 달을 고르지 않고 보낸다 — 주보가 있는 가장 최근 달을 서버가 골라 준다.
@@ -28,6 +22,11 @@ export function BulletinScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 등록은 관리자만 된다 (서버 AdminGuard와 같은 규칙) — 못 쓰는 사람에게 버튼을 보이면 403을 만난다.
   const isAdmin = useMe()?.isAdmin === true;
+
+  // 상단 시리즈 배너 = 홈 배너와 같은 데이터 (관리자가 홈 배너 관리에서 등록한 최신 1건).
+  // SERMON형만 시리즈 문구가 있다 — 포스터형이거나 등록된 게 없으면 배너 없이 목록만 그린다.
+  const { data: banner } = useHomeBanner();
+  const sermonBanner = banner?.kind === "SERMON" ? banner : null;
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["bulletins", month],
@@ -68,13 +67,16 @@ export function BulletinScreen() {
       {/* 시안의 필터-배너 간격 36 중 16은 FilterBar가 자기 padding으로 갖고 있어서 20만 더한다. */}
       <ScrollView contentContainerClassName="px-5 pb-6 pt-5">
         {/* 시안의 배너-목록 간격 40 중 24는 BulletinCard가 자기 py로 갖고 있어서 16만 더한다. */}
-        <View className="mb-4">
-          <SermonSeriesBanner
-            seriesLabel={SERMON_SERIES.seriesLabel}
-            title={SERMON_SERIES.title}
-            description={SERMON_SERIES.description}
-          />
-        </View>
+        {sermonBanner && (
+          <View className="mb-4">
+            <SermonSeriesBanner
+              seriesLabel={sermonBanner.seriesLabel ?? ""}
+              title={sermonBanner.title}
+              description={sermonBanner.passage ?? ""}
+              imageUrl={sermonBanner.imageUrl ?? undefined}
+            />
+          </View>
+        )}
         {items.map((bulletin) => (
           <BulletinCard
             key={bulletin.id}

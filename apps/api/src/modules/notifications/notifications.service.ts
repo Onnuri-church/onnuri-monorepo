@@ -56,7 +56,8 @@ export class NotificationsService {
   }
 
   // 알림 생성 — 실패해도 본 동작(공지 등록 등)을 막으면 안 되므로 절대 던지지 않는다
-  // (UploadsService.deleteByUrl과 같은 취급).
+  // (UploadsService.deleteByUrl과 같은 취급). 알림센터 행을 쌓은 뒤 같은 내용으로
+  // 기기 푸시도 발송한다.
   async notify(userIds: string[], input: NotifyInput): Promise<void> {
     if (userIds.length === 0) return;
     try {
@@ -69,8 +70,55 @@ export class NotificationsService {
           linkUrl: input.linkUrl ?? null,
         })),
       });
+      await this.sendPush(userIds, input);
     } catch (error) {
       this.logger.warn(`notification create failed: ${String(error)}`);
+    }
+  }
+
+  // Expo 푸시 발송. 수신자들의 기기 토큰을 모아 100개 단위로 Expo 푸시 서버에 보낸다
+  // (https://docs.expo.dev/push-notifications/sending-notifications/ — 요청당 100개 제한).
+  // 앱을 지운 기기의 토큰(DeviceNotRegistered)은 그 자리에서 정리한다.
+  private async sendPush(userIds: string[], input: NotifyInput): Promise<void> {
+    const tokens = await this.prisma.pushToken.findMany({
+      where: { userId: { in: userIds } },
+      select: { token: true },
+    });
+    if (tokens.length === 0) return;
+
+    const messages = tokens.map(({ token }) => ({
+      to: token,
+      title: input.title,
+      body: input.body,
+      sound: 'default',
+      // 앱이 푸시 탭을 받으면 알림센터를 연다 — linkUrl은 이후 딥링크 확장용으로 같이 싣는다.
+      data: { linkUrl: input.linkUrl ?? null },
+    }));
+
+    for (let start = 0; start < messages.length; start += 100) {
+      const chunk = messages.slice(start, start + 100);
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chunk),
+      });
+      if (!response.ok) {
+        this.logger.warn(`push send failed: ${response.status} ${await response.text()}`);
+        continue;
+      }
+
+      // 티켓은 요청 순서와 1:1 대응 — 죽은 토큰만 골라 지운다.
+      const { data: tickets } = (await response.json()) as {
+        data?: { status: string; details?: { error?: string } }[];
+      };
+      const deadTokens = (tickets ?? []).flatMap((ticket, index) =>
+        ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered'
+          ? [chunk[index].to]
+          : [],
+      );
+      if (deadTokens.length > 0) {
+        await this.prisma.pushToken.deleteMany({ where: { token: { in: deadTokens } } });
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import type {
   PostComment,
   TeamActivityDetail,
   TeamActivityListResponse,
+  UpdateTeamActivityRequest,
 } from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
@@ -59,6 +60,19 @@ export async function createTeamActivity(
 ): Promise<TeamActivityDetail> {
   const { data } = await apiClient.post<TeamActivityDetail>(
     "/posts/team-activities",
+    body,
+  );
+  return data;
+}
+
+// 부서활동 수정 (PATCH /posts/team-activities/:id). 내 글만 고칠 수 있고 팀은 못 바꾼다.
+// imageUrls는 사진 전체 교체다 — 글쓰기 화면이 최종 목록을 통째로 보낸다.
+export async function updateTeamActivity(
+  postId: string,
+  body: UpdateTeamActivityRequest,
+): Promise<TeamActivityDetail> {
+  const { data } = await apiClient.patch<TeamActivityDetail>(
+    `/posts/team-activities/${postId}`,
     body,
   );
   return data;

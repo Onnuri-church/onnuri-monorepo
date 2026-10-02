@@ -60,8 +60,8 @@ function backgroundPath(width: number, height: number) {
 }
 
 // 탭바 몸통 높이 (h-20, 홈 인디케이터 inset 제외). 탭바가 오버레이(absolute)라 레이아웃 자리를
-// 차지하지 않으므로, BottomTabNavigator가 이 값 + inset만큼 sceneStyle 하단 패딩을 넣어
-// 화면 콘텐츠가 탭바에 가리지 않게 한다.
+// 차지하지 않으므로, 각 탭 화면이 이 값 + inset만큼 스크롤 콘텐츠 하단 패딩을 넣어
+// 콘텐츠 끝이 탭바에 가리지 않게 한다 — 탭바가 숨으면 그 자리까지 콘텐츠가 보인다.
 export const TAB_BAR_HEIGHT = 80;
 
 export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {

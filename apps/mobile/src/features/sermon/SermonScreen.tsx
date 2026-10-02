@@ -3,7 +3,9 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { FilterBar } from "../../shared/components/base/FilterBar";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
@@ -18,6 +20,7 @@ export function SermonScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 하단 탭 화면이라 스크롤 내리면 탭바를 숨긴다 (셀·마이페이지와 동일).
   const handleHideTabBarScroll = useHideTabBarOnScroll();
+  const insets = useSafeAreaInsets();
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["sermons", month],
@@ -54,7 +57,10 @@ export function SermonScreen() {
       <FilterBar items={months} selected={selectedMonth ?? ""} onSelect={setMonth} />
       {/* 시안의 필터-목록 간격 36 중 16은 FilterBar가 자기 padding으로 갖고 있어서 20만 더한다. */}
       <ScrollView
-        contentContainerClassName="gap-7 px-5 pb-6 pt-5"
+        contentContainerClassName="gap-7 px-5 pt-5"
+        // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
+        // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-6 포함).
+        contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
       >

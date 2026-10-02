@@ -31,6 +31,7 @@ import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateQtShareDto } from './dto/create-qt-share.dto';
 import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
+import { UpdateTeamActivityDto } from './dto/update-team-activity.dto';
 import { UpdateQtShareDto } from './dto/update-qt-share.dto';
 
 // "내 좋아요"를 고르는 조건. 게스트(userId 없음)는 좋아요가 있을 수 없는데, Prisma는
@@ -587,6 +588,7 @@ export class PostsService {
       title: post.title ?? '',
       content: post.content,
       dateLabel: toDayLabel(post.eventDate ?? post.createdAt),
+      eventDate: toDateValue(post.eventDate ?? post.createdAt),
       createdAt: post.createdAt.toISOString(),
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,
@@ -658,6 +660,54 @@ export class PostsService {
     if (!user?.isAdmin && !isTeamMember) {
       throw new ForbiddenException('이 부서의 팀원만 글을 쓸 수 있습니다.');
     }
+  }
+
+  // 부서활동 수정 — 내 글만 (삭제와 같은 기준). imageUrls를 보내면 사진 전체 교체
+  // (updateCellNews와 같은 방식 — 글쓰기 화면이 최종 목록을 통째로 보낸다).
+  async updateTeamActivity(
+    id: string,
+    userId: string,
+    dto: UpdateTeamActivityDto,
+  ): Promise<TeamActivityDetail> {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
+      select: { authorId: true, eventDate: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    if (post.authorId !== userId) {
+      throw new ForbiddenException('내가 쓴 글만 수정할 수 있습니다.');
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.post.update({
+        where: { id },
+        data: {
+          ...(dto.title !== undefined && { title: dto.title }),
+          ...(dto.content !== undefined && { content: dto.content }),
+          ...(dto.eventDate !== undefined && {
+            eventDate: new Date(dto.eventDate),
+          }),
+        },
+      });
+      if (dto.imageUrls !== undefined) {
+        await tx.image.deleteMany({
+          where: { postId: id, kind: 'POST_CONTENT' },
+        });
+        const takenOn = new Date(dto.eventDate ?? post.eventDate ?? new Date());
+        await tx.image.createMany({
+          data: dto.imageUrls.map((url, index) => ({
+            url,
+            kind: 'POST_CONTENT' as const,
+            postId: id,
+            uploadedById: userId,
+            takenOn,
+            sortOrder: index,
+          })),
+        });
+      }
+    });
+
+    return this.findTeamActivity(id, userId);
   }
 
   // 부서활동 삭제 — 내 글만. 글은 지우지 않고 deletedAt만 채운다(목록·상세가 걸러낸다).

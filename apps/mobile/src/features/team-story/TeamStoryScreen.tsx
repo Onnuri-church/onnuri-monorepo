@@ -2,10 +2,12 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useDeleteTeam, useTeams } from "./api";
 import { TeamListItem } from "./components/TeamListItem";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon, isIconName } from "../../shared/components/base/Icon";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
@@ -14,6 +16,7 @@ import { useMe } from "../profile/useMe";
 // (셀 탭이 관리자에게 셀 관리로 뜨는 것과 같은 방식). 일반 유저·게스트는 목록만 본다.
 export function TeamStoryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const { data: teams } = useTeams();
   const me = useMe();
   const canManage = me?.isAdmin === true;
@@ -34,7 +37,12 @@ export function TeamStoryScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="gap-4 px-5 pb-6 pt-7">
+      <ScrollView
+        contentContainerClassName="gap-4 px-5 pt-7"
+        // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
+        // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-6 포함).
+        contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
+      >
         {(teams ?? []).map((team) => (
           <TeamListItem
             key={team.id}

@@ -24,6 +24,7 @@
     },
     "android": {
       "package": "com.onnuri.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/android-icon-foreground.png"
