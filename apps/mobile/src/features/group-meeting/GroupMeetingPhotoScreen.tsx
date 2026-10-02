@@ -2,7 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   FlatList,
@@ -45,11 +45,27 @@ export function GroupMeetingPhotoScreen() {
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<(typeof photos)[number]>>(null);
 
-  // 화살표·삭제 모두 이 함수로 이동한다 — index 상태는 스크롤이 멈출 때 한 군데서만 갱신.
+  // 화살표·삭제 모두 이 함수로 이동한다. index는 여기서 즉시 갱신한다 —
+  // Android는 프로그램 스크롤이 momentum end를 안 쏘기도 해서 이벤트만 믿으면
+  // 카운터·삭제 대상이 어긋난다. 제스처 스크롤은 handleScrollEnd가 최종값으로 덮는다.
   const goTo = (next: number, animated = true) => {
     listRef.current?.scrollToIndex({ index: next, animated });
-    if (!animated) setIndex(next);
+    setIndex(next);
   };
+
+  // 캐시가 비어 있던 채 열리면 FlatList가 빈 배열로 마운트돼 initialScrollIndex가
+  // 무효다 — 사진이 처음 도착한 시점에 한 번만 원하는 장으로 맞춘다.
+  const appliedInitialIndex = useRef(false);
+  useEffect(() => {
+    if (appliedInitialIndex.current || totalCount === 0) return;
+    appliedInitialIndex.current = true;
+    if (initialIndex > 0) {
+      const next = Math.min(initialIndex, totalCount - 1);
+      requestAnimationFrame(() => goTo(next, false));
+    }
+    // goTo는 렌더마다 새로 만들어지지만 동작이 같아 의존성에서 뺀다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totalCount, initialIndex]);
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
