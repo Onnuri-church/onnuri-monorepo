@@ -128,16 +128,16 @@ export function DepartmentActivityDetailScreen() {
     },
   });
 
-  // ⋮는 내 글일 때만 보이고 항목이 화면 데이터(작성자)에 의존하므로,
+  // ⋮는 관리 권한(작성자·그 팀 팀장·관리자)일 때만 보이고 항목이 화면 데이터에 의존하므로,
   // 등록부(RootNavigator)가 아니라 화면이 헤더를 단독 등록한다 (큐티나눔 상세와 같은 방식).
-  const isMine = data?.isMine ?? false;
+  const canManage = data?.canManage ?? false;
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <Header
           variant="sub"
           title="부서활동 게시판"
-          rightAction={isMine ? "more" : "none"}
+          rightAction={canManage ? "more" : "none"}
           menuItems={[
             {
               icon: "edit",
@@ -153,7 +153,7 @@ export function DepartmentActivityDetailScreen() {
         />
       ),
     });
-  }, [navigation, isMine, id]);
+  }, [navigation, canManage, id]);
 
   const confirmDelete = () => {
     dialogRef.current?.close();

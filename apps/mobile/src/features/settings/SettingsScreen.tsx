@@ -7,20 +7,22 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
+import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
 import { BrightnessSlider } from "./components/BrightnessSlider";
 import { SettingRow } from "./components/SettingRow";
 
-// 알림 종류별 켜짐 여부. 푸시 알림 기능이 아직 없어서 화면 로컬 상태로만 동작한다 —
-// 기능이 붙으면 서버 저장으로 교체.
+// 알림 종류별 켜짐 여부 — 서버에 저장되고, 끄면 그 종류의 푸시가 오지 않는다
+// (알림센터에는 그대로 쌓인다). key는 NotificationSettings 필드명과 같다.
 const NOTIFICATION_ROWS = [
   { key: "sermonUpload", title: "말씀영상 업로드 알림" },
-  { key: "liveStart", title: "실시간 예배 시작 알림" },
-  { key: "qtComment", title: "큐티나눔 새글 알림" },
+  { key: "liveWorship", title: "실시간 예배 시작 알림" },
+  { key: "qtNewPost", title: "큐티나눔 새글 알림" },
 ] as const;
 
 type NotificationKey = (typeof NOTIFICATION_ROWS)[number]["key"];
@@ -45,14 +47,29 @@ export function SettingsScreen() {
   //   그때까지 토글 상태만 동작. 시안 확정되면 tokens.js 확장과 함께 연결한다.
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState("한국어");
-  const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
-    sermonUpload: true,
-    liveStart: true,
-    qtComment: true,
-  });
 
+  // 서버 값이 오기 전에는 기본값(전부 켜짐)으로 그린다 — 기본값과 같아서 깜빡임이 없다.
+  const { data: settings } = useNotificationSettings();
+  const updateSettings = useUpdateNotificationSettings();
+  const notifications: Record<NotificationKey, boolean> = settings ?? {
+    sermonUpload: true,
+    liveWorship: true,
+    qtNewPost: true,
+  };
+
+  // 저장 피드백은 토스트 한 줄 — 확인 팝업은 조작을 끊어서 두지 않는다 (2026-10-02 결정,
+  // 광고성 푸시가 생기면 그때 법정 고지 팝업을 별도로 단다).
+  const toastRef = useRef<AppToastRef>(null);
   const handleNotificationChange = (key: NotificationKey, value: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }));
+    const title = NOTIFICATION_ROWS.find((row) => row.key === key)?.title ?? "알림";
+    toastRef.current?.show(`${title}이 ${value ? "켜졌어요" : "꺼졌어요"}`);
+    updateSettings.mutate(
+      { [key]: value },
+      {
+        // 훅의 onError가 토글을 서버 값으로 되돌린다 — 여기서는 안내만 띄운다.
+        onError: () => toastRef.current?.show("저장하지 못했어요. 다시 시도해주세요"),
+      },
+    );
   };
 
   const handleLanguageSelect = (option: string) => {
@@ -191,6 +208,8 @@ export function SettingsScreen() {
         cancelLabel="취소"
         onConfirm={handleWithdrawConfirm}
       />
+
+      <AppToast ref={toastRef} />
     </ScrollView>
   );
 }

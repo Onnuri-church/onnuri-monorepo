@@ -29,7 +29,11 @@ export type RootStackParamList = {
   DepartmentActivityDetail: { id: string };
   // postId가 있으면 그 글 수정, 없으면 새 글 작성.
   DepartmentActivityWrite: { postId: string } | undefined;
+  // 팀장 "게시판 관리" (마이페이지 관리 카드) — 자기 팀 부서활동 글 목록.
+  TeamBoardManage: { teamId: string };
   GroupMeeting: undefined;
+  // 마이페이지 "취향 소그룹" — 내가 신청·참여 중인 모임 목록.
+  MyGroupMeetings: undefined;
   GroupMeetingDetail: { id: string };
   GroupMeetingForm: { meetingId?: string };
   PrayerBoard: undefined;

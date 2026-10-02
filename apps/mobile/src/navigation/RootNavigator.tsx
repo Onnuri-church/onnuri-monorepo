@@ -35,9 +35,11 @@ import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
+import { TeamBoardManageScreen } from "../features/department-activity/TeamBoardManageScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
+import { MyGroupMeetingScreen } from "../features/group-meeting/MyGroupMeetingScreen";
 import { LiveScreen } from "../features/live/LiveScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
@@ -217,10 +219,26 @@ export function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="TeamBoardManage"
+            component={TeamBoardManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="게시판 관리" rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
             name="GroupMeeting"
             component={GroupMeetingScreen}
             /* 관리자에게만 우측 "편집"이 붙어 화면이 헤더를 단독 등록한다 (2026-09-21 관리자 시안) */
             options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="MyGroupMeetings"
+            component={MyGroupMeetingScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="취향 소그룹" rightAction="home" />,
+            }}
           />
           <Stack.Screen
             name="GroupMeetingForm"

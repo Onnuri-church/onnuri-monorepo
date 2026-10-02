@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { GroupMeeting, GroupMeetingDetail } from '@onnuri/shared';
+import type {
+  GroupMeeting,
+  GroupMeetingDetail,
+  MyGroupMeeting,
+} from '@onnuri/shared';
 
 import { pad } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
@@ -45,23 +49,66 @@ export class GroupMeetingsService {
       orderBy: { post: { createdAt: 'desc' } },
     });
 
-    return groups.map((group) => {
-      const status = this.toStatus(group);
-      return {
-        id: group.postId,
-        title: group.post.title ?? '',
-        deadline: group.recruitEnd?.toISOString().slice(0, 10) ?? null,
-        status,
-        // 사용자에게 보이는 상태 문구는 프론트가 아니라 여기서 계산한다 (ARCHITECTURE.md App Responsibilities).
-        statusLabel: status === 'open' ? '모집중' : '마감',
-        thumbnailUrl: group.post.coverImageUrl,
-        participantCount: group.members.length,
-        participantAvatarUrls: group.members
-          .map((member) => member.user.avatarUrl)
-          .filter((url): url is string => url !== null)
-          .slice(0, 3),
-      };
+    return groups.map((group) => this.toSummary(group));
+  }
+
+  // 마이페이지 "취향 소그룹" — 내가 신청(PENDING)·참여(APPROVED) 중인 모임. 거절은 뺀다.
+  async findMine(userId: string): Promise<MyGroupMeeting[]> {
+    const memberships = await this.prisma.hobbyGroupMember.findMany({
+      where: {
+        userId,
+        status: { in: ['APPROVED', 'PENDING'] },
+        group: { post: { deletedAt: null } },
+      },
+      select: {
+        role: true,
+        status: true,
+        group: {
+          select: {
+            postId: true,
+            status: true,
+            recruitEnd: true,
+            post: { select: { title: true, coverImageUrl: true, createdAt: true } },
+            members: {
+              where: { status: 'APPROVED' },
+              select: { user: { select: { avatarUrl: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { group: { post: { createdAt: 'desc' } } },
     });
+
+    return memberships.map((membership) => ({
+      ...this.toSummary(membership.group),
+      myStatus: membership.status === 'APPROVED' ? 'APPROVED' : 'PENDING',
+      isLeader: membership.role === 'LEADER',
+    }));
+  }
+
+  // 목록 카드 공통 모양 (findAll·findMine이 같이 쓴다).
+  private toSummary(group: {
+    postId: string;
+    status: 'RECRUITING' | 'CLOSED';
+    recruitEnd: Date | null;
+    post: { title: string | null; coverImageUrl: string | null };
+    members: { user: { avatarUrl: string | null } }[];
+  }): GroupMeeting {
+    const status = this.toStatus(group);
+    return {
+      id: group.postId,
+      title: group.post.title ?? '',
+      deadline: group.recruitEnd?.toISOString().slice(0, 10) ?? null,
+      status,
+      // 사용자에게 보이는 상태 문구는 프론트가 아니라 여기서 계산한다 (ARCHITECTURE.md App Responsibilities).
+      statusLabel: status === 'open' ? '모집중' : '마감',
+      thumbnailUrl: group.post.coverImageUrl,
+      participantCount: group.members.length,
+      participantAvatarUrls: group.members
+        .map((member) => member.user.avatarUrl)
+        .filter((url): url is string => url !== null)
+        .slice(0, 3),
+    };
   }
 
   async findOne(

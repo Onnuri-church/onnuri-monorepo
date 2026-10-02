@@ -10,6 +10,7 @@ import type {
   CellRole,
   MeResponse,
   MyStatsResponse,
+  NotificationSettings,
   TeamRole,
   User,
 } from '@onnuri/shared';
@@ -20,6 +21,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
+import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 
 @Injectable()
 export class UsersService {
@@ -432,6 +434,43 @@ export class UsersService {
       }),
     ]);
     return { qtShareCount, attendanceWeeks, receivedHearts };
+  }
+
+  // 알림 토글 3종 (설정 화면). DB 컬럼명(notify*)과 API 필드명이 달라 여기서 매핑한다.
+  async getNotificationSettings(userId: string): Promise<NotificationSettings> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        notifySermonUpload: true,
+        notifyLiveWorship: true,
+        notifyQtNewPost: true,
+      },
+    });
+    if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    return {
+      sermonUpload: user.notifySermonUpload,
+      liveWorship: user.notifyLiveWorship,
+      qtNewPost: user.notifyQtNewPost,
+    };
+  }
+
+  async updateNotificationSettings(
+    userId: string,
+    dto: UpdateNotificationSettingsDto,
+  ): Promise<NotificationSettings> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.sermonUpload !== undefined && {
+          notifySermonUpload: dto.sermonUpload,
+        }),
+        ...(dto.liveWorship !== undefined && {
+          notifyLiveWorship: dto.liveWorship,
+        }),
+        ...(dto.qtNewPost !== undefined && { notifyQtNewPost: dto.qtNewPost }),
+      },
+    });
+    return this.getNotificationSettings(userId);
   }
 
   // 기기 푸시 토큰 등록 — token이 unique라서, 같은 기기에 다른 계정으로 로그인하면

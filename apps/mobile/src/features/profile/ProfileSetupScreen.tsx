@@ -1,5 +1,5 @@
 import { useNavigation } from "@react-navigation/native";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import {
@@ -22,7 +22,7 @@ import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import { SelectField } from "../../shared/components/composed/SelectField";
-import { fetchCells, fetchTeams, patchMyProfile } from "./api";
+import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
 
 // 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
 const NONE_OPTION = "없음";
@@ -77,10 +77,20 @@ export function ProfileSetupScreen() {
   const [birthday, setBirthday] = useState(() => toBirthdayInput(sessionUser?.birthDate ?? null));
   const [phone, setPhone] = useState(sessionUser?.phone ?? "");
   const [gender, setGender] = useState<Gender | null>(sessionUser?.gender ?? null);
-  // 현재 소속은 유저 응답에 없어서(멤버십 조회 API 없음) 수정 모드에서도 미리 채우지 못한다.
   const [cell, setCell] = useState<string | null>(null);
   const [team, setTeam] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // 수정 모드 프리필 — 소속은 세션 유저에 없어서 /users/me로 받아 채운다 (소속 없음 = "없음").
+  // 사용자가 먼저 고른 값(null 아님)은 덮지 않는다. 온보딩은 직접 고르게 비워둔다.
+  const isEditing = session.status === "authenticated";
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe, enabled: isEditing });
+  useEffect(() => {
+    if (!isEditing || !me) return;
+    setCell((prev) => prev ?? me.cell?.name ?? NONE_OPTION);
+    setTeam((prev) => prev ?? me.team?.name ?? NONE_OPTION);
+  }, [isEditing, me]);
 
   // 안드로이드 하드웨어(제스처) 뒤로가기. 온보딩에서는 이 화면이 스택의 유일한 화면이라
   // 기본 동작이 앱을 내려버린다 — 헤더 뒤로가기(RootNavigator 등록부)와 같은 의미로,
@@ -121,6 +131,9 @@ export function ProfileSetupScreen() {
         cellId: findIdByName(cells, cell),
         teamId: findIdByName(teams, team),
       });
+
+      // 마이페이지 등이 보는 /users/me 캐시를 비운다 — 안 비우면 바뀐 소속이 이전 값으로 보인다.
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
 
       // 저장 중에 세션이 사라졌으면(401 → clearSession) 화면도 곧 로그인으로 바뀐다 — 손대지 않는다.
       const current = useAuthStore.getState().session;

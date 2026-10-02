@@ -38,9 +38,8 @@ function deriveRole(me: MeResponse | undefined, isAdmin: boolean): UserRole {
 }
 
 // 등급별 관리 메뉴 (시안 확정). 일반 유저는 관리 카드가 없다.
-// TODO(라우트): 나머지 대상 화면들(게시판 관리·팔로워 노트·출석 관리)이
-//   아직 없어 onPress를 비워둔다. 화면이 생기면 라우트 등록과 함께 연결.
 interface RoleLinkHandlers {
+  onBoardManagePress?: () => void;
   onTeamMemberPress?: () => void;
   onCellManagePress?: () => void;
   onFollowerNotePress?: () => void;
@@ -55,7 +54,7 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
   switch (role) {
     case "teamLeader":
       return [
-        { label: `${team} 게시판 관리` },
+        { label: `${team} 게시판 관리`, onPress: handlers.onBoardManagePress },
         { label: `${team} 팀원 관리`, onPress: handlers.onTeamMemberPress },
       ];
     case "cellLeader":
@@ -164,6 +163,10 @@ export function MyPageScreen() {
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
   const myTeamId = me?.team?.id;
   const roleLinks = getRoleLinks(role, team, {
+    // 팀장 메뉴 — 내 팀이 있어야 갈 곳이 정해진다 (teamLeader 판정 자체가 me.team 기준이라 항상 있다).
+    onBoardManagePress: myTeamId
+      ? () => navigation.navigate("TeamBoardManage", { teamId: myTeamId })
+      : undefined,
     onTeamMemberPress: myTeamId
       ? () => navigation.navigate("TeamMemberAdmin", { teamId: myTeamId })
       : undefined,
@@ -253,7 +256,11 @@ export function MyPageScreen() {
             ]}
           />
           <MenuLinkCard
-            links={[{ label: "공지사항", onPress: () => navigation.navigate("NoticeList") }]}
+            links={[
+              // 내가 신청·참여 중인 모임 모아보기 — 게시판에서 매번 찾지 않게 하는 지름길.
+              { label: "취향 소그룹", onPress: () => navigation.navigate("MyGroupMeetings") },
+              { label: "공지사항", onPress: () => navigation.navigate("NoticeList") },
+            ]}
           />
         </View>
 
