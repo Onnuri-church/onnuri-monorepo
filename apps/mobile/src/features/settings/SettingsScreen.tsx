@@ -10,7 +10,7 @@ import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppShee
 import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
-import { useAuthStore } from "../../shared/store/useAuthStore";
+import { signOut } from "../../shared/api/session";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
@@ -40,7 +40,6 @@ function SectionLabel({ children }: { children: string }) {
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const clearSession = useAuthStore((state) => state.clearSession);
   const languageSheetRef = useRef<AppSheetRef>(null);
 
   // TODO(디자인): 다크 팔레트 값이 어색해 디자이너와 함께 다시 작업하기로 함 (2026-09-09) —
@@ -78,7 +77,9 @@ export function SettingsScreen() {
   };
 
   const handleLogoutPress = () => {
-    clearSession();
+    // 화면 전환 + 토큰·푸시·계정별 캐시 정리까지 — clearSession만 부르면 저장된 토큰이
+    // 남아 앱 재시작 시 도로 로그인되고, 이 기기로 푸시도 계속 온다.
+    void signOut();
   };
 
   // 회원탈퇴 — 확인 팝업을 거쳐 서버에 탈퇴(soft)를 보내고, 성공하면 세션을 지워
@@ -86,7 +87,8 @@ export function SettingsScreen() {
   const withdrawDialogRef = useRef<AppDialogRef>(null);
   const { mutate: withdraw, isPending: withdrawing } = useMutation({
     mutationFn: () => apiClient.delete("/users/me"),
-    onSuccess: () => clearSession(),
+    // 서버가 세션·푸시 토큰을 지웠어도 로컬 토큰·캐시는 남는다 — signOut으로 마저 정리.
+    onSuccess: () => void signOut(),
     onError: () => Alert.alert("탈퇴하지 못했어요", "잠시 후 다시 시도해주세요."),
   });
 

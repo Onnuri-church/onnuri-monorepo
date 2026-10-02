@@ -11,6 +11,7 @@ import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppShee
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import { signOut } from "../../shared/api/session";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -82,7 +83,6 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
 export function MyPageScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const clearSession = useAuthStore((state) => state.clearSession);
   const session = useAuthStore((state) => state.session);
   const handleHideTabBarScroll = useHideTabBarOnScroll();
 
@@ -185,8 +185,8 @@ export function MyPageScreen() {
   });
 
   const handleLogoutPress = () => {
-    // TODO(로그인 연동): 서버 세션 만료 처리가 생기면 여기서 같이 호출.
-    clearSession();
+    // 토큰·푸시·계정별 캐시까지 정리한다 (설정 로그아웃과 동일).
+    void signOut();
   };
 
   return (
