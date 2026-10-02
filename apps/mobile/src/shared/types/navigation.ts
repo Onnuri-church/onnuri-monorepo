@@ -35,6 +35,10 @@ export type RootStackParamList = {
   // 마이페이지 "취향 소그룹" — 내가 신청·참여 중인 모임 목록.
   MyGroupMeetings: undefined;
   GroupMeetingDetail: { id: string };
+  // 상세 "사진 N장 모두 보기" — 월 묶음 그리드 (편집은 소그룹장·관리자).
+  GroupMeetingGallery: { meetingId: string };
+  // 상세 "참여 멤버" 행 — 승인된 멤버 전체 명단.
+  GroupMeetingMembers: { meetingId: string };
   GroupMeetingForm: { meetingId?: string };
   PrayerBoard: undefined;
   // 게시판 ⋮ 메뉴에서 들어가는 내 북마크 목록. 게시판과 화면이 비슷하지만 라우트를 나눈다 —

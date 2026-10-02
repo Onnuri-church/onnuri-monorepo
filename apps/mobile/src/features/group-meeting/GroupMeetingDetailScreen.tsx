@@ -14,6 +14,7 @@ import {
   useAddGroupMeetingPhotos,
   useCancelGroupMeetingJoin,
   useDecideGroupMeetingMember,
+  useDeleteGroupMeetingComment,
   useJoinGroupMeeting,
 } from "./api";
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -75,6 +76,7 @@ export function GroupMeetingDetailScreen() {
 
   const me = useMe();
   const addComment = useAddGroupMeetingComment(params.id);
+  const deleteComment = useDeleteGroupMeetingComment(params.id);
   const join = useJoinGroupMeeting(params.id);
   const cancelJoin = useCancelGroupMeetingJoin(params.id);
   const decideMember = useDecideGroupMeetingMember(params.id);
@@ -208,12 +210,38 @@ export function GroupMeetingDetailScreen() {
           />
         )}
 
+        {/* 거절 안내 — 시안: 상태 라벨 위 테두리 박스. 재신청은 아래 버튼으로 그대로 가능하다. */}
+        {meeting.myStatus === "REJECTED" && (
+          <View
+            className="mt-4 flex-row items-center gap-2.5 rounded-xl border border-text-assistive px-5 py-2"
+            style={{ marginHorizontal: CONTENT_PADDING }}
+          >
+            <View className="h-2 w-2 rounded-full bg-semantic-danger" />
+            <Text className="text-body-small text-text-neutral">
+              아쉽지만 이번 소그룹 참여가 어려워요
+            </Text>
+          </View>
+        )}
+
         <View className="gap-2 pt-4" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <View className="flex-row items-center gap-2">
             <Text className="text-label-medium text-primary-normal">{meeting.statusLabel}</Text>
             <Text className="text-label-medium text-text-alternative">{meeting.periodLabel}</Text>
           </View>
-          <Text className="text-heading-main text-text-normal">{meeting.title}</Text>
+          <View className="flex-row items-center justify-between">
+            <Text className="text-heading-main text-text-normal">{meeting.title}</Text>
+            {/* 소그룹장·관리자의 수정 진입 — 활동 사진의 +추가와 같은 회색 알약 모양 */}
+            {meeting.canManage && (
+              <Pressable
+                className="rounded-md bg-background-muted px-2 py-0.5"
+                onPress={() =>
+                  navigation.navigate("GroupMeetingForm", { meetingId: params.id })
+                }
+              >
+                <Text className="text-body-small text-text-neutral">수정</Text>
+              </Pressable>
+            )}
+          </View>
           {meeting.description !== "" && (
             <Text className="text-body-medium text-text-neutral">{meeting.description}</Text>
           )}
@@ -231,7 +259,13 @@ export function GroupMeetingDetailScreen() {
 
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <Text className="text-heading-small text-text-normal">참여 멤버</Text>
-          <View className="mt-3 flex-row items-center gap-3">
+          {/* 행 전체가 참여멤버 명단으로 가는 버튼이다 (시안의 참여멤버 보기 화면). */}
+          <Pressable
+            className="mt-3 flex-row items-center gap-3"
+            onPress={() =>
+              navigation.navigate("GroupMeetingMembers", { meetingId: params.id })
+            }
+          >
             <View className="flex-row">
               {meeting.participantAvatarUrls.map((url, index) => (
                 <Image
@@ -244,7 +278,7 @@ export function GroupMeetingDetailScreen() {
             <Text className="text-body-small text-text-neutral">
               총 {meeting.participantCount}명
             </Text>
-          </View>
+          </Pressable>
         </View>
 
         {/* 신청 대기 — 소그룹장·관리자에게만 보인다 (자체 디자인: 셀원 관리 행 패턴 + 알약 버튼,
@@ -341,7 +375,7 @@ export function GroupMeetingDetailScreen() {
                 <Pressable
                   className="mt-3 flex-row items-center justify-center gap-1"
                   onPress={() =>
-                    navigation.navigate("GroupMeetingPhoto", { meetingId: params.id, index: 0 })
+                    navigation.navigate("GroupMeetingGallery", { meetingId: params.id })
                   }
                 >
                   <Text className="text-label-small text-text-alternative">
@@ -381,6 +415,9 @@ export function GroupMeetingDetailScreen() {
                 timeAgo={toTimeAgo(item.createdAt)}
                 content={item.content}
                 avatarUrl={item.authorAvatarUrl}
+                onDeletePress={
+                  item.isMine ? () => deleteComment.mutate(item.id) : undefined
+                }
               />
             ))}
           </View>

@@ -18,6 +18,12 @@ import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 
 // "7/1 ~ 7/28" — 모집 기간 표시 (시안 카드·상세). @db.Date라 UTC 기준으로 읽는다.
+// 갤러리 월 묶음 라벨 — "2026년 7월". takenOn이 없으면 묶을 수 없어 null.
+function toPhotoMonthLabel(takenOn: Date | null): string | null {
+  if (!takenOn) return null;
+  return `${takenOn.getUTCFullYear()}년 ${takenOn.getUTCMonth() + 1}월`;
+}
+
 function toPeriodLabel(start: Date | null, end: Date | null): string {
   const part = (date: Date) => `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
   if (!start && !end) return '';
@@ -133,7 +139,7 @@ export class GroupMeetingsService {
             images: {
               // 활동 사진 = 직접 업로드(GALLERY). POST_CONTENT는 옛 계약 호환으로 남긴다.
               where: { kind: { in: ['GALLERY', 'POST_CONTENT'] } },
-              select: { id: true, url: true },
+              select: { id: true, url: true, takenOn: true },
               orderBy: { createdAt: 'desc' },
             },
             comments: {
@@ -142,6 +148,7 @@ export class GroupMeetingsService {
                 id: true,
                 content: true,
                 createdAt: true,
+                authorId: true,
                 author: { select: { name: true, avatarUrl: true } },
               },
               orderBy: { createdAt: 'asc' },
@@ -197,11 +204,19 @@ export class GroupMeetingsService {
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
       leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
+      // 참여멤버 보기 화면용 전체 명단 — 가입순(members orderBy)을 그대로 쓴다.
+      members: approved.map((m) => ({
+        id: m.userId,
+        name: m.user.name,
+        avatarUrl: m.user.avatarUrl,
+        isLeader: m.role === 'LEADER',
+      })),
       // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
       photos: group.post.images.map((image) => ({
         id: image.id,
         url: image.url,
         caption: null,
+        monthLabel: toPhotoMonthLabel(image.takenOn),
       })),
       photoCount: group.post.images.length,
       comments: group.post.comments.map((comment) => ({
@@ -210,6 +225,7 @@ export class GroupMeetingsService {
         authorAvatarUrl: comment.author.avatarUrl,
         createdAt: comment.createdAt.toISOString(),
         content: comment.content,
+        isMine: userId !== undefined && comment.authorId === userId,
       })),
       myStatus: mine?.status ?? null,
       canManage,

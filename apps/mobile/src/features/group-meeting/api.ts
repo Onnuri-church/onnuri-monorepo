@@ -113,6 +113,40 @@ export function useAddGroupMeetingPhotos(meetingId: string) {
   });
 }
 
+// 갤러리 편집의 일괄 삭제 — 삭제 API가 한 장 단위라 반복 호출한다 (한 장이라도 실패하면
+// 에러로 떨어져 onError에서 안내). 마지막 응답이 최신 상세라 캐시에 그대로 넣는다.
+export function useRemoveGroupMeetingPhotos(meetingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (imageIds: string[]) => {
+      let detail: GroupMeetingDetail | null = null;
+      for (const imageId of imageIds) {
+        const { data } = await apiClient.delete<GroupMeetingDetail>(
+          `/group-meetings/${meetingId}/photos/${imageId}`,
+        );
+        detail = data;
+      }
+      return detail;
+    },
+    onSuccess: (detail) => {
+      if (detail) queryClient.setQueryData(["group-meetings", meetingId], detail);
+    },
+  });
+}
+
+// 댓글 삭제 — 소그룹 댓글은 게시판 공용 테이블이라 공용 API(/posts/...)를 쓴다.
+// 서버 규칙상 내 댓글만 지울 수 있다 (CommentItem의 삭제 버튼도 isMine일 때만 보인다).
+export function useDeleteGroupMeetingComment(meetingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (commentId: string) =>
+      apiClient.delete(`/posts/${meetingId}/comments/${commentId}`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["group-meetings", meetingId] });
+    },
+  });
+}
+
 // 활동 사진 삭제 — 소그룹장·관리자만 (서버가 창고 파일도 같이 지운다).
 export function useRemoveGroupMeetingPhoto(meetingId: string) {
   const queryClient = useQueryClient();
