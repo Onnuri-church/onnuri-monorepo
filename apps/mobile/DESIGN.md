@@ -105,7 +105,7 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
   * 준비 작업(최소 노출 시간, 향후 세션 복원 등)은 `shared/hooks/useAppBootstrap.ts`가 맡고, 스플래시 화면은 상태만 받아 렌더링한다.
   * 스플래시 배경은 `SafeAreaView`로 감싸지 않는다 — 네이티브 스플래시가 화면 전체를 덮으므로, inset에서 배경이 끊기면 전환 순간 노치·홈 인디케이터 영역에 흰 띠가 보인다.
 * 오버레이(Toast · Modal · BottomSheet)는 `@gorhom/bottom-sheet` 하나로 통일한다. 바텀시트는 `BottomSheet`/`BottomSheetModal`, 일반 모달·Toast도 별도 라이브러리 없이 같은 패키지의 `BottomSheetModal`로 화면 최상위 네이티브 레이어에 띄운다. `AppToast` · `AppDialog` · `AppSheet`(`src/shared/components/base/`에 위치)는 여닫기 제어와 애니메이션 트리거만 담당하고, 내부 렌더링은 `BottomSheetModal`에 위임한다 (웹처럼 컨테이너 안 절대 위치로 직접 쌓지 않음).
-  * 여닫기는 전역 store가 아니라 `AppSheet`·`AppDialog`가 노출하는 `ref`(`open`/`close`)로 호출부가 제어한다. 부르는 곳이 늘어나 화면 밖에서 띄울 일이 생기면 그때 store를 얹는다. (`AppToast`는 아직 없다.)
+  * 여닫기는 전역 store가 아니라 `AppSheet`·`AppDialog`가 노출하는 `ref`(`open`/`close`)로 호출부가 제어한다. 부르는 곳이 늘어나 화면 밖에서 띄울 일이 생기면 그때 store를 얹는다. (`AppToast`는 `show(message)` 하나만 노출한다 — 1.5초 뒤 알아서 닫히는 피드백 전용이라 close가 없다.)
   * 확인 팝업은 `AppDialog`를 쓴다. 시트와 달리 좌우 여백을 두고 사방이 둥근 하단 카드라, `BottomSheetModal`의 `detached` + `bottomInset`으로 바닥에서 띄우고 핸들(`handleComponent={null}`)과 판다운을 끈다. 문구·버튼 라벨은 props로 받고, `cancelLabel`을 주면 버튼 두 개, 안 주면 확인 버튼 하나가 카드 폭을 다 쓴다.
   * ⋮ 드롭다운처럼 **특정 버튼에 붙는 팝오버**(`ContextMenu`)는 예외로 RN `Modal`을 쓴다 — 위치가 앵커 기준(버튼 좌표)이라 바닥 기준인 `detached` 시트로는 좌표를 역산해야 하고, 아래에서 올라오는 시트 애니메이션도 드롭다운과 맞지 않는다. 화면 단위로 뜨는 오버레이만 위 통일 규칙의 대상이다.
   * 시트 높이는 `snapPoints` 고정이 아니라 내용에 맞춘다(dynamic sizing, 상한은 시안 750/874 → 화면의 86%). 고정 높이로 두면 내용이 짧을 때 아래에 빈 공간이 남는데, 그 빈 공간을 없애려고 `flex`로 바닥에 붙이는 방법은 안 통한다 — `BottomSheetView`가 내부에서 `position: absolute`(`top`/`left`/`right`만 지정)를 자기 style 뒤에 붙여서 높이가 내용에 붙어버리기 때문이다.

@@ -7,6 +7,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
+import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -56,8 +57,19 @@ export function SettingsScreen() {
     qtNewPost: true,
   };
 
+  // 저장 피드백은 토스트 한 줄 — 확인 팝업은 조작을 끊어서 두지 않는다 (2026-10-02 결정,
+  // 광고성 푸시가 생기면 그때 법정 고지 팝업을 별도로 단다).
+  const toastRef = useRef<AppToastRef>(null);
   const handleNotificationChange = (key: NotificationKey, value: boolean) => {
-    updateSettings.mutate({ [key]: value });
+    const title = NOTIFICATION_ROWS.find((row) => row.key === key)?.title ?? "알림";
+    toastRef.current?.show(`${title}이 ${value ? "켜졌어요" : "꺼졌어요"}`);
+    updateSettings.mutate(
+      { [key]: value },
+      {
+        // 훅의 onError가 토글을 서버 값으로 되돌린다 — 여기서는 안내만 띄운다.
+        onError: () => toastRef.current?.show("저장하지 못했어요. 다시 시도해주세요"),
+      },
+    );
   };
 
   const handleLanguageSelect = (option: string) => {
@@ -196,6 +208,8 @@ export function SettingsScreen() {
         cancelLabel="취소"
         onConfirm={handleWithdrawConfirm}
       />
+
+      <AppToast ref={toastRef} />
     </ScrollView>
   );
 }
