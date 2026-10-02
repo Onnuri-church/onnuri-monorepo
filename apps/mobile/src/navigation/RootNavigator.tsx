@@ -35,6 +35,7 @@ import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
 import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
 import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
 import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
+import { TeamBoardManageScreen } from "../features/department-activity/TeamBoardManageScreen";
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
@@ -214,6 +215,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="부서활동 글쓰기" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamBoardManage"
+            component={TeamBoardManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="게시판 관리" rightAction="home" />,
             }}
           />
           <Stack.Screen

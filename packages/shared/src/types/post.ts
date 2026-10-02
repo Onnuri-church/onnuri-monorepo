@@ -213,6 +213,8 @@ export interface TeamActivityDetail {
   likeCount: number;
   likedByMe: boolean;
   isMine: boolean;
+  /** ⋮(수정·삭제) 노출 기준 — 작성자 본인, 그 팀의 팀장, 관리자 (서버 권한과 동일) */
+  canManage: boolean;
   /** 최상위 댓글만 담긴다. 대댓글은 각 댓글의 replies에 있다 */
   comments: PostComment[];
 }

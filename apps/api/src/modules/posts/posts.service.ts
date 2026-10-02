@@ -580,6 +580,12 @@ export class PostsService {
       data: { viewCount: { increment: 1 } },
     });
 
+    // ⋮(수정·삭제) 노출 기준 — findEditableTeamActivity와 같은 규칙을 미리 계산해 내린다.
+    const canManage =
+      userId !== undefined &&
+      (post.authorId === userId ||
+        (await this.isTeamManager(userId, post.teamId)));
+
     return {
       id: post.id,
       teamId: post.teamId ?? '',
@@ -597,11 +603,30 @@ export class PostsService {
       likeCount: post._count.likes,
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
+      canManage,
       comments: post.comments.map((comment) => ({
         ...toPostComment(comment, userId),
         replies: comment.replies.map((reply) => toPostComment(reply, userId)),
       })),
     };
+  }
+
+  // 그 팀의 팀장이거나 관리자인지 — 상세의 canManage와 수정·삭제 권한 검증이 같이 쓴다.
+  private async isTeamManager(
+    userId: string,
+    teamId: string | null,
+  ): Promise<boolean> {
+    const requester = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        isAdmin: true,
+        teamMemberships: {
+          where: { teamId: teamId ?? '', endedAt: null, role: 'LEADER' },
+          select: { id: true },
+        },
+      },
+    });
+    return requester?.isAdmin === true || (requester?.teamMemberships.length ?? 0) > 0;
   }
 
   // 부서활동 작성 — 그 팀의 팀원 또는 관리자만 (셀 소식이 "그 셀 셀원만"인 것과 같은 기준,
@@ -662,21 +687,14 @@ export class PostsService {
     }
   }
 
-  // 부서활동 수정 — 내 글만 (삭제와 같은 기준). imageUrls를 보내면 사진 전체 교체
-  // (updateCellNews와 같은 방식 — 글쓰기 화면이 최종 목록을 통째로 보낸다).
+  // 부서활동 수정 — 작성자·그 팀 팀장·관리자 (삭제와 같은 기준). imageUrls를 보내면
+  // 사진 전체 교체 (updateCellNews와 같은 방식 — 글쓰기 화면이 최종 목록을 통째로 보낸다).
   async updateTeamActivity(
     id: string,
     userId: string,
     dto: UpdateTeamActivityDto,
   ): Promise<TeamActivityDetail> {
-    const post = await this.prisma.post.findFirst({
-      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
-      select: { authorId: true, eventDate: true },
-    });
-    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
-    if (post.authorId !== userId) {
-      throw new ForbiddenException('내가 쓴 글만 수정할 수 있습니다.');
-    }
+    const post = await this.findEditableTeamActivity(id, userId);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.post.update({
@@ -710,23 +728,28 @@ export class PostsService {
     return this.findTeamActivity(id, userId);
   }
 
-  // 부서활동 삭제 — 내 글만. 글은 지우지 않고 deletedAt만 채운다(목록·상세가 걸러낸다).
+  // 부서활동 삭제 (soft) — 작성자 본인, 그 팀의 팀장, 관리자만 (2026-10-02 확정,
+  // 셀 소식의 "작성자·셀장·관리자"와 같은 기준 — 팀장 "게시판 관리" 메뉴가 이 권한을 쓴다).
   async removeTeamActivity(id: string, userId: string): Promise<void> {
-    const post = await this.prisma.post.findFirst({
-      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
-      select: { authorId: true },
-    });
-    // 없는 글과 남의 글을 구분한다 — 남의 글에 404를 주면 앱에서 "글이 사라졌다"로 보여
-    // 잘못된 안내가 나간다 (큐티나눔과 같은 기준).
-    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
-    if (post.authorId !== userId) {
-      throw new ForbiddenException('내가 쓴 글만 삭제할 수 있습니다.');
-    }
-
+    await this.findEditableTeamActivity(id, userId);
     await this.prisma.post.update({
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  // 수정·삭제 공통 권한: 작성자 본인, 그 팀의 팀장, 관리자 (findEditableCellNews와 같은 모양).
+  private async findEditableTeamActivity(id: string, userId: string) {
+    const post = await this.prisma.post.findFirst({
+      where: { id, board: 'TEAM_ACTIVITY', deletedAt: null },
+      select: { id: true, teamId: true, authorId: true, eventDate: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+
+    if (post.authorId !== userId && !(await this.isTeamManager(userId, post.teamId))) {
+      throw new ForbiddenException('수정·삭제 권한이 없습니다.');
+    }
+    return post;
   }
 
   // 셀 소식 작성 — 그 셀의 셀원(셀장 포함) 또는 관리자만 (2026-08-26 확정, cellDetail.ts
