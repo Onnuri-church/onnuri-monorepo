@@ -12,15 +12,16 @@ import { Toggle } from "../../shared/components/base/Toggle";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
 import { BrightnessSlider } from "./components/BrightnessSlider";
 import { SettingRow } from "./components/SettingRow";
 
-// 알림 종류별 켜짐 여부. 푸시 알림 기능이 아직 없어서 화면 로컬 상태로만 동작한다 —
-// 기능이 붙으면 서버 저장으로 교체.
+// 알림 종류별 켜짐 여부 — 서버에 저장되고, 끄면 그 종류의 푸시가 오지 않는다
+// (알림센터에는 그대로 쌓인다). key는 NotificationSettings 필드명과 같다.
 const NOTIFICATION_ROWS = [
   { key: "sermonUpload", title: "말씀영상 업로드 알림" },
-  { key: "liveStart", title: "실시간 예배 시작 알림" },
-  { key: "qtComment", title: "큐티나눔 새글 알림" },
+  { key: "liveWorship", title: "실시간 예배 시작 알림" },
+  { key: "qtNewPost", title: "큐티나눔 새글 알림" },
 ] as const;
 
 type NotificationKey = (typeof NOTIFICATION_ROWS)[number]["key"];
@@ -45,14 +46,18 @@ export function SettingsScreen() {
   //   그때까지 토글 상태만 동작. 시안 확정되면 tokens.js 확장과 함께 연결한다.
   const [darkMode, setDarkMode] = useState(false);
   const [language, setLanguage] = useState("한국어");
-  const [notifications, setNotifications] = useState<Record<NotificationKey, boolean>>({
+
+  // 서버 값이 오기 전에는 기본값(전부 켜짐)으로 그린다 — 기본값과 같아서 깜빡임이 없다.
+  const { data: settings } = useNotificationSettings();
+  const updateSettings = useUpdateNotificationSettings();
+  const notifications: Record<NotificationKey, boolean> = settings ?? {
     sermonUpload: true,
-    liveStart: true,
-    qtComment: true,
-  });
+    liveWorship: true,
+    qtNewPost: true,
+  };
 
   const handleNotificationChange = (key: NotificationKey, value: boolean) => {
-    setNotifications((prev) => ({ ...prev, [key]: value }));
+    updateSettings.mutate({ [key]: value });
   };
 
   const handleLanguageSelect = (option: string) => {

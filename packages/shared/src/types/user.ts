@@ -102,6 +102,19 @@ export interface UpdateMyAvatarRequest {
   avatarUrl: string | null;
 }
 
+/** GET /users/me/notification-settings 응답 — 설정 화면 알림 토글 3종 (기본 전부 켜짐) */
+export interface NotificationSettings {
+  /** 말씀영상 업로드 알림 */
+  sermonUpload: boolean;
+  /** 실시간 예배 시작 알림 */
+  liveWorship: boolean;
+  /** 큐티나눔 새글 알림 */
+  qtNewPost: boolean;
+}
+
+/** PATCH /users/me/notification-settings 요청 본문 (응답은 NotificationSettings) — 보낸 필드만 반영 */
+export type UpdateNotificationSettingsRequest = Partial<NotificationSettings>;
+
 /** GET /users/me/stats 응답 — 마이페이지 통계 카드 3종 */
 export interface MyStatsResponse {
   /** 내가 쓴 큐티나눔 글 수 (삭제 글 제외) */

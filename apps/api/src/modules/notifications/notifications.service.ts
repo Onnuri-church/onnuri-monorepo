@@ -4,6 +4,15 @@ import type { NotificationType } from '../../../generated/prisma';
 
 import { PrismaService } from '../prisma/prisma.service';
 
+// 설정 화면의 알림 토글과 1:1인 타입만 유저 설정으로 푸시를 거른다 — 여기 없는 타입
+// (공지·댓글 등)은 끌 수단이 없으므로 모두에게 보낸다. 알림센터에는 꺼도 쌓인다
+// (푸시만 조용해지는 것 — 기록까지 숨기면 나중에 놓친 걸 찾을 수 없다).
+const PUSH_PREF_COLUMN = {
+  SERMON_UPLOAD: 'notifySermonUpload',
+  LIVE_START: 'notifyLiveWorship',
+  QT_NEW: 'notifyQtNewPost',
+} as const satisfies Partial<Record<NotificationType, string>>;
+
 // 다른 모듈이 이벤트 시점에 부르는 알림 생성 입력.
 export interface NotifyInput {
   type: NotificationType;
@@ -80,8 +89,21 @@ export class NotificationsService {
   // (https://docs.expo.dev/push-notifications/sending-notifications/ — 요청당 100개 제한).
   // 앱을 지운 기기의 토큰(DeviceNotRegistered)은 그 자리에서 정리한다.
   private async sendPush(userIds: string[], input: NotifyInput): Promise<void> {
+    // 설정 토글이 있는 타입이면 꺼둔 사람을 뺀다.
+    let targetIds = userIds;
+    const prefColumn =
+      PUSH_PREF_COLUMN[input.type as keyof typeof PUSH_PREF_COLUMN];
+    if (prefColumn) {
+      const allowed = await this.prisma.user.findMany({
+        where: { id: { in: userIds }, [prefColumn]: true },
+        select: { id: true },
+      });
+      targetIds = allowed.map((user) => user.id);
+      if (targetIds.length === 0) return;
+    }
+
     const tokens = await this.prisma.pushToken.findMany({
-      where: { userId: { in: userIds } },
+      where: { userId: { in: targetIds } },
       select: { token: true },
     });
     if (tokens.length === 0) return;

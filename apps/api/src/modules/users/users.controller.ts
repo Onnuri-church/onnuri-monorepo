@@ -16,6 +16,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
+import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 import { UpdateMyAvatarDto } from './dto/update-my-avatar.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UsersService } from './users.service';
@@ -66,6 +67,22 @@ export class UsersController {
     @Body() dto: UpdateMyAvatarDto,
   ) {
     return this.usersService.updateMyAvatar(user.sub, dto.avatarUrl);
+  }
+
+  // 알림 토글 3종 (설정 화면). 푸시 발송만 거르고 알림센터에는 그대로 쌓인다.
+  @UseGuards(JwtAuthGuard)
+  @Get('me/notification-settings')
+  notificationSettings(@CurrentUser() user: JwtPayload) {
+    return this.usersService.getNotificationSettings(user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/notification-settings')
+  updateNotificationSettings(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateNotificationSettingsDto,
+  ) {
+    return this.usersService.updateNotificationSettings(user.sub, dto);
   }
 
   // 기기 푸시 토큰 등록 — 로그인 후 권한을 허용한 기기가 부른다. 같은 기기에 다른 계정으로
