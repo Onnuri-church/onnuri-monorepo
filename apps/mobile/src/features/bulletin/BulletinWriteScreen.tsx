@@ -97,7 +97,8 @@ export function BulletinWriteScreen() {
           <Button
             label="등록하기"
             onPress={handleSubmitPress}
-            disabled={!canSubmit || isPending}
+            disabled={!canSubmit}
+            loading={isPending}
           />
         </View>
       </ScrollView>

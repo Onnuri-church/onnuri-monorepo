@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -166,7 +166,12 @@ export function SettingsScreen() {
               right={<Icon name="expand-right" color={colors.primary.normal} />}
             />
             <SettingRow title="로그아웃" onPress={handleLogoutPress} />
-            <SettingRow title="회원탈퇴" onPress={() => withdrawDialogRef.current?.open()} />
+            <SettingRow
+              title="회원탈퇴"
+              onPress={() => withdrawDialogRef.current?.open()}
+              // 탈퇴는 서버 왕복을 기다렸다가 전환된다 — 그동안 진행 중임을 보여준다.
+              right={withdrawing ? <ActivityIndicator size="small" color={colors.primary.normal} /> : undefined}
+            />
           </View>
         </View>
       </View>

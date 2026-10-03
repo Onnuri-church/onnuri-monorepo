@@ -116,8 +116,8 @@ export function TeamFormScreen() {
             <Button
               label={teamId ? "저장" : "등록하기"}
               onPress={handleSubmitPress}
+              loading={submitting}
               disabled={
-                submitting ||
                 name.trim().length === 0 ||
                 leaderName === null ||
                 tagline.trim().length === 0 ||

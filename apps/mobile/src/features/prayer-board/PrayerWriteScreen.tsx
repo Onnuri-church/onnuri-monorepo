@@ -203,6 +203,7 @@ export function PrayerWriteScreen() {
               label={saving ? "저장하는 중..." : editingId ? "저장하기" : "등록하기"}
               onPress={handleSubmitPress}
               disabled={!canSubmit}
+              loading={saving}
             />
           </View>
         </ScrollView>

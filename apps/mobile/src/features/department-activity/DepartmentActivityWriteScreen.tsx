@@ -163,7 +163,8 @@ export function DepartmentActivityWriteScreen() {
             <Button
               label={isEditing ? "저장하기" : "등록하기"}
               onPress={handleSubmitPress}
-              disabled={!canSubmit || isPending}
+              disabled={!canSubmit}
+              loading={isPending}
             />
           </View>
         </ScrollView>

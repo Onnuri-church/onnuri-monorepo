@@ -245,7 +245,7 @@ export function ProfileSetupScreen() {
         </ScrollView>
 
         <View className="px-5 pb-12">
-          <Button label="등록하기" disabled={!canSubmit} onPress={() => void handleSubmitPress()} />
+          <Button label="등록하기" disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
         </View>
       </KeyboardAvoidingView>
     </View>

@@ -202,6 +202,7 @@ export function GroupMeetingFormScreen() {
             <Button
               label={meetingId ? "저장하기" : "등록하기"}
               disabled={!canSubmit}
+              loading={saving}
               onPress={handleSubmitPress}
             />
           </View>

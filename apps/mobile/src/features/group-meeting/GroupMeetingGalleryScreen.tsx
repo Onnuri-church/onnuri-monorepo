@@ -119,8 +119,9 @@ export function GroupMeetingGalleryScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView contentContainerClassName="px-5 pb-6">
         {/* 헤더 바로 아래 가운데 정렬 (팀 갤러리와 같은 시안 값) */}
+        {/* 업로드는 수 초 걸린다 — 장수 자리에 진행 중임을 알린다. */}
         <Text className="text-center text-caption-main text-text-alternative">
-          전체 {photos.length}장
+          {uploading ? "사진 올리는 중..." : `전체 ${photos.length}장`}
         </Text>
         <View className="mt-10 gap-9">
           {groups.map((group, index) => (

@@ -144,6 +144,7 @@ export function AdminBannerFormScreen() {
           <Button
             label={saving ? "등록하는 중..." : "등록하기"}
             disabled={!canSubmit}
+            loading={saving}
             onPress={handleSubmitPress}
           />
         </View>

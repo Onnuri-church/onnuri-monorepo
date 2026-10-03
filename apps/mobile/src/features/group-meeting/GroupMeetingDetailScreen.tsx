@@ -444,11 +444,8 @@ export function GroupMeetingDetailScreen() {
                       ? "모집이 마감됐어요"
                       : "참여 신청하기"
               }
-              disabled={
-                (meeting.status === "closed" && meeting.myStatus === null) ||
-                join.isPending ||
-                cancelJoin.isPending
-              }
+              disabled={meeting.status === "closed" && meeting.myStatus === null}
+              loading={join.isPending || cancelJoin.isPending}
               onPress={handleJoinPress}
             />
           </View>
