@@ -93,6 +93,8 @@ export class TeamsService {
       const created = await tx.team.create({
         data: {
           name: dto.name,
+          // iconUrl 컬럼에 아이콘 이름을 넣는다 (목록 조회의 매핑 주석 참고).
+          iconUrl: dto.iconName ?? null,
           tagline: dto.tagline ?? null,
           description: dto.description ?? null,
           coverImageUrl: dto.coverImageUrl ?? null,
@@ -115,6 +117,7 @@ export class TeamsService {
         where: { id },
         data: {
           ...(dto.name !== undefined && { name: dto.name }),
+          ...(dto.iconName !== undefined && { iconUrl: dto.iconName }),
           ...(dto.tagline !== undefined && { tagline: dto.tagline }),
           ...(dto.description !== undefined && { description: dto.description }),
           ...(dto.coverImageUrl !== undefined && { coverImageUrl: dto.coverImageUrl }),

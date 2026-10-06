@@ -12,6 +12,10 @@ export class UpdateTeamDto {
 
   @IsOptional()
   @IsString()
+  iconName?: string | null;
+
+  @IsOptional()
+  @IsString()
   tagline?: string | null;
 
   @IsOptional()
