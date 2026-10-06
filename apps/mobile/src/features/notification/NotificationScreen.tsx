@@ -235,7 +235,8 @@ export function NotificationScreen() {
 
                 {rest.length > 0 && (
                   <Pressable
-                    className="mt-3"
+                    // 가운데 정렬 (2026-10-07 피드백) — 왼쪽 구석보다 눈에 잘 띈다.
+                    className="mt-3 items-center"
                     onPress={() => handleExpandPress(latest.type, rest.length)}
                     hitSlop={8}
                   >
