@@ -42,7 +42,6 @@ import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen
 import { GroupMeetingGalleryScreen } from "../features/group-meeting/GroupMeetingGalleryScreen";
 import { GroupMeetingMemberListScreen } from "../features/group-meeting/GroupMeetingMemberListScreen";
 import { MyGroupMeetingScreen } from "../features/group-meeting/MyGroupMeetingScreen";
-import { LiveScreen } from "../features/live/LiveScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
@@ -170,14 +169,6 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="주보/나눔지 업로드" rightAction="none" />,
-            }}
-          />
-          <Stack.Screen
-            name="Live"
-            component={LiveScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="실시간 예배" />,
             }}
           />
           {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}

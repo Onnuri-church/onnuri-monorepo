@@ -17,7 +17,6 @@ export type RootStackParamList = {
   QtBoardDetail: { id: string };
   // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (상세의 ⋮ > 수정하기에서 진입).
   QtBoardWrite: { id: string } | undefined;
-  Live: undefined;
   Qr: undefined;
   // QR을 찍은 뒤 보는 결과. duplicate면 "이미 출석했다" 안내로 바뀐다 —
   // 두 화면이 배치가 같고 아이콘·문구·카드 행만 달라서 라우트를 나누지 않는다.
