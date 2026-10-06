@@ -49,7 +49,7 @@ export class PostsController {
     @CurrentUser() user: JwtPayload | undefined,
     @Query() query: FindQtSharesDto,
   ) {
-    return this.postsService.findQtShares(user?.sub, query.month);
+    return this.postsService.findQtShares(user?.sub, query);
   }
 
   @UseGuards(OptionalJwtAuthGuard)

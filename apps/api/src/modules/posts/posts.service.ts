@@ -3,6 +3,7 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type {
   CellNewsDetail,
@@ -12,7 +13,6 @@ import type {
   QtShareDetail,
   QtShareListItem,
   QtShareListResponse,
-  QtShareMonth,
   TeamActivityDetail,
   TeamActivityListItem,
   TeamActivityListResponse,
@@ -22,8 +22,6 @@ import type { BoardType } from '../../../generated/prisma';
 import {
   toDateLabel,
   toDayLabel,
-  toMonthLabel,
-  toMonthValue,
 } from '../../common/utils/date';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -188,26 +186,65 @@ export class PostsService {
     };
   }
 
-  // 큐티나눔 목록. 월 필터 항목도 함께 내려준다 — 앱이 월 목록을 직접 만들지 않게 하려는 것
-  // (ARCHITECTURE.md App Responsibilities). 글이 없는 달은 선택지에 넣지 않는다.
+  // 큐티나눔 목록 — 연도·월 선택 버튼 + "내 글" 전환 (2026-10-07 확정). 월은 항상 1~12 전부
+  // 고를 수 있어 서버가 "글 있는 달"만 골라 줄 필요가 없고, 연도만 첫 글이 있는 해부터
+  // 올해까지 내려준다 (해가 바뀌면 앱 수정 없이 자동으로 늘어난다).
   async findQtShares(
     userId: string | undefined,
-    month?: string,
+    query: { year?: number; month?: number; mine?: boolean },
   ): Promise<QtShareListResponse> {
-    const months = await this.findMonths();
-    // 요청한 달에 글이 없으면(또는 month 생략) 가장 최근 달을 보여준다.
-    const selected =
-      months.find((item) => item.value === month)?.value ?? months[0]?.value;
-    if (!selected) return { months, selectedMonth: null, items: [] };
+    if (query.mine && !userId) {
+      throw new UnauthorizedException('내 글은 로그인 후 볼 수 있어요.');
+    }
+    const scope = {
+      board: 'QT_SHARE' as const,
+      deletedAt: null,
+      eventDate: { not: null },
+      ...(query.mine && { authorId: userId }),
+    };
 
-    const [year, monthOfYear] = selected.split('.').map(Number);
+    // 연도 선택지의 시작점은 "전체" 기준 첫 글 — 전체/내 글을 오가도 선택지가 흔들리지 않게.
+    const hasPick = query.year !== undefined && query.month !== undefined;
+    const [first, latest] = await Promise.all([
+      this.prisma.post.findFirst({
+        where: { board: 'QT_SHARE', deletedAt: null, eventDate: { not: null } },
+        orderBy: { eventDate: 'asc' },
+        select: { eventDate: true },
+      }),
+      hasPick
+        ? null
+        : this.prisma.post.findFirst({
+            where: scope,
+            orderBy: { eventDate: 'desc' },
+            select: { eventDate: true },
+          }),
+    ]);
+
+    // "오늘"은 KST 기준 — 서버(UTC)의 자정 무렵에 해가 밀리지 않게 9시간을 더한다.
+    const kstNow = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const thisYear = kstNow.getUTCFullYear();
+    const thisMonth = kstNow.getUTCMonth() + 1;
+
+    // 연·월을 안 정했으면 글이 있는 가장 최근 달, 글이 하나도 없으면 이번 달.
+    const year = hasPick
+      ? query.year!
+      : (latest?.eventDate?.getUTCFullYear() ?? thisYear);
+    const month = hasPick
+      ? query.month!
+      : latest?.eventDate
+        ? latest.eventDate.getUTCMonth() + 1
+        : thisMonth;
+
+    const firstYear = first?.eventDate?.getUTCFullYear() ?? thisYear;
+    const years: number[] = [];
+    for (let y = Math.max(thisYear, year); y >= Math.min(firstYear, year); y--) years.push(y);
+
     const posts = await this.prisma.post.findMany({
       where: {
-        board: 'QT_SHARE',
-        deletedAt: null,
+        ...scope,
         eventDate: {
-          gte: new Date(Date.UTC(year, monthOfYear - 1, 1)),
-          lt: new Date(Date.UTC(year, monthOfYear, 1)),
+          gte: new Date(Date.UTC(year, month - 1, 1)),
+          lt: new Date(Date.UTC(year, month, 1)),
         },
       },
       select: {
@@ -234,7 +271,7 @@ export class PostsService {
       likedByMe: post.likes.length > 0,
     }));
 
-    return { months, selectedMonth: selected, items };
+    return { years, selectedYear: year, selectedMonth: month, items };
   }
 
   // 큐티나눔 상세. board까지 조건에 넣는다 — 다른 게시판 글 id로 이 경로를 부르면
@@ -1007,14 +1044,4 @@ export class PostsService {
   }
 
   // 월 목록은 전체 글의 날짜에서 뽑아야 해서 본문 없이 날짜만 따로 조회한다.
-  private async findMonths(): Promise<QtShareMonth[]> {
-    const dates = await this.prisma.post.findMany({
-      where: { board: 'QT_SHARE', deletedAt: null, eventDate: { not: null } },
-      select: { eventDate: true },
-      orderBy: { eventDate: 'desc' },
-    });
-
-    const values = [...new Set(dates.map((row) => toMonthValue(row.eventDate!)))];
-    return values.map((value) => ({ value, label: toMonthLabel(value) }));
-  }
 }

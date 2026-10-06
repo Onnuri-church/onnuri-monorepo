@@ -1,4 +1,4 @@
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -7,26 +7,50 @@ import { Alert, ScrollView, Text, View } from "react-native";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 
 import { fetchQtShares } from "./api";
+import { PickerPill } from "./components/PickerPill";
 import { QtPostCard } from "./components/QtPostCard";
 import { useToggleQtLike } from "./useToggleQtLike";
-import { FilterBar } from "../../shared/components/base/FilterBar";
+import { FilterChip } from "../../shared/components/base/FilterChip";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
+// 월 선택지는 항상 1~12 전부다 — 글 없는 달은 빈 화면으로 보여준다 (서버가 골라 줄 필요 없음).
+const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => ({
+  value: index + 1,
+  label: `${index + 1}월`,
+}));
+
 export function QtBoardScreen() {
-  // 처음에는 달을 고르지 않고 보낸다 — 글이 있는 가장 최근 달을 서버가 골라 준다.
-  const [month, setMonth] = useState<string>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, "QtBoard">>();
+
+  // 전체 | 내 글 — 마이페이지의 큐티나눔 통계에서 들어오면 처음부터 "내 글"이다.
+  const [mine, setMine] = useState(route.params?.mine === true);
+  // 연·월은 처음에 정하지 않고 보낸다 — 글이 있는 가장 최근 달을 서버가 골라 주고,
+  // 그 값을 응답(selectedYear/Month)으로 받아 버튼에 표시한다.
+  const [pick, setPick] = useState<{ year: number; month: number }>();
 
   const { data, isPending, isError } = useQuery({
-    queryKey: ["qt-shares", month],
-    queryFn: () => fetchQtShares(month),
-    // 달을 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
+    queryKey: ["qt-shares", mine, pick?.year, pick?.month],
+    queryFn: () => fetchQtShares({ mine, year: pick?.year, month: pick?.month }),
+    // 필터를 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
     placeholderData: keepPreviousData,
   });
+
+  // 범위를 바꾸면 연·월 선택을 비운다 — 전체에서 보던 달에 내 글이 없어 빈 화면부터 보게
+  // 되는 걸 막고, 서버가 그 범위의 최근 달을 다시 골라 준다.
+  const handleScopePress = (nextMine: boolean) => {
+    if (nextMine === mine) return;
+    if (nextMine && useAuthStore.getState().session.status !== "authenticated") {
+      Alert.alert("로그인이 필요해요", "내 글은 로그인 후 볼 수 있어요.");
+      return;
+    }
+    setMine(nextMine);
+    setPick(undefined);
+  };
 
   const toggleLike = useToggleQtLike();
 
@@ -69,14 +93,38 @@ export function QtBoardScreen() {
     );
   }
 
-  const { months, selectedMonth, items } = data;
+  const { years, selectedYear, selectedMonth, items } = data;
 
   return (
     <View className="flex-1 bg-background-normal">
-      {/* 요청한 달(month)이 아니라 서버가 고른 달을 표시한다 — 보고 있던 달의 글이 전부
-          사라지면 서버가 최신 달로 폴백하는데, 요청값을 쓰면 목록과 어긋난다. */}
-      <FilterBar items={months} selected={selectedMonth ?? ""} onSelect={setMonth} />
+      {/* 요청값이 아니라 서버가 고른 연·월을 표시한다 — 연·월을 정하지 않고 보냈을 때
+          서버가 고른 달이 곧 목록이 보여주는 달이다. */}
+      <View className="flex-row items-center justify-between px-5 pb-1 pt-4">
+        <View className="flex-row items-center gap-2">
+          <PickerPill
+            label={`${selectedYear}년`}
+            options={years.map((year) => ({ value: year, label: `${year}년` }))}
+            selected={selectedYear}
+            onSelect={(year) => setPick({ year, month: selectedMonth })}
+          />
+          <PickerPill
+            label={`${selectedMonth}월`}
+            options={MONTH_OPTIONS}
+            selected={selectedMonth}
+            onSelect={(month) => setPick({ year: selectedYear, month })}
+          />
+        </View>
+        <View className="flex-row items-center gap-2">
+          <FilterChip label="전체" selected={!mine} onPress={() => handleScopePress(false)} />
+          <FilterChip label="내 글" selected={mine} onPress={() => handleScopePress(true)} />
+        </View>
+      </View>
       <ScrollView contentContainerClassName="gap-4 pt-3 px-5 py-4">
+        {items.length === 0 && (
+          <Text className="mt-16 text-center text-body-medium text-text-alternative">
+            {mine ? "이 달에 작성한 큐티가 없어요" : "이 달에는 작성된 큐티가 없어요"}
+          </Text>
+        )}
         {items.map((item) => (
           <QtPostCard
             key={item.id}
