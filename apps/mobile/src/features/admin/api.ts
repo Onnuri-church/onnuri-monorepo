@@ -12,11 +12,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiClient } from "../../shared/api/client";
 
 // 회원 목록 (관리자 전용 GET /users) — 회원 관리 목록과 셀장/부셀장 선택지가 같이 쓴다.
-export function useAdminMembers() {
+export function useAdminMembers(enabled = true) {
   return useQuery({
     queryKey: ["admin", "members"],
     queryFn: () =>
       apiClient.get<AdminMemberSummary[]>("/users").then((res) => res.data),
+    // GET /users는 관리자 전용 — 비관리자 화면(소그룹 수정의 소그룹장)에서는 요청 자체를 끈다.
+    enabled,
   });
 }
 

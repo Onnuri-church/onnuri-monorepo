@@ -11,6 +11,7 @@ import type {
 } from '@onnuri/shared';
 
 import { pad } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { AddPhotosDto } from './dto/add-photos.dto';
@@ -37,6 +38,7 @@ export class GroupMeetingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(): Promise<GroupMeeting[]> {
@@ -360,7 +362,7 @@ export class GroupMeetingsService {
   async join(userId: string, id: string): Promise<GroupMeetingDetail> {
     const group = await this.prisma.hobbyGroup.findFirst({
       where: { postId: id, post: { deletedAt: null } },
-      select: { status: true, recruitEnd: true },
+      select: { status: true, recruitEnd: true, post: { select: { title: true } } },
     });
     if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
     if (this.toStatus(group) === 'closed') {
@@ -382,6 +384,26 @@ export class GroupMeetingsService {
       update: { status: 'PENDING' },
       create: { postId: id, userId },
     });
+
+    // 승인할 사람(소그룹장)에게 알림 — 안 보내면 상세에 들어가 볼 때까지 신청이 묵는다.
+    // 관리자 전체에게는 보내지 않는다 (승인은 소그룹장 몫, 관리자는 보조 권한).
+    const [leaders, applicant] = await Promise.all([
+      this.prisma.hobbyGroupMember.findMany({
+        where: { postId: id, role: 'LEADER' },
+        select: { userId: true },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    ]);
+    await this.notifications.notify(
+      leaders.map((leader) => leader.userId).filter((leaderId) => leaderId !== userId),
+      {
+        type: 'GROUP_MEETING',
+        title: '취향 소그룹',
+        body: `${applicant?.name ?? '회원'}님이 "${group.post.title}" 참여를 신청했어요`,
+        linkUrl: `group-meeting/${id}`,
+      },
+    );
+
     return this.findOne(id, userId);
   }
 
@@ -421,6 +443,23 @@ export class GroupMeetingsService {
       where: { postId_userId: { postId: id, userId: targetUserId } },
       data: { status },
     });
+
+    // 결과를 신청자에게 알림 — 안 보내면 앱을 다시 열어볼 때까지 결과를 모른다.
+    // (거절은 상세의 거절 안내 배너와 짝을 이룬다 — 탭하면 그 화면으로 간다.)
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+    await this.notifications.notify([targetUserId], {
+      type: 'GROUP_MEETING',
+      title: '취향 소그룹',
+      body:
+        status === 'APPROVED'
+          ? `"${post?.title ?? '소그룹'}" 참여가 승인됐어요`
+          : `"${post?.title ?? '소그룹'}" 신청이 이번에는 승인되지 않았어요`,
+      linkUrl: `group-meeting/${id}`,
+    });
+
     return this.findOne(id, requesterId);
   }
 

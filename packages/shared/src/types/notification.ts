@@ -10,7 +10,8 @@ export type NotificationType =
   | "QT_NEW"
   | "COMMENT"
   | "LIKE"
-  | "NOTICE";
+  | "NOTICE"
+  | "GROUP_MEETING";
 
 /** GET /notifications 응답 항목 — 최신순 */
 /** PATCH·DELETE /users/me/push-token 요청 본문 — 기기의 Expo 푸시 토큰 */

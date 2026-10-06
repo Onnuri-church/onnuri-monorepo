@@ -97,6 +97,7 @@ enum NotificationType {
   COMMENT
   LIKE
   NOTICE
+  GROUP_MEETING
 }
 
 // ---------------------------------------------------------------------

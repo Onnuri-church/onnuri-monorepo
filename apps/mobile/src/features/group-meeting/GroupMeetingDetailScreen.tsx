@@ -2,8 +2,20 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { GroupMeetingMember } from "@onnuri/shared";
-import { useRef, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -71,6 +83,24 @@ export function GroupMeetingDetailScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [comment, setComment] = useState("");
+
+  // 입력줄을 화면 하단에 고정하면서 키보드가 가린 높이를 직접 받아 아래 패딩으로 넣는다.
+  // KeyboardAvoidingView를 쓰지 않는 이유는 부서활동 상세와 같다 — SDK 57은 edge-to-edge가
+  // 항상 켜져 있어 창이 줄어들지 않아서, 창 크기로 역산하는 방식은 0으로 계산된다.
+  const insets = useSafeAreaInsets();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  useEffect(() => {
+    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const show = Keyboard.addListener(showEvent, (event) =>
+      setKeyboardHeight(event.endCoordinates.height),
+    );
+    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
+    return () => {
+      show.remove();
+      hide.remove();
+    };
+  }, []);
   const { width } = useWindowDimensions();
   const thumb = getThumbLayout(width);
 
@@ -267,18 +297,42 @@ export function GroupMeetingDetailScreen() {
               navigation.navigate("GroupMeetingMembers", { meetingId: params.id })
             }
           >
+            {/* 사진 없는 멤버는 회색 기본 원으로 채운다(합쳐서 최대 3개) — 이 줄이 명단으로
+                가는 버튼인데, 전원이 사진이 없으면 아바타 줄이 통째로 사라져 눌리는 줄인지
+                알 수 없었다. 끝의 화살표도 같은 이유다. */}
             <View className="flex-row">
-              {meeting.participantAvatarUrls.map((url, index) => (
+              {meeting.participantAvatarUrls.slice(0, 3).map((url, index) => (
                 <Image
                   key={url}
                   source={{ uri: url }}
                   className={index === 0 ? "h-8 w-8 rounded-full" : "-ml-2 h-8 w-8 rounded-full"}
                 />
               ))}
+              {Array.from({
+                length: Math.max(
+                  0,
+                  Math.min(meeting.participantCount, 3) -
+                    Math.min(meeting.participantAvatarUrls.length, 3),
+                ),
+              }).map((_, index) => (
+                <View
+                  key={`placeholder-${index}`}
+                  className={
+                    index === 0 && meeting.participantAvatarUrls.length === 0
+                      ? ""
+                      : "-ml-2 rounded-full border border-background-normal"
+                  }
+                >
+                  <Avatar imageUrl={null} size={32} />
+                </View>
+              ))}
             </View>
             <Text className="text-body-small text-text-neutral">
               총 {meeting.participantCount}명
             </Text>
+            <View className="ml-auto">
+              <Icon name="expand-right" color={colors.icon.normal} />
+            </View>
           </Pressable>
         </View>
 
@@ -422,13 +476,6 @@ export function GroupMeetingDetailScreen() {
               />
             ))}
           </View>
-          <View className="mt-3">
-            <CommentInput
-              value={comment}
-              onChangeText={setComment}
-              onSubmit={handleCommentSubmit}
-            />
-          </View>
         </View>
 
         {/* 참여 버튼 — 소그룹장/관리자는 신청 대상이 아니라 숨긴다 */}
@@ -451,6 +498,23 @@ export function GroupMeetingDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* 댓글 입력줄 — 스크롤 안에 두면 안드로이드 edge-to-edge에서 내비 바에 깔려 닿을 수
+          없었다(삼성 실기기 확인). 부서활동·셀 소식 상세와 같은 하단 고정으로 통일한다.
+          여백·테두리를 className이 아니라 style로 주는 이유도 부서활동 상세와 같다 —
+          키보드 높이는 매번 달라져 className으로 못 만들고, 섞어 쓰면 style이 무시된다. */}
+      <View
+        style={{
+          paddingHorizontal: CONTENT_PADDING,
+          paddingTop: 8,
+          paddingBottom: (keyboardHeight || insets.bottom) + 8,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          borderTopColor: colors.text.assistive,
+          backgroundColor: colors.background.normal,
+        }}
+      >
+        <CommentInput value={comment} onChangeText={setComment} onSubmit={handleCommentSubmit} />
+      </View>
 
       <AppDialog
         ref={rejectDialogRef}

@@ -17,6 +17,7 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
 import { buildMemberOptions, findOptionByLabel } from "../admin/memberOptions";
+import { useMe } from "../profile/useMe";
 import { fetchGroupMeetingDetail, useCreateGroupMeeting, useUpdateGroupMeeting } from "./api";
 
 interface LeaderPick {
@@ -24,8 +25,9 @@ interface LeaderPick {
   name: string;
 }
 
-// 취향소그룹 생성/편집 겸용 폼 (관리자 전용 — 2026-09-21 시안: 배경사진/이름/설명문/
-// 모집일/장소/비용/소그룹장 한 명 이상). meetingId가 있으면 편집 모드로 기존 값을 채운다.
+// 취향소그룹 생성/편집 겸용 폼 (2026-09-21 시안: 배경사진/이름/설명문/모집일/장소/비용/
+// 소그룹장 한 명 이상). 생성은 관리자 전용, 편집은 소그룹장도 들어온다(canManage).
+// meetingId가 있으면 편집 모드로 기존 값을 채운다.
 export function GroupMeetingFormScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "GroupMeetingForm">>();
@@ -38,7 +40,10 @@ export function GroupMeetingFormScreen() {
     enabled: meetingId !== undefined,
   });
 
-  const { data: members } = useAdminMembers();
+  // 소그룹장 선택지(GET /users)는 관리자 전용이다 — 비관리자 소그룹장이 수정으로 들어오면
+  // 403으로 선택지가 비므로, 추가 피커를 숨기고 요청도 보내지 않는다 (기존 소그룹장 제거는 가능).
+  const isAdmin = useMe()?.isAdmin === true;
+  const { data: members } = useAdminMembers(isAdmin);
   const createMeeting = useCreateGroupMeeting();
   const updateMeeting = useUpdateGroupMeeting(meetingId ?? "");
   const saving = createMeeting.isPending || updateMeeting.isPending;
@@ -185,17 +190,19 @@ export function GroupMeetingFormScreen() {
                 </View>
               ))}
             </View>
-            <View className="-mt-2">
-              <SelectField
-                label=""
-                placeholder="소그룹장 추가"
-                options={memberOptions
-                  .filter((option) => !leaders.some((leader) => leader.id === option.id))
-                  .map((option) => option.label)}
-                value={null}
-                onChange={handleLeaderAdd}
-              />
-            </View>
+            {isAdmin && (
+              <View className="-mt-2">
+                <SelectField
+                  label=""
+                  placeholder="소그룹장 추가"
+                  options={memberOptions
+                    .filter((option) => !leaders.some((leader) => leader.id === option.id))
+                    .map((option) => option.label)}
+                  value={null}
+                  onChange={handleLeaderAdd}
+                />
+              </View>
+            )}
           </View>
 
           <View className="mt-4">

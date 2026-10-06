@@ -15,6 +15,7 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
+import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
 
 type Filter = "all" | GroupMeetingStatus;
@@ -176,6 +177,7 @@ export function GroupMeetingScreen() {
           <View key={meeting.id} style={{ width: cardWidth }}>
             <Card
               imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
+              imageFallback={<CardImageFallback />}
               badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
               dimmed={meeting.status === "closed"}
               onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}

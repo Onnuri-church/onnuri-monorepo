@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { fetchMyGroupMeetings } from "./api";
+import { CardImageFallback } from "./components/CardImageFallback";
 import { Button } from "../../shared/components/base/Button";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
@@ -117,6 +118,7 @@ export function MyGroupMeetingScreen() {
         <View key={meeting.id} style={{ width: cardWidth }}>
           <Card
             imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
+            imageFallback={<CardImageFallback />}
             badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
             dimmed={meeting.status === "closed"}
             onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
