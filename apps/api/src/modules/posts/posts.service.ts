@@ -307,6 +307,22 @@ export class PostsService {
       select: { id: true },
     });
 
+    // 전 회원 알림 — 작성자 본인·탈퇴자 제외 (공지와 같은 규칙). 토글(큐티나눔 새글)을
+    // 끈 사람은 notifications.service가 푸시만 건너뛰고 알림센터에는 남긴다.
+    const users = await this.prisma.user.findMany({
+      where: { id: { not: userId }, withdrawnAt: null },
+      select: { id: true },
+    });
+    await this.notifications.notify(
+      users.map((user) => user.id),
+      {
+        type: 'QT_NEW',
+        title: '큐티나눔',
+        body: `새 큐티나눔이 올라왔어요: ${dto.title}`,
+        linkUrl: `qt/${post.id}`,
+      },
+    );
+
     return this.findQtShare(post.id, userId);
   }
 
