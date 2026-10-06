@@ -110,7 +110,9 @@ export class NotificationsService {
 
     const messages = tokens.map(({ token }) => ({
       to: token,
-      title: input.title,
+      // 기기 푸시 제목은 브랜드로 통일한다 (2026-10-07 결정) — 내용이 자체 설명적이라
+      // 종류 제목은 중복이다. input.title은 앱 알림센터의 카드 라벨로만 쓰인다.
+      title: '온누리 청년부',
       body: input.body,
       sound: 'default',
       // 앱이 푸시 탭을 받으면 알림센터를 연다 — linkUrl은 이후 딥링크 확장용으로 같이 싣는다.
