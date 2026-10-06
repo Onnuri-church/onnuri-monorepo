@@ -9,6 +9,7 @@ import { TeamListItem } from "./components/TeamListItem";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon, isIconName } from "../../shared/components/base/Icon";
+import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 
@@ -16,6 +17,9 @@ import { useMe } from "../profile/useMe";
 // (셀 탭이 관리자에게 셀 관리로 뜨는 것과 같은 방식). 일반 유저·게스트는 목록만 본다.
 export function TeamStoryScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // 하단 탭 화면이라 스크롤 내리면 탭바를 숨긴다 (홈·셀·말씀·마이페이지와 동일 —
+  // 이 탭만 연결이 빠져 있었다).
+  const handleHideTabBarScroll = useHideTabBarOnScroll();
   const insets = useSafeAreaInsets();
   const { data: teams } = useTeams();
   const me = useMe();
@@ -42,6 +46,8 @@ export function TeamStoryScreen() {
         // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
         // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-6 포함).
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
+        onScroll={handleHideTabBarScroll}
+        scrollEventThrottle={16}
       >
         {(teams ?? []).map((team) => (
           <TeamListItem
