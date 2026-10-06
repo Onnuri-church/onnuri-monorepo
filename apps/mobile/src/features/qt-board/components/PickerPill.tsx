@@ -12,10 +12,10 @@ interface PickerPillProps<T extends number | string> {
   onSelect: (value: T) => void;
 }
 
-// 드롭다운 항목 높이와 목록 최대 높이 — 12개월(36*12)이 스크롤 없이 한 번에 펼쳐지는 높이다.
-// 작은 화면에서 이보다 길어지면 안에서 스크롤된다.
+// 드롭다운은 5개만 보이고 나머지는 안에서 위아래로 스크롤한다 (2026-10-07 결정 — 12개월이
+// 전부 펼쳐지면 화면을 너무 차지한다).
 const ITEM_HEIGHT = 36;
-const LIST_MAX_HEIGHT = 440;
+const VISIBLE_COUNT = 5;
 // 칩 모서리 반지름 — 펼친 카드도 같은 값을 써서 버튼에서 이어 늘어난 모양이 된다.
 const RADIUS = 18;
 
@@ -46,6 +46,15 @@ export function PickerPill<T extends number | string>({
   };
 
   const handleClose = () => setAnchor(null);
+
+  // 열릴 때 선택 항목이 5개 창 가운데쯤 오게 미리 스크롤한다 — 안 그러면 선택값이 창 밖에 있어
+  // 지금 무엇이 골라져 있는지 안 보인다.
+  const listRef = useRef<ScrollView>(null);
+  const handleListLayout = () => {
+    const index = options.findIndex((option) => option.value === selected);
+    const centered = (index - Math.floor(VISIBLE_COUNT / 2)) * ITEM_HEIGHT;
+    listRef.current?.scrollTo({ y: Math.max(0, centered), animated: false });
+  };
 
   const handleSelect = (value: T) => {
     setAnchor(null);
@@ -85,12 +94,17 @@ export function PickerPill<T extends number | string>({
                 style={{ height: anchor.height - 2 }}
               >
                 <Text className="text-label-medium text-text-neutral">{label}</Text>
-                <Icon name="arrow-drop-down" size={18} color={colors.icon.accent} />
+                {/* 열린 상태라 화살표가 위를 본다 (닫힌 칩은 아래) */}
+                <View style={{ transform: [{ rotate: "180deg" }] }}>
+                  <Icon name="arrow-drop-down" size={18} color={colors.icon.accent} />
+                </View>
               </View>
               <ScrollView
+                ref={listRef}
+                onLayout={handleListLayout}
                 bounces={false}
                 showsVerticalScrollIndicator={false}
-                style={{ maxHeight: LIST_MAX_HEIGHT }}
+                style={{ maxHeight: ITEM_HEIGHT * VISIBLE_COUNT }}
               >
                 {options.map((option) => (
                   <Pressable
