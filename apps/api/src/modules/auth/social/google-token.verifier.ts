@@ -33,6 +33,7 @@ export class GoogleTokenVerifier {
         providerUid: payload.sub,
         email: payload.email ?? null,
         name: payload.name ?? null,
+        avatarUrl: payload.picture ?? null,
       };
     } catch {
       throw new UnauthorizedException('구글 토큰 검증에 실패했습니다.');

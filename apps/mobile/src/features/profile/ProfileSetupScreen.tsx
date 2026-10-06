@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   BackHandler,
@@ -23,6 +23,7 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
+import { AvatarEditor } from "./components/AvatarEditor";
 
 // 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
 const NONE_OPTION = "없음";
@@ -74,6 +75,9 @@ export function ProfileSetupScreen() {
   const sessionUser =
     session.status === "onboarding" || session.status === "authenticated" ? session.user : null;
 
+  // 프로필 사진 — 가입 직후엔 소셜 프로필 사진이 기본으로 들어 있다 (서버가 가입 때 저장).
+  // AvatarEditor가 저장까지 끝내고 알려주므로 여기는 보여줄 값만 든다.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(sessionUser?.avatarUrl ?? null);
   const [birthday, setBirthday] = useState(() => toBirthdayInput(sessionUser?.birthDate ?? null));
   const [phone, setPhone] = useState(sessionUser?.phone ?? "");
   const [gender, setGender] = useState<Gender | null>(sessionUser?.gender ?? null);
@@ -83,13 +87,17 @@ export function ProfileSetupScreen() {
 
   // 수정 모드 프리필 — 소속은 세션 유저에 없어서 /users/me로 받아 채운다 (소속 없음 = "없음").
   // 사용자가 먼저 고른 값(null 아님)은 덮지 않는다. 온보딩은 직접 고르게 비워둔다.
+  // 사진도 me로 보정한다 — 세션 유저는 로그인 시점 값이라 마이페이지에서 바꾼 사진을 모른다.
+  // 단 이 화면에서 이미 바꿨으면(ref) 덮지 않는다. null이 "사진 없음"이라 prev ?? 로는 못 거른다.
   const isEditing = session.status === "authenticated";
+  const avatarTouched = useRef(false);
   const queryClient = useQueryClient();
   const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe, enabled: isEditing });
   useEffect(() => {
     if (!isEditing || !me) return;
     setCell((prev) => prev ?? me.cell?.name ?? NONE_OPTION);
     setTeam((prev) => prev ?? me.team?.name ?? NONE_OPTION);
+    if (!avatarTouched.current) setAvatarUrl(me.avatarUrl ?? null);
   }, [isEditing, me]);
 
   // 안드로이드 하드웨어(제스처) 뒤로가기. 온보딩에서는 이 화면이 스택의 유일한 화면이라
@@ -171,6 +179,18 @@ export function ProfileSetupScreen() {
           contentContainerClassName="gap-7.5 px-5 pb-6"
           keyboardShouldPersistTaps="handled"
         >
+          {/* 소셜 사진이 이미 채워져 있어 "입력란"이 아니라 "원하면 바꾸는 자리"다 —
+              온보딩 이탈을 늘리지 않으면서 기본 이미지/앨범 선택을 가입 시점에 연다. */}
+          <View className="pt-4">
+            <AvatarEditor
+              avatarUrl={avatarUrl}
+              onChange={(url) => {
+                avatarTouched.current = true;
+                setAvatarUrl(url);
+              }}
+            />
+          </View>
+
           <View className="py-4">
             <Text className="text-body-main text-text-normal">생년월일</Text>
             <TextInput
