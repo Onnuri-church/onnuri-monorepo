@@ -42,6 +42,13 @@ export function PrayerBoardScreen() {
     queryFn: () => fetchPrayers(category),
   });
 
+  // 검색은 받아온 목록을 제목으로 거른다 — 목록이 전체 응답이라 서버 왕복이 필요 없고,
+  // 익명 글이 있어 작성자 이름은 검색 대상에 넣지 않는다.
+  const query = keyword.trim();
+  const visibleItems = (data?.items ?? []).filter(
+    (prayer) => query === "" || prayer.title.includes(query),
+  );
+
   const handleDeletePress = (prayer: PrayerRequest) => {
     setPendingDelete(prayer);
     dialogRef.current?.open();
@@ -99,7 +106,13 @@ export function PrayerBoardScreen() {
             </Text>
           )}
 
-          {data?.items.map((prayer) => (
+          {!isPending && !isError && query !== "" && visibleItems.length === 0 && (
+            <Text className="text-center text-body-medium text-text-alternative">
+              검색 결과가 없어요
+            </Text>
+          )}
+
+          {visibleItems.map((prayer) => (
             <PrayerCard
               key={prayer.id}
               prayer={prayer}

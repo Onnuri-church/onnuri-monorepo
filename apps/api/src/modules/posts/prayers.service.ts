@@ -61,7 +61,8 @@ function myBookmarkFilter(userId?: string) {
 export class PrayersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // 익명 글의 실명 노출 판단 — 관리자에게만 "익명(실명)"으로 조립한다 (확정 스펙).
+  // 익명 글의 실명 노출 판단 — 관리자와 작성자 본인에게만 "익명(실명)"으로 조립한다
+  // (확정 스펙 + 2026-10-05 보완: 본인은 자기 글을 알아볼 수 있어야 한다).
   private async isAdmin(userId?: string): Promise<boolean> {
     if (!userId) return false;
     const user = await this.prisma.user.findUnique({
@@ -79,11 +80,12 @@ export class PrayersService {
     // schema상 board=PRAYER면 prayerRequest가 항상 있다 — 없으면 데이터가 깨진 것.
     const prayer = row.prayerRequest!;
     const realName = row.author.name;
+    const isMine = userId !== undefined && row.authorId === userId;
     return {
       id: row.id,
       number: prayer.number,
       authorName: prayer.isAnonymous
-        ? admin
+        ? admin || isMine
           ? `익명(${realName})`
           : '익명'
         : realName,
@@ -93,7 +95,7 @@ export class PrayersService {
       // 계약: ISO date (YYYY-MM-DD)
       visibleUntil: prayer.visibleUntil.toISOString().slice(0, 10),
       bookmarked: row.bookmarks.length > 0,
-      isMine: userId !== undefined && row.authorId === userId,
+      isMine,
     };
   }
 
@@ -152,7 +154,7 @@ export class PrayersService {
       },
       orderBy: { createdAt: 'desc' },
     });
-    // 내 글은 익명이어도 실명 노출 문제가 없다 — 그래도 문구는 목록과 같게 유지한다.
+    // 전부 내 글이라 toItem의 본인 분기로 익명 글도 "익명(실명)"으로 보인다 — admin 조회 불필요.
     return rows.map((row) => this.toItem(row, userId, false));
   }
 
