@@ -1,7 +1,6 @@
-import { useRef } from "react";
-import { Pressable, Text, View } from "react-native";
+import { useRef, useState } from "react";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 
-import { AppSheet, type AppSheetRef } from "../../../shared/components/base/AppSheet";
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
 
@@ -13,8 +12,16 @@ interface PickerPillProps<T extends number | string> {
   onSelect: (value: T) => void;
 }
 
-// 필터 칩 모양의 선택 버튼 — 누르면 항목 시트가 올라오고, 고르면 닫힌다.
-// SelectField의 시트 구성(항목 목록 + 바닥 고정 취소)과 같되 폼 줄이 아니라 칩이다.
+// 드롭다운 항목 높이와 최대 높이 — 12개월(40*12 + 위아래 여백 16)이 스크롤 없이 한 번에
+// 펼쳐지는 높이다. 작은 화면에서 이보다 길어지면 안에서 스크롤된다.
+const ITEM_HEIGHT = 40;
+const MAX_HEIGHT = 500;
+const MIN_WIDTH = 96;
+const GAP_BELOW_BUTTON = 6;
+
+// 필터 칩 모양의 선택 버튼 — 누르면 그 버튼 바로 아래로 목록이 펼쳐진다 (2026-10-07 피드백:
+// 바텀시트가 아니라 토글 드롭다운). ⋮ 메뉴(ContextMenu)처럼 버튼을 실측해서 아래에 붙이고,
+// 화면 단위가 아닌 앵커 팝오버라 RN Modal로 띄운다 (DESIGN.md 오버레이 예외 조항).
 // 현재 선택 항목은 브랜드 색 + 굵게 표시한다.
 export function PickerPill<T extends number | string>({
   label,
@@ -22,17 +29,28 @@ export function PickerPill<T extends number | string>({
   selected,
   onSelect,
 }: PickerPillProps<T>) {
-  const sheetRef = useRef<AppSheetRef>(null);
+  const buttonRef = useRef<View>(null);
+  // 목록을 붙일 화면 좌표. null이면 닫힘 — 버튼을 실측한 뒤에 열리므로 위치와 열림이 같이 간다.
+  const [anchor, setAnchor] = useState<{ top: number; left: number; width: number } | null>(null);
+
+  const handleOpenPress = () => {
+    buttonRef.current?.measureInWindow((x, y, width, height) => {
+      setAnchor({ top: y + height + GAP_BELOW_BUTTON, left: x, width });
+    });
+  };
+
+  const handleClose = () => setAnchor(null);
 
   const handleSelect = (value: T) => {
+    setAnchor(null);
     onSelect(value);
-    sheetRef.current?.close();
   };
 
   return (
     <>
       <Pressable
-        onPress={() => sheetRef.current?.open()}
+        ref={buttonRef}
+        onPress={handleOpenPress}
         className="flex-row items-center gap-0.5 rounded-full border border-text-assistive py-1 pl-3 pr-1.5"
         style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
       >
@@ -40,41 +58,43 @@ export function PickerPill<T extends number | string>({
         <Icon name="arrow-drop-down" size={18} color={colors.icon.accent} />
       </Pressable>
 
-      <AppSheet
-        ref={sheetRef}
-        footer={
-          <View className="bg-background-normal px-4 pb-4">
-            <View className="border-t-2 border-background-assistive" />
-            <Pressable
-              onPress={() => sheetRef.current?.close()}
-              className="pt-4"
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+      <Modal visible={anchor !== null} transparent animationType="fade" onRequestClose={handleClose}>
+        {/* 바깥 아무 곳이나 누르면 닫힌다. 안드로이드 뒤로가기는 onRequestClose가 받는다. */}
+        <Pressable className="flex-1" onPress={handleClose}>
+          {anchor && (
+            <View
+              className="absolute overflow-hidden rounded-5 bg-background-muted py-2"
+              style={{
+                top: anchor.top,
+                left: anchor.left,
+                minWidth: Math.max(anchor.width, MIN_WIDTH),
+                maxHeight: MAX_HEIGHT,
+              }}
             >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
-            </Pressable>
-          </View>
-        }
-      >
-        <View className="gap-6 p-4 pb-9">
-          {options.map((option) => (
-            <Pressable
-              key={String(option.value)}
-              onPress={() => handleSelect(option.value)}
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-            >
-              <Text
-                className={
-                  option.value === selected
-                    ? "text-center text-body-main text-primary-normal"
-                    : "text-center text-body-medium text-text-normal"
-                }
-              >
-                {option.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
-      </AppSheet>
+              <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
+                {options.map((option) => (
+                  <Pressable
+                    key={String(option.value)}
+                    onPress={() => handleSelect(option.value)}
+                    className="items-center justify-center px-4 active:opacity-60"
+                    style={{ height: ITEM_HEIGHT }}
+                  >
+                    <Text
+                      className={
+                        option.value === selected
+                          ? "text-body-main text-primary-normal"
+                          : "text-body-medium text-text-normal"
+                      }
+                    >
+                      {option.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+        </Pressable>
+      </Modal>
     </>
   );
 }
