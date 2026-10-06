@@ -1,16 +1,16 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
-import { useRef, useState } from "react";
-import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useRef } from "react";
+import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
 
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
-import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { signOut } from "../../shared/api/session";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
@@ -27,10 +27,6 @@ const NOTIFICATION_ROWS = [
 
 type NotificationKey = (typeof NOTIFICATION_ROWS)[number]["key"];
 
-// 지원 언어 목록은 팀 확정 전 최소 구성이다. 선택값 저장까지만 하고,
-// 실제 번역(i18n) 적용은 앱 전체 텍스트 작업이 필요해 후속 티켓으로 미룬다.
-const LANGUAGES = ["한국어", "English"];
-
 // 섹션 제목 시안 스타일(14px/600)과 버전정보(14px/400 #555555)는 등록된 텍스트 스타일·토큰에
 // 없다 — caption-main(13/500)·body-small(13/400)+text.neutral로 근사했고, 등록 여부는
 // 디자인(남현지) 확인 필요.
@@ -40,12 +36,6 @@ function SectionLabel({ children }: { children: string }) {
 
 export function SettingsScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const languageSheetRef = useRef<AppSheetRef>(null);
-
-  // TODO(디자인): 다크 팔레트 값이 어색해 디자이너와 함께 다시 작업하기로 함 (2026-09-09) —
-  //   그때까지 토글 상태만 동작. 시안 확정되면 tokens.js 확장과 함께 연결한다.
-  const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("한국어");
 
   // 서버 값이 오기 전에는 기본값(전부 켜짐)으로 그린다 — 기본값과 같아서 깜빡임이 없다.
   const { data: settings } = useNotificationSettings();
@@ -59,7 +49,18 @@ export function SettingsScreen() {
   // 저장 피드백은 토스트 한 줄 — 확인 팝업은 조작을 끊어서 두지 않는다 (2026-10-02 결정,
   // 광고성 푸시가 생기면 그때 법정 고지 팝업을 별도로 단다).
   const toastRef = useRef<AppToastRef>(null);
+
+  // 게스트도 설정에 들어올 수 있는데 계정이 필요한 행은 서버가 401로 거절한다 —
+  // 실패 토스트/Alert 대신 로그인 안내부터 (기도제목 북마크와 같은 패턴).
+  const requireLogin = () => {
+    const { session } = useAuthStore.getState();
+    if (session.status === "authenticated") return true;
+    Alert.alert("로그인이 필요해요", "로그인 후 이용할 수 있어요.");
+    return false;
+  };
+
   const handleNotificationChange = (key: NotificationKey, value: boolean) => {
+    if (!requireLogin()) return;
     const title = NOTIFICATION_ROWS.find((row) => row.key === key)?.title ?? "알림";
     toastRef.current?.show(`${title}이 ${value ? "켜졌어요" : "꺼졌어요"}`);
     updateSettings.mutate(
@@ -69,11 +70,6 @@ export function SettingsScreen() {
         onError: () => toastRef.current?.show("저장하지 못했어요. 다시 시도해주세요"),
       },
     );
-  };
-
-  const handleLanguageSelect = (option: string) => {
-    setLanguage(option);
-    languageSheetRef.current?.close();
   };
 
   const handleLogoutPress = () => {
@@ -100,7 +96,9 @@ export function SettingsScreen() {
   return (
     <ScrollView className="bg-background-normal" contentContainerClassName="px-5 pb-10 pt-14">
       <View className="gap-7.5">
-        {/* 디스플레이 */}
+        {/* 디스플레이 — 다크모드 토글과 언어 섹션은 실동작(테마 연동·i18n)이 보류 중이라
+            출시 전까지 숨긴다 (2026-10-06 결정, 켜도 변화 없는 토글은 버그로 보인다).
+            시안·이전 구현은 git 이력에 있다 — 테마/i18n 티켓이 생기면 되살린다. */}
         <View className="gap-2">
           <SectionLabel>디스플레이</SectionLabel>
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
@@ -109,29 +107,6 @@ export function SettingsScreen() {
               <View className="h-6 w-6 rounded-full bg-background-assistive" />
               <BrightnessSlider />
             </View>
-            <SettingRow
-              title="다크모드"
-              subtitle="어두운 테마로 전환"
-              right={<Toggle value={darkMode} onValueChange={setDarkMode} />}
-            />
-          </View>
-        </View>
-
-        {/* 언어 */}
-        <View className="gap-2">
-          <SectionLabel>언어</SectionLabel>
-          <View className="rounded-5 bg-background-normal px-4 py-5 shadow-card">
-            <SettingRow
-              title="표시언어 선택"
-              onPress={() => languageSheetRef.current?.open()}
-              right={
-                <View className="flex-row items-center gap-1">
-                  {/* 시안에는 선택값 표시가 없다 — 현재 언어를 알 방법이 없어 임시로 노출. 위치는 확인 필요 */}
-                  <Text className="text-body-small text-text-alternative">{language}</Text>
-                  <Icon name="arrow-drop-down" color={colors.icon.accent} />
-                </View>
-              }
-            />
           </View>
         </View>
 
@@ -162,13 +137,13 @@ export function SettingsScreen() {
                 기존 값 채우기/수정 전용 화면 분리를 다시 판단한다. */}
             <SettingRow
               title="회원 정보 수정"
-              onPress={() => navigation.navigate("ProfileEdit")}
+              onPress={() => requireLogin() && navigation.navigate("ProfileEdit")}
               right={<Icon name="expand-right" color={colors.primary.normal} />}
             />
             <SettingRow title="로그아웃" onPress={handleLogoutPress} />
             <SettingRow
               title="회원탈퇴"
-              onPress={() => withdrawDialogRef.current?.open()}
+              onPress={() => requireLogin() && withdrawDialogRef.current?.open()}
               // 탈퇴는 서버 왕복을 기다렸다가 전환된다 — 그동안 진행 중임을 보여준다.
               right={withdrawing ? <ActivityIndicator size="small" color={colors.primary.normal} /> : undefined}
             />
@@ -177,35 +152,6 @@ export function SettingsScreen() {
       </View>
 
       <Text className="mt-10 pl-4.5 text-body-small text-text-neutral">버전정보 1.0.0</Text>
-
-      {/* 언어 선택 시트 — SelectField의 시트 구성(항목 목록 + 바닥 고정 취소)과 같은 패턴 */}
-      <AppSheet
-        ref={languageSheetRef}
-        footer={
-          <View className="bg-background-normal px-4 pb-4">
-            <View className="border-t-2 border-background-assistive" />
-            <Pressable
-              onPress={() => languageSheetRef.current?.close()}
-              className="pt-4"
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-            >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
-            </Pressable>
-          </View>
-        }
-      >
-        <View className="gap-6 p-4 pb-9">
-          {LANGUAGES.map((option) => (
-            <Pressable
-              key={option}
-              onPress={() => handleLanguageSelect(option)}
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-            >
-              <Text className="text-center text-body-medium text-text-normal">{option}</Text>
-            </Pressable>
-          ))}
-        </View>
-      </AppSheet>
 
       <AppDialog
         ref={withdrawDialogRef}
