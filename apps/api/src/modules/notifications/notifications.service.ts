@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import type { NotificationInfo } from '@onnuri/shared';
 import type { NotificationType } from '../../../generated/prisma';
 
@@ -64,6 +65,35 @@ export class NotificationsService {
     });
   }
 
+  // 벨 아이콘 뱃지 — 켜짐/꺼짐만 필요하지만, 나중에 숫자 뱃지로 바꿀 수 있게 개수로 내린다.
+  async unreadCount(userId: string): Promise<{ count: number }> {
+    const count = await this.prisma.notification.count({
+      where: { userId, readAt: null },
+    });
+    return { count };
+  }
+
+  // 개별 지우기 — 내 알림만. 남의 id를 보내면 조건이 안 맞아 조용히 0건이다.
+  async remove(userId: string, id: string): Promise<void> {
+    await this.prisma.notification.deleteMany({ where: { id, userId } });
+  }
+
+  // 전체 지우기 — 알림센터 헤더의 "모두 지우기".
+  async removeAll(userId: string): Promise<void> {
+    await this.prisma.notification.deleteMany({ where: { userId } });
+  }
+
+  // 오래된 알림 정리 — 어차피 목록은 최근 100건만 내려서 UX 변화 없이 비대화만 막는다.
+  // 매일 새벽 4시(KST, 서버 UTC 19시)에 30일 지난 행을 지운다.
+  @Cron('0 19 * * *')
+  async pruneOld(): Promise<void> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const deleted = await this.prisma.notification.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    if (deleted.count > 0) this.logger.log(`오래된 알림 ${deleted.count}건 정리`);
+  }
+
   // 알림 생성 — 실패해도 본 동작(공지 등록 등)을 막으면 안 되므로 절대 던지지 않는다
   // (UploadsService.deleteByUrl과 같은 취급). 알림센터 행을 쌓은 뒤 같은 내용으로
   // 기기 푸시도 발송한다.
@@ -110,7 +140,9 @@ export class NotificationsService {
 
     const messages = tokens.map(({ token }) => ({
       to: token,
-      title: input.title,
+      // 기기 푸시 제목은 브랜드로 통일한다 (2026-10-07 결정) — 내용이 자체 설명적이라
+      // 종류 제목은 중복이다. input.title은 앱 알림센터의 카드 라벨로만 쓰인다.
+      title: '온누리 청년부',
       body: input.body,
       sound: 'default',
       // 앱이 푸시 탭을 받으면 알림센터를 연다 — linkUrl은 이후 딥링크 확장용으로 같이 싣는다.

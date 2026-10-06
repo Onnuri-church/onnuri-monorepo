@@ -447,10 +447,8 @@ export function RootNavigator() {
           <Stack.Screen
             name="Notifications"
             component={NotificationScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="" rightAction="none" />,
-            }}
+            // 헤더는 화면이 setOptions로 그린다 — "모두 지우기"가 화면 데이터(알림 유무)에 달려서.
+            options={{ headerShown: true }}
           />
           {/* 프로필 사진 확대 보기 — 뒤 화면이 비치는 투명 모달. 헤더 없이 탭으로 닫는다. */}
           <Stack.Screen

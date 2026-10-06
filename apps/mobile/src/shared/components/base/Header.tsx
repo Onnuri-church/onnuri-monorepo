@@ -3,10 +3,30 @@ import { useRef, useState } from "react";
 import { Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useUnreadNotificationCount } from "../../api/notifications";
+import { useAuthStore } from "../../store/useAuthStore";
 import { colors } from "../../theme/tokens";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
+
+// 벨 아이콘 + 안읽음 빨간 점. 메인 헤더와 마이페이지 액션 바가 같이 쓴다.
+// 게스트는 알림이 없으므로(401) 로그인일 때만 개수를 묻는다.
+export function NotificationBell({ size = 28 }: { size?: number }) {
+  const signedIn = useAuthStore((state) => state.session.status === "authenticated");
+  const { data } = useUnreadNotificationCount(signedIn);
+  return (
+    <View>
+      <Icon name="bell" size={size} color={colors.icon.strong} />
+      {(data?.count ?? 0) > 0 && (
+        <View
+          className="absolute rounded-full border border-background-normal bg-semantic-danger"
+          style={{ top: 1, right: 1, width: 9, height: 9 }}
+        />
+      )}
+    </View>
+  );
+}
 
 // 헤더 콘텐츠 행 높이 (안전영역 제외).
 const HEADER_ROW_HEIGHT = 61;
@@ -130,7 +150,7 @@ export function Header(props: HeaderProps) {
                   }
                   hitSlop={8}
                 >
-                  <Icon name="bell" size={28} color={colors.icon.strong} />
+                  <NotificationBell />
                 </Pressable>
                 {/* 설정도 갈 곳이 정해져 있어 기본 동작을 준다 (마이페이지 액션 바와 같은 화면). */}
                 <Pressable
