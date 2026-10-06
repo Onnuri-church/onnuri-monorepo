@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
 import type { NotificationInfo } from '@onnuri/shared';
 import type { NotificationType } from '../../../generated/prisma';
 
@@ -62,6 +63,35 @@ export class NotificationsService {
       where: { userId, readAt: null },
       data: { readAt: new Date() },
     });
+  }
+
+  // 벨 아이콘 뱃지 — 켜짐/꺼짐만 필요하지만, 나중에 숫자 뱃지로 바꿀 수 있게 개수로 내린다.
+  async unreadCount(userId: string): Promise<{ count: number }> {
+    const count = await this.prisma.notification.count({
+      where: { userId, readAt: null },
+    });
+    return { count };
+  }
+
+  // 개별 지우기 — 내 알림만. 남의 id를 보내면 조건이 안 맞아 조용히 0건이다.
+  async remove(userId: string, id: string): Promise<void> {
+    await this.prisma.notification.deleteMany({ where: { id, userId } });
+  }
+
+  // 전체 지우기 — 알림센터 헤더의 "모두 지우기".
+  async removeAll(userId: string): Promise<void> {
+    await this.prisma.notification.deleteMany({ where: { userId } });
+  }
+
+  // 오래된 알림 정리 — 어차피 목록은 최근 100건만 내려서 UX 변화 없이 비대화만 막는다.
+  // 매일 새벽 4시(KST, 서버 UTC 19시)에 30일 지난 행을 지운다.
+  @Cron('0 19 * * *')
+  async pruneOld(): Promise<void> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const deleted = await this.prisma.notification.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    if (deleted.count > 0) this.logger.log(`오래된 알림 ${deleted.count}건 정리`);
   }
 
   // 알림 생성 — 실패해도 본 동작(공지 등록 등)을 막으면 안 되므로 절대 던지지 않는다

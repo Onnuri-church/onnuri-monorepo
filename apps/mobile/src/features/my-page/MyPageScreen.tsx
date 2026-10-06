@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
+import { NotificationBell } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { signOut } from "../../shared/api/session";
@@ -155,7 +156,7 @@ export function MyPageScreen() {
         {/* 상단 액션 바 — 이 화면은 main 헤더(로고+앱 이름) 대신 알림·설정 아이콘만 쓴다 (시안). */}
         <View className="mt-7 flex-row justify-end gap-2">
           <Pressable onPress={() => navigation.navigate("Notifications")}>
-            <Icon name="bell" size={28} color={colors.icon.strong} />
+            <NotificationBell />
           </Pressable>
           <Pressable onPress={() => navigation.navigate("Settings")}>
             <Icon name="setting" size={28} color={colors.icon.strong} />
