@@ -25,7 +25,8 @@ export type RootStackParamList = {
   // 말씀 탭에서 카드를 눌러 들어가는 설교영상 상세. 탭 밖으로 push된다.
   SermonDetail: { id: string };
   Bulletin: undefined;
-  DepartmentActivity: undefined;
+  // teamId를 주면 그 팀으로 필터된 채 열린다 (팀 상세의 "OO팀 게시판" 진입).
+  DepartmentActivity: { teamId?: string } | undefined;
   DepartmentActivityDetail: { id: string };
   // postId가 있으면 그 글 수정, 없으면 새 글 작성.
   DepartmentActivityWrite: { postId: string } | undefined;

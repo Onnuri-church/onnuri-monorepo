@@ -1,4 +1,5 @@
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
+import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -20,7 +21,10 @@ import { toTimeAgo } from "../../shared/utils/date";
 const ALL_TEAMS = "";
 
 export function DepartmentActivityScreen() {
-  const [teamId, setTeamId] = useState<string>(ALL_TEAMS);
+  // 팀 상세의 "OO팀 게시판"으로 들어오면 그 팀으로 필터된 채 시작한다.
+  // 없는 팀이어도 서버가 전체로 되돌리므로(selectedTeamId 표시 규칙) 따로 검증하지 않는다.
+  const route = useRoute<RouteProp<RootStackParamList, "DepartmentActivity">>();
+  const [teamId, setTeamId] = useState<string>(route.params?.teamId ?? ALL_TEAMS);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 글은 자기 부서에만 쓸 수 있다(관리자 제외). 소속이 없으면 어느 부서에도 못 쓰므로
   // 버튼 자체를 감춘다 — 누를 수 있는데 서버가 403으로 막으면 이유를 알 수 없다.

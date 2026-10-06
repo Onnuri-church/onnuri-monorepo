@@ -45,7 +45,8 @@ export function TeamMemberAdminScreen() {
         </Text>
 
         <View className="mt-4">
-          <SearchBar value={query} onChangeText={setQuery} placeholder="이름으로 검색해서 추가" />
+          {/* 검색은 아래 목록을 거를 뿐이다 — 추가는 점선 "팀원 추가" 버튼이 따로 한다 (문구 혼동 수정). */}
+          <SearchBar value={query} onChangeText={setQuery} placeholder="이름으로 검색" />
         </View>
 
         <View className="mt-3 gap-3">
