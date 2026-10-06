@@ -243,6 +243,9 @@ export class AuthService {
         email,
         // 프로필 미제공 시 임시 이름 — 프로필 설정 화면에서 다시 입력받는다.
         name: profile.name ?? email.split('@')[0],
+        // 소셜 프로필 사진을 기본 아바타로 — 가입 시점에만 채운다. 이후에는 본인이
+        // 바꾼 사진이 우선이라 재로그인에서 덮어쓰지 않는다 (기존 유저 분기에 없음).
+        avatarUrl: profile.avatarUrl,
         socialAccounts: {
           create: { provider, providerUid: profile.providerUid },
         },

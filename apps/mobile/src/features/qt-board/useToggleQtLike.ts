@@ -1,6 +1,9 @@
 import type { QtShareDetail, QtShareListResponse } from "@onnuri/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback } from "react";
+import { Alert } from "react-native";
 
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { likePost, unlikePost } from "./api";
 
 interface ToggleLikeArgs {
@@ -78,5 +81,17 @@ export function useToggleQtLike() {
     },
   });
 
-  return mutate;
+  // 게스트는 서버가 401로 거절해 하트가 켜졌다 조용히 꺼진다 — 요청 전에 안내부터
+  // (기도제목 북마크와 같은 패턴).
+  return useCallback(
+    (args: ToggleLikeArgs) => {
+      const { session } = useAuthStore.getState();
+      if (session.status !== "authenticated") {
+        Alert.alert("로그인이 필요해요", "좋아요는 로그인 후 할 수 있어요.");
+        return;
+      }
+      mutate(args);
+    },
+    [mutate],
+  );
 }

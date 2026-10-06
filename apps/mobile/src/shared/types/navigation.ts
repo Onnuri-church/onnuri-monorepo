@@ -17,7 +17,6 @@ export type RootStackParamList = {
   QtBoardDetail: { id: string };
   // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (상세의 ⋮ > 수정하기에서 진입).
   QtBoardWrite: { id: string } | undefined;
-  Live: undefined;
   Qr: undefined;
   // QR을 찍은 뒤 보는 결과. duplicate면 "이미 출석했다" 안내로 바뀐다 —
   // 두 화면이 배치가 같고 아이콘·문구·카드 행만 달라서 라우트를 나누지 않는다.
@@ -25,7 +24,8 @@ export type RootStackParamList = {
   // 말씀 탭에서 카드를 눌러 들어가는 설교영상 상세. 탭 밖으로 push된다.
   SermonDetail: { id: string };
   Bulletin: undefined;
-  DepartmentActivity: undefined;
+  // teamId를 주면 그 팀으로 필터된 채 열린다 (팀 상세의 "OO팀 게시판" 진입).
+  DepartmentActivity: { teamId?: string } | undefined;
   DepartmentActivityDetail: { id: string };
   // postId가 있으면 그 글 수정, 없으면 새 글 작성.
   DepartmentActivityWrite: { postId: string } | undefined;
@@ -35,6 +35,10 @@ export type RootStackParamList = {
   // 마이페이지 "취향 소그룹" — 내가 신청·참여 중인 모임 목록.
   MyGroupMeetings: undefined;
   GroupMeetingDetail: { id: string };
+  // 상세 "사진 N장 모두 보기" — 월 묶음 그리드 (편집은 소그룹장·관리자).
+  GroupMeetingGallery: { meetingId: string };
+  // 상세 "참여 멤버" 행 — 승인된 멤버 전체 명단.
+  GroupMeetingMembers: { meetingId: string };
   GroupMeetingForm: { meetingId?: string };
   PrayerBoard: undefined;
   // 게시판 ⋮ 메뉴에서 들어가는 내 북마크 목록. 게시판과 화면이 비슷하지만 라우트를 나눈다 —
@@ -94,6 +98,8 @@ export type RootStackParamList = {
   GroupMeetingPhoto: { meetingId: string; index: number };
   // 메인 헤더 종 아이콘에서 진입하는 알림센터.
   Notifications: undefined;
+  // 프로필 사진 확대 보기 — null이면 기본 이미지를 크게 보여준다.
+  AvatarViewer: { imageUrl: string | null };
   // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
   NoticeList: undefined;
   NoticeDetail: { id: string };

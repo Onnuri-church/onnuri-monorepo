@@ -1,9 +1,11 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect } from "react";
+import { Alert } from "react-native";
 
 import { type ContextMenuItem } from "../../../shared/components/base/ContextMenu";
 import { Header } from "../../../shared/components/base/Header";
+import { useAuthStore } from "../../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../../shared/types/navigation";
 
 interface PrayerMenuProps {
@@ -25,16 +27,26 @@ export function PrayerMenu({ title, items }: PrayerMenuProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useLayoutEffect(() => {
+    // 두 화면 다 내 데이터라 게스트는 401 빈 화면만 만난다 — 이동 전에 안내한다
+    // (기도제목 북마크와 같은 패턴).
+    const goIfSignedIn = (screen: "PrayerMine" | "PrayerBookmarks") => {
+      const { session } = useAuthStore.getState();
+      if (session.status !== "authenticated") {
+        Alert.alert("로그인이 필요해요", "내 기도제목은 로그인 후 볼 수 있어요.");
+        return;
+      }
+      navigation.navigate(screen);
+    };
     const defaultItems: ContextMenuItem[] = [
       {
         icon: "user",
         label: "내 기도제목 보기",
-        onPress: () => navigation.navigate("PrayerMine"),
+        onPress: () => goIfSignedIn("PrayerMine"),
       },
       {
         icon: "bookmark",
         label: "저장한 기도제목",
-        onPress: () => navigation.navigate("PrayerBookmarks"),
+        onPress: () => goIfSignedIn("PrayerBookmarks"),
       },
     ];
 

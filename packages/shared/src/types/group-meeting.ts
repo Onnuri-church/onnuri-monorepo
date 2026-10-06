@@ -25,6 +25,8 @@ export interface GroupMeetingPhoto {
   url: string;
   /** 사진 위에 겹쳐 보여줄 설명 (예: "여름 수련회 찬양 · 7월") */
   caption: string | null;
+  /** 갤러리 월 묶음 라벨 (예: "2026년 7월") — 촬영일이 없으면 null */
+  monthLabel: string | null;
 }
 
 export interface GroupMeetingComment {
@@ -34,6 +36,8 @@ export interface GroupMeetingComment {
   /** 작성 시각(ISO) — "2분 전"은 앱이 계산한다 (캐시에 굳지 않게) */
   createdAt: string;
   content: string;
+  /** 내 댓글 여부 — 삭제 버튼 노출 기준 (서버 삭제 권한도 작성자 본인만) */
+  isMine: boolean;
 }
 
 export interface GroupMeetingMember {
@@ -41,6 +45,11 @@ export interface GroupMeetingMember {
   id: string;
   name: string;
   avatarUrl: string | null;
+}
+
+/** 참여멤버 전체 보기 행 — 승인된 멤버만, 소그룹장 표시 포함 */
+export interface GroupMeetingMemberDetail extends GroupMeetingMember {
+  isLeader: boolean;
 }
 
 /** GET /group-meetings/mine 응답 항목 — 마이페이지 "취향 소그룹"(내가 속한 모임 목록) */
@@ -65,6 +74,8 @@ export interface GroupMeetingDetail extends GroupMeeting {
   place: string;
   cost: string;
   leaders: GroupMeetingMember[];
+  /** 승인된 참여 멤버 전체 (참여멤버 보기 화면) — 소그룹장 포함, 가입순 */
+  members: GroupMeetingMemberDetail[];
   photos: GroupMeetingPhoto[];
   /** photos에 다 담기지 않은 것까지 포함한 전체 장수 */
   photoCount: number;

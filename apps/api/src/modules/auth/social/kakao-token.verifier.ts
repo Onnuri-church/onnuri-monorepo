@@ -17,7 +17,7 @@ interface KakaoMe {
   id: number;
   kakao_account?: {
     email?: string;
-    profile?: { nickname?: string };
+    profile?: { nickname?: string; profile_image_url?: string };
   };
 }
 
@@ -112,6 +112,7 @@ export class KakaoTokenVerifier {
       providerUid: String(me.id),
       email: me.kakao_account?.email ?? null,
       name: me.kakao_account?.profile?.nickname ?? null,
+      avatarUrl: me.kakao_account?.profile?.profile_image_url ?? null,
     };
   }
 

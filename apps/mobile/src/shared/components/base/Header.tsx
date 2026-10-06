@@ -27,7 +27,8 @@ interface SubHeaderProps {
    * 우측 버튼. "home"이면 메인 탭으로 돌아간다. "export"면 공유 버튼(주보 상세 등),
    * "bookmark"면 저장 버튼(기도제목 상세), "text"면 아이콘 대신 문구 버튼(팀원 추가의 "완료" 등).
    * "none"이면 버튼 없이 자리만 비운다 (타이틀이 가운데 유지되도록 아이콘과 같은 폭).
-   * 기본값은 더보기(⋮).
+   * 기본값은 더보기(⋮) — 단, 누를 수 없는 아이콘은 그리지 않는다: ⋮는 menuItems가,
+   * 공유는 onPressShare가 있을 때만 나온다 (안 넘기고 등록한 화면에 죽은 버튼이 떠 있었다).
    */
   rightAction?: "more" | "home" | "export" | "bookmark" | "text" | "none";
   /** rightAction이 "text"일 때 그릴 문구 (예: "완료", "편집"). */
@@ -95,9 +96,11 @@ export function Header(props: HeaderProps) {
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
           <Icon name="back" size={28} color={colors.icon.strong} />
         </Pressable>
-        <Pressable onPress={props.onPressShare} hitSlop={8}>
-          <Icon name="export" size={28} color={colors.icon.strong} />
-        </Pressable>
+        {props.onPressShare && (
+          <Pressable onPress={props.onPressShare} hitSlop={8}>
+            <Icon name="export" size={28} color={colors.icon.strong} />
+          </Pressable>
+        )}
       </View>
     );
   }
@@ -155,9 +158,13 @@ export function Header(props: HeaderProps) {
                     <Icon name="home" size={28} color={colors.icon.strong} />
                   </Pressable>
               ) : props.rightAction === "export" ? (
-                  <Pressable onPress={props.onPressShare} hitSlop={8}>
-                    <Icon name="export" size={28} color={colors.icon.strong} />
-                  </Pressable>
+                  props.onPressShare ? (
+                      <Pressable onPress={props.onPressShare} hitSlop={8}>
+                        <Icon name="export" size={28} color={colors.icon.strong} />
+                      </Pressable>
+                  ) : (
+                      <View className="w-7" />
+                  )
               ) : props.rightAction === "bookmark" ? (
                   <Pressable onPress={props.onPressBookmark} hitSlop={8}>
                     <Icon
@@ -172,10 +179,12 @@ export function Header(props: HeaderProps) {
                   </Pressable>
               ) : props.rightAction === "none" ? (
                   <View className="w-7" />
-              ) : (
+              ) : props.menuItems?.length ? (
                   <Pressable ref={moreButtonRef} onPress={openMenu} hitSlop={8}>
                     <Icon name="more" size={28} color={colors.icon.strong} />
                   </Pressable>
+              ) : (
+                  <View className="w-7" />
               )}
               {props.menuItems && (
                   <ContextMenu

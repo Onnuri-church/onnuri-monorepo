@@ -26,12 +26,20 @@ export function SearchBar({ value, onChangeText, placeholder, onSubmit }: Search
         onSubmitEditing={onSubmit}
         returnKeyType="search"
       />
-      <Pressable
-        className="h-12 w-12 items-center justify-center rounded-full active:opacity-60"
-        onPress={onSubmit}
-      >
-        <Icon name="search" size={24} color={colors.icon.strong} />
-      </Pressable>
+      {/* 사용처 대부분이 입력 즉시 거르는 방식이라 onSubmit이 없다 — 그때는 눌리는
+          버튼이 아니라 장식 아이콘으로만 둔다 (눌러도 아무 일 없는 버튼을 만들지 않는다). */}
+      {onSubmit ? (
+        <Pressable
+          className="h-12 w-12 items-center justify-center rounded-full active:opacity-60"
+          onPress={onSubmit}
+        >
+          <Icon name="search" size={24} color={colors.icon.strong} />
+        </Pressable>
+      ) : (
+        <View className="h-12 w-12 items-center justify-center">
+          <Icon name="search" size={24} color={colors.icon.strong} />
+        </View>
+      )}
     </View>
   );
 }

@@ -32,9 +32,9 @@ export function TeamStoryDetailScreen() {
     navigation.navigate("TeamMemberList", { teamId: params.teamId });
   const handleViewAllPhotosPress = () =>
     navigation.navigate("TeamStoryGallery", { teamId: params.teamId });
-  // 팀 게시판은 부서활동 게시판이다 (기획 확인). 해당 팀으로 필터된 화면이 맞지만
-  // 필터는 별도 티켓이라 우선 목록 전체를 연다.
-  const handleBoardPress = () => navigation.navigate("DepartmentActivity");
+  // 팀 게시판은 부서활동 게시판이다 (기획 확인) — 이 팀으로 필터된 채 연다.
+  const handleBoardPress = () =>
+    navigation.navigate("DepartmentActivity", { teamId: params.teamId });
 
   return (
     <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="px-5 pb-10">

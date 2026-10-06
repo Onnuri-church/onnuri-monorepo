@@ -71,6 +71,9 @@ export function NotificationScreen() {
       case "qt":
         navigation.navigate("QtBoardDetail", { id: first });
         break;
+      case "sermon":
+        navigation.navigate("SermonDetail", { id: first });
+        break;
       case "prayer":
         navigation.navigate("PrayerBoardDetail", { id: first });
         break;

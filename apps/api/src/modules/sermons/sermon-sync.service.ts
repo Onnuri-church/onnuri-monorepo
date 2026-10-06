@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 
 import { type AppConfig } from '../../config/configuration';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { parseSermonTitle } from './youtube-title';
 
@@ -59,6 +60,7 @@ export class SermonSyncService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
     config: ConfigService<AppConfig, true>,
   ) {
     this.apiKey = config.get('youtube', { infer: true }).apiKey;
@@ -139,6 +141,12 @@ export class SermonSyncService {
           startsAt: sermon.startsAt,
         },
       });
+      // 알림 전환 판단용 — upsert 전의 라이브 상태를 기억해 둔다.
+      const existing = await this.prisma.sermon.findUnique({
+        where: { serviceId: service.id },
+        select: { isLive: true, deletedAt: true },
+      });
+
       // deletedAt은 건드리지 않는다 — 관리자가 지운 영상이 다음 주기에 되살아나면 안 된다.
       const data = {
         title: sermon.title,
@@ -149,12 +157,57 @@ export class SermonSyncService {
         isLive: sermon.isLive,
         viewCount: sermon.viewCount,
       };
-      await this.prisma.sermon.upsert({
+      const saved = await this.prisma.sermon.upsert({
         where: { serviceId: service.id },
         update: data,
         create: { serviceId: service.id, ...data },
+        select: { id: true },
       });
+
+      await this.notifyIfNeeded(sermon, existing, saved.id);
     }
+  }
+
+  // 설교 알림 — 설정 토글(실시간 예배 시작 / 말씀영상 업로드)과 1:1. 상태 전환에서만 보내서
+  // 5분 주기가 반복돼도 같은 영상에 같은 종류는 한 번만 나간다.
+  //  - 라이브 시작: 설교가 live로 처음 등장하거나 live로 바뀜
+  //  - 영상 업로드: VOD로 처음 등장하거나, 라이브가 끝나 VOD가 됨(놓친 사람용 다시보기)
+  private async notifyIfNeeded(
+    sermon: { title: string; startsAt: Date; isLive: boolean },
+    existing: { isLive: boolean; deletedAt: Date | null } | null,
+    sermonId: string,
+  ): Promise<void> {
+    // 관리자가 지운 영상은 조용히 둔다. 첫 가동·빈 DB에 과거분이 쏟아질 때의
+    // 알림 폭탄도 막는다 — 방송 시작 3일이 지난 영상은 새 소식이 아니다.
+    if (existing?.deletedAt) return;
+    if (Date.now() - sermon.startsAt.getTime() > 3 * DAY_MS) return;
+
+    const liveStarted = sermon.isLive && (!existing || !existing.isLive);
+    const uploaded = !sermon.isLive && (!existing || existing.isLive);
+    if (!liveStarted && !uploaded) return;
+
+    // 전 회원 대상 — 탈퇴자 제외 (공지와 같은 규칙). 토글을 끈 사람은
+    // notifications.service가 푸시만 건너뛰고 알림센터에는 남긴다.
+    const users = await this.prisma.user.findMany({
+      where: { withdrawnAt: null },
+      select: { id: true },
+    });
+    await this.notifications.notify(
+      users.map((user) => user.id),
+      liveStarted
+        ? {
+            type: 'LIVE_START',
+            title: '실시간 예배',
+            body: `실시간 예배가 시작됐어요: ${sermon.title}`,
+            linkUrl: `sermon/${sermonId}`,
+          }
+        : {
+            type: 'SERMON_UPLOAD',
+            title: '말씀영상',
+            body: `새 말씀영상이 올라왔어요: ${sermon.title}`,
+            linkUrl: `sermon/${sermonId}`,
+          },
+    );
   }
 
   private async get<T>(

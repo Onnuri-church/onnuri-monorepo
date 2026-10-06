@@ -21,6 +21,7 @@ import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingP
 import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
 import { NoticeListScreen } from "../features/notice/NoticeListScreen";
 import { NotificationScreen } from "../features/notification/NotificationScreen";
+import { AvatarViewerScreen } from "../features/profile/AvatarViewerScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
@@ -39,8 +40,9 @@ import { TeamBoardManageScreen } from "../features/department-activity/TeamBoard
 import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
 import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
+import { GroupMeetingGalleryScreen } from "../features/group-meeting/GroupMeetingGalleryScreen";
+import { GroupMeetingMemberListScreen } from "../features/group-meeting/GroupMeetingMemberListScreen";
 import { MyGroupMeetingScreen } from "../features/group-meeting/MyGroupMeetingScreen";
-import { LiveScreen } from "../features/live/LiveScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
@@ -170,14 +172,6 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title="주보/나눔지 업로드" rightAction="none" />,
             }}
           />
-          <Stack.Screen
-            name="Live"
-            component={LiveScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title="실시간 예배" />,
-            }}
-          />
           {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}
           <Stack.Screen
             name="Qr"
@@ -291,6 +285,20 @@ export function RootNavigator() {
             name="GroupMeetingDetail"
             component={GroupMeetingDetailScreen}
             options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (우측 편집/완료가 선택 모드에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="GroupMeetingGallery"
+            component={GroupMeetingGalleryScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="GroupMeetingMembers"
+            component={GroupMeetingMemberListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="참여멤버" rightAction="home" />,
+            }}
           />
           {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서
               navigation.setOptions로 넘기는 쪽이 맞다. */}
@@ -443,6 +451,12 @@ export function RootNavigator() {
               headerShown: true,
               header: () => <Header variant="sub" title="" rightAction="none" />,
             }}
+          />
+          {/* 프로필 사진 확대 보기 — 뒤 화면이 비치는 투명 모달. 헤더 없이 탭으로 닫는다. */}
+          <Stack.Screen
+            name="AvatarViewer"
+            component={AvatarViewerScreen}
+            options={{ presentation: "transparentModal", animation: "fade" }}
           />
           <Stack.Screen
             name="NoticeList"

@@ -109,9 +109,8 @@ export function CellNewsWriteScreen() {
             <Button
               label={isEditing ? "저장하기" : "등록하기"}
               onPress={handleSubmitPress}
-              disabled={
-                title.trim().length === 0 || content.trim().length === 0 || saving || uploading
-              }
+              disabled={title.trim().length === 0 || content.trim().length === 0}
+              loading={saving || uploading}
             />
           </View>
         </ScrollView>

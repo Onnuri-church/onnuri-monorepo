@@ -11,6 +11,7 @@ import type {
 } from '@onnuri/shared';
 
 import { pad } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { AddPhotosDto } from './dto/add-photos.dto';
@@ -18,6 +19,12 @@ import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 
 // "7/1 ~ 7/28" — 모집 기간 표시 (시안 카드·상세). @db.Date라 UTC 기준으로 읽는다.
+// 갤러리 월 묶음 라벨 — "2026년 7월". takenOn이 없으면 묶을 수 없어 null.
+function toPhotoMonthLabel(takenOn: Date | null): string | null {
+  if (!takenOn) return null;
+  return `${takenOn.getUTCFullYear()}년 ${takenOn.getUTCMonth() + 1}월`;
+}
+
 function toPeriodLabel(start: Date | null, end: Date | null): string {
   const part = (date: Date) => `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
   if (!start && !end) return '';
@@ -31,6 +38,7 @@ export class GroupMeetingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async findAll(): Promise<GroupMeeting[]> {
@@ -133,8 +141,13 @@ export class GroupMeetingsService {
             images: {
               // 활동 사진 = 직접 업로드(GALLERY). POST_CONTENT는 옛 계약 호환으로 남긴다.
               where: { kind: { in: ['GALLERY', 'POST_CONTENT'] } },
-              select: { id: true, url: true },
-              orderBy: { createdAt: 'desc' },
+              select: { id: true, url: true, takenOn: true },
+              // 갤러리 월 묶음이 takenOn 기준이라 정렬도 takenOn — createdAt 순이면
+              // 글 사진(takenOn=활동일)이 끼어들 때 같은 달이 여러 묶음으로 쪼개진다.
+              orderBy: [
+                { takenOn: { sort: 'desc', nulls: 'last' } },
+                { createdAt: 'desc' },
+              ],
             },
             comments: {
               where: { deletedAt: null },
@@ -142,6 +155,7 @@ export class GroupMeetingsService {
                 id: true,
                 content: true,
                 createdAt: true,
+                authorId: true,
                 author: { select: { name: true, avatarUrl: true } },
               },
               orderBy: { createdAt: 'asc' },
@@ -197,11 +211,21 @@ export class GroupMeetingsService {
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
       leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
+      // 참여멤버 보기 화면용 전체 명단 — 소그룹장 먼저(시안 첫 행), 그 안에서는 가입순.
+      members: [...approved]
+        .sort((a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'))
+        .map((m) => ({
+          id: m.userId,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+          isLeader: m.role === 'LEADER',
+        })),
       // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
       photos: group.post.images.map((image) => ({
         id: image.id,
         url: image.url,
         caption: null,
+        monthLabel: toPhotoMonthLabel(image.takenOn),
       })),
       photoCount: group.post.images.length,
       comments: group.post.comments.map((comment) => ({
@@ -210,6 +234,7 @@ export class GroupMeetingsService {
         authorAvatarUrl: comment.author.avatarUrl,
         createdAt: comment.createdAt.toISOString(),
         content: comment.content,
+        isMine: userId !== undefined && comment.authorId === userId,
       })),
       myStatus: mine?.status ?? null,
       canManage,
@@ -337,7 +362,7 @@ export class GroupMeetingsService {
   async join(userId: string, id: string): Promise<GroupMeetingDetail> {
     const group = await this.prisma.hobbyGroup.findFirst({
       where: { postId: id, post: { deletedAt: null } },
-      select: { status: true, recruitEnd: true },
+      select: { status: true, recruitEnd: true, post: { select: { title: true } } },
     });
     if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
     if (this.toStatus(group) === 'closed') {
@@ -359,6 +384,26 @@ export class GroupMeetingsService {
       update: { status: 'PENDING' },
       create: { postId: id, userId },
     });
+
+    // 승인할 사람(소그룹장)에게 알림 — 안 보내면 상세에 들어가 볼 때까지 신청이 묵는다.
+    // 관리자 전체에게는 보내지 않는다 (승인은 소그룹장 몫, 관리자는 보조 권한).
+    const [leaders, applicant] = await Promise.all([
+      this.prisma.hobbyGroupMember.findMany({
+        where: { postId: id, role: 'LEADER' },
+        select: { userId: true },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    ]);
+    await this.notifications.notify(
+      leaders.map((leader) => leader.userId).filter((leaderId) => leaderId !== userId),
+      {
+        type: 'GROUP_MEETING',
+        title: '취향 소그룹',
+        body: `${applicant?.name ?? '회원'}님이 "${group.post.title}" 참여를 신청했어요`,
+        linkUrl: `group-meeting/${id}`,
+      },
+    );
+
     return this.findOne(id, userId);
   }
 
@@ -398,6 +443,23 @@ export class GroupMeetingsService {
       where: { postId_userId: { postId: id, userId: targetUserId } },
       data: { status },
     });
+
+    // 결과를 신청자에게 알림 — 안 보내면 앱을 다시 열어볼 때까지 결과를 모른다.
+    // (거절은 상세의 거절 안내 배너와 짝을 이룬다 — 탭하면 그 화면으로 간다.)
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+    await this.notifications.notify([targetUserId], {
+      type: 'GROUP_MEETING',
+      title: '취향 소그룹',
+      body:
+        status === 'APPROVED'
+          ? `"${post?.title ?? '소그룹'}" 참여가 승인됐어요`
+          : `"${post?.title ?? '소그룹'}" 신청이 이번에는 승인되지 않았어요`,
+      linkUrl: `group-meeting/${id}`,
+    });
+
     return this.findOne(id, requesterId);
   }
 

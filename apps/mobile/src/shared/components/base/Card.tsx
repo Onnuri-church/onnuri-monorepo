@@ -18,8 +18,11 @@ interface CardProps {
   className?: string;
   /** 그리드가 계산한 폭 등, 클래스로 표현할 수 없는 값 지정용. */
   style?: StyleProp<ViewStyle>;
-  /** 상단 썸네일. 없으면 본문만 렌더링된다. */
+  /** 상단 썸네일. 없으면 본문만 렌더링된다 (imageFallback을 주지 않는 한). */
   imageSource?: ImageSourcePropType;
+  /** 썸네일이 없을 때 이미지 영역 가운데에 대신 그릴 내용(기본 이미지·워터마크).
+      주면 사진이 없어도 썸네일 영역이 비율대로 유지돼 그리드의 카드 높이가 들쭉날쭉해지지 않는다. */
+  imageFallback?: ReactNode;
   /** 썸네일 좌상단에 겹쳐 놓을 요소(예: <Chip color="open" text="모집중" />). 자리만 잡아주고 모양은 관여하지 않는다. */
   badge?: ReactNode;
   /** 마감 등 비활성 표시 — 카드 전체를 흐리게 한다. */
@@ -34,6 +37,7 @@ export function Card({
   className,
   style,
   imageSource,
+  imageFallback,
   badge,
   dimmed,
   onPress,
@@ -50,11 +54,18 @@ export function Card({
 
   return (
     <Container className={containerClassName} style={style} onPress={onPress}>
-      {imageSource && (
-        <View className="bg-text-assistive" style={{ aspectRatio: IMAGE_ASPECT_RATIO }}>
-          {/* 퍼센트 사이즈(h-full)는 웹에서 부모 높이 계산에 따라 어긋날 수 있어 절대 채움으로 고정.
-              cover는 비율을 유지한 채 사진 중앙을 기준으로 잘라낸다 (RN 기본 정렬이 중앙). */}
-          <Image source={imageSource} style={StyleSheet.absoluteFill} resizeMode="cover" />
+      {(imageSource || imageFallback) && (
+        <View
+          className={imageSource ? "bg-text-assistive" : "bg-background-assistive"}
+          style={{ aspectRatio: IMAGE_ASPECT_RATIO }}
+        >
+          {imageSource ? (
+            /* 퍼센트 사이즈(h-full)는 웹에서 부모 높이 계산에 따라 어긋날 수 있어 절대 채움으로 고정.
+               cover는 비율을 유지한 채 사진 중앙을 기준으로 잘라낸다 (RN 기본 정렬이 중앙). */
+            <Image source={imageSource} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          ) : (
+            <View className="flex-1 items-center justify-center">{imageFallback}</View>
+          )}
           {badge && <View className="absolute left-3 top-3">{badge}</View>}
         </View>
       )}

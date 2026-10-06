@@ -109,17 +109,20 @@ describe('Auth (e2e)', () => {
               providerUid: 'kakao-uid-1',
               email: MINSU_EMAIL,
               name: '민수',
+              avatarUrl: null,
             },
             'kakao-noemail': {
               providerUid: 'kakao-uid-2',
               email: null,
               name: '이메일미동의',
+              avatarUrl: null,
             },
             // 같은 계정(uid-2)이 동의항목 심사 통과 후 이메일을 제공하기 시작한 상황
             'kakao-noemail-later': {
               providerUid: 'kakao-uid-2',
               email: `later@${EMAIL_DOMAIN}`,
               name: '이메일미동의',
+              avatarUrl: null,
             },
           },
           { 'valid-kakao-code': 'kakao-minsu' },
@@ -132,6 +135,7 @@ describe('Auth (e2e)', () => {
             providerUid: 'google-uid-1',
             email: MINSU_EMAIL,
             name: 'Minsu',
+            avatarUrl: null,
           },
         }),
       )

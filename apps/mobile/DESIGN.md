@@ -98,7 +98,7 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 * Header는 `shared/components/base/Header.tsx`에 구현, 두 variant로 나뉜다 (Figma 확정):
   * `variant="main"` — 메인 탭 화면에 공통 적용. `BottomTabNavigator`의 `screenOptions.header`로 적용.
   * `variant="sub"` — 탭 밖에서 push되는 화면용. `RootNavigator`의 각 `Stack.Screen options.header`로 적용 (반드시 `headerShown: true`도 같이 줘야 렌더링됨 — `headerShown: false`가 있으면 `header` 함수를 줘도 아예 안 그려짐).
-    * 우측 버튼은 `rightAction`으로 고른다: `more`(기본, 더보기 ⋮) · `home`(메인 탭으로) · `export`(공유, 주보·나눔지 상세) · `none`(버튼 없이 자리만 비워 타이틀을 가운데 유지). 시안에 없는 새 동작이 필요하면 화면에서 따로 그리지 말고 여기에 값을 추가한다.
+    * 우측 버튼은 `rightAction`으로 고른다: `more`(기본, 더보기 ⋮) · `home`(메인 탭으로) · `export`(공유) · `none`(버튼 없이 자리만 비워 타이틀을 가운데 유지). 시안에 없는 새 동작이 필요하면 화면에서 따로 그리지 말고 여기에 값을 추가한다. **누를 수 없는 아이콘은 그려지지 않는다** — ⋮는 `menuItems`가, 공유는 `onPressShare`가 있을 때만 나온다(2026-10-06: 핸들러 없이 등록된 화면들에 죽은 버튼이 떠 있던 문제의 재발 방지).
     * ⋮ 드롭다운은 `menuItems`(ContextMenuItem 배열)로 헤더가 직접 연다. 메뉴 위치는 상수로 두지 않고 ⋮ 버튼을 `measureInWindow`로 실측해 그 아래에 붙인다 — 헤더 높이·아이콘 크기가 바뀌어도 따라온다. **헤더 정의는 화면당 정확히 한 곳**: 항목이 고정이면 RootNavigator 등록부에서 넘기고, 화면 데이터에 의존하면(예: 내 글일 때만 ⋮ — QtBoardDetail) 화면이 `useLayoutEffect`+`setOptions`로 헤더를 단독 등록하고 등록부에는 `headerShown: true`만 둔다.
 * **화면 트리는 `RootNavigator` 한 곳에서만 분기한다.** `useAuthStore`의 `session.status`를 보고 `authenticated`·`guest`면 메인 스택을, `unauthenticated`면 `AuthStack`을 그린다. 개별 화면에서 세션 체크 후 조건부 push하지 않는다. (상태값 정의와 게스트가 못 하는 동작은 [ARCHITECTURE.md](../../ARCHITECTURE.md)의 Access Model 참고.)
   * 준비가 끝나기 전(`loading`)에는 스플래시가 `NavigationContainer` **바깥에서** 트리를 통째로 대신한다. 스크린으로 등록하지 않는다 — 뒤로가기 대상이 되면 안 되고 네비게이션도 쓰지 않기 때문이다. 온보딩처럼 화면이 여러 장 붙으면 그때 별도 `Stack`으로 올린다.

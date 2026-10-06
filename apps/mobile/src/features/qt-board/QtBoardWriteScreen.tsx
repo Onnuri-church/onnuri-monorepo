@@ -122,7 +122,7 @@ export function QtBoardWriteScreen () {
 
                     <View className="mt-16">
                         {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
-                        <Button label="등록하기" onPress={handleSubmitPress} disabled={!canSubmit || isPending}/>
+                        <Button label="등록하기" onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending}/>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>
