@@ -1,13 +1,11 @@
 import type { MeResponse } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import * as ImagePicker from "expo-image-picker";
-import { useRef, useState } from "react";
-import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
+import { Avatar } from "../../shared/components/base/Avatar";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
@@ -15,8 +13,7 @@ import { signOut } from "../../shared/api/session";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { uploadImage } from "../../shared/api/upload";
-import { fetchMe, patchMyAvatar } from "../profile/api";
+import { fetchMe } from "../profile/api";
 import { useMyStats } from "./api";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
 import { ProfileInfoCard } from "./components/ProfileInfoCard";
@@ -101,58 +98,11 @@ export function MyPageScreen() {
     { label: "받은하트", value: myStats?.receivedHearts ?? 0 },
   ];
 
-  // 아바타 탭 → 사진 선택 → 업로드 → 저장. 정사각 크롭은 시스템 피커의 편집 화면에 맡긴다.
-  const queryClient = useQueryClient();
-  const [avatarUploading, setAvatarUploading] = useState(false);
-  const avatarSheetRef = useRef<AppSheetRef>(null);
-
-  // 사진이 이미 있으면 시트에서 고르고(변경/기본 이미지), 없으면 바로 앨범을 연다 —
-  // 선택지가 하나뿐일 때 시트를 띄우는 건 손만 늘리는 일이라서다.
+  // 아바타 탭 → 확대 보기 (2026-10-07 확정: 마이페이지는 보기 전용, 사진 변경은
+  // 설정 > 회원 정보 수정의 아바타 편집기에서만).
   const handleAvatarPress = () => {
-    if (!me || avatarUploading) return;
-    if (me.avatarUrl) {
-      avatarSheetRef.current?.open();
-    } else {
-      void handleAvatarPickPress();
-    }
-  };
-
-  const handleAvatarPickPress = async () => {
-    avatarSheetRef.current?.close();
-    if (!me || avatarUploading) return;
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      quality: 0.8,
-      allowsEditing: true,
-      aspect: [1, 1],
-    });
-    if (result.canceled) return;
-    setAvatarUploading(true);
-    try {
-      const url = await uploadImage(result.assets[0].uri);
-      await patchMyAvatar(url);
-      // 다른 화면(셀원 목록·댓글 등)의 아바타는 각자 쿼리라 다음 조회 때 따라온다.
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
-    } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
-    } finally {
-      setAvatarUploading(false);
-    }
-  };
-
-  // 기본 이미지로 변경 — 창고의 옛 파일도 서버가 그 자리에서 지운다.
-  const handleAvatarResetPress = async () => {
-    avatarSheetRef.current?.close();
-    if (!me || avatarUploading) return;
-    setAvatarUploading(true);
-    try {
-      await patchMyAvatar(null);
-      await queryClient.invalidateQueries({ queryKey: ["me"] });
-    } catch {
-      Alert.alert("변경 실패", "잠시 후 다시 시도해주세요.");
-    } finally {
-      setAvatarUploading(false);
-    }
+    if (!me) return;
+    navigation.navigate("AvatarViewer", { imageUrl: me.avatarUrl });
   };
 
   // /users/me가 오기 전까지는 세션의 유저(로그인 응답)로 이름을 먼저 그린다.
@@ -204,8 +154,7 @@ export function MyPageScreen() {
       >
         {/* 상단 액션 바 — 이 화면은 main 헤더(로고+앱 이름) 대신 알림·설정 아이콘만 쓴다 (시안). */}
         <View className="mt-7 flex-row justify-end gap-2">
-          {/* TODO(라우트): 알림 화면 미정 — 생기면 연결 */}
-          <Pressable>
+          <Pressable onPress={() => navigation.navigate("Notifications")}>
             <Icon name="bell" size={28} color={colors.icon.strong} />
           </Pressable>
           <Pressable onPress={() => navigation.navigate("Settings")}>
@@ -215,24 +164,14 @@ export function MyPageScreen() {
 
         {/* 프로필 영역 */}
         <View className="mt-5 items-center">
-          {/* 탭하면 사진 변경 — 우하단 연필 뱃지가 그 표시다. 게스트는 me가 없어 눌리지 않는다. */}
+          {/* 탭하면 확대 보기 — 변경이 아니라서 연필 뱃지는 두지 않는다. 게스트는 me가 없어 눌리지 않는다. */}
           <Pressable
             onPress={handleAvatarPress}
-            disabled={!me || avatarUploading}
+            disabled={!me}
             style={({ pressed }) => (pressed ? { opacity: 0.8 } : null)}
           >
-            {me?.avatarUrl ? (
-              <Image source={{ uri: me.avatarUrl }} className="h-25 w-25 rounded-full" />
-            ) : (
-              <View className="h-25 w-25 items-center justify-center rounded-full bg-background-normal">
-                <Icon name="user" size={48} />
-              </View>
-            )}
-            {me && (
-              <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full border border-background-assistive bg-background-normal">
-                <Icon name="edit" size={14} color={colors.icon.normal} />
-              </View>
-            )}
+            {/* 사진 없을 때의 기본 이미지는 Avatar가 그린다 (OY 심볼 — 온보딩·댓글과 통일) */}
+            <Avatar imageUrl={me?.avatarUrl} size={100} />
           </Pressable>
           <Text className="mt-2.5 text-center text-title text-text-normal">
             {name}님,{"\n"}안녕하세요!
@@ -258,7 +197,12 @@ export function MyPageScreen() {
           <MenuLinkCard
             links={[
               // 내가 신청·참여 중인 모임 모아보기 — 게시판에서 매번 찾지 않게 하는 지름길.
-              { label: "취향 소그룹", onPress: () => navigation.navigate("MyGroupMeetings") },
+              // 관리자는 소그룹에 참여하지 않으므로 빈 "내 소그룹" 대신 게시판(관리 분기)으로 간다.
+              {
+                label: "취향 소그룹",
+                onPress: () =>
+                  navigation.navigate(role === "admin" ? "GroupMeeting" : "MyGroupMeetings"),
+              },
               { label: "공지사항", onPress: () => navigation.navigate("NoticeList") },
             ]}
           />
@@ -269,41 +213,6 @@ export function MyPageScreen() {
         </Pressable>
       </ScrollView>
 
-      {/* 프로필 사진 변경 시트 — 사진이 있을 때만 열린다 (SelectField 시트와 같은 결) */}
-      <AppSheet
-        ref={avatarSheetRef}
-        footer={
-          <View className="bg-background-normal px-4 pb-4">
-            <View className="border-t-2 border-background-assistive" />
-            <Pressable
-              onPress={() => avatarSheetRef.current?.close()}
-              className="pt-4"
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-            >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
-            </Pressable>
-          </View>
-        }
-      >
-        <View className="gap-6 p-4 pb-9">
-          <Pressable
-            onPress={() => void handleAvatarPickPress()}
-            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-          >
-            <Text className="text-center text-body-medium text-text-normal">
-              앨범에서 사진 선택
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => void handleAvatarResetPress()}
-            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-          >
-            <Text className="text-center text-body-medium text-semantic-danger">
-              기본 이미지로 변경
-            </Text>
-          </Pressable>
-        </View>
-      </AppSheet>
     </View>
   );
 }

@@ -21,6 +21,7 @@ import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingP
 import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
 import { NoticeListScreen } from "../features/notice/NoticeListScreen";
 import { NotificationScreen } from "../features/notification/NotificationScreen";
+import { AvatarViewerScreen } from "../features/profile/AvatarViewerScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
@@ -450,6 +451,12 @@ export function RootNavigator() {
               headerShown: true,
               header: () => <Header variant="sub" title="" rightAction="none" />,
             }}
+          />
+          {/* 프로필 사진 확대 보기 — 뒤 화면이 비치는 투명 모달. 헤더 없이 탭으로 닫는다. */}
+          <Stack.Screen
+            name="AvatarViewer"
+            component={AvatarViewerScreen}
+            options={{ presentation: "transparentModal", animation: "fade" }}
           />
           <Stack.Screen
             name="NoticeList"

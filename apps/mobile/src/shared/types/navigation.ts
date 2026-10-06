@@ -98,6 +98,8 @@ export type RootStackParamList = {
   GroupMeetingPhoto: { meetingId: string; index: number };
   // 메인 헤더 종 아이콘에서 진입하는 알림센터.
   Notifications: undefined;
+  // 프로필 사진 확대 보기 — null이면 기본 이미지를 크게 보여준다.
+  AvatarViewer: { imageUrl: string | null };
   // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
   NoticeList: undefined;
   NoticeDetail: { id: string };
