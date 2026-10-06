@@ -2,7 +2,9 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
+
+import { useAuthStore } from "../../shared/store/useAuthStore";
 
 import { fetchQtShares } from "./api";
 import { QtPostCard } from "./components/QtPostCard";
@@ -37,6 +39,12 @@ export function QtBoardScreen() {
   };
 
   const handleWritePress = () => {
+    // 게스트는 작성까지 다 한 뒤 등록 실패를 만나게 된다 — 들어가기 전에 안내한다.
+    const { session } = useAuthStore.getState();
+    if (session.status !== "authenticated") {
+      Alert.alert("로그인이 필요해요", "글쓰기는 로그인 후 할 수 있어요.");
+      return;
+    }
     navigation.navigate("QtBoardWrite");
   };
 
