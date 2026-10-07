@@ -210,7 +210,36 @@ export class AdminAttendanceService {
       throw new NotFoundException('존재하지 않는 셀입니다.');
     }
 
-    return cells.map((cell) => ({
+    // 전체 보기에서는 어느 셀에도 속하지 않은 회원을 마지막 "셀 없음" 그룹으로 붙인다.
+    const noCellUsers =
+      scope === 'all'
+        ? await this.prisma.user.findMany({
+            where: {
+              withdrawnAt: null,
+              cellMemberships: { none: { endedAt: null, cell: { deletedAt: null } } },
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const noCellGroup = noCellUsers.length
+      ? [
+          {
+            id: 'no-cell',
+            name: '셀 없음',
+            members: noCellUsers
+              .map((user): MemberInfo => ({
+                id: user.id,
+                name: user.name,
+                role: null,
+                roleLabel: null,
+                cellId: null,
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name, 'ko')),
+          },
+        ]
+      : [];
+
+    const cellGroups = cells.map((cell) => ({
       id: cell.id,
       name: cell.name,
       members: cell.memberships
@@ -241,5 +270,7 @@ export class AdminAttendanceService {
           return order(a) - order(b) || a.name.localeCompare(b.name, 'ko');
         }),
     }));
+
+    return [...cellGroups, ...noCellGroup];
   }
 }
