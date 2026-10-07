@@ -31,3 +31,36 @@ export interface AdminAttendanceResponse {
   dates: string[];
   groups: AdminAttendanceGroup[];
 }
+
+/** 모임 없는 날 종류 — 지정이 없는 일요일은 예배·셀모임 둘 다 있는 날 */
+export type OffDayKind = "WORSHIP_OFF" | "CELL_MEETING_OFF" | "BOTH_OFF";
+
+export interface AdminOffDay {
+  /** YYYY-MM-DD (일요일) */
+  date: string;
+  /** "10/4" */
+  label: string;
+  /** null = 지정 없음(모임 있는 날) */
+  kind: OffDayKind | null;
+}
+
+/** GET /admin/off-days?month= 응답 — 그 달의 일요일 전부 */
+export interface AdminOffDaysResponse {
+  month: string;
+  monthLabel: string;
+  days: AdminOffDay[];
+}
+
+/** PUT /admin/off-days/:date 요청 본문 — kind null이면 지정 해제 */
+export interface SetOffDayRequest {
+  kind: OffDayKind | null;
+  /** 지울 기존 출석 기록이 있을 때 확인을 받은 뒤 true로 다시 보낸다 */
+  confirm?: boolean;
+}
+
+/** PUT /admin/off-days/:date가 409로 돌려주는 본문 — 지정하면 삭제될 기록 수 */
+export interface OffDayConflictBody {
+  message: string;
+  worshipCount: number;
+  cellMeetingCount: number;
+}

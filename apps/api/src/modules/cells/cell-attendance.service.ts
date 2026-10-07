@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -25,6 +26,10 @@ export class CellAttendanceService {
   ): Promise<CellAttendanceResponse> {
     await this.assertCanManage(requesterId, cellId);
     const members = await this.findActiveMembers(cellId);
+    const offDay = await this.prisma.offDay.findUnique({
+      where: { date: new Date(date) },
+      select: { kind: true },
+    });
 
     // 그 날짜의 예배 회차가 아직 없으면(QR도 저장도 없던 주) 전원 미기록으로 내려준다.
     const service = await this.prisma.worshipService.findUnique({
@@ -52,6 +57,7 @@ export class CellAttendanceService {
 
     return {
       date,
+      offDay: offDay?.kind ?? null,
       members: members.map((member) => ({
         ...member,
         worship: worshipByUser.get(member.id) ?? false,
@@ -74,6 +80,17 @@ export class CellAttendanceService {
     const records = dto.records.filter((record) => memberIds.has(record.userId));
 
     const meetingDate = new Date(dto.date);
+    // 관리자가 지정한 모임 없는 날은 해당 쪽 기록을 받지 않는다 (둘 다 없으면 저장 자체를 거부).
+    const offDay = await this.prisma.offDay.findUnique({
+      where: { date: meetingDate },
+      select: { kind: true },
+    });
+    if (offDay?.kind === 'BOTH_OFF') {
+      throw new BadRequestException('예배와 셀모임이 모두 없는 날이라 출석을 저장할 수 없어요.');
+    }
+    const skipWorship = offDay?.kind === 'WORSHIP_OFF';
+    const skipMeeting = offDay?.kind === 'CELL_MEETING_OFF';
+
     await this.prisma.$transaction(async (tx) => {
       // 예배 회차·셀모임 행이 없으면 만든다 — 회차 관리 기능 전 임시 처리 (팔로워 노트와 동일).
       const service = await tx.worshipService.upsert({
@@ -88,8 +105,8 @@ export class CellAttendanceService {
       });
 
       for (const record of records) {
-        await this.applyWorship(tx, service.id, requesterId, record);
-        await this.applyMeeting(tx, meeting.id, requesterId, record);
+        if (!skipWorship) await this.applyWorship(tx, service.id, requesterId, record);
+        if (!skipMeeting) await this.applyMeeting(tx, meeting.id, requesterId, record);
       }
     });
 

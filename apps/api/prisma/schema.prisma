@@ -43,6 +43,13 @@ enum AttendanceMethod {
   MANUAL // 셀장/관리자가 출석 관리 화면에서 수동 기록
 }
 
+// 관리자가 지정하는 "모임 없는 날" 종류 — 지정이 없는 일요일은 예배·셀모임 둘 다 있는 날이다.
+enum OffDayKind {
+  WORSHIP_OFF // 예배 없음 (예배 칸 '-', QR 출석 거부)
+  CELL_MEETING_OFF // 셀모임 없음 (셀모임 칸 '-', 셀모임 출석 저장 거부) — 행사로 예배만 드리는 날 등
+  BOTH_OFF // 둘 다 없음
+}
+
 enum BoardType {
   QT_SHARE // 큐티나눔
   CELL_NEWS // 셀 소식 (cellId 필수)
@@ -257,6 +264,15 @@ model WorshipService {
   cellMeetings CellMeeting[]
   sermon       Sermon?
   images       Image[]
+}
+
+// 모임 없는 날 — 예배 회차(WorshipService)가 아직 없는 미래 일요일도 지정할 수 있어서
+// 회차와 별개로 날짜를 키로 둔다. 일요일만 지정 가능(서비스 검증).
+model OffDay {
+  id        String     @id @default(cuid())
+  date      DateTime   @unique @db.Date
+  kind      OffDayKind
+  createdAt DateTime   @default(now())
 }
 
 model WorshipAttendance {

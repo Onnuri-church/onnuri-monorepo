@@ -19,7 +19,7 @@ const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER:
 
 // 그 달의 일요일들 — @db.Date가 UTC 자정으로 저장되므로 UTC 기준으로 만든다
 // (조회 조건과 표 머리가 저장 값과 같은 기준이어야 하루씩 안 밀린다).
-function sundaysOfMonth(year: number, month: number): Date[] {
+export function sundaysOfMonth(year: number, month: number): Date[] {
   const sundays: Date[] = [];
   const date = new Date(Date.UTC(year, month - 1, 1));
   while (date.getUTCMonth() === month - 1) {
@@ -39,8 +39,9 @@ interface MemberInfo {
 }
 
 // 관리자 출석부 — 셀 출석 관리(cell-attendance)가 기록한 값을 주차 × 회원 표로 집계한다.
-// 표기 규칙(docs/attendance-data-model.md): 예배 O/X(행 없음=결석), 셀모임은 그 주 모임
-// 행이 없으면 '-'(모임 없음 — 결석 아님).
+// 표기 규칙(docs/attendance-data-model.md): 예배 O/X(행 없음=결석), 셀모임도 O/X다.
+// 지정 없는 일요일은 모임이 있는 날이라 체크 안 한 사람은 X, '-'는 관리자가 지정한 모임 없는 날
+// (OffDay)과 셀 없는 회원의 셀모임 칸뿐이다.
 @Injectable()
 export class AdminAttendanceService {
   constructor(private readonly prisma: PrismaService) {}
@@ -86,7 +87,6 @@ export class AdminAttendanceService {
 
     // 키: "시간값" / "시간값:userId" / "시간값:cellId" — 주차별 조회를 O(1)로.
     const worshipByKey = new Map<string, boolean>();
-    const meetingExists = new Set<string>();
     const meetingByKey = new Map<string, boolean>();
     for (const service of services) {
       const week = String(service.date.getTime());
@@ -94,25 +94,39 @@ export class AdminAttendanceService {
         worshipByKey.set(`${week}:${row.userId}`, row.attended);
       }
       for (const meeting of service.cellMeetings) {
-        meetingExists.add(`${week}:${meeting.cellId}`);
         for (const row of meeting.attendances) {
           meetingByKey.set(`${week}:${row.userId}`, row.attended);
         }
       }
     }
 
+    // 관리자가 지정한 모임 없는 날 — 해당 칸은 기록과 상관없이 '-'.
+    const offDays = await this.prisma.offDay.findMany({
+      where: { date: { in: sundays } },
+      select: { date: true, kind: true },
+    });
+    const offKindByWeek = new Map(
+      offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]),
+    );
+
     const toWeeks = (member: MemberInfo): [AdminAttendanceMark, AdminAttendanceMark][] =>
       sundays.map((sunday) => {
         const week = String(sunday.getTime());
-        const worship: AdminAttendanceMark = worshipByKey.get(`${week}:${member.id}`)
-          ? 'O'
-          : 'X';
-        const meeting: AdminAttendanceMark =
-          member.cellId && meetingExists.has(`${week}:${member.cellId}`)
-            ? meetingByKey.get(`${week}:${member.id}`)
+        const offKind = offKindByWeek.get(week);
+        const worship: AdminAttendanceMark =
+          offKind === 'WORSHIP_OFF' || offKind === 'BOTH_OFF'
+            ? '-'
+            : worshipByKey.get(`${week}:${member.id}`)
               ? 'O'
-              : 'X'
-            : '-';
+              : 'X';
+        const meeting: AdminAttendanceMark =
+          offKind === 'CELL_MEETING_OFF' || offKind === 'BOTH_OFF'
+            ? '-'
+            : member.cellId
+              ? meetingByKey.get(`${week}:${member.id}`)
+                ? 'O'
+                : 'X'
+              : '-'; // 셀이 없으면 셀모임 칸도 없다
         return [worship, meeting];
       });
 
