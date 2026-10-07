@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -35,6 +36,7 @@ function SectionLabel({ children }: { children: string }) {
 }
 
 export function SettingsScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // 서버 값이 오기 전에는 기본값(전부 켜짐)으로 그린다 — 기본값과 같아서 깜빡임이 없다.
@@ -94,7 +96,11 @@ export function SettingsScreen() {
   };
 
   return (
-    <ScrollView className="bg-background-normal" contentContainerClassName="px-5 pb-10 pt-14">
+    <ScrollView
+      className="bg-background-normal"
+      contentContainerClassName="px-5 pt-14"
+      contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+    >
       <View className="gap-7.5">
         {/* 디스플레이 — 다크모드 토글과 언어 섹션은 실동작(테마 연동·i18n)이 보류 중이라
             출시 전까지 숨긴다 (2026-10-06 결정, 켜도 변화 없는 토글은 버그로 보인다).

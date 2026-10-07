@@ -1,12 +1,14 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useState } from "react";
 import { Image, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toNoticeDateLabel, useNotices } from "./api";
 
 // 공지 상세 — 목록이 전체 필드를 내려주므로 같은 캐시에서 찾는다 (api.ts 계약).
 export function NoticeDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "NoticeDetail">>();
   const { data: notices, isLoading } = useNotices();
   const notice = (notices ?? []).find((item) => item.id === params.id);
@@ -27,7 +29,8 @@ export function NoticeDetailScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background-normal"
-      contentContainerClassName="px-5 pb-10 pt-6"
+      contentContainerClassName="px-5 pt-6"
+      contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
     >
       <Text className="text-heading-medium text-text-normal">{notice.title}</Text>
       <Text className="mt-2 text-body-small text-text-alternative">

@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
   fetchGroupMeetingDetail,
@@ -20,6 +21,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 소그룹 갤러리 (상세의 "사진 N장 모두 보기") — 팀 갤러리와 같은 월 묶음 그리드.
 // 추가는 승인된 참여자·소그룹장·관리자(서버 규칙 동일), 편집(일괄 삭제)은 소그룹장·관리자만.
 export function GroupMeetingGalleryScreen() {
+  const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingGallery">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -117,7 +119,10 @@ export function GroupMeetingGalleryScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-6">
+      <ScrollView
+        contentContainerClassName="px-5"
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+      >
         {/* 헤더 바로 아래 가운데 정렬 (팀 갤러리와 같은 시안 값) */}
         {/* 업로드는 수 초 걸린다 — 장수 자리에 진행 중임을 알린다. */}
         <Text className="text-center text-caption-main text-text-alternative">

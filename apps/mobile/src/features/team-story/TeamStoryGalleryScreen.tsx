@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useLayoutEffect, useRef, useState } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAddTeamPhoto, useRemoveTeamPhotos, useTeam, useTeamGallery } from "./api";
 import { canManageTeamGallery } from "./teamPermissions";
@@ -15,6 +16,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 사진 추가·삭제는 그 팀 팀장과 관리자만 — 권한이 없으면 헤더의 편집 버튼 자체가 안 뜬다.
 export function TeamStoryGalleryScreen() {
+  const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryGallery">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -85,7 +87,10 @@ export function TeamStoryGalleryScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-6">
+      <ScrollView
+        contentContainerClassName="px-5"
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+      >
         {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
         <Text className="text-center text-caption-main text-text-alternative">전체 {total}장</Text>
         <View className="mt-10 gap-9">
