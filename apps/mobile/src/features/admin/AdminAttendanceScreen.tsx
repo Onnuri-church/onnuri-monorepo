@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
@@ -65,7 +65,7 @@ export function AdminAttendanceScreen() {
   const cellId = selectedCellId ?? cells?.[0]?.id;
   const teamId = selectedTeamId ?? teams?.[0]?.id;
 
-  const { data, isLoading } = useAdminAttendance({
+  const { data, isLoading, refetch, isRefetching } = useAdminAttendance({
     month: monthParam,
     scope: filter,
     groupId: filter === "cell" ? cellId : filter === "team" ? teamId : undefined,
@@ -98,6 +98,9 @@ export function AdminAttendanceScreen() {
       <ScrollView
         contentContainerClassName="px-5 pt-4"
         contentContainerStyle={{ paddingBottom: 64 + insets.bottom }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }
       >
         {/* 필터 */}
         <View className="flex-row items-center gap-5">

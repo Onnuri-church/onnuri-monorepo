@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
@@ -15,7 +15,7 @@ import { MemberBadge } from "./components/MemberBadge";
 export function AdminMemberListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState("");
-  const { data } = useAdminMembers();
+  const { data, refetch, isRefetching } = useAdminMembers();
 
   // 시안 검색바 플레이스홀더가 "이름 · 셀 · 팀으로 검색" — 세 필드 모두에 부분 일치.
   const members = (data ?? []).filter((member) =>
@@ -36,6 +36,7 @@ export function AdminMemberListScreen() {
       className="bg-background-page"
       contentContainerClassName="px-5 pb-10 pt-4"
       keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <SearchBar value={keyword} onChangeText={setKeyword} placeholder="이름 · 셀 · 팀으로 검색" />
 
