@@ -1,9 +1,11 @@
 import { Fragment } from "react";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 
 interface Stat {
   label: string;
   value: number;
+  /** 주면 이 항목이 눌린다 (예: 큐티나눔 → 내 글 목록) */
+  onPress?: () => void;
 }
 
 interface StatsCardProps {
@@ -19,10 +21,16 @@ export function StatsCard({ stats }: StatsCardProps) {
       {stats.map((stat, index) => (
         <Fragment key={stat.label}>
           {index > 0 && <View className="h-8 w-px bg-background-assistive" />}
-          <View className="items-center gap-1">
+          <Pressable
+            className="items-center gap-1"
+            disabled={!stat.onPress}
+            onPress={stat.onPress}
+            hitSlop={8}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
             <Text className="text-heading-small text-text-normal">{stat.value}</Text>
             <Text className="text-body-small text-text-alternative">{stat.label}</Text>
-          </View>
+          </Pressable>
         </Fragment>
       ))}
     </View>

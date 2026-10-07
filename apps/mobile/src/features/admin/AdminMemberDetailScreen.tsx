@@ -2,6 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
@@ -13,6 +14,7 @@ import { MemberBadge } from "./components/MemberBadge";
 // 마이페이지 관리자 메뉴 > 회원 관리 > 회원 상세 — GET /users/:id 실데이터.
 // 편집은 헤더 "편집" 버튼(RootNavigator 등록부)으로 AdminMemberEdit에 간다 (2026-09-21 시안).
 export function AdminMemberDetailScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminMemberDetail">>();
   const { data: member, isLoading } = useAdminMember(route.params.memberId);
@@ -49,7 +51,11 @@ export function AdminMemberDetailScreen() {
 
   return (
     /* 시안 배경 #F5F5F5 — 토큰에 없어 background.page로 근사 (목록 화면과 동일) */
-    <ScrollView className="bg-background-page" contentContainerClassName="px-5 pb-10 pt-6">
+    <ScrollView
+      className="bg-background-page"
+      contentContainerClassName="px-5 pt-6"
+      contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+    >
       {/* 프로필 영역 */}
       <View className="items-center">
         {member?.avatarUrl ? (

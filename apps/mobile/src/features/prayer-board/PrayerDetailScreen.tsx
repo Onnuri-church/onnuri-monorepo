@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import { ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Header } from "../../shared/components/base/Header";
@@ -35,6 +36,7 @@ const DATE_LINE = 23;
 const BODY_LINE = 23;
 
 export function PrayerDetailScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { id } = useRoute<RouteProp<RootStackParamList, "PrayerBoardDetail">>().params;
   const toggleBookmark = useToggleBookmark();
@@ -70,7 +72,8 @@ export function PrayerDetailScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background-normal"
-      contentContainerClassName="pb-10"
+      contentContainerClassName=""
+      contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       style={{ paddingHorizontal: CONTENT_PADDING }}
     >
       {isPending || !data ? (

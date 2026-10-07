@@ -40,19 +40,18 @@ export interface QtShareListItem {
   likedByMe: boolean;
 }
 
-/** 목록 상단 월 필터 항목. 글이 있는 달만 최신순으로 내려간다. */
-export interface QtShareMonth {
-  /** "2026.05" — 목록 조회의 month 파라미터로 그대로 되돌려준다 */
-  value: string;
-  /** "26년 5월" */
-  label: string;
-}
-
+/**
+ * GET /posts/qt-shares 응답. 연도·월은 선택 버튼이라 월은 항상 1~12 전부 고를 수 있고
+ * (글 없는 달은 빈 목록), 연도만 서버가 "첫 글이 있는 해 ~ 올해"로 내려준다.
+ */
 export interface QtShareListResponse {
-  months: QtShareMonth[];
-  /** 서버가 실제로 고른 달. 요청한 month에 글이 없으면 최신 달로 바뀌므로, 화면은
-   *  요청값이 아니라 이 값을 선택 상태로 표시한다 (글이 하나도 없으면 null). */
-  selectedMonth: string | null;
+  /** 연도 선택지 — 최신순. 해가 바뀌면 서버가 자동으로 늘려서 앱 수정이 필요 없다. */
+  years: number[];
+  /** 서버가 실제로 고른 연·월. year/month를 생략하면 글이 있는 가장 최근 달(글이 없으면
+   *  이번 달)로 정해지므로, 화면은 요청값이 아니라 이 값을 선택 상태로 표시한다. */
+  selectedYear: number;
+  /** 1~12 */
+  selectedMonth: number;
   items: QtShareListItem[];
 }
 

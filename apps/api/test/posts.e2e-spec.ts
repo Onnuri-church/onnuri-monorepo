@@ -170,27 +170,28 @@ describe('Posts (e2e)', () => {
         .set('Authorization', 'Bearer not-a-real-token')
         .expect(401));
 
-    it('month 형식이 YYYY.MM이 아니면 400', () => getList('?month=2025-03').expect(400));
+    it('month가 1~12가 아니면 400', () => getList('?year=2025&month=13').expect(400));
 
     it('고른 달의 글만 준다 (다른 달이 섞이지 않는다)', async () => {
-      const res = await getList('?month=2025.03').expect(200);
+      const res = await getList('?year=2025&month=3').expect(200);
 
       const body = res.body as QtShareListResponse;
-      expect(body.selectedMonth).toBe('2025.03');
+      expect(body.selectedYear).toBe(2025);
+      expect(body.selectedMonth).toBe(3);
       const titles = body.items.map((item) => item.title);
       expect(titles).toContain(`${FIXTURE_PREFIX}3월글`);
       expect(titles).not.toContain(`${FIXTURE_PREFIX}2월글`);
     });
 
     it('삭제된 글은 목록에 없다', async () => {
-      const res = await getList('?month=2025.03').expect(200);
+      const res = await getList('?year=2025&month=3').expect(200);
 
       const titles = (res.body as QtShareListResponse).items.map((i) => i.title);
       expect(titles).not.toContain(`${FIXTURE_PREFIX}삭제된글`);
     });
 
     it('날짜 라벨이 저장한 날과 같다 (타임존으로 하루 밀리지 않는다)', async () => {
-      const res = await getList('?month=2025.03').expect(200);
+      const res = await getList('?year=2025&month=3').expect(200);
 
       const item = (res.body as QtShareListResponse).items.find(
         (i) => i.id === marchPostId,
@@ -200,25 +201,51 @@ describe('Posts (e2e)', () => {
       expect(item?.authorName).toBeTruthy();
     });
 
-    it('월 목록은 글이 있는 달만 담고 최신순이다', async () => {
+    it('연도 선택지는 첫 글이 있는 해부터 올해까지 최신순이다', async () => {
       const res = await getList().expect(200);
 
-      const values = (res.body as QtShareListResponse).months.map((m) => m.value);
-      expect(values).toContain('2025.03');
-      expect(values).toContain('2025.02');
-      // 픽스처에 1월 글이 없으므로 선택지에도 없어야 한다.
-      expect(values).not.toContain('2025.01');
-      expect([...values]).toEqual([...values].sort().reverse());
+      const years = (res.body as QtShareListResponse).years;
+      expect(years).toContain(2025);
+      expect(years[0]).toBe(new Date().getFullYear());
+      expect([...years]).toEqual([...years].sort((a, b) => b - a));
     });
 
-    it('글이 없는 달을 요청하면 최신 달로 폴백하고 selectedMonth로 알려준다', async () => {
-      const res = await getList('?month=2025.01').expect(200);
+    it('연·월을 생략하면 글이 있는 가장 최근 달을 고른다', async () => {
+      const res = await getList().expect(200);
 
       const body = res.body as QtShareListResponse;
-      expect(body.selectedMonth).not.toBe('2025.01');
-      // 폴백 대상은 월 목록의 첫 항목(최신 달)이다 — 화면은 이 값을 선택 상태로 쓴다.
-      expect(body.selectedMonth).toBe(body.months[0].value);
+      // 시드(2026.03~05)가 픽스처(2025)보다 최신이므로 그쪽이 선택된다.
+      expect(body.selectedYear * 100 + body.selectedMonth).toBeGreaterThanOrEqual(202503);
+      expect(body.items.length).toBeGreaterThan(0);
     });
+
+    it('글이 없는 달을 고르면 폴백 없이 그 달 그대로 빈 목록을 준다', async () => {
+      const res = await getList('?year=2025&month=1').expect(200);
+
+      const body = res.body as QtShareListResponse;
+      expect(body.selectedYear).toBe(2025);
+      expect(body.selectedMonth).toBe(1);
+      expect(body.items).toEqual([]);
+    });
+
+    it('mine=true면 내 글만 준다', async () => {
+      const res = await getList('?mine=true&year=2025&month=3').expect(200);
+
+      const items = (res.body as QtShareListResponse).items;
+      expect(items.map((i) => i.id)).toContain(marchPostId);
+      expect(items.every((i) => i.authorName)).toBe(true);
+    });
+
+    it('mine=true인데 연·월을 생략하면 내 글이 있는 가장 최근 달을 고른다', async () => {
+      const res = await getList('?mine=true').expect(200);
+
+      const body = res.body as QtShareListResponse;
+      expect(body.selectedYear).toBe(2025);
+      expect(body.selectedMonth).toBe(3);
+    });
+
+    it('mine=true인데 토큰이 없으면 401', () =>
+      request(app.getHttpServer()).get('/posts/qt-shares?mine=true').expect(401));
   });
 
   // 좋아요 describe보다 먼저 둔다 — 거기서 marchPostId의 좋아요 상태를 바꾸므로,
@@ -328,7 +355,7 @@ describe('Posts (e2e)', () => {
     });
 
     const findMarchPost = async () => {
-      const res = await getList('?month=2025.03').expect(200);
+      const res = await getList('?year=2025&month=3').expect(200);
       return (res.body as QtShareListResponse).items.find(
         (item) => item.id === marchPostId,
       );
@@ -867,7 +894,7 @@ describe('Posts (e2e)', () => {
     });
 
     it('작성한 글이 그 달 목록에 보인다', async () => {
-      const res = await getList('?month=2025.03').expect(200);
+      const res = await getList('?year=2025&month=3').expect(200);
 
       const titles = (res.body as QtShareListResponse).items.map((i) => i.title);
       expect(titles).toContain(`${FIXTURE_PREFIX}작성글`);
@@ -982,7 +1009,7 @@ describe('Posts (e2e)', () => {
         .get(`/posts/qt-shares/${myPostId}`)
         .expect(404);
 
-      const list = await getList('?month=2025.04').expect(200);
+      const list = await getList('?year=2025&month=4').expect(200);
       const ids = (list.body as QtShareListResponse).items.map((i) => i.id);
       expect(ids).not.toContain(myPostId);
     });

@@ -7,10 +7,17 @@ import type {
 
 import { apiClient } from "../../shared/api/client";
 
-// 큐티나눔 목록 (GET /posts/qt-shares). month를 생략하면 서버가 가장 최근 달을 골라 준다.
-export async function fetchQtShares(month?: string): Promise<QtShareListResponse> {
+export interface QtShareQuery {
+  year?: number;
+  month?: number;
+  /** true면 내 글만 (로그인 필요) */
+  mine?: boolean;
+}
+
+// 큐티나눔 목록 (GET /posts/qt-shares). 연·월을 생략하면 서버가 글이 있는 가장 최근 달을 골라 준다.
+export async function fetchQtShares(query: QtShareQuery): Promise<QtShareListResponse> {
   const { data } = await apiClient.get<QtShareListResponse>("/posts/qt-shares", {
-    params: month ? { month } : undefined,
+    params: query,
   });
   return data;
 }

@@ -1,6 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { toTeamRoleLabel, useTeamDetail, useTeamGallery } from "./api";
 import { ActivityPhotos } from "./components/ActivityPhotos";
@@ -16,6 +17,7 @@ const MEMBER_PREVIEW_COUNT = 4;
 const PHOTO_PREVIEW_COUNT = 4;
 
 export function TeamStoryDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: team } = useTeamDetail(params.teamId);
@@ -37,7 +39,11 @@ export function TeamStoryDetailScreen() {
     navigation.navigate("DepartmentActivity", { teamId: params.teamId });
 
   return (
-    <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="px-5 pb-10">
+    <ScrollView
+      className="flex-1 bg-background-normal"
+      contentContainerClassName="px-5"
+      contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+    >
       <TeamProfile
         name={team?.name ?? ""}
         description={team?.tagline ?? ""}

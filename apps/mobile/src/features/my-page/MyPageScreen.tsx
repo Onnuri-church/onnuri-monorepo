@@ -94,7 +94,12 @@ export function MyPageScreen() {
   // 통계 3종 — 도착 전에는 0으로 그린다 (카드 자리를 비우면 레이아웃이 튄다).
   const { data: myStats } = useMyStats(session.status === "authenticated");
   const stats = [
-    { label: "큐티나눔", value: myStats?.qtShareCount ?? 0 },
+    {
+      label: "큐티나눔",
+      value: myStats?.qtShareCount ?? 0,
+      // 내가 쓴 글 모아보기 — 큐티나눔 게시판을 "내 글" 상태로 연다 (게스트는 통계가 없어 안 눌림).
+      onPress: me ? () => navigation.navigate("QtBoard", { mine: true }) : undefined,
+    },
     { label: "출석주수", value: myStats?.attendanceWeeks ?? 0 },
     { label: "받은하트", value: myStats?.receivedHearts ?? 0 },
   ];

@@ -2,6 +2,7 @@ import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../shared/components/base/Icon";
 import { YouTubePlayer } from "../../shared/components/base/YouTubePlayer";
@@ -22,6 +23,7 @@ const REPLAY_NOTICE = "지난 예배 다시보기예요. 언제든 편하게 시
 
 // 설교영상 상세.
 export function SermonDetailScreen() {
+  const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "SermonDetail">>();
   const { data: video, isPending, isError } = useQuery({
     queryKey: ["sermon", params.id],
@@ -47,7 +49,10 @@ export function SermonDetailScreen() {
   }
 
   return (
-    <ScrollView className="flex-1 bg-background-page" contentContainerClassName="pb-6">
+    <ScrollView
+      className="flex-1 bg-background-page"
+      contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+    >
       {/* iOS(WKWebView)는 playsinline·자동재생 동작이 Android와 달라 두 플랫폼을 따로 확인해야 한다. */}
       <View className="w-full bg-background-dark" style={{ aspectRatio: VIDEO_ASPECT_RATIO }}>
         {isPlaying ? (

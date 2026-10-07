@@ -13,7 +13,8 @@ export type RootTabParamList = {
 // QR도 탭이 아니라 메인 헤더의 QR 버튼에서 push한다 — 하단 탭 가운데 자리는 말씀이 쓴다.
 export type RootStackParamList = {
   Main: undefined;
-  QtBoard: undefined;
+  // mine: true면 "내 글" 상태로 열린다 (마이페이지 큐티나눔 통계 탭).
+  QtBoard: { mine?: boolean } | undefined;
   QtBoardDetail: { id: string };
   // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (상세의 ⋮ > 수정하기에서 진입).
   QtBoardWrite: { id: string } | undefined;
