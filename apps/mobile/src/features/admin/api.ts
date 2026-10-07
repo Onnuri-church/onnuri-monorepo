@@ -1,10 +1,12 @@
 import type {
   AdminAttendanceResponse,
+  AdminOffDaysResponse,
   AdminMemberDetail,
   AdminMemberSummary,
   CellDetailResponse,
   CreateHomeBannerRequest,
   HomeBanner,
+  OffDayKind,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -183,5 +185,35 @@ export function useDeleteHomeBanner() {
     mutationFn: (bannerId: string) =>
       apiClient.delete(`/notices/banners/${bannerId}`).then((res) => res.data),
     onSuccess: invalidateBanners,
+  });
+}
+
+// 모임 없는 날 — 그 달 일요일별 지정 상태. 지정/해제는 출석부·셀 출석 화면 데이터도 바꾸므로 같이 무효화한다.
+export function useAdminOffDays(month: string) {
+  return useQuery({
+    queryKey: ["admin", "off-days", month],
+    queryFn: () =>
+      apiClient
+        .get<AdminOffDaysResponse>("/admin/off-days", { params: { month } })
+        .then((res) => res.data),
+  });
+}
+
+export function useSetAdminOffDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      date,
+      kind,
+      confirm,
+    }: {
+      date: string;
+      kind: OffDayKind | null;
+      confirm?: boolean;
+    }) => apiClient.put(`/admin/off-days/${date}`, { kind, confirm }).then((res) => res.data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin"] });
+      void queryClient.invalidateQueries({ queryKey: ["cell-attendance"] });
+    },
   });
 }

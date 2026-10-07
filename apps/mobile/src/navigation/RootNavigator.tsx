@@ -11,6 +11,7 @@ import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScre
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
 import { AdminMemberEditScreen } from "../features/admin/AdminMemberEditScreen";
 import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
+import { AdminOffDaysScreen } from "../features/admin/AdminOffDaysScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
 import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
@@ -573,6 +574,14 @@ export function RootNavigator() {
                 />
               ),
             })}
+          />
+          <Stack.Screen
+            name="AdminOffDays"
+            component={AdminOffDaysScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="모임 없는 날 지정" rightAction="none" />,
+            }}
           />
           <Stack.Screen
             name="AdminDataDownload"

@@ -88,6 +88,8 @@ export type RootStackParamList = {
   AdminMemberDetail: { memberId: string };
   AdminMemberEdit: { memberId: string };
   AdminAttendance: undefined;
+  // 출석부의 "모임 없는 날 지정"에서 진입한다.
+  AdminOffDays: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;
   // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.

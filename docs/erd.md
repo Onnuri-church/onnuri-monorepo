@@ -136,7 +136,7 @@ erDiagram
     CellMeeting {
         string id PK
         string cellId FK
-        string serviceId FK "셀모임 날짜 = 그 주 일요일. 행이 없는 주는 모임 '없음'(결석 아님)"
+        string serviceId FK "셀모임 날짜 = 그 주 일요일. '없음'은 행 유무가 아니라 OffDay(모임 없는 날) 지정으로 정한다 — 행이 없는데 지정도 없으면 결석"
         string createdById FK "등록한 셀장 (nullable)"
     }
 

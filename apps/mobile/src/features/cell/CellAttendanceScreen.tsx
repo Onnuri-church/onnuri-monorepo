@@ -19,6 +19,12 @@ import { useCell, useCellAttendance, useSaveCellAttendance } from "./api";
 import { AttendanceMemberRow } from "./components/AttendanceMemberRow";
 import { MonthPicker } from "./components/MonthPicker";
 
+const OFF_DAY_NOTICE = {
+  WORSHIP_OFF: "이 날은 예배가 없는 날이에요.\n예배 출석은 저장되지 않아요.",
+  CELL_MEETING_OFF: "이 날은 셀모임이 없는 날이에요.\n셀모임 출석은 저장되지 않아요.",
+  BOTH_OFF: "이 날은 예배와 셀모임이 모두 없는 날이에요.\n출석을 저장할 수 없어요.",
+};
+
 // 출석 관리 (관리 탭 > 출석 관리 — 셀장·관리자 전용 경로로만 진입한다).
 // 날짜 바를 누르면 주차별 보기(월 그리드 + 그 달의 일요일 목록)가 아래로 펼쳐진다 (시안).
 export function CellAttendanceScreen() {
@@ -47,6 +53,8 @@ export function CellAttendanceScreen() {
       );
     }
   }, [attendanceData]);
+
+  const offDay = attendanceData?.offDay ?? null;
 
   const worshipCount = attendance.filter((row) => row.worship === "present").length;
   const meetingCount = attendance.filter((row) => row.meeting === "present").length;
@@ -117,10 +125,12 @@ export function CellAttendanceScreen() {
           </View>
         )}
 
-        {/* 안내 배너 */}
+        {/* 안내 배너 — 관리자가 모임 없는 날로 지정했으면 그 사실을 알린다 */}
         <View className="mt-3.5 rounded-2.5 bg-background-alternative px-4 py-2.5">
           <Text className="text-caption-main text-primary-normal">
-            QR은 예배 출석만 기록돼요.{"\n"}셀모임에 온 사람은 아래에서 직접 체크해주세요.
+            {offDay
+              ? OFF_DAY_NOTICE[offDay]
+              : "QR은 예배 출석만 기록돼요.\n셀모임에 온 사람은 아래에서 직접 체크해주세요."}
           </Text>
         </View>
 
@@ -152,7 +162,7 @@ export function CellAttendanceScreen() {
         </View>
 
         <View className="mt-6">
-          <Button label="등록하기" onPress={handleSubmitPress} />
+          <Button label="등록하기" onPress={handleSubmitPress} disabled={offDay === "BOTH_OFF"} />
         </View>
       </ScrollView>
     </View>
