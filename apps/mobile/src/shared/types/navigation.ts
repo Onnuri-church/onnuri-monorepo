@@ -92,6 +92,8 @@ export type RootStackParamList = {
   AdminOffDays: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;
+  // 다운로드 화면에서 고른 조건(쿼리 문자열 키 그대로)으로 건수·앞쪽 몇 줄을 미리 본다.
+  AdminDataPreview: { query: Record<string, string> };
   // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.
   AdminBannerManage: undefined;
   AdminBannerForm: undefined;

@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { Icon } from "../../shared/components/base/Icon";
@@ -42,6 +43,7 @@ function AttendanceMarkPair({ marks }: { marks: [AdminAttendanceMark, AdminAtten
 // 값을 주차 × 회원 표로 집계). 헤더의 "다운로드"는 RootNavigator 등록부에서 연결한다.
 export function AdminAttendanceScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<AttendanceFilter>("all");
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -70,6 +72,11 @@ export function AdminAttendanceScreen() {
   });
   const dates = data?.dates ?? [];
   const groups = data?.groups ?? [];
+  // 전체 보기에서는 멤버 없는 셀을 맨 아래로 모은다 ("셀 없음" 그룹은 멤버가 있을 때만 내려온다).
+  const orderedGroups =
+    filter === "all"
+      ? [...groups.filter((g) => g.rows.length > 0), ...groups.filter((g) => g.rows.length === 0)]
+      : groups;
 
   const pickerOptions = filter === "team" ? (teams ?? []) : (cells ?? []);
   const pickerValue =
@@ -88,7 +95,10 @@ export function AdminAttendanceScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-4">
+      <ScrollView
+        contentContainerClassName="px-5 pt-4"
+        contentContainerStyle={{ paddingBottom: 64 + insets.bottom }}
+      >
         {/* 필터 */}
         <View className="flex-row items-center gap-5">
           <RadioOption label="전체" selected={filter === "all"} onPress={() => setFilter("all")} />
@@ -186,66 +196,91 @@ export function AdminAttendanceScreen() {
         <View className="h-px bg-background-assistive" />
 
         {/* 출석 표 — 전체 필터는 셀별 그룹 헤더가 붙는다 */}
-        {groups.map((group) => (
-          <View key={group.id}>
-            {filter === "all" && (
-              <Pressable
-                className="-mx-5 h-9 flex-row items-center justify-between bg-background-muted px-5"
-                onPress={() => toggleGroup(group.id)}
-              >
-                <Text className="text-body-main text-text-normal">{group.name}</Text>
-                <View className="flex-row items-center gap-2">
-                  <Text className="text-caption-main text-text-alternative">
-                    {group.rows.length}명
-                  </Text>
-                  <View
-                    style={{
-                      transform: [{ rotate: collapsedIds.includes(group.id) ? "-90deg" : "0deg" }],
-                    }}
+        {orderedGroups.map((group, groupIndex) => {
+          const isEmpty = group.rows.length === 0;
+          // 셀 사이 간격 — 멤버 있는 셀은 12px, 멤버 없는 셀 묶음은 앞과 16px 띄우고 서로는 붙인다.
+          const gapClass =
+            groupIndex === 0
+              ? ""
+              : isEmpty
+                ? orderedGroups[groupIndex - 1].rows.length === 0
+                  ? "mt-1"
+                  : "mt-4"
+                : "mt-3";
+          return (
+            <View key={group.id} className={filter === "all" ? gapClass : ""}>
+              {filter === "all" && (
+                <Pressable
+                  className="-mx-5 h-9 flex-row items-center justify-between bg-background-muted px-5"
+                  disabled={isEmpty}
+                  onPress={() => toggleGroup(group.id)}
+                >
+                  <Text
+                    className={
+                      isEmpty
+                        ? "text-body-regular text-text-alternative"
+                        : "text-body-main text-text-normal"
+                    }
                   >
-                    <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
-                  </View>
-                </View>
-              </Pressable>
-            )}
-            {!(filter === "all" && collapsedIds.includes(group.id)) &&
-              group.rows.map((row, index) => (
-                <View key={row.id}>
-                  {index > 0 && <View className="h-px bg-background-muted" />}
-                  <View className="flex-row items-center py-2">
-                    <View className="flex-1 flex-row items-center gap-1.5">
-                      <Text
-                        className={
-                          row.role
-                            ? "text-body-main text-text-normal"
-                            : "text-body-regular text-text-normal"
-                        }
+                    {group.name}
+                  </Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text className="text-caption-main text-text-alternative">
+                      {group.rows.length}명
+                    </Text>
+                    {!isEmpty && (
+                      <View
+                        style={{
+                          transform: [
+                            { rotate: collapsedIds.includes(group.id) ? "-90deg" : "0deg" },
+                          ],
+                        }}
                       >
-                        {row.name}
-                      </Text>
-                      {row.role === "leader" && (
-                        <View className="rounded bg-primary-normal px-1.5 py-0.5">
-                          <Text className="text-caption-small text-text-disable">
-                            {row.roleLabel}
-                          </Text>
-                        </View>
-                      )}
-                      {row.role === "viceLeader" && (
-                        <View className="rounded border border-primary-normal bg-background-normal px-1.5 py-0.5">
-                          <Text className="text-caption-small text-primary-normal">
-                            {row.roleLabel}
-                          </Text>
-                        </View>
-                      )}
-                    </View>
-                    {row.weeks.map((week, weekIndex) => (
-                      <AttendanceMarkPair key={weekIndex} marks={week} />
-                    ))}
+                        <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
+                      </View>
+                    )}
                   </View>
-                </View>
-              ))}
-          </View>
-        ))}
+                </Pressable>
+              )}
+              {!(filter === "all" && collapsedIds.includes(group.id)) &&
+                group.rows.map((row, index) => (
+                  <View key={row.id}>
+                    {index > 0 && <View className="h-px bg-background-muted" />}
+                    <View className="flex-row items-center py-2">
+                      <View className="flex-1 flex-row items-center gap-1.5">
+                        <Text
+                          className={
+                            row.role
+                              ? "text-body-main text-text-normal"
+                              : "text-body-regular text-text-normal"
+                          }
+                        >
+                          {row.name}
+                        </Text>
+                        {row.role === "leader" && (
+                          <View className="rounded bg-primary-normal px-1.5 py-0.5">
+                            <Text className="text-caption-small text-text-disable">
+                              {row.roleLabel}
+                            </Text>
+                          </View>
+                        )}
+                        {row.role === "viceLeader" && (
+                          <View className="rounded border border-primary-normal bg-background-normal px-1.5 py-0.5">
+                            <Text className="text-caption-small text-primary-normal">
+                              {row.roleLabel}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      {row.weeks.map((week, weekIndex) => (
+                        <AttendanceMarkPair key={weekIndex} marks={week} />
+                      ))}
+                    </View>
+                  </View>
+                ))}
+            </View>
+          );
+        })}
         {groups.length === 0 && (
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
             {isLoading ? "출석부를 불러오고 있어요." : "표시할 출석 기록이 없어요."}

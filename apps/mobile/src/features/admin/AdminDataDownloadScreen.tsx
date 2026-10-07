@@ -1,3 +1,5 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
@@ -11,8 +13,10 @@ import { Icon } from "../../shared/components/base/Icon";
 import { DateField } from "../../shared/components/composed/DateField";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
 import { fetchTeams } from "../profile/api";
+import { useAdminDownloadPreview } from "./api";
 import { RadioOption } from "./components/RadioOption";
 
 type DataKind = "member" | "attendance" | "both";
@@ -28,6 +32,7 @@ function SectionLabel({ children }: { children: string }) {
 // 관리자 출석부·회원 관리 헤더의 "다운로드"로 진입. GET /admin/download가 만든 엑셀
 // (attendance-data-model.md §4 — 유저 정보 + 셀 기간별 출석부 시트)을 받아 공유 시트를 띄운다.
 export function AdminDataDownloadScreen() {
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [dataKind, setDataKind] = useState<DataKind | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [period, setPeriod] = useState<Period | null>(null);
@@ -53,6 +58,25 @@ export function AdminDataDownloadScreen() {
     (target === "all" || pickerId !== null) &&
     (period !== "custom" || (customFrom !== null && customTo !== null)) &&
     !downloading;
+
+  // 다운로드와 같은 쿼리 — 세 질문이 다 채워지면 건수 요약을 미리 받아 보여준다.
+  const query: Record<string, string> | null =
+    dataKind !== null &&
+    target !== null &&
+    period !== null &&
+    (target === "all" || pickerId !== null) &&
+    (period !== "custom" || (customFrom !== null && customTo !== null))
+      ? {
+          kind: dataKind,
+          scope: target,
+          period,
+          ...(target !== "all" && pickerId ? { groupId: pickerId } : {}),
+          ...(period === "custom" && customFrom && customTo
+            ? { from: customFrom, to: customTo }
+            : {}),
+        }
+      : null;
+  const { data: preview, isLoading: previewLoading } = useAdminDownloadPreview(query);
 
   const handlePickerSelect = (optionId: string) => {
     if (target === "team") {
@@ -205,6 +229,30 @@ export function AdminDataDownloadScreen() {
       </ScrollView>
 
       <View className="px-5 pb-12">
+        {query && (
+          <Pressable
+            className="mb-3 flex-row items-center justify-between rounded-2.5 bg-background-alternative px-4 py-3"
+            onPress={() => navigation.navigate("AdminDataPreview", { query })}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
+            <Text className="flex-1 text-caption-main text-primary-normal">
+              {previewLoading || !preview
+                ? "내려받을 내용을 확인하고 있어요."
+                : [
+                    preview.member ? `회원 ${preview.member.total}명` : null,
+                    preview.attendance
+                      ? `출석부 ${preview.attendance.total}줄 · ${preview.attendance.weekCount}주`
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+            </Text>
+            <View className="flex-row items-center gap-1">
+              <Text className="text-body-main text-primary-normal">미리보기</Text>
+              <Icon name="expand-right" size={14} color={colors.icon.normal} />
+            </View>
+          </Pressable>
+        )}
         <Button
           label={downloading ? "만드는 중..." : "다운로드"}
           disabled={!canDownload}

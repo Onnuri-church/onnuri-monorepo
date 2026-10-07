@@ -45,6 +45,12 @@ export class AdminController {
     return this.adminOffDaysService.set(date, dto);
   }
 
+  // 다운로드 전 미리보기 — 같은 쿼리로 건수와 앞쪽 몇 줄만 JSON으로 준다.
+  @Get('download/preview')
+  previewDownload(@Query() query: FindAdminDownloadDto) {
+    return this.adminDownloadService.preview(query);
+  }
+
   // 엑셀 파일을 그대로 내려준다 — 앱이 파일로 저장한 뒤 공유 시트를 띄운다.
   @Get('download')
   async download(@Query() query: FindAdminDownloadDto): Promise<StreamableFile> {

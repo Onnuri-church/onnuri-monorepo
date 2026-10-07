@@ -64,3 +64,34 @@ export interface OffDayConflictBody {
   worshipCount: number;
   cellMeetingCount: number;
 }
+
+/** GET /admin/download/preview 응답 — 다운로드 전 건수와 앞쪽 몇 줄 (연락처·생년월일은 싣지 않는다) */
+export interface AdminDownloadPreview {
+  /** "2026-01-01 ~ 2026-12-31" */
+  rangeLabel: string;
+  /** kind가 attendance면 null */
+  member: {
+    total: number;
+    rows: {
+      name: string;
+      gender: "남" | "여" | null;
+      age: number | null;
+      team: string | null;
+      cell: string | null;
+    }[];
+  } | null;
+  /** kind가 member면 null — total은 엑셀 출석부 시트의 줄 수(셀 멤버십 기간별) */
+  attendance: {
+    total: number;
+    weekCount: number;
+    rows: {
+      name: string;
+      cell: string;
+      role: string;
+      period: string;
+      worshipCount: number;
+      meetingCount: number;
+      weekTotal: number;
+    }[];
+  } | null;
+}

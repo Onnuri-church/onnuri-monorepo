@@ -1,5 +1,6 @@
 import type {
   AdminAttendanceResponse,
+  AdminDownloadPreview,
   AdminOffDaysResponse,
   AdminMemberDetail,
   AdminMemberSummary,
@@ -82,6 +83,8 @@ export function useAdminAttendance(params: AdminAttendanceParams) {
       apiClient
         .get<AdminAttendanceResponse>("/admin/attendance", { params })
         .then((res) => res.data),
+    // 셀·멤버 구성이 바뀐 직후에도 최신이 보이도록 캐시를 쓰지 않는다 (기본 staleTime 1분).
+    staleTime: 0,
     // 특정 셀/팀 필터인데 아직 선택지가 안 뽑혔으면(목록 로딩 전) 기다린다.
     enabled: params.scope === "all" || params.groupId !== undefined,
   });
@@ -215,5 +218,19 @@ export function useSetAdminOffDay() {
       void queryClient.invalidateQueries({ queryKey: ["admin"] });
       void queryClient.invalidateQueries({ queryKey: ["cell-attendance"] });
     },
+  });
+}
+
+// 데이터 다운로드 전 미리보기 — 다운로드와 같은 쿼리(kind/scope/groupId/period/from/to)로 건수와 앞쪽 몇 줄을 받는다.
+export type DownloadPreviewParams = Record<string, string>;
+
+export function useAdminDownloadPreview(params: DownloadPreviewParams | null) {
+  return useQuery({
+    queryKey: ["admin", "download-preview", params],
+    queryFn: () =>
+      apiClient
+        .get<AdminDownloadPreview>("/admin/download/preview", { params })
+        .then((res) => res.data),
+    enabled: params !== null,
   });
 }

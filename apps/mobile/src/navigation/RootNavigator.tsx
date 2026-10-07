@@ -8,6 +8,7 @@ import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
 import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
+import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
 import { AdminMemberEditScreen } from "../features/admin/AdminMemberEditScreen";
 import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
@@ -589,6 +590,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title="데이터 다운로드" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminDataPreview"
+            component={AdminDataPreviewScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="미리보기" rightAction="none" />,
             }}
           />
           <Stack.Screen
