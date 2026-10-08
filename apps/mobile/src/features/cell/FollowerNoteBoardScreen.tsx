@@ -2,6 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -23,6 +24,7 @@ import { FollowerNoteCard } from "./components/FollowerNoteCard";
 // 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
 // "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
 export function FollowerNoteBoardScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteBoard">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
@@ -70,7 +72,7 @@ export function FollowerNoteBoardScreen() {
           onPress={() => setCalendarOpen((prev) => !prev)}
         >
           <Text className="text-heading-small text-text-normal">
-            {monthFilter === null ? "전체 기간" : `2026년 ${monthFilter}월`}
+            {monthFilter === null ? t("전체 기간") : t("2026년 {{month}}월", { month: monthFilter })}
           </Text>
           <Icon name="arrow-drop-down" size={24} color={colors.icon.strong} />
         </Pressable>
@@ -110,7 +112,7 @@ export function FollowerNoteBoardScreen() {
           ))}
           {visibleNotes.length === 0 && (
             <Text className="pt-10 text-center text-body-medium text-text-alternative">
-              {isLoading ? "노트를 불러오고 있어요." : "이 기간에 작성된 노트가 없어요."}
+              {isLoading ? t("노트를 불러오고 있어요.") : t("이 기간에 작성된 노트가 없어요.")}
             </Text>
           )}
         </View>
@@ -124,10 +126,10 @@ export function FollowerNoteBoardScreen() {
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

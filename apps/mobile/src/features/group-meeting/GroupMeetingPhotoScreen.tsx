@@ -3,6 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   FlatList,
@@ -18,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Icon } from "../../shared/components/base/Icon";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchGroupMeetingDetail, useRemoveGroupMeetingPhoto } from "./api";
@@ -26,6 +28,8 @@ import { fetchGroupMeetingDetail, useRemoveGroupMeetingPhoto } from "./api";
 // 좌우 스와이프로 넘기고, 화살표는 제스처를 모르는 사용자용 힌트로 남긴다 (2026-10-02 결정).
 // 소그룹장·관리자는 우상단 삭제로 현재 사진을 지운다 — 등록부는 headerShown: false.
 export function GroupMeetingPhotoScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "GroupMeetingPhoto">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -86,7 +90,7 @@ export function GroupMeetingPhotoScreen() {
         const next = Math.min(index, detail.photos.length - 1);
         requestAnimationFrame(() => goTo(next, false));
       },
-      onError: () => Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요."),
+      onError: () => Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요.")),
     });
   };
 
@@ -97,10 +101,10 @@ export function GroupMeetingPhotoScreen() {
           className="absolute left-5 h-8 w-8 items-center justify-center"
           onPress={() => navigation.goBack()}
         >
-          <Icon name="back" size={28} color={colors.icon.disable} />
+          <Icon name="back" size={28} color={themeColors.text.onImage} />
         </Pressable>
-        <Text className="text-heading-small text-text-disable">
-          {meeting?.title ?? "활동 사진"}
+        <Text className="text-heading-small text-text-onImage">
+          {meeting?.title ?? t("활동 사진")}
         </Text>
         {meeting?.canManage && (
           <Pressable
@@ -108,7 +112,7 @@ export function GroupMeetingPhotoScreen() {
             onPress={() => dialogRef.current?.open()}
             hitSlop={8}
           >
-            <Text className="text-body-small text-semantic-danger">삭제</Text>
+            <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
           </Pressable>
         )}
       </View>
@@ -161,10 +165,10 @@ export function GroupMeetingPhotoScreen() {
 
       <AppDialog
         ref={dialogRef}
-        title="이 사진을 삭제하시겠습니까?"
-        description="삭제된 사진은 복구할 수 없습니다."
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t("이 사진을 삭제하시겠습니까?")}
+        description={t("삭제된 사진은 복구할 수 없습니다.")}
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
         onConfirm={handleDeleteConfirm}
       />
     </View>

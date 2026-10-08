@@ -1,5 +1,6 @@
 import {Alert, KeyboardAvoidingView, ScrollView, View} from "react-native";
 import {useEffect, useState} from "react";
+import {useTranslation} from "react-i18next";
 import {useNavigation, useRoute, type RouteProp} from "@react-navigation/native";
 import type {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
@@ -15,6 +16,7 @@ import type {RootStackParamList} from "../../shared/types/navigation";
 import {createQtShare, fetchQtDetails, updateQtShare} from "./api";
 
 export function QtBoardWriteScreen () {
+    const {t} = useTranslation()
     const route = useRoute<RouteProp<RootStackParamList, "QtBoardWrite">>()
     // id가 있으면 수정 모드 — 기존 글을 불러와 필드를 채운 채 시작한다.
     const editingId = route.params?.id
@@ -75,8 +77,8 @@ export function QtBoardWriteScreen () {
 
         onError: () => {
             Alert.alert(
-                editingId ? "수정하지 못했어요" : "등록하지 못했어요",
-                "잠시 후 다시 시도해주세요.",
+                editingId ? t("수정하지 못했어요") : t("등록하지 못했어요"),
+                t("잠시 후 다시 시도해주세요."),
             )
         },
     })
@@ -99,30 +101,30 @@ export function QtBoardWriteScreen () {
                     contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
                     keyboardShouldPersistTaps="handled"
                 >
-                    <DateField label="날짜" placeholder="날짜를 입력해주세요" value={selectDate} onChange={setSelectDate}/>
+                    <DateField label={t("날짜")} placeholder={t("날짜를 입력해주세요")} value={selectDate} onChange={setSelectDate}/>
 
-                    <Field label="배경사진">
+                    <Field label={t("배경사진")}>
                         <ImageUploadBoxSingle imageUri={backgroundPhotoUri} onChange={setBackgroundPhotoUri}/>
                     </Field>
 
-                    <Field label="본문사진(최대 5장)">
+                    <Field label={t("본문사진(최대 5장)")}>
                         <ImageUploadBoxMultiple imageUris={bodyPhotoUris} onChange={setBodyPhotoUris}/>
                     </Field>
 
-                    <TextField label="말씀" placeholder="예) 룻기 1:8-10" value={verse} onChangeText={setVerse}/>
+                    <TextField label={t("말씀")} placeholder={t("예) 룻기 1:8-10")} value={verse} onChangeText={setVerse}/>
 
-                    <TextField label="제목" placeholder="제목을 입력해주세요." value={title} onChangeText={setTitle}/>
+                    <TextField label={t("제목")} placeholder={t("제목을 입력해주세요.")} value={title} onChangeText={setTitle}/>
 
                     <TextAreaField
-                        label="내용"
-                        placeholder={"오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요."}
+                        label={t("내용")}
+                        placeholder={t("오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요.")}
                         value={content}
                         onChangeText={setContent}
                     />
 
                     <View className="mt-16">
                         {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
-                        <Button label="등록하기" onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending}/>
+                        <Button label={t("등록하기")} onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending}/>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingView>

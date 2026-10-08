@@ -17,7 +17,7 @@ export function PostAuthor({authorName, department, categoryName, date} : PostAu
             <View className="w-10 h-10 rounded-full bg-background-assistive"></View>
             <View>
                 <View className="flex flex-row justify-start items-center gap-1">
-                    <Text className="text-heading-small">{authorName}</Text>
+                    <Text className="text-heading-small text-text-normal">{authorName}</Text>
                     <Chip color={getDepartmentColor(department)} text={categoryName}/>
                 </View>
                 <Text className="text-body-small text-text-alternative">{date}</Text>

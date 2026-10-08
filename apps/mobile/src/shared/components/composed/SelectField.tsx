@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { Keyboard, Pressable, Text, View } from "react-native";
 
 import { AppSheet, type AppSheetRef } from "../base/AppSheet";
@@ -17,6 +18,7 @@ interface SelectFieldProps {
 // 시안 확정값(402pt 프레임): 입력줄 48 높이 / 좌우 8 / 아래 구분선.
 // 구분선은 시안이 1.5px이지만 Tailwind 기본 스케일에 없어서 1px(border)로 넣었다.
 export function SelectField({ label, placeholder, options, value, onChange }: SelectFieldProps) {
+  const { t } = useTranslation();
   const sheetRef = useRef<AppSheetRef>(null);
 
   const handleSelect = (option: string) => {
@@ -63,7 +65,7 @@ export function SelectField({ label, placeholder, options, value, onChange }: Se
               className="pt-4"
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
+              <Text className="text-center text-body-medium text-text-alternative">{t("취소")}</Text>
             </Pressable>
           </View>
         }

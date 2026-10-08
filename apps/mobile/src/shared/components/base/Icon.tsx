@@ -47,7 +47,9 @@ import VideoOn from "../../assets/icons/video-on.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
 import Warning from "../../assets/icons/warning.svg";
 import Write from "../../assets/icons/write.svg";
+import { useThemeStore } from "../../store/useThemeStore";
 import { colors } from "../../theme/tokens";
+import { themedColor } from "../../theme/useThemeColors";
 
 // 아이콘은 여러 곳에서 가져온 SVG를 직접 모아서 쓴다 (팩 미설치).
 // 화면 코드는 파일 경로를 모르고 name만 알면 되도록 여기서만 매핑한다 — 아이콘을 교체하거나
@@ -124,6 +126,8 @@ interface IconProps {
 
 export function Icon({ name, size = 24, color = colors.icon.normal }: IconProps) {
   const Source = ICONS[name];
+  // 호출부는 `colors.icon.x`(라이트 값)를 넘기므로, 다크 테마면 여기서 대응하는 다크 값으로 바꾼다.
+  const mode = useThemeStore((state) => state.mode);
 
-  return <Source width={size} height={size} color={color} />;
+  return <Source width={size} height={size} color={themedColor(color, mode)} />;
 }

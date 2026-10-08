@@ -1,6 +1,7 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
 import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
@@ -18,7 +19,6 @@ import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen"
 import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
 import { CellDetailScreen } from "../features/cell/CellDetailScreen";
 import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
-import { BannerViewerScreen } from "../features/home/BannerViewerScreen";
 import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingPhotoScreen";
 import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
 import { NoticeListScreen } from "../features/notice/NoticeListScreen";
@@ -71,6 +71,7 @@ import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
+import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
@@ -82,14 +83,16 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 // 셀 페이지 헤더 — 셀 이름이 서버 목록(useCell)에서 오므로 훅을 쓸 수 있게 컴포넌트로 뺐다
 // (등록부의 header 콜백 안에서는 훅을 못 쓴다).
 function CellDetailHeader({ cellId }: { cellId: string }) {
+  const { t } = useTranslation();
   const cell = useCell(cellId);
-  return <Header variant="sub" title={cell?.name ?? "셀 페이지"} rightAction="home" />;
+  return <Header variant="sub" title={cell?.name ?? t("셀 페이지")} rightAction="home" />;
 }
 
 // 팀 상세 헤더 — 팀 이름이 서버 목록(useTeam)에서 오므로 같은 이유로 컴포넌트로 뺐다.
 function TeamStoryDetailHeader({ teamId }: { teamId: string }) {
+  const { t } = useTranslation();
   const team = useTeam(teamId);
-  return <Header variant="sub" title={team?.name ?? "팀"} rightAction="home" />;
+  return <Header variant="sub" title={team?.name ?? t("팀")} rightAction="home" />;
 }
 
 // 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
@@ -102,7 +105,21 @@ function TeamStoryDetailHeader({ teamId }: { teamId: string }) {
 // 스플래시는 뒤로가기로 돌아갈 수 있으면 안 되고 네비게이션도 쓰지 않아서, 스크린으로 등록하는 대신
 // 트리를 통째로 대신한다. 온보딩처럼 여러 화면이 붙는 날이 오면 그때 별도 Stack으로 올린다.
 export function RootNavigator() {
+  const { t } = useTranslation();
   const session = useAuthStore((state) => state.session);
+  // 화면 전환 중 비는 바탕(카드 배경)이 흰색으로 번쩍이지 않게 네비게이션 테마도 현재 테마 색을 쓴다.
+  const themeColors = useThemeColors();
+  const navigationTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: themeColors.primary.normal,
+      background: themeColors.background.normal,
+      card: themeColors.background.normal,
+      text: themeColors.text.normal,
+      border: themeColors.background.assistive,
+    },
+  };
 
   useAppBootstrap();
 
@@ -119,7 +136,7 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={navigationTheme}>
       {session.status === "authenticated" || session.status === "guest" ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
@@ -128,13 +145,13 @@ export function RootNavigator() {
             component={QtBoardScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="큐티나눔" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("큐티나눔")} rightAction="home" />,
             }}
           />
           <Stack.Screen
               name="QtBoardWrite"
               component={QtBoardWriteScreen}
-              options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔 글쓰기" /> }}
+              options={{ headerShown: true, header: () => <Header variant="sub" title={t("큐티나눔 글쓰기")} /> }}
           />
           <Stack.Screen
             name="QtBoardDetail"
@@ -147,7 +164,7 @@ export function RootNavigator() {
             component={BulletinDetailScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="주보" rightAction="export" />,
+              header: () => <Header variant="sub" title={t("주보")} rightAction="export" />,
             }}
           />
           <Stack.Screen
@@ -155,7 +172,7 @@ export function RootNavigator() {
             component={SharingSheetScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="나눔지" rightAction="export" />,
+              header: () => <Header variant="sub" title={t("나눔지")} rightAction="export" />,
             }}
           />
           <Stack.Screen
@@ -171,7 +188,7 @@ export function RootNavigator() {
             component={BulletinWriteScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="주보/나눔지 업로드" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("주보/나눔지 업로드")} rightAction="none" />,
             }}
           />
           {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}
@@ -189,7 +206,7 @@ export function RootNavigator() {
             component={BulletinScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="마태복음 시리즈" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("마태복음 시리즈")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -197,7 +214,7 @@ export function RootNavigator() {
             component={DepartmentActivityScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="부서활동 게시판" />,
+              header: () => <Header variant="sub" title={t("부서활동 게시판")} />,
             }}
           />
           <Stack.Screen
@@ -211,7 +228,7 @@ export function RootNavigator() {
             component={DepartmentActivityWriteScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="부서활동 글쓰기" />,
+              header: () => <Header variant="sub" title={t("부서활동 글쓰기")} />,
             }}
           />
           <Stack.Screen
@@ -219,7 +236,7 @@ export function RootNavigator() {
             component={TeamBoardManageScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="게시판 관리" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("게시판 관리")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -233,7 +250,7 @@ export function RootNavigator() {
             component={MyGroupMeetingScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="취향 소그룹" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("취향 소그룹")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -244,7 +261,7 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title={route.params?.meetingId ? "취향소그룹 편집" : "취향소그룹 생성"}
+                  title={route.params?.meetingId ? t("취향소그룹 편집") : t("취향소그룹 생성")}
                   rightAction="none"
                 />
               ),
@@ -271,7 +288,7 @@ export function RootNavigator() {
             component={PrayerDetailScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="기도제목" rightAction="bookmark" />,
+              header: () => <Header variant="sub" title={t("기도제목")} rightAction="bookmark" />,
             }}
           />
           <Stack.Screen
@@ -279,7 +296,7 @@ export function RootNavigator() {
             component={PrayerWriteScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="기도제목 작성하기" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("기도제목 작성하기")} rightAction="none" />,
             }}
           />
 
@@ -299,7 +316,7 @@ export function RootNavigator() {
             component={GroupMeetingMemberListScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="참여멤버" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("참여멤버")} rightAction="home" />,
             }}
           />
           {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서
@@ -328,7 +345,7 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title={route.params?.teamId ? "팀 편집" : "팀 생성"}
+                  title={route.params?.teamId ? t("팀 편집") : t("팀 생성")}
                   rightAction="none"
                 />
               ),
@@ -339,7 +356,7 @@ export function RootNavigator() {
             component={TeamMemberAdminScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="팀원 관리" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("팀원 관리")} rightAction="home" />,
             }}
           />
           {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존) — 여기 header를 두면 이중 정의. */}
@@ -353,7 +370,7 @@ export function RootNavigator() {
             component={TeamMemberListScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="팀원" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("팀원")} rightAction="none" />,
             }}
           />
           {/* 헤더 타이틀이 셀 이름이라 목업에서 찾아 쓴다 (TeamStoryDetail과 같은 패턴).
@@ -380,7 +397,7 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title={route.params?.newsId ? "소식 수정" : "소식 글쓰기"}
+                  title={route.params?.newsId ? t("소식 수정") : t("소식 글쓰기")}
                   rightAction="none"
                 />
               ),
@@ -388,14 +405,13 @@ export function RootNavigator() {
           />
           {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
           <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
-          <Stack.Screen name="BannerViewer" component={BannerViewerScreen} />
           <Stack.Screen name="GroupMeetingPhoto" component={GroupMeetingPhotoScreen} />
           <Stack.Screen
             name="CellMemberManage"
             component={CellMemberManageScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="셀원 관리" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("셀원 관리")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -403,7 +419,7 @@ export function RootNavigator() {
             component={CellAttendanceScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="출석 관리" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("출석 관리")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -411,7 +427,7 @@ export function RootNavigator() {
             component={FollowerNoteBoardScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="팔로워 노트" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("팔로워 노트")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -422,7 +438,7 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title={route.params?.noteId ? "팔로워 노트 수정" : "팔로워 노트 작성"}
+                  title={route.params?.noteId ? t("팔로워 노트 수정") : t("팔로워 노트 작성")}
                   rightAction="none"
                 />
               ),
@@ -439,7 +455,7 @@ export function RootNavigator() {
             component={SettingsScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="설정" rightAction="home" />,
+              header: () => <Header variant="sub" title={t("설정")} rightAction="home" />,
             }}
           />
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
@@ -463,7 +479,7 @@ export function RootNavigator() {
             component={NoticeListScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="공지사항" />,
+              header: () => <Header variant="sub" title={t("공지사항")} />,
             }}
           />
           <Stack.Screen
@@ -471,7 +487,7 @@ export function RootNavigator() {
             component={NoticeDetailScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="공지사항" />,
+              header: () => <Header variant="sub" title={t("공지사항")} />,
             }}
           />
           <Stack.Screen
@@ -479,7 +495,7 @@ export function RootNavigator() {
             component={NoticeWriteScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="공지 등록" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("공지 등록")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -487,23 +503,29 @@ export function RootNavigator() {
             component={AdminBannerManageScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="홈 배너 관리" />,
+              header: () => <Header variant="sub" title={t("홈 배너 관리")} />,
             }}
           />
           <Stack.Screen
             name="AdminBannerForm"
             component={AdminBannerFormScreen}
-            options={{
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title="배너 등록" rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.bannerId ? t("배너 수정") : t("배너 등록")}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           <Stack.Screen
             name="AdminCellManage"
             component={AdminCellManageScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="셀 관리" />,
+              header: () => <Header variant="sub" title={t("셀 관리")} />,
             }}
           />
           <Stack.Screen
@@ -514,7 +536,7 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title={route.params?.cellId ? "셀 편집" : "셀 생성"}
+                  title={route.params?.cellId ? t("셀 편집") : t("셀 생성")}
                   rightAction="none"
                 />
               ),
@@ -528,9 +550,9 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title="회원 관리"
+                  title={t("회원 관리")}
                   rightAction="text"
-                  rightLabel="다운로드"
+                  rightLabel={t("다운로드")}
                   onPressRightLabel={() => nav.navigate("AdminDataDownload")}
                 />
               ),
@@ -544,9 +566,9 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title="회원 관리"
+                  title={t("회원 관리")}
                   rightAction="text"
-                  rightLabel="편집"
+                  rightLabel={t("편집")}
                   onPressRightLabel={() =>
                     nav.navigate("AdminMemberEdit", { memberId: detailRoute.params.memberId })
                   }
@@ -568,9 +590,9 @@ export function RootNavigator() {
               header: () => (
                 <Header
                   variant="sub"
-                  title="출석부"
+                  title={t("출석부")}
                   rightAction="text"
-                  rightLabel="다운로드"
+                  rightLabel={t("다운로드")}
                   onPressRightLabel={() => nav.navigate("AdminDataDownload")}
                 />
               ),
@@ -581,7 +603,7 @@ export function RootNavigator() {
             component={AdminOffDaysScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="모임 없는 날 지정" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("모임 없는 날 지정")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -589,7 +611,7 @@ export function RootNavigator() {
             component={AdminDataDownloadScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="데이터 다운로드" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("데이터 다운로드")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -597,7 +619,7 @@ export function RootNavigator() {
             component={AdminDataPreviewScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="미리보기" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("미리보기")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -605,7 +627,7 @@ export function RootNavigator() {
             component={ProfileSetupScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title="회원 정보 수정" rightAction="none" />,
+              header: () => <Header variant="sub" title={t("회원 정보 수정")} rightAction="none" />,
             }}
           />
         </Stack.Navigator>
@@ -625,7 +647,7 @@ export function RootNavigator() {
                 header: () => (
                   <Header
                     variant="sub"
-                    title="프로필 설정"
+                    title={t("프로필 설정")}
                     rightAction="none"
                     onPressBack={() => void signOut()}
                   />

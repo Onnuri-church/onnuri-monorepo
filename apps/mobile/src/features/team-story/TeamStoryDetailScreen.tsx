@@ -1,5 +1,6 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -17,6 +18,7 @@ const MEMBER_PREVIEW_COUNT = 4;
 const PHOTO_PREVIEW_COUNT = 4;
 
 export function TeamStoryDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -51,7 +53,7 @@ export function TeamStoryDetailScreen() {
       />
 
       <View className="mt-6 gap-3">
-        <Text className="text-heading-small text-text-normal">팀 소개</Text>
+        <Text className="text-heading-small text-text-normal">{t("팀 소개")}</Text>
         <Text className="text-body-medium text-text-alternative">{team?.description ?? ""}</Text>
       </View>
 
@@ -64,7 +66,9 @@ export function TeamStoryDetailScreen() {
       </View>
 
       <View className="mt-12 gap-3">
-        <Text className="text-heading-small text-text-normal">팀원 · {members.length}명</Text>
+        <Text className="text-heading-small text-text-normal">
+          {t("팀원 · {{count}}명", { count: members.length })}
+        </Text>
         <View>
           {previewMembers.map((member) => (
             <MemberRow
@@ -76,7 +80,7 @@ export function TeamStoryDetailScreen() {
           {hiddenMemberCount > 0 && (
             <Pressable className="mt-3" onPress={handleMemberListPress}>
               <Text className="text-caption-main text-text-alternative">
-                외 {hiddenMemberCount}명 더 보기
+                {t("외 {{count}}명 더 보기", { count: hiddenMemberCount })}
               </Text>
             </Pressable>
           )}
@@ -85,8 +89,8 @@ export function TeamStoryDetailScreen() {
 
       <View className="mt-20">
         <TeamBoardLink
-          title={`${team?.name ?? "팀"} 게시판`}
-          description="연습 일정, 셋리스트, 공지를 확인해요"
+          title={t("{{name}} 게시판", { name: team?.name ?? t("팀") })}
+          description={t("연습 일정, 셋리스트, 공지를 확인해요")}
           onPress={handleBoardPress}
         />
       </View>

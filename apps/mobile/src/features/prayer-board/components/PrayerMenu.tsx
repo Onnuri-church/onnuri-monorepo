@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert } from "react-native";
 
 import { type ContextMenuItem } from "../../../shared/components/base/ContextMenu";
@@ -24,6 +25,7 @@ interface PrayerMenuProps {
 // ⋮에 항목을 붙이려면 화면에서 헤더를 다시 지정한다. 드롭다운 자체는 Header가
 // menuItems로 품고 있어서 여기서는 항목만 정해서 넘긴다.
 export function PrayerMenu({ title, items }: PrayerMenuProps) {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   useLayoutEffect(() => {
@@ -32,7 +34,7 @@ export function PrayerMenu({ title, items }: PrayerMenuProps) {
     const goIfSignedIn = (screen: "PrayerMine" | "PrayerBookmarks") => {
       const { session } = useAuthStore.getState();
       if (session.status !== "authenticated") {
-        Alert.alert("로그인이 필요해요", "내 기도제목은 로그인 후 볼 수 있어요.");
+        Alert.alert(t("로그인이 필요해요"), t("내 기도제목은 로그인 후 볼 수 있어요."));
         return;
       }
       navigation.navigate(screen);
@@ -40,12 +42,12 @@ export function PrayerMenu({ title, items }: PrayerMenuProps) {
     const defaultItems: ContextMenuItem[] = [
       {
         icon: "user",
-        label: "내 기도제목 보기",
+        label: t("내 기도제목 보기"),
         onPress: () => goIfSignedIn("PrayerMine"),
       },
       {
         icon: "bookmark",
-        label: "저장한 기도제목",
+        label: t("저장한 기도제목"),
         onPress: () => goIfSignedIn("PrayerBookmarks"),
       },
     ];
@@ -53,7 +55,7 @@ export function PrayerMenu({ title, items }: PrayerMenuProps) {
     navigation.setOptions({
       header: () => <Header variant="sub" title={title} menuItems={items ?? defaultItems} />,
     });
-  }, [navigation, title, items]);
+  }, [navigation, title, items, t]);
 
   return null;
 }

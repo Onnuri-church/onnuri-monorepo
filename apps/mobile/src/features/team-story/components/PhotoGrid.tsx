@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 export interface GridPhoto {
   id: string;
@@ -44,6 +46,7 @@ export function PhotoGrid({
   onAddPress,
   showLabel = true,
 }: PhotoGridProps) {
+  const { t } = useTranslation();
   // 추가 슬롯은 첫 칸을 차지한다 — null을 앞에 끼워 넣고 렌더에서 구분한다.
   const slots: (GridPhoto | null)[] = onAddPress ? [null, ...photos] : photos;
   const rows = chunk(slots, COLUMNS);
@@ -62,7 +65,7 @@ export function PhotoGrid({
                   onPress={onAddPress}
                 >
                   <Icon name="add-round-light" size={24} />
-                  <Text className="mt-px text-caption-main text-text-alternative">추가</Text>
+                  <Text className="mt-px text-caption-main text-text-alternative">{t("추가")}</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -96,11 +99,12 @@ export function PhotoGrid({
 // 고른 칸 위에 얹는 표시 (시안: 검정 20% 딤 + 2px primary 테두리 + 우상단 체크).
 // 딤은 색+opacity를 style로 준다 — 셀 갤러리(GalleryMonthGrid)가 쓰는 방식과 같다.
 function SelectedOverlay() {
+  const themeColors = useThemeColors();
   return (
     <View className="absolute inset-0 items-end p-2">
       <View
         className="absolute inset-0"
-        style={{ backgroundColor: colors.text.normal, opacity: 0.2 }}
+        style={{ backgroundColor: themeColors.text.normal, opacity: 0.2 }}
       />
       <View className="absolute inset-0 border-2 border-primary-normal" />
       <View className="h-6 w-6 items-center justify-center rounded-full bg-primary-normal">

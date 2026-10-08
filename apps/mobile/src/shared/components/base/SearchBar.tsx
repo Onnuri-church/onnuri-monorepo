@@ -1,6 +1,7 @@
 import { Pressable, TextInput, View } from "react-native";
 
 import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 import { Icon } from "./Icon";
 
 interface SearchBarProps {
@@ -15,6 +16,7 @@ interface SearchBarProps {
 // 우측 아이콘은 48x48 버튼(h-12 w-12) 안의 24 아이콘이라, 아이콘이 바 오른쪽 끝에서 16 떨어진다.
 // 폭은 박지 않는다 — 호출부의 좌우 여백이 정한다. 무엇을 검색하는지는 모르고 값과 콜백만 받는다.
 export function SearchBar({ value, onChangeText, placeholder, onSubmit }: SearchBarProps) {
+  const themeColors = useThemeColors();
   return (
     <View className="h-14 flex-row items-center rounded-full bg-background-muted p-1">
       <TextInput
@@ -22,7 +24,7 @@ export function SearchBar({ value, onChangeText, placeholder, onSubmit }: Search
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.text.alternative}
+        placeholderTextColor={themeColors.text.alternative}
         onSubmitEditing={onSubmit}
         returnKeyType="search"
       />

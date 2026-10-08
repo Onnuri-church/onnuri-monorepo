@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
 import { Alert, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -22,6 +23,7 @@ import { PrayerMenu } from "./components/PrayerMenu";
 const CONTENT_PADDING = 20;
 
 export function PrayerBoardScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
   const queryClient = useQueryClient();
@@ -58,7 +60,7 @@ export function PrayerBoardScreen() {
     try {
       if (pendingDelete) await deletePrayer(pendingDelete.id);
     } catch {
-      Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
     }
     dialogRef.current?.close();
     setPendingDelete(null);
@@ -68,7 +70,11 @@ export function PrayerBoardScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <FilterBar items={[...PRAYER_CATEGORIES]} selected={category} onSelect={setCategory} />
+      <FilterBar
+        items={PRAYER_CATEGORIES.map((item) => ({ ...item, label: t(item.label) }))}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <ScrollView contentContainerClassName="pb-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
         {isAdmin ? (
@@ -76,20 +82,23 @@ export function PrayerBoardScreen() {
           <View className="mt-2 flex-row items-center justify-center gap-1">
             <Icon name="lock" size={12} color={colors.semantic.warning} />
             <Text className="text-body-small text-semantic-warning">
-              관리자만 실제 작성자를 확인할 수 있어요
+              {t("관리자만 실제 작성자를 확인할 수 있어요")}
             </Text>
           </View>
         ) : (
           // 시안: Title/Main 22px Bold, 행간 26(2줄 = 52). 등록 개수만 브랜드 색으로 강조한다.
           // 공용 TEXT_STYLE은 행간이 140%라 여기서만 시안 값을 지정한다 (PrayerCard와 같은 이유).
           <Text className="mt-2 text-center text-title text-text-normal" style={{ lineHeight: 26 }}>
-            현재 <Text className="text-primary-normal">{data?.totalCount ?? 0}개</Text>의 기도제목이
-            {"\n"}등록되어 있어요
+            <Trans
+              i18nKey={"현재 <0>{{count}}개</0>의 기도제목이\n등록되어 있어요"}
+              values={{ count: data?.totalCount ?? 0 }}
+              components={{ 0: <Text className="text-primary-normal" /> }}
+            />
           </Text>
         )}
 
         <View className="mt-6">
-          <SearchBar value={keyword} onChangeText={setKeyword} placeholder="기도제목 검색" />
+          <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("기도제목 검색")} />
         </View>
 
         <View className="mt-6 gap-6">
@@ -102,13 +111,13 @@ export function PrayerBoardScreen() {
 
           {isError && (
             <Text className="text-center text-body-medium text-text-alternative">
-              기도제목을 불러오지 못했어요
+              {t("기도제목을 불러오지 못했어요")}
             </Text>
           )}
 
           {!isPending && !isError && query !== "" && visibleItems.length === 0 && (
             <Text className="text-center text-body-medium text-text-alternative">
-              검색 결과가 없어요
+              {t("검색 결과가 없어요")}
             </Text>
           )}
 
@@ -133,14 +142,14 @@ export function PrayerBoardScreen() {
         </FloatingButton>
       )}
 
-      <PrayerMenu title="기도제목 게시판" />
+      <PrayerMenu title={t("기도제목 게시판")} />
 
       <AppDialog
         ref={dialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={handleDeleteConfirm}
       />
     </View>

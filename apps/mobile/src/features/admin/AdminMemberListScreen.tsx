@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -13,6 +14,7 @@ import { MemberBadge } from "./components/MemberBadge";
 
 // 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
 export function AdminMemberListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState("");
   const { data, refetch, isRefetching } = useAdminMembers();
@@ -38,10 +40,10 @@ export function AdminMemberListScreen() {
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
-      <SearchBar value={keyword} onChangeText={setKeyword} placeholder="이름 · 셀 · 팀으로 검색" />
+      <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("이름 · 셀 · 팀으로 검색")} />
 
       <Text className="mt-3 pl-1 text-caption-main text-text-alternative">
-        전체 {members.length}명
+        {t("전체 {{count}}명", { count: members.length })}
       </Text>
 
       <View className="mt-2 rounded-5 bg-background-normal px-4 py-2 shadow-card">
@@ -66,7 +68,7 @@ export function AdminMemberListScreen() {
                   {member.badge && <MemberBadge badge={member.badge} />}
                 </View>
                 <Text className="mt-0.5 text-caption-main text-text-alternative">
-                  {member.cellName ?? "무소속"} · {member.teamName ?? "무소속"}
+                  {member.cellName ?? t("무소속")} · {member.teamName ?? t("무소속")}
                 </Text>
               </View>
               <Icon name="expand-right" size={16} color={colors.icon.normal} />
@@ -75,7 +77,7 @@ export function AdminMemberListScreen() {
         ))}
         {members.length === 0 && (
           <Text className="py-6 text-center text-body-regular text-text-alternative">
-            검색 결과가 없어요.
+            {t("검색 결과가 없어요.")}
           </Text>
         )}
       </View>

@@ -2,6 +2,7 @@ import { type RouteProp, useNavigation, useRoute } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -36,6 +37,7 @@ const DATE_LINE = 23;
 const BODY_LINE = 23;
 
 export function PrayerDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { id } = useRoute<RouteProp<RootStackParamList, "PrayerBoardDetail">>().params;
@@ -52,19 +54,21 @@ export function PrayerDetailScreen() {
       header: () => (
         <Header
           variant="sub"
-          title="기도제목"
+          title={t("기도제목")}
           rightAction="bookmark"
           bookmarked={data?.bookmarked}
           onPressBookmark={() => toggleBookmark(id, data?.bookmarked ?? false)}
         />
       ),
     });
-  }, [navigation, id, data?.bookmarked, toggleBookmark]);
+  }, [navigation, id, data?.bookmarked, toggleBookmark, t]);
 
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">기도제목을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">
+          {t("기도제목을 불러오지 못했어요")}
+        </Text>
       </View>
     );
   }
@@ -84,7 +88,7 @@ export function PrayerDetailScreen() {
       ) : (
         <>
           <View style={{ marginTop: GAP_HEADER_TO_CATEGORY }}>
-            <CategoryBadge label={data.category} />
+            <CategoryBadge label={t(data.category)} />
           </View>
 
           <Text

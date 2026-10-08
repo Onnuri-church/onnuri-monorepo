@@ -11,6 +11,7 @@ import { apiClient } from "../../shared/api/client";
 import type { PrayerRequest } from "./components/PrayerCard";
 
 // 서버는 enum 값·ISO 날짜만 내리고 표시 문구(카테고리 한글명·작성일·D-day)는 여기서 조립한다.
+// 카테고리 한글명은 원문 키로 두고 화면에서 t()로 번역한다.
 // 예외는 authorName — 익명/관리자 실명 노출 판단이 서버 권한이라 완성 문구로 내려온다.
 
 export const PRAYER_CATEGORIES = [
@@ -73,7 +74,7 @@ function toCard(item: PrayerListItem): PrayerRequest {
     authorName: item.authorName,
     category: CATEGORY_LABEL[item.category],
     title: item.title,
-    createdAtLabel: `작성일 ${toDotDate(item.createdAt)}`,
+    createdDate: toDotDate(item.createdAt),
     ddayLabel: toDdayLabel(item.visibleUntil),
     bookmarked: item.bookmarked,
   };

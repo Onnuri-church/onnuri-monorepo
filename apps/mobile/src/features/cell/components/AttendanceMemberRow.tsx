@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Avatar } from "../../../shared/components/base/Avatar";
@@ -15,6 +16,7 @@ export function AttendanceMemberRow({
   onWorshipChange,
   onMeetingChange,
 }: AttendanceMemberRowProps) {
+  const { t } = useTranslation();
   return (
     <View className="gap-4 py-4">
       <View className="flex-row items-center gap-2">
@@ -24,14 +26,14 @@ export function AttendanceMemberRow({
 
       <View className="gap-2.5">
         <StatusRow
-          label="예배"
-          presentLabel="출석"
+          label={t("예배")}
+          presentLabel={t("출석")}
           status={attendance.worship}
           onChange={onWorshipChange}
         />
         <StatusRow
-          label="셀모임"
-          presentLabel="참석"
+          label={t("셀모임")}
+          presentLabel={t("참석")}
           status={attendance.meeting}
           onChange={onMeetingChange}
         />
@@ -49,6 +51,7 @@ interface StatusRowProps {
 }
 
 function StatusRow({ label, presentLabel, status, onChange }: StatusRowProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center">
       <Text className="w-12 text-caption-main text-text-alternative">{label}</Text>
@@ -60,7 +63,7 @@ function StatusRow({ label, presentLabel, status, onChange }: StatusRowProps) {
           onPress={() => onChange("present")}
         />
         <SegmentButton
-          label="결석"
+          label={t("결석")}
           selected={status === "absent"}
           tone="absent"
           onPress={() => onChange("absent")}

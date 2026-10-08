@@ -1,8 +1,10 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, StyleSheet, Text, View } from "react-native";
 import Svg, { Defs, LinearGradient, Rect, Stop } from "react-native-svg";
 
 import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { useThemeStore } from "../../../shared/store/useThemeStore";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 // 시안 확정값 362x240. 폭은 배너가 정하지 않고 호출부의 좌우 여백이 정하므로 비율로만 고정한다
 // (주보 SermonSeriesBanner와 같은 방식).
@@ -17,56 +19,58 @@ const SCRIM_START = "0.5324";
 const SCRIM_OPACITY = 0.2;
 
 interface WeeklySermonBannerProps {
-  /** 시리즈 묶음 이름 (예: "8월 설교 시리즈"). poster 모드에서는 안 쓴다 */
+  /** 시리즈 묶음 이름 (예: "8월 설교 시리즈") */
   seriesLabel?: string;
-  /** 본문 범위 (예: "마태복음 6:5-8"). poster 모드에서는 안 쓴다 */
+  /** 본문 범위 (예: "마태복음 6:5-8") */
   passage?: string;
   title?: string;
   /** 대표 이미지. 없으면 회색 자리에 그라데이션만 그린다 — 말씀 배너의 배경사진은 선택이다. */
   imageUrl?: string;
-  /**
-   * 포스터 모드 — 수련회·이벤트 포스터처럼 텍스트 없이 이미지만 채운다 (2026-09-23 확정).
-   * 주보 바로가기 버튼은 두 모드 다 남는다.
-   */
-  poster?: boolean;
-  /** 배너(이미지 영역) 탭 — 포스터 크게 보기 진입용. 없으면 눌리지 않는다 */
-  onPressImage?: () => void;
   /** 우하단 "주보 · 나눔자료" 버튼. */
   onPressShortcut?: () => void;
 }
 
-// 홈 맨 위 배너. 말씀 모드는 사진 위에 라벨·본문·제목이 얹히고, 포스터 모드는 이미지만
-// 채운다 — 우하단 바로가기 버튼은 공통이다. (주보의 SermonSeriesBanner는 사진 "아래"에
+// 홈 맨 위 배너. 사진 위에 라벨·본문·제목이 얹히고 우하단에 바로가기 버튼이 붙는다. (주보의 SermonSeriesBanner는 사진 "아래"에
 // 글이 쌓이는 다른 배너다.)
 export function WeeklySermonBanner({
   seriesLabel,
   passage,
   title,
   imageUrl,
-  poster,
-  onPressImage,
   onPressShortcut,
 }: WeeklySermonBannerProps) {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
+  const mode = useThemeStore((state) => state.mode);
   return (
     <Pressable
       className="overflow-hidden rounded-2.5 bg-text-assistive active:opacity-90"
       style={{ aspectRatio: IMAGE_ASPECT_RATIO }}
-      disabled={!onPressImage}
-      onPress={onPressImage}
+      // 작은 알약만 눌리면 배너를 눌렀을 때 아무 반응이 없어 "안 눌린다"로 보인다 — 배너 어디를 눌러도 같은 곳으로 간다.
+      onPress={onPressShortcut}
     >
       {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다. */}
       {imageUrl ? (
-        <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+        <>
+          <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
+          {/* 밝은 사진에서도 흰 글자가 읽히도록 어두운 덮개를 한 겹 씌운다 (다크 테마는 눈부심 완화로 더 진하게). */}
+          <View
+            style={[
+              StyleSheet.absoluteFill,
+              { backgroundColor: themeColors.background.dark, opacity: mode === "dark" ? 0.45 : 0.3 },
+            ]}
+          />
+        </>
       ) : (
         <Svg style={StyleSheet.absoluteFill} width="100%" height="100%">
           <Defs>
             <LinearGradient id={SCRIM_ID} x1="0" y1="0" x2="0" y2="1">
               <Stop
                 offset={SCRIM_START}
-                stopColor={colors.background.normal}
+                stopColor={themeColors.background.normal}
                 stopOpacity={SCRIM_OPACITY}
               />
-              <Stop offset="1" stopColor={colors.text.normal} stopOpacity={SCRIM_OPACITY} />
+              <Stop offset="1" stopColor={themeColors.text.normal} stopOpacity={SCRIM_OPACITY} />
             </LinearGradient>
           </Defs>
           <Rect x="0" y="0" width="100%" height="100%" fill={`url(#${SCRIM_ID})`} />
@@ -76,22 +80,21 @@ export function WeeklySermonBanner({
       {/* 시안은 라벨 → 본문 → 제목을 각각 23씩 벌리는데, 그 23은 텍스트 높이가 0으로 잡힌
           Figma export 기준이라 그대로 쓸 수 없다. 실제 행간(13px의 140% = 18.2)을 빼고 남는
           만큼만 여백으로 준다 — 라벨 아래 24, 본문 아래 4. */}
-      {!poster && (
-        <View className="absolute bottom-5 left-6">
-          <Text className="text-body-small text-background-normal">{seriesLabel}</Text>
-          <Text className="mt-6 text-body-small-bold text-background-normal">{passage}</Text>
-          <Text className="mt-1 text-body-small-bold text-background-normal">{title}</Text>
-        </View>
-      )}
+      <View className="absolute bottom-5 left-6">
+        <Text className="text-body-small text-text-onImage">{seriesLabel}</Text>
+        <Text className="mt-6 text-body-small-bold text-text-onImage">{passage}</Text>
+        <Text className="mt-1 text-body-small-bold text-text-onImage">{title}</Text>
+      </View>
 
       {/* 시안의 opacity 0.85는 글자까지 흐려져서 빼고 불투명하게 그린다 (확인 완료).
           좌우 여백이 다른 건(12/10) 화살표 아이콘 안쪽 여백을 시안이 감안한 값이다. */}
       <Pressable
-        className="absolute bottom-5.5 right-6 flex-row items-center rounded-5 bg-background-normal py-1.5 pl-3 pr-2.5 active:opacity-80"
+        className="absolute bottom-5.5 right-6 flex-row items-center rounded-5 bg-background-onImage py-1.5 pl-3 pr-2.5 active:opacity-80"
         onPress={onPressShortcut}
+        hitSlop={10}
       >
-        <Text className="text-caption-small text-text-normal">주보 · 나눔자료</Text>
-        <Icon name="expand-right" size={15} />
+        <Text className="text-caption-small text-background-dark">{t("주보 · 나눔자료")}</Text>
+        <Icon name="expand-right" size={15} color={themeColors.background.dark} />
       </Pressable>
     </Pressable>
   );

@@ -1,5 +1,6 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useLayoutEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 
 import { useAddTeamMembers, useTeamMemberCandidates } from "./api";
@@ -11,6 +12,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 팀에 넣을 사람을 검색해서 여러 명 고르는 화면. 헤더의 "완료"가 고른 사람을 반영하고 돌아간다 —
 // 동작이 화면 상태(선택 목록)에 의존해서 화면이 헤더를 단독 등록한다 (DESIGN.md 헤더 규칙).
 export function TeamMemberAddScreen() {
+  const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamMemberAdd">>();
   const navigation = useNavigation();
   const { data: candidates } = useTeamMemberCandidates(params.teamId);
@@ -36,21 +38,21 @@ export function TeamMemberAddScreen() {
       header: () => (
         <Header
           variant="sub"
-          title="팀원 추가"
+          title={t("팀원 추가")}
           rightAction="text"
-          rightLabel="완료"
+          rightLabel={t("완료")}
           onPressRightLabel={handleDonePress}
         />
       ),
     });
-  }, [navigation, selectedIds]);
+  }, [navigation, selectedIds, t]);
 
   return (
     <ScrollView className="flex-1 bg-background-normal" contentContainerClassName="px-5 pb-6 pt-4">
-      <SearchBar value={query} onChangeText={setQuery} placeholder="이름으로 검색" />
+      <SearchBar value={query} onChangeText={setQuery} placeholder={t("이름으로 검색")} />
 
       <Text className="mt-4 text-caption-main text-text-alternative">
-        {selectedIds.length}명 선택됨
+        {t("{{count}}명 선택됨", { count: selectedIds.length })}
       </Text>
 
       <View className="mt-2">
@@ -59,7 +61,7 @@ export function TeamMemberAddScreen() {
             key={candidate.id}
             name={candidate.name}
             // 시안 문구 — 서버는 팀 이름만 주고 "없음" 표현은 화면이 정한다.
-            affiliation={candidate.teamName ?? "소속 팀 없음"}
+            affiliation={candidate.teamName ?? t("소속 팀 없음")}
             selected={selectedIds.includes(candidate.id)}
             onPress={() => handleToggle(candidate.id)}
           />

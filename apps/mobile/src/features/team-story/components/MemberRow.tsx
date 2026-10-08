@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 
 interface MemberRowProps {
@@ -16,6 +17,7 @@ interface MemberRowProps {
 // (DESIGN.md 컴포넌트 배치 규칙). 팀 상세의 팀원 미리보기와 팀원 리스트가 같이 쓴다.
 // 시안 확정값: 행 높이 60(py-2.5 + 아바타 40), 아바타 40, 아바타-이름 간격 16.
 export function MemberRow({ name, roleLabel, avatarUrl, onDeletePress }: MemberRowProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between border-b border-text-assistive py-2.5">
       <View className="flex-row items-center gap-4">
@@ -28,7 +30,7 @@ export function MemberRow({ name, roleLabel, avatarUrl, onDeletePress }: MemberR
       </View>
       {onDeletePress ? (
         <Pressable onPress={onDeletePress} hitSlop={8}>
-          <Text className="text-body-small text-semantic-danger">삭제</Text>
+          <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
         </Pressable>
       ) : (
         <Text className="text-body-small text-primary-normal">{roleLabel}</Text>

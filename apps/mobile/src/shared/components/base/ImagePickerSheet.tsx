@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { AppSheet, type AppSheetRef } from "./AppSheet";
@@ -9,6 +10,7 @@ interface ImagePickerSheetProps {
 }
 
 export function ImagePickerSheet({ sheetRef, pickerItems }: ImagePickerSheetProps) {
+  const { t } = useTranslation();
   const handleCancelPress = () => sheetRef.current?.close();
 
   return (
@@ -22,7 +24,7 @@ export function ImagePickerSheet({ sheetRef, pickerItems }: ImagePickerSheetProp
             className="pt-4"
             style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
           >
-            <Text className="text-center text-body-medium text-text-alternative">취소</Text>
+            <Text className="text-center text-body-medium text-text-alternative">{t("취소")}</Text>
           </Pressable>
         </View>
       }

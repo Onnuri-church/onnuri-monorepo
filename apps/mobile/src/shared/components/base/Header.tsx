@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUnreadNotificationCount } from "../../api/notifications";
 import { useAuthStore } from "../../store/useAuthStore";
 import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
@@ -89,6 +90,7 @@ interface OverlayHeaderProps {
 type HeaderProps = MainHeaderProps | SubHeaderProps | OverlayHeaderProps;
 
 export function Header(props: HeaderProps) {
+  const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
@@ -169,7 +171,7 @@ export function Header(props: HeaderProps) {
               <Pressable onPress={props.onPressBack ?? (() => navigation.goBack())} hitSlop={8}>
                 <Icon name="back" size={28} color={colors.icon.strong} />
               </Pressable>
-              <Text className="font-pretendard-semibold text-heading-small">{props.title}</Text>
+              <Text className="font-pretendard-semibold text-heading-small text-text-normal">{props.title}</Text>
               {props.rightAction === "home" ? (
                   <Pressable
                       onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
@@ -190,7 +192,7 @@ export function Header(props: HeaderProps) {
                     <Icon
                         name={props.bookmarked ? "bookmark-active" : "bookmark"}
                         size={28}
-                        color={props.bookmarked ? colors.primary.normal : colors.icon.strong}
+                        color={props.bookmarked ? themeColors.primary.normal : themeColors.icon.strong}
                     />
                   </Pressable>
               ) : props.rightAction === "text" ? (

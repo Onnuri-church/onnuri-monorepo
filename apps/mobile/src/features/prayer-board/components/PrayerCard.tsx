@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 import { CategoryBadge } from "./CategoryBadge";
 
 export interface PrayerRequest {
@@ -13,10 +15,10 @@ export interface PrayerRequest {
   category: string;
   title: string;
   /**
-   * 표시용 문자열 (예: "작성일 2026.08.03"). 안 주면 날짜 줄을 통째로 그리지 않는다 —
+   * 작성일 (예: "2026.08.03", 카드가 "작성일 …"로 그린다). 안 주면 날짜 줄을 통째로 그리지 않는다 —
    * 홈 화면은 그 자리에 카드 위로 페이지 인디케이터를 얹는다.
    */
-  createdAtLabel?: string;
+  createdDate?: string;
   /** 남은 기간 (예: "D-2"). 없으면 표시하지 않는다 */
   ddayLabel?: string | null;
   bookmarked?: boolean;
@@ -60,6 +62,8 @@ export function PrayerCard({
   onEdit,
   onDelete,
 }: PrayerCardProps) {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   return (
     <Pressable
       className="rounded-5 border border-background-muted bg-background-normal p-4 active:opacity-80"
@@ -73,7 +77,7 @@ export function PrayerCard({
         >
           No.{prayer.number} · {prayer.authorName}
         </Text>
-        <CategoryBadge label={prayer.category} />
+        <CategoryBadge label={t(prayer.category)} />
       </View>
 
       <Text
@@ -84,13 +88,13 @@ export function PrayerCard({
         {prayer.title}
       </Text>
 
-      {prayer.createdAtLabel && (
+      {prayer.createdDate && (
         <View className="mt-2.5 flex-row items-center gap-2.5">
           <Text
             className="text-caption-main text-text-alternative"
             style={{ lineHeight: CAPTION_LINE }}
           >
-            {prayer.createdAtLabel}
+            {t("작성일 {{date}}", { date: prayer.createdDate })}
           </Text>
           {prayer.ddayLabel && (
             <Text
@@ -114,7 +118,7 @@ export function PrayerCard({
           <Icon
             name={prayer.bookmarked ? "bookmark-active" : "bookmark"}
             size={24}
-            color={prayer.bookmarked ? colors.primary.normal : colors.text.alternative}
+            color={prayer.bookmarked ? themeColors.primary.normal : themeColors.text.alternative}
           />
         </Pressable>
       )}
@@ -136,7 +140,7 @@ export function PrayerCard({
                   className="text-caption-main text-text-alternative"
                   style={{ lineHeight: CAPTION_LINE }}
                 >
-                  수정
+                  {t("수정")}
                 </Text>
               </Pressable>
             )}
@@ -150,7 +154,7 @@ export function PrayerCard({
                 className="text-caption-main text-semantic-danger"
                 style={{ lineHeight: CAPTION_LINE }}
               >
-                삭제
+                {t("삭제")}
               </Text>
             </Pressable>
           </View>

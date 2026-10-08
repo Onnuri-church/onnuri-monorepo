@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Image, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -16,6 +17,7 @@ const PRESET_IMAGES = presetContext.keys().sort().map((key) => presetContext(key
 
 export function ImageUploadBoxSingle({ imageUri, onChange }: ImageUploadBoxSingleProps) {
 
+  const { t } = useTranslation();
   const handleDeletePress = () => {
     onChange?.(null);
   };
@@ -54,9 +56,9 @@ export function ImageUploadBoxSingle({ imageUri, onChange }: ImageUploadBoxSingl
         sheetRef={sheetRef}
         pickerItems={
           [
-            ["카메라로 촬영", handleTakePhoto],
-            ["앨범에서 선택", handlePickFromAlbum],
-            ["기존 이미지 불러오기", handleUseRandomPreset],
+            [t("카메라로 촬영"), handleTakePhoto],
+            [t("앨범에서 선택"), handlePickFromAlbum],
+            [t("기존 이미지 불러오기"), handleUseRandomPreset],
           ] as const
         }
       />

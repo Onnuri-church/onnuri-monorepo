@@ -3,6 +3,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
 
 import { Header } from "../../shared/components/base/Header";
@@ -14,18 +15,19 @@ import { useCells } from "../cell/api";
 import { fetchTeams } from "../profile/api";
 import { useAdminMember, useUpdateAdminMember } from "./api";
 
-// 권한 선택지 — 시안 액션시트에는 "관리자"도 있지만 앱 지정 대상에서 제외 (2026-09-21 확정).
-const ROLE_OPTIONS: { label: string; value: AdminMemberRole }[] = [
-  { label: "일반사용자", value: "GENERAL" },
-  { label: "팀장", value: "TEAM_LEADER" },
-  { label: "팔로워", value: "CELL_LEADER" },
-];
-const NO_MEMBERSHIP = "소속 없음";
-
 // 회원 편집 (회원 상세 헤더 "편집" — 2026-09-21 시안). 시안은 카드 안 행별 편집(인라인
 // 연필·휠 피커·액션시트)인데, 앱의 기존 폼 관례(TextField/DateField/SelectField 스택)로
 // 근사해 구현했다 — 행별 UI가 필요하면 디자이너와 확인 후 조정.
 export function AdminMemberEditScreen() {
+  const { t } = useTranslation();
+  // 권한 선택지 — 시안 액션시트에는 "관리자"도 있지만 앱 지정 대상에서 제외 (2026-09-21 확정).
+  // SelectField가 표시 문자열을 값으로 쓰므로 번역된 라벨을 그대로 상태에 넣는다.
+  const ROLE_OPTIONS: { label: string; value: AdminMemberRole }[] = [
+    { label: t("일반사용자"), value: "GENERAL" },
+    { label: t("팀장"), value: "TEAM_LEADER" },
+    { label: t("팔로워"), value: "CELL_LEADER" },
+  ];
+  const NO_MEMBERSHIP = t("소속 없음");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminMemberEdit">>();
   const { memberId } = route.params;
@@ -68,7 +70,7 @@ export function AdminMemberEditScreen() {
           // 서버 검증 메시지(팀 없이 팀장 지정 등)를 그대로 보여준다.
           const message =
             (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-          Alert.alert("저장 실패", message ?? "잠시 후 다시 시도해주세요.");
+          Alert.alert(t("저장 실패"), message ?? t("잠시 후 다시 시도해주세요."));
         },
       },
     );
@@ -80,9 +82,9 @@ export function AdminMemberEditScreen() {
       header: () => (
         <Header
           variant="sub"
-          title="회원 정보"
+          title={t("회원 정보")}
           rightAction="text"
-          rightLabel="저장"
+          rightLabel={t("저장")}
           onPressRightLabel={handleSavePress}
         />
       ),
@@ -93,7 +95,7 @@ export function AdminMemberEditScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-regular text-text-alternative">
-          회원 정보를 불러오고 있어요.
+          {t("회원 정보를 불러오고 있어요.")}
         </Text>
       </View>
     );
@@ -103,18 +105,23 @@ export function AdminMemberEditScreen() {
     <View className="flex-1 bg-background-normal">
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
         <ScrollView contentContainerClassName="gap-2 px-5 pb-10 pt-4" keyboardShouldPersistTaps="handled">
-          <TextField label="이름" placeholder="이름을 입력하세요." value={name} onChangeText={setName} />
+          <TextField
+            label={t("이름")}
+            placeholder={t("이름을 입력하세요.")}
+            value={name}
+            onChangeText={setName}
+          />
 
           <DateField
-            label="생년월일"
-            placeholder="생년월일을 선택하세요."
+            label={t("생년월일")}
+            placeholder={t("생년월일을 선택하세요.")}
             value={birthDate}
             onChange={setBirthDate}
           />
 
           {/* 성별 — 시안: 남성/여성 토글 */}
           <View className="py-4">
-            <Text className="text-body-main text-text-normal">성별</Text>
+            <Text className="text-body-main text-text-normal">{t("성별")}</Text>
             <View className="mt-2 flex-row self-start overflow-hidden rounded-lg bg-background-muted">
               {(["MALE", "FEMALE"] as const).map((value) => (
                 <Pressable
@@ -131,7 +138,7 @@ export function AdminMemberEditScreen() {
                         : "text-caption-main text-text-alternative"
                     }
                   >
-                    {value === "MALE" ? "남성" : "여성"}
+                    {value === "MALE" ? t("남성") : t("여성")}
                   </Text>
                 </Pressable>
               ))}
@@ -139,31 +146,31 @@ export function AdminMemberEditScreen() {
           </View>
 
           <TextField
-            label="연락처"
-            placeholder="연락처를 입력하세요."
+            label={t("연락처")}
+            placeholder={t("연락처를 입력하세요.")}
             value={phone}
             onChangeText={setPhone}
           />
 
           <SelectField
-            label="소속 셀"
-            placeholder="소속 셀을 선택하세요."
+            label={t("소속 셀")}
+            placeholder={t("소속 셀을 선택하세요.")}
             options={[NO_MEMBERSHIP, ...(cells ?? []).map((cell) => cell.name)]}
             value={cellName}
             onChange={setCellName}
           />
 
           <SelectField
-            label="소속 팀"
-            placeholder="소속 팀을 선택하세요."
+            label={t("소속 팀")}
+            placeholder={t("소속 팀을 선택하세요.")}
             options={[NO_MEMBERSHIP, ...(teams ?? []).map((team) => team.name)]}
             value={teamName}
             onChange={setTeamName}
           />
 
           <SelectField
-            label="권한"
-            placeholder="권한을 선택하세요."
+            label={t("권한")}
+            placeholder={t("권한을 선택하세요.")}
             options={ROLE_OPTIONS.map((option) => option.label)}
             value={roleLabel}
             onChange={setRoleLabel}
@@ -171,7 +178,7 @@ export function AdminMemberEditScreen() {
 
           {/* 가입일 — 수정 불가 (시안) */}
           <View className="flex-row items-center justify-between py-4">
-            <Text className="text-body-main text-text-normal">가입일</Text>
+            <Text className="text-body-main text-text-normal">{t("가입일")}</Text>
             <Text className="text-body-regular text-text-alternative">{member.joinedAtLabel}</Text>
           </View>
         </ScrollView>

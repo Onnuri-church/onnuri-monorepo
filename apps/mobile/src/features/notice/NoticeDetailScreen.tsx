@@ -2,12 +2,14 @@ import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useState } from "react";
 import { Image, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toNoticeDateLabel, useNotices } from "./api";
 
 // 공지 상세 — 목록이 전체 필드를 내려주므로 같은 캐시에서 찾는다 (api.ts 계약).
 export function NoticeDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "NoticeDetail">>();
   const { data: notices, isLoading } = useNotices();
@@ -20,7 +22,7 @@ export function NoticeDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-medium text-text-alternative">
-          {isLoading ? "공지를 불러오고 있어요." : "공지를 찾을 수 없어요."}
+          {isLoading ? t("공지를 불러오고 있어요.") : t("공지를 찾을 수 없어요.")}
         </Text>
       </View>
     );

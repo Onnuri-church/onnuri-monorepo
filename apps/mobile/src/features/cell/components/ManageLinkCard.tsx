@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 interface ManageLinkCardProps {
   title: string;
@@ -11,12 +11,13 @@ interface ManageLinkCardProps {
 
 // 관리 탭의 이동 카드 (시안: 높이 73.6, 패딩 13/16, 0.3px 테두리, radius 20).
 export function ManageLinkCard({ title, description, onPress }: ManageLinkCardProps) {
+  const themeColors = useThemeColors();
   return (
     <Pressable
       className="flex-row items-center rounded-5 px-4 py-3"
       style={{
         borderWidth: StyleSheet.hairlineWidth,
-        borderColor: colors.icon.normal,
+        borderColor: themeColors.icon.normal,
       }}
       onPress={onPress}
     >

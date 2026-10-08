@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import GoogleMark from "../../../shared/assets/logo/google.svg";
@@ -8,14 +9,12 @@ import KakaoMark from "../../../shared/assets/logo/kakao.svg";
 // 마크 SVG도 다색이고 정사각형이 아니라서(카카오 24×23) Icon을 거치지 않고 여기서만 import한다.
 const PROVIDERS = {
   kakao: {
-    label: "카카오 로그인",
     Mark: KakaoMark,
     markHeight: 23,
     box: { backgroundColor: "#FEE500" },
     labelColor: "rgba(0, 0, 0, 0.85)",
   },
   google: {
-    label: "구글 로그인",
     Mark: GoogleMark,
     markHeight: 24,
     box: { backgroundColor: "#FFFFFF", borderWidth: 1, borderColor: "#E5E7EB" },
@@ -29,7 +28,9 @@ interface SocialLoginButtonProps {
 }
 
 export function SocialLoginButton({ provider, onPress }: SocialLoginButtonProps) {
-  const { label, Mark, markHeight, box, labelColor } = PROVIDERS[provider];
+  const { t } = useTranslation();
+  const { Mark, markHeight, box, labelColor } = PROVIDERS[provider];
+  const label = provider === "kakao" ? t("카카오 로그인") : t("구글 로그인");
 
   // 눌림 상태는 Pressable의 style 콜백으로만 처리한다(DESIGN.md props 규칙).
   // 시안에 pressed 색이 없어서 우선 투명도로 두고, 확정 규칙이 나오면 이 줄만 바꾼다.

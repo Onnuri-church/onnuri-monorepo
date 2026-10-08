@@ -2,6 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
@@ -9,7 +10,7 @@ import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { uploadImage } from "../../shared/api/upload";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
 import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
@@ -18,6 +19,8 @@ import { buildMemberOptions, findOptionByLabel, findOptionById } from "./memberO
 // 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
 // cellId가 있으면 편집 모드로 기존 값을 채워서 연다.
 export function AdminCellFormScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "AdminCellForm">>();
   // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
@@ -64,7 +67,7 @@ export function AdminCellFormScreen() {
     try {
       coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     }
 
@@ -79,7 +82,7 @@ export function AdminCellFormScreen() {
     const mutation = editingCell ? updateCell : createCell;
     mutation.mutate(payload, {
       onSuccess: () => navigation.goBack(),
-      onError: () => Alert.alert("저장 실패", "잠시 후 다시 시도해주세요."),
+      onError: () => Alert.alert(t("저장 실패"), t("잠시 후 다시 시도해주세요.")),
     });
   };
 
@@ -92,7 +95,7 @@ export function AdminCellFormScreen() {
         >
           {/* 배경사진 — 시안: 362x173 점선 슬롯, 탭하면 업로드 */}
           <View className="py-3">
-            <Text className="text-body-main text-text-normal">배경사진</Text>
+            <Text className="text-body-main text-text-normal">{t("배경사진")}</Text>
             <View className="mt-4 h-43">
               <ImageSlot
                 imageUri={coverUri}
@@ -104,8 +107,8 @@ export function AdminCellFormScreen() {
           </View>
 
           <SelectField
-            label="셀장"
-            placeholder="셀장을 선택하세요."
+            label={t("셀장")}
+            placeholder={t("셀장을 선택하세요.")}
             options={memberOptions.map((option) => option.label)}
             value={findOptionById(memberOptions, leaderId)?.label ?? null}
             onChange={(label) => setLeaderId(findOptionByLabel(memberOptions, label)?.id ?? null)}
@@ -114,7 +117,7 @@ export function AdminCellFormScreen() {
           {/* 부셀장 — 라벨 옆 체크박스. 해제하면 선택줄이 사라지고 부셀장 없이 생성된다 (시안). */}
           <View className="py-3">
             <View className="flex-row items-center gap-2.5">
-              <Text className="text-body-main text-text-normal">부셀장</Text>
+              <Text className="text-body-main text-text-normal">{t("부셀장")}</Text>
               <Pressable
                 onPress={() => setHasViceLeader((prev) => !prev)}
                 hitSlop={8}
@@ -132,7 +135,7 @@ export function AdminCellFormScreen() {
               <View className="-mt-4">
                 <SelectField
                   label=""
-                  placeholder="부셀장을 선택하세요."
+                  placeholder={t("부셀장을 선택하세요.")}
                   options={memberOptions
                     .filter((option) => option.id !== leaderId)
                     .map((option) => option.label)}
@@ -144,25 +147,25 @@ export function AdminCellFormScreen() {
               </View>
             ) : (
               <Text className="mt-2 text-center text-body-small text-text-alternative">
-                체크 해제 시 부셀장 없이 생성돼요
+                {t("체크 해제 시 부셀장 없이 생성돼요")}
               </Text>
             )}
           </View>
 
           <View className="py-3">
-            <Text className="text-body-main text-text-normal">셀이름</Text>
+            <Text className="text-body-main text-text-normal">{t("셀이름")}</Text>
             <TextInput
               className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
               value={name}
               onChangeText={setName}
-              placeholder="셀 이름을 입력하세요."
-              placeholderTextColor={colors.text.assistive}
+              placeholder={t("셀 이름을 입력하세요.")}
+              placeholderTextColor={themeColors.text.assistive}
             />
           </View>
 
           <DateField
-            label="활동기간"
-            placeholder="셀 턴 종료일을 선택하세요."
+            label={t("활동기간")}
+            placeholder={t("셀 턴 종료일을 선택하세요.")}
             value={period}
             onChange={setPeriod}
           />
@@ -170,7 +173,7 @@ export function AdminCellFormScreen() {
 
         <View className="px-5 pb-12">
           <Button
-            label={editingCell ? "저장하기" : "등록하기"}
+            label={editingCell ? t("저장하기") : t("등록하기")}
             disabled={!canSubmit}
             onPress={handleSubmitPress}
           />

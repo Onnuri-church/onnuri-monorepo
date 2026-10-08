@@ -1,7 +1,8 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, TextInput, View } from "react-native";
 
 import { Icon } from "../base/Icon";
-import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 
 interface CommentInputProps {
   value: string;
@@ -21,8 +22,10 @@ export function CommentInput({
   onChangeText,
   onSubmit,
   avatarUrl,
-  placeholder = "댓글을 입력하세요",
+  placeholder,
 }: CommentInputProps) {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const canSubmit = value.trim().length > 0;
 
   return (
@@ -36,8 +39,8 @@ export function CommentInput({
         className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
-        placeholderTextColor={colors.text.alternative}
+        placeholder={placeholder ?? t("댓글을 입력하세요")}
+        placeholderTextColor={themeColors.text.alternative}
         onSubmitEditing={canSubmit ? onSubmit : undefined}
         returnKeyType="send"
       />
@@ -50,7 +53,7 @@ export function CommentInput({
         <Icon
           name="send-fill"
           size={20}
-          color={canSubmit ? colors.primary.normal : colors.icon.normal}
+          color={canSubmit ? themeColors.primary.normal : themeColors.icon.normal}
         />
       </Pressable>
     </View>

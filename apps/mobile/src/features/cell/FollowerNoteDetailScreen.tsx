@@ -2,6 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,7 +12,7 @@ import { Header } from "../../shared/components/base/Header";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import {
@@ -20,10 +21,12 @@ import {
   useFollowerNotes,
 } from "./api";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
-import { NOTE_QUESTIONS } from "./followerNotes";
+import { getNoteQuestions } from "./followerNotes";
 
 // 팔로워 노트 게시글 (시안: 작성자 프로필 + 셀장 뱃지 + 날짜 제목 + 3문항 + 댓글).
 export function FollowerNoteDetailScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -47,24 +50,24 @@ export function FollowerNoteDetailScreen() {
       header: () => (
         <Header
           variant="sub"
-          title="팔로워 노트"
+          title={t("팔로워 노트")}
           rightAction={isMine ? "more" : "none"}
           menuItems={[
             {
               icon: "edit",
-              label: "수정하기",
+              label: t("수정하기"),
               onPress: () => navigation.navigate("FollowerNoteWrite", { cellId, noteId }),
             },
             {
               icon: "trash-can",
-              label: "삭제하기",
+              label: t("삭제하기"),
               onPress: () => deleteDialogRef.current?.open(),
             },
           ]}
         />
       ),
     });
-  }, [navigation, cellId, noteId, isMine]);
+  }, [navigation, cellId, noteId, isMine, t]);
 
   const confirmDelete = () => {
     deleteDialogRef.current?.close();
@@ -80,7 +83,7 @@ export function FollowerNoteDetailScreen() {
   if (!note) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">노트를 찾을 수 없어요.</Text>
+        <Text className="text-body-medium text-text-alternative">{t("노트를 찾을 수 없어요.")}</Text>
       </View>
     );
   }
@@ -96,7 +99,7 @@ export function FollowerNoteDetailScreen() {
                 <View className="flex-row items-center gap-1">
                   <Text className="text-heading-small text-text-normal">{note.authorName}</Text>
                   <View className="rounded-full bg-primary-normal px-2 py-0.5">
-                    <Text className="text-caption-small text-text-disable">셀장</Text>
+                    <Text className="text-caption-small text-text-disable">{t("셀장")}</Text>
                   </View>
                 </View>
                 <Text className="text-body-small text-text-alternative">
@@ -110,7 +113,7 @@ export function FollowerNoteDetailScreen() {
             </Text>
 
             <View className="mt-6 gap-6">
-              {NOTE_QUESTIONS.map((question, index) =>
+              {getNoteQuestions().map((question, index) =>
                 note.answers[index]?.trim() ? (
                   <View key={question.title} className="gap-2.5">
                     <View className="flex-row items-center gap-1">
@@ -130,10 +133,10 @@ export function FollowerNoteDetailScreen() {
             className="mt-8 px-5 pb-6 pt-4"
             style={{
               borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: colors.background.assistive,
+              borderTopColor: themeColors.background.assistive,
             }}
           >
-            <Text className="text-body-main text-text-normal">댓글 {comments.length}</Text>
+            <Text className="text-body-main text-text-normal">{t("댓글 {{count}}", { count: comments.length })}</Text>
             {comments.length === 0 ? (
               <CommentEmpty />
             ) : (
@@ -158,24 +161,24 @@ export function FollowerNoteDetailScreen() {
           style={{
             paddingBottom: insets.bottom + 8,
             borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: colors.background.assistive,
+            borderTopColor: themeColors.background.assistive,
           }}
         >
           <CommentInput
             value={commentDraft}
             onChangeText={setCommentDraft}
             onSubmit={handleCommentSubmit}
-            placeholder="답변을 남겨보세요."
+            placeholder={t("답변을 남겨보세요.")}
           />
         </View>
       </KeyboardAvoidingView>
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

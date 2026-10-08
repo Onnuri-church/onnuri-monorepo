@@ -1,6 +1,7 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { fetchGroupMeetingDetail } from "./api";
@@ -10,6 +11,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 참여멤버 전체 보기 (상세의 "참여 멤버" 행에서 진입) — 승인된 멤버만, 가입순.
 // 시안: 행 = 아바타 40 + 이름, 우측에 소그룹장 표시. 타이틀 아래 가운데 "총 N명".
 export function GroupMeetingMemberListScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingMembers">>();
 
@@ -27,7 +29,7 @@ export function GroupMeetingMemberListScreen() {
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
     >
       <Text className="text-center text-caption-main text-text-alternative">
-        총 {members.length}명
+        {t("총 {{count}}명", { count: members.length })}
       </Text>
       <View className="mt-8">
         {members.map((member) => (
@@ -40,7 +42,7 @@ export function GroupMeetingMemberListScreen() {
               <Text className="text-body-main text-text-normal">{member.name}</Text>
             </View>
             {member.isLeader && (
-              <Text className="text-body-small text-primary-normal">소그룹장</Text>
+              <Text className="text-body-small text-primary-normal">{t("소그룹장")}</Text>
             )}
           </View>
         ))}

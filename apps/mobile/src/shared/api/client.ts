@@ -1,6 +1,7 @@
 import axios, { AxiosError, type InternalAxiosRequestConfig } from "axios";
 import { Alert } from "react-native";
 
+import { i18n } from "../i18n";
 import { useAuthStore } from "../store/useAuthStore";
 import { API_BASE_URL } from "./config";
 import { clearTokens } from "./tokenStorage";
@@ -43,8 +44,8 @@ apiClient.interceptors.response.use(
     }
 
     await clearTokens();
-    Alert.alert("세션이 만료되었습니다", "다시 로그인해주세요.", [
-      { text: "확인", onPress: () => useAuthStore.getState().clearSession() },
+    Alert.alert(i18n.t("세션이 만료되었습니다"), i18n.t("다시 로그인해주세요."), [
+      { text: i18n.t("확인"), onPress: () => useAuthStore.getState().clearSession() },
     ]);
     return Promise.reject(error);
   },

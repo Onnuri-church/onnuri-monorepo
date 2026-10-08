@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 
 interface CommentItemProps {
@@ -22,6 +23,7 @@ export function CommentItem({
   onReplyPress,
   onDeletePress,
 }: CommentItemProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row gap-2 py-2">
       {avatarUrl ? (
@@ -40,12 +42,12 @@ export function CommentItem({
           <View className="mt-1 flex-row gap-3">
             {onReplyPress && (
               <Pressable onPress={onReplyPress} hitSlop={8}>
-                <Text className="text-body-small text-text-alternative">답글</Text>
+                <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
               </Pressable>
             )}
             {onDeletePress && (
               <Pressable onPress={onDeletePress} hitSlop={8}>
-                <Text className="text-body-small text-text-alternative">삭제</Text>
+                <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
               </Pressable>
             )}
           </View>

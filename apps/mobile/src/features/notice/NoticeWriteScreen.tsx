@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
@@ -16,6 +17,7 @@ import { useCreateNotice } from "./api";
 // 공지 등록 (관리자 전용, 자체 디자인 — 시안 없음). 내용이나 사진 중 하나는 있어야 한다
 // (포스터 한 장짜리 공지도 되고, 글만 있는 공지도 된다 — 서버도 같은 규칙).
 export function NoticeWriteScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const createNotice = useCreateNotice();
 
@@ -46,7 +48,7 @@ export function NoticeWriteScreen() {
       });
       navigation.goBack();
     } catch {
-      Alert.alert("등록 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);
     }
@@ -60,23 +62,23 @@ export function NoticeWriteScreen() {
           keyboardShouldPersistTaps="handled"
         >
           <TextField
-            label="제목"
-            placeholder="공지 제목을 입력하세요."
+            label={t("제목")}
+            placeholder={t("공지 제목을 입력하세요.")}
             value={title}
             onChangeText={setTitle}
           />
 
           <View>
             <TextAreaField
-              label="내용"
-              placeholder="공지 내용을 입력하세요."
+              label={t("내용")}
+              placeholder={t("공지 내용을 입력하세요.")}
               value={content}
               onChangeText={setContent}
             />
           </View>
 
           <View>
-            <Field label="사진(선택)">
+            <Field label={t("사진(선택)")}>
               <View className="h-43">
                 <ImageSlot
                   imageUri={photoUri}
@@ -87,14 +89,14 @@ export function NoticeWriteScreen() {
               </View>
             </Field>
             <Text className="mt-2 text-caption-main text-text-alternative">
-              내용 없이 포스터 사진만으로도 등록할 수 있어요
+              {t("내용 없이 포스터 사진만으로도 등록할 수 있어요")}
             </Text>
           </View>
         </ScrollView>
 
         <View className="px-5 pb-12">
           <Button
-            label={saving ? "등록하는 중..." : "등록하기"}
+            label={saving ? t("등록하는 중...") : t("등록하기")}
             disabled={!canSubmit}
             loading={saving}
             onPress={handleSubmitPress}

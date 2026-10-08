@@ -1,6 +1,7 @@
 import { useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -16,6 +17,7 @@ import { type CellMember } from "./cellDetail";
 // 일반 셀원 행에는 빨간 "삭제"가 붙는다. 시안에 추가 버튼은 아직 없다 —
 // 카드 설명("셀원을 추가하거나 관리해요")과 어긋나서 디자이너 확인 필요.
 export function CellMemberManageScreen() {
+  const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "CellMemberManage">>();
   const { cellId } = route.params;
 
@@ -54,11 +56,11 @@ export function CellMemberManageScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView contentContainerClassName="px-5 pb-10" keyboardShouldPersistTaps="handled">
         <Text className="text-center text-caption-main text-text-alternative">
-          총 {members.length}명
+          {t("총 {{count}}명", { count: members.length })}
         </Text>
 
         <View className="mt-3">
-          <SearchBar value={query} onChangeText={setQuery} placeholder="셀원 이름으로 검색" />
+          <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀원 이름으로 검색")} />
         </View>
 
         <View className="mt-4">
@@ -71,7 +73,7 @@ export function CellMemberManageScreen() {
           ))}
           {visibleMembers.length === 0 && (
             <Text className="pt-10 text-center text-body-medium text-text-alternative">
-              검색 결과가 없어요.
+              {t("검색 결과가 없어요.")}
             </Text>
           )}
         </View>
@@ -79,9 +81,9 @@ export function CellMemberManageScreen() {
 
       <AppDialog
         ref={deleteDialogRef}
-        title={`${pendingDelete?.name ?? ""}님을 셀에서 삭제하시겠습니까?`}
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t("{{name}}님을 셀에서 삭제하시겠습니까?", { name: pendingDelete?.name ?? "" })}
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>
@@ -95,6 +97,7 @@ interface MemberRowProps {
 
 // 셀원 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
 function MemberRow({ member, onDeletePress }: MemberRowProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between border-b border-background-assistive py-2.5">
       <View className="flex-row items-center gap-4">
@@ -103,11 +106,11 @@ function MemberRow({ member, onDeletePress }: MemberRowProps) {
       </View>
       {member.role === "member" ? (
         <Pressable onPress={onDeletePress} hitSlop={10}>
-          <Text className="text-body-small text-semantic-danger">삭제</Text>
+          <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
         </Pressable>
       ) : (
         <Text className="text-body-small text-primary-normal">
-          {member.role === "leader" ? "셀장" : "부셀장"}
+          {member.role === "leader" ? t("셀장") : t("부셀장")}
         </Text>
       )}
     </View>

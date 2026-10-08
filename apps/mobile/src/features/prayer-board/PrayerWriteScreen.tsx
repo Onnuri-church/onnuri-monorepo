@@ -3,6 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
 
 import { uploadImage } from "../../shared/api/upload";
@@ -44,6 +45,7 @@ function addDays(days: number): string {
 
 // 기도제목 작성하기 (시안 402pt 프레임: 익명 토글 → 기도제목 → 카테고리 → 공개기간 → 사진 → 내용 → 등록).
 export function PrayerWriteScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "PrayerWrite">>();
   const queryClient = useQueryClient();
@@ -91,7 +93,7 @@ export function PrayerWriteScreen() {
     if (!canSubmit) return;
     const { session } = useAuthStore.getState();
     if (session.status !== "authenticated") {
-      Alert.alert("로그인이 필요해요", "기도제목은 로그인 후 등록할 수 있어요.");
+      Alert.alert(t("로그인이 필요해요"), t("기도제목은 로그인 후 등록할 수 있어요."));
       return;
     }
     const categoryValue = categoryLabelToValue(category);
@@ -121,7 +123,7 @@ export function PrayerWriteScreen() {
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
       navigation.goBack();
     } catch {
-      Alert.alert("등록 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);
     }
@@ -137,41 +139,43 @@ export function PrayerWriteScreen() {
         >
           <View className="flex-row items-center justify-between">
             {/* 라벨 타이포는 Field 라벨과 동일하게 맞춘다 (시안: 같은 위계). */}
-            <Text className="text-body-main text-text-normal">익명으로 작성</Text>
+            <Text className="text-body-main text-text-normal">{t("익명으로 작성")}</Text>
             <Toggle value={anonymous} onValueChange={setAnonymous} />
           </View>
 
           <View>
             <TextField
-              label="기도제목"
-              placeholder="한 줄로 표현해보세요."
+              label={t("기도제목")}
+              placeholder={t("한 줄로 표현해보세요.")}
               value={title}
               onChangeText={setTitle}
             />
           </View>
 
           <SelectField
-            label="기도 카테고리"
-            placeholder="카테고리를 선택하세요."
-            options={WRITE_CATEGORIES}
-            value={category}
-            onChange={setCategory}
+            label={t("기도 카테고리")}
+            placeholder={t("카테고리를 선택하세요.")}
+            options={WRITE_CATEGORIES.map((item) => t(item))}
+            value={category === null ? null : t(category)}
+            onChange={(picked) => setCategory(WRITE_CATEGORIES.find((item) => t(item) === picked) ?? null)}
           />
 
           <View>
             <SelectField
-              label="공개기간"
-              placeholder={editingId ? "기존 공개기간 유지 (바꾸려면 선택)" : "공개기간을 지정하세요."}
-              options={PERIOD_OPTIONS}
-              value={period}
-              onChange={setPeriod}
+              label={t("공개기간")}
+              placeholder={
+                editingId ? t("기존 공개기간 유지 (바꾸려면 선택)") : t("공개기간을 지정하세요.")
+              }
+              options={PERIOD_OPTIONS.map((item) => t(item))}
+              value={period === null ? null : t(period)}
+              onChange={(picked) => setPeriod(PERIOD_OPTIONS.find((item) => t(item) === picked) ?? null)}
             />
             {period === "직접설정" && (
               /* SelectField 아래 py-4와 DateField 위 py-4가 겹쳐 -mt-4로 한 번 상쇄한다. */
               <View className="-mt-4">
                 <DateField
                   label=""
-                  placeholder="공개 종료일을 선택하세요."
+                  placeholder={t("공개 종료일을 선택하세요.")}
                   value={customUntil}
                   onChange={setCustomUntil}
                 />
@@ -179,20 +183,20 @@ export function PrayerWriteScreen() {
             )}
             {/* SelectField 내부의 아래 py-4를 -mt-2로 상쇄해 안내문을 입력줄 가까이 붙인다. */}
             <Text className="-mt-2 text-caption-main text-text-alternative">
-              선택한 기간이 지나면 기도제목이 자동으로 목록에서 사라져요
+              {t("선택한 기간이 지나면 기도제목이 자동으로 목록에서 사라져요")}
             </Text>
           </View>
 
           <View>
-            <Field label="사진(선택)">
+            <Field label={t("사진(선택)")}>
               <ImageUploadBoxMultiple imageUris={photoUris} onChange={setPhotoUris} />
             </Field>
           </View>
 
           <View>
             <TextAreaField
-              label="내용"
-              placeholder="나누고 싶은 기도제목을 자유롭게 적어주세요."
+              label={t("내용")}
+              placeholder={t("나누고 싶은 기도제목을 자유롭게 적어주세요.")}
               value={content}
               onChangeText={setContent}
             />
@@ -200,7 +204,7 @@ export function PrayerWriteScreen() {
 
           <View className="mt-16">
             <Button
-              label={saving ? "저장하는 중..." : editingId ? "저장하기" : "등록하기"}
+              label={saving ? t("저장하는 중...") : editingId ? t("저장하기") : t("등록하기")}
               onPress={handleSubmitPress}
               disabled={!canSubmit}
               loading={saving}

@@ -14,6 +14,7 @@ import Svg, { Path } from "react-native-svg";
 
 import { useTabBarStore } from "../../store/useTabBarStore";
 import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 import type { RootTabParamList } from "../../types/navigation";
 import { Icon } from "./Icon";
 
@@ -67,6 +68,7 @@ function backgroundPath(width: number, height: number) {
 export const TAB_BAR_HEIGHT = 80;
 
 export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {
+  const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -149,7 +151,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
           height={80 + insets.bottom}
           style={StyleSheet.absoluteFill}
         >
-          <Path d={backgroundPath(width, 80 + insets.bottom)} fill={colors.background.normal} />
+          <Path d={backgroundPath(width, 80 + insets.bottom)} fill={themeColors.background.normal} />
         </Svg>
         <View className="h-20 flex-row">
           {state.routes.map((route, index) => {
@@ -175,7 +177,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 <Icon
                   name={icon.name}
                   size={icon.size}
-                  color={isFocused ? colors.icon.strong : colors.icon.normal}
+                  color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
                 />
                 <Text
                   className={

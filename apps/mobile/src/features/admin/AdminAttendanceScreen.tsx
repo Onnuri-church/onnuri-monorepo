@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -42,6 +43,7 @@ function AttendanceMarkPair({ marks }: { marks: [AdminAttendanceMark, AdminAtten
 // 마이페이지 관리자 메뉴 > 출석부 — GET /admin/attendance 실데이터 (셀 출석 관리가 기록한
 // 값을 주차 × 회원 표로 집계). 헤더의 "다운로드"는 RootNavigator 등록부에서 연결한다.
 export function AdminAttendanceScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const [filter, setFilter] = useState<AttendanceFilter>("all");
@@ -104,14 +106,14 @@ export function AdminAttendanceScreen() {
       >
         {/* 필터 */}
         <View className="flex-row items-center gap-5">
-          <RadioOption label="전체" selected={filter === "all"} onPress={() => setFilter("all")} />
+          <RadioOption label={t("전체")} selected={filter === "all"} onPress={() => setFilter("all")} />
           <RadioOption
-            label="특정 셀"
+            label={t("특정 셀")}
             selected={filter === "cell"}
             onPress={() => setFilter("cell")}
           />
           <RadioOption
-            label="특정 팀"
+            label={t("특정 팀")}
             selected={filter === "team"}
             onPress={() => setFilter("team")}
           />
@@ -123,7 +125,7 @@ export function AdminAttendanceScreen() {
           onPress={() => navigation.navigate("AdminOffDays")}
           style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
         >
-          <Text className="text-body-main text-primary-normal">모임 없는 날 지정</Text>
+          <Text className="text-body-main text-primary-normal">{t("모임 없는 날 지정")}</Text>
           <Icon name="expand-right" size={14} color={colors.icon.normal} />
         </Pressable>
 
@@ -135,7 +137,7 @@ export function AdminAttendanceScreen() {
             style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
           >
             <Text className="text-body-regular text-text-alternative">
-              {filter === "team" ? "선택한 팀" : "선택한 셀"}
+              {filter === "team" ? t("선택한 팀") : t("선택한 셀")}
             </Text>
             <View className="flex-row items-center gap-2">
               <Text className="text-body-main text-primary-normal">{pickerValue}</Text>
@@ -150,7 +152,7 @@ export function AdminAttendanceScreen() {
           onPress={() => setMonthPickerOpen((prev) => !prev)}
         >
           <Text className="text-body-main text-text-normal">
-            {data?.monthLabel ?? `${today.getFullYear()}년 ${month}월`}
+            {data?.monthLabel ?? t("{{year}}년 {{month}}월", { year: today.getFullYear(), month })}
           </Text>
           <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
         </Pressable>
@@ -168,24 +170,24 @@ export function AdminAttendanceScreen() {
 
         {/* 범례 */}
         <View className="mt-4 flex-row items-center gap-2.5">
-          <Text className="text-caption-main text-text-alternative">왼쪽 예배 · 오른쪽 셀모임</Text>
+          <Text className="text-caption-main text-text-alternative">{t("왼쪽 예배 · 오른쪽 셀모임")}</Text>
           <View className="ml-auto flex-row items-center gap-1">
             <View className="h-3 w-3 bg-primary-normal" />
-            <Text className="text-caption-main text-text-alternative">출석</Text>
+            <Text className="text-caption-main text-text-alternative">{t("출석")}</Text>
           </View>
           <View className="flex-row items-center gap-1">
             <View className="h-3 w-3 bg-background-muted" />
-            <Text className="text-caption-main text-text-alternative">결석</Text>
+            <Text className="text-caption-main text-text-alternative">{t("결석")}</Text>
           </View>
           <View className="flex-row items-center gap-1">
             <View className="h-0.5 w-2.5 bg-background-assistive" />
-            <Text className="text-caption-main text-text-alternative">없음</Text>
+            <Text className="text-caption-main text-text-alternative">{t("없음")}</Text>
           </View>
         </View>
 
         {/* 표 머리 */}
         <View className="mt-4 flex-row items-center pb-2">
-          <Text className="flex-1 text-body-small-bold text-text-alternative">이름</Text>
+          <Text className="flex-1 text-body-small-bold text-text-alternative">{t("이름")}</Text>
           {dates.map((date) => (
             <Text
               key={date}
@@ -229,7 +231,7 @@ export function AdminAttendanceScreen() {
                   </Text>
                   <View className="flex-row items-center gap-2">
                     <Text className="text-caption-main text-text-alternative">
-                      {group.rows.length}명
+                      {t("{{count}}명", { count: group.rows.length })}
                     </Text>
                     {!isEmpty && (
                       <View
@@ -286,7 +288,7 @@ export function AdminAttendanceScreen() {
         })}
         {groups.length === 0 && (
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
-            {isLoading ? "출석부를 불러오고 있어요." : "표시할 출석 기록이 없어요."}
+            {isLoading ? t("출석부를 불러오고 있어요.") : t("표시할 출석 기록이 없어요.")}
           </Text>
         )}
       </ScrollView>
@@ -299,7 +301,7 @@ export function AdminAttendanceScreen() {
             className="items-center bg-background-normal py-4"
             onPress={() => pickerSheetRef.current?.close()}
           >
-            <Text className="text-body-regular text-text-alternative">취소</Text>
+            <Text className="text-body-regular text-text-alternative">{t("취소")}</Text>
           </Pressable>
         }
       >

@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { Alert } from "react-native";
 
+import { i18n } from "../../shared/i18n";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { likePost, unlikePost } from "./api";
 
@@ -87,7 +88,7 @@ export function useToggleQtLike() {
     (args: ToggleLikeArgs) => {
       const { session } = useAuthStore.getState();
       if (session.status !== "authenticated") {
-        Alert.alert("로그인이 필요해요", "좋아요는 로그인 후 할 수 있어요.");
+        Alert.alert(i18n.t("로그인이 필요해요"), i18n.t("좋아요는 로그인 후 할 수 있어요."));
         return;
       }
       mutate(args);

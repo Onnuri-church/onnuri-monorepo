@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, View } from "react-native";
 
 import { uploadImage } from "../../shared/api/upload";
@@ -19,6 +20,7 @@ const MAX_SHARING_SHEET_PHOTOS = 5;
 // 주보/나눔지 업로드 (시안: 날짜 → 주보 → 나눔지 → 등록하기).
 // 사진 섹션 둘은 같은 컴포넌트지만 올리는 대상이 달라 상태를 따로 갖는다.
 export function BulletinWriteScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
 
@@ -51,8 +53,8 @@ export function BulletinWriteScreen() {
       const message = (error as { response?: { data?: { message?: string | string[] } } })
         .response?.data?.message;
       Alert.alert(
-        "등록 실패",
-        (Array.isArray(message) ? message.join("\n") : message) ?? "잠시 후 다시 시도해주세요.",
+        t("등록 실패"),
+        (Array.isArray(message) ? message.join("\n") : message) ?? t("잠시 후 다시 시도해주세요."),
       );
     },
   });
@@ -70,13 +72,13 @@ export function BulletinWriteScreen() {
         contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-4"
       >
         <DateField
-          label="날짜"
-          placeholder="날짜를 선택하세요."
+          label={t("날짜")}
+          placeholder={t("날짜를 선택하세요.")}
           value={selectDate}
           onChange={setSelectDate}
         />
 
-        <Field label="주보">
+        <Field label={t("주보")}>
           <ImageUploadBoxMultiple
             imageUris={bulletinUris}
             onChange={setBulletinUris}
@@ -84,7 +86,7 @@ export function BulletinWriteScreen() {
           />
         </Field>
 
-        <Field label={`나눔지(최대 ${MAX_SHARING_SHEET_PHOTOS}장)`}>
+        <Field label={t("나눔지(최대 {{count}}장)", { count: MAX_SHARING_SHEET_PHOTOS })}>
           <ImageUploadBoxMultiple
             imageUris={sharingSheetUris}
             onChange={setSharingSheetUris}
@@ -95,7 +97,7 @@ export function BulletinWriteScreen() {
         <View className="mt-8">
           {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
           <Button
-            label="등록하기"
+            label={t("등록하기")}
             onPress={handleSubmitPress}
             disabled={!canSubmit}
             loading={isPending}

@@ -7,6 +7,7 @@ import type {
   CellDetailResponse,
   CreateHomeBannerRequest,
   HomeBanner,
+  UpdateHomeBannerRequest,
   OffDayKind,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
@@ -178,6 +179,29 @@ export function useCreateHomeBanner() {
   return useMutation({
     mutationFn: (payload: CreateHomeBannerRequest) =>
       apiClient.post<HomeBanner>("/notices/banners", payload).then((res) => res.data),
+    onSuccess: invalidateBanners,
+  });
+}
+
+export function useUpdateHomeBanner(bannerId: string) {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: (payload: UpdateHomeBannerRequest) =>
+      apiClient
+        .patch<HomeBanner>(`/notices/banners/${bannerId}`, payload)
+        .then((res) => res.data),
+    onSuccess: invalidateBanners,
+  });
+}
+
+// 홈 표시 켜기/끄기 — 켜면 서버가 다른 배너를 꺼서 목록 전체가 바뀐다.
+export function useSetHomeBannerActive() {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: ({ bannerId, active }: { bannerId: string; active: boolean }) =>
+      apiClient
+        .put<HomeBanner>(`/notices/banners/${bannerId}/active`, { active })
+        .then((res) => res.data),
     onSuccess: invalidateBanners,
   });
 }

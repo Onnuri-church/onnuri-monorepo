@@ -1,6 +1,7 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -23,6 +24,7 @@ const REPLAY_NOTICE = "지난 예배 다시보기예요. 언제든 편하게 시
 
 // 설교영상 상세.
 export function SermonDetailScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "SermonDetail">>();
   const { data: video, isPending, isError } = useQuery({
@@ -43,7 +45,9 @@ export function SermonDetailScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-page">
-        <Text className="text-body-medium text-text-alternative">영상을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">
+          {t("영상을 불러오지 못했어요")}
+        </Text>
       </View>
     );
   }
@@ -85,7 +89,7 @@ export function SermonDetailScreen() {
           {[video.dateTimeLabel, video.preacher].filter(Boolean).join(" · ")}
         </Text>
         <Text className="text-body-medium text-text-normal">
-          {video.isLive ? LIVE_NOTICE : REPLAY_NOTICE}
+          {t(video.isLive ? LIVE_NOTICE : REPLAY_NOTICE)}
         </Text>
       </View>
     </ScrollView>

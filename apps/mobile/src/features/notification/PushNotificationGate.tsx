@@ -4,9 +4,11 @@ import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { useEffect, useRef } from "react";
 import { Platform } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { registerPushToken } from "../../shared/api/push";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { i18n } from "../../shared/i18n";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 앱이 켜져 있을 때(포그라운드)도 배너·소리를 보여준다 — 기본값이 "숨김"이라 명시한다.
@@ -35,6 +37,7 @@ let handledResponseDate: number | null = null;
 // 권한이 이미 있으면 조용히 토큰을 등록하고, 아직 안 물어봤으면 안내를 먼저 띄운 뒤
 // "알림 받기"를 눌렀을 때만 OS 권한 창을 연다.
 export function PushNotificationGate() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const dialogRef = useRef<AppDialogRef>(null);
 
@@ -44,7 +47,7 @@ export function PushNotificationGate() {
       // 안드로이드는 채널이 있어야 배너가 뜬다 — 서버 발송의 기본 채널과 이름을 맞춘다.
       if (Platform.OS === "android") {
         await Notifications.setNotificationChannelAsync("default", {
-          name: "알림",
+          name: i18n.t("알림"),
           importance: Notifications.AndroidImportance.HIGH,
         });
       }
@@ -84,10 +87,10 @@ export function PushNotificationGate() {
   return (
     <AppDialog
       ref={dialogRef}
-      title="공지를 놓치지 않게 알림을 켜주세요"
-      description="중요한 소식을 먼저 알려드려요"
-      confirmLabel="알림 받기"
-      cancelLabel="나중에 하기"
+      title={t("공지를 놓치지 않게 알림을 켜주세요")}
+      description={t("중요한 소식을 먼저 알려드려요")}
+      confirmLabel={t("알림 받기")}
+      cancelLabel={t("나중에 하기")}
       onConfirm={handleAllowPress}
     />
   );

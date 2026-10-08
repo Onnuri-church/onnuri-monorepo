@@ -23,6 +23,8 @@ const colors = {
     dark: "#000000",
     gold: "#F3EAD8",
     red: "#FBEAE8",
+    // 사진 위에 올라가는 알약 버튼 배경 — 배너 사진은 테마와 무관하게 같아서 라이트에선 흰색이다.
+    onImage: "#FFFFFF",
   },
   text: {
     normal: "#111111",
@@ -31,6 +33,8 @@ const colors = {
     assistive: "#D9D9D9",
     disable: "#FFFFFF",
     brown: "#5C4A2A",
+    // 사진 위 글자 — background/text.normal은 테마에 따라 뒤집히지만 사진 위 글자는 항상 밝아야 한다.
+    onImage: "#FFFFFF",
   },
   // accent는 아이콘 원본 SVG에만 있던 색을 토큰으로 올린 것으로, 컬러차트에 대응 항목이 없다.
   // 로고(assets/logo/)에 시안 확정값으로 박힌 색과 같아서, 아이콘용 토큰으로 남길지
@@ -67,6 +71,102 @@ const colors = {
     info: "#E9E9F2",
   },
 };
+
+// 다크 팔레트 (2026-10-07 제안, 지환님 확인). 라이트와 같은 키 구조를 유지해야 한다 — 키가 하나라도
+// 어긋나면 CSS 변수가 비어 그 색만 사라진다 (아래 themeVars가 라이트 기준으로 변수를 만든다).
+// 설계 기준: 순수 검정 대신 녹회색 3단계 바탕, 초록은 밝게(#276E4C → #4C9873), 초록 채움 위 글자는
+// 흰색 대신 어두운 색(text.disable — 밝은 초록 위 흰 글자는 대비 3.5라 읽기 부족), 글자는 순백 대신 #ECEEED.
+const darkColors = {
+  transparent: "transparent",
+  current: "currentColor",
+  primary: {
+    normal: "#4C9873",
+  },
+  background: {
+    normal: "#121614",
+    page: "#0D100E",
+    alternative: "#1B2822",
+    assistive: "#3A423E",
+    muted: "#232A26",
+    dark: "#000000",
+    gold: "#3A2F1C",
+    red: "#3A211D",
+    onImage: "#ECEEED",
+  },
+  text: {
+    normal: "#ECEEED",
+    neutral: "#C4C9C6",
+    alternative: "#8F9893",
+    assistive: "#3A423E",
+    disable: "#0B0F0D",
+    brown: "#E0C28A",
+    onImage: "#F2F4F3",
+  },
+  icon: {
+    normal: "#8F9893",
+    strong: "#C4C9C6",
+    strongest: "#F2F4F3",
+    accent: "#5FAA86",
+    disable: "#0B0F0D",
+  },
+  chip: {
+    bg: "#232A26",
+    selected: "#4C9873",
+    open: "#C4C9C6",
+    closed: "#8F9893",
+    purple: "#C77DE8",
+    blue: "#5BB8E6",
+    red: "#E86F6F",
+    yellow: "#D9C24A",
+    green: "#6FD04A",
+    orange: "#F0953C",
+    indigo: "#8F7BE8",
+  },
+  semantic: {
+    warning: "#D9A45C",
+    danger: "#E0685C",
+    info: "#262735",
+  },
+};
+
+// Tailwind에는 hex 대신 CSS 변수 참조를 등록한다 — 값은 앱 루트가 vars()로 테마별로 공급한다.
+// `<alpha-value>` 덕분에 bg-…/85 같은 투명도 수식어가 그대로 동작한다.
+function mapLeaves(tree, fn, path = []) {
+  const out = {};
+  for (const [key, value] of Object.entries(tree)) {
+    out[key] =
+      typeof value === "string" ? fn(value, [...path, key]) : mapLeaves(value, fn, [...path, key]);
+  }
+  return out;
+}
+
+const NON_HEX = new Set(["transparent", "currentColor"]);
+
+const colorVarRefs = mapLeaves(colors, (value, path) =>
+  NON_HEX.has(value) ? value : `rgb(var(--c-${path.join("-")}) / <alpha-value>)`,
+);
+
+function hexToChannels(hex) {
+  const h = hex.replace("#", "");
+  return `${parseInt(h.slice(0, 2), 16)} ${parseInt(h.slice(2, 4), 16)} ${parseInt(h.slice(4, 6), 16)}`;
+}
+
+function buildThemeVars(palette) {
+  const vars = {};
+  const walk = (tree, path) => {
+    for (const [key, value] of Object.entries(tree)) {
+      if (typeof value === "string") {
+        if (!NON_HEX.has(value)) vars[`--c-${[...path, key].join("-")}`] = hexToChannels(value);
+      } else {
+        walk(value, [...path, key]);
+      }
+    }
+  };
+  walk(palette, []);
+  return vars;
+}
+
+const themeVars = { light: buildThemeVars(colors), dark: buildThemeVars(darkColors) };
 
 // 그림자. NativeWind는 shadow-*를 RN의 shadowColor/shadowOffset/shadowRadius로 변환하면서
 // shadowOpacity를 1로 고정하므로, 투명도는 색의 알파(#RRGGBBAA)에 넣어야 한다.
@@ -200,4 +300,15 @@ const textStyles = Object.fromEntries(
   ]),
 );
 
-module.exports = { colors, fontFamily, textStyles, boxShadow, elevation, spacing, borderRadius };
+module.exports = {
+  colors,
+  darkColors,
+  colorVarRefs,
+  themeVars,
+  fontFamily,
+  textStyles,
+  boxShadow,
+  elevation,
+  spacing,
+  borderRadius,
+};

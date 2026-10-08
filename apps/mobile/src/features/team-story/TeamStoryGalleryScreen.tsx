@@ -2,6 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -16,6 +17,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 사진 추가·삭제는 그 팀 팀장과 관리자만 — 권한이 없으면 헤더의 편집 버튼 자체가 안 뜬다.
 export function TeamStoryGalleryScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryGallery">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -76,14 +78,14 @@ export function TeamStoryGalleryScreen() {
       header: () => (
         <Header
           variant="sub"
-          title={`${team?.name ?? "팀"} 갤러리`}
+          title={t("{{name}} 갤러리", { name: team?.name ?? t("팀") })}
           rightAction={canManage ? "text" : "none"}
-          rightLabel={selecting ? "완료" : "편집"}
+          rightLabel={selecting ? t("완료") : t("편집")}
           onPressRightLabel={handleEditPress}
         />
       ),
     });
-  }, [navigation, params.teamId, selecting, canManage, team?.name]);
+  }, [navigation, params.teamId, selecting, canManage, team?.name, t]);
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -92,7 +94,9 @@ export function TeamStoryGalleryScreen() {
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
       >
         {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
-        <Text className="text-center text-caption-main text-text-alternative">전체 {total}장</Text>
+        <Text className="text-center text-caption-main text-text-alternative">
+          {t("전체 {{count}}장", { count: total })}
+        </Text>
         <View className="mt-10 gap-9">
           {groups.map((group, index) => (
             <PhotoGrid
@@ -127,10 +131,10 @@ export function TeamStoryGalleryScreen() {
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         placement="center"
         onConfirm={handleDeleteConfirm}
       />

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 
 import { fetchMyPrayers } from "./api";
 import { PrayerFilterList } from "./components/PrayerFilterList";
@@ -9,6 +10,7 @@ import { PrayerMenu } from "./components/PrayerMenu";
 // 수정/삭제 줄은 들어오자마자 보이지 않고 ⋮ > "수정하기"로 켠다 — 삭제가 목록에 항상 떠 있으면
 // 스크롤 중 오탭으로 글이 지워진다.
 export function MyPrayerScreen() {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
 
   // useMemo로 고정한다 — PrayerMenu가 이 배열을 헤더를 다시 그리는 effect의 의존성으로 쓰는데,
@@ -17,11 +19,11 @@ export function MyPrayerScreen() {
     () => [
       {
         icon: "edit" as const,
-        label: editing ? "수정 완료" : "수정하기",
+        label: editing ? t("수정 완료") : t("수정하기"),
         onPress: () => setEditing((prev) => !prev),
       },
     ],
-    [editing],
+    [editing, t],
   );
 
   return (
@@ -30,10 +32,10 @@ export function MyPrayerScreen() {
         name="mine"
         fetchList={fetchMyPrayers}
         editing={editing}
-        emptyText="작성한 기도제목이 없어요"
+        emptyText={t("작성한 기도제목이 없어요")}
       />
       {/* 내 화면이라 이동 항목(내 기도제목/저장한 기도제목)은 빼고 수정하기만 둔다. */}
-      <PrayerMenu title="내 기도제목" items={menuItems} />
+      <PrayerMenu title={t("내 기도제목")} items={menuItems} />
     </>
   );
 }

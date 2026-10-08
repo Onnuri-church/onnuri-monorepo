@@ -96,9 +96,8 @@ export type RootStackParamList = {
   AdminDataPreview: { query: Record<string, string> };
   // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.
   AdminBannerManage: undefined;
-  AdminBannerForm: undefined;
-  // 홈 포스터 배너 크게 보기 (검정 배경 뷰어).
-  BannerViewer: { imageUrl: string; title: string };
+  // bannerId가 있으면 수정 모드다 (유형은 못 바꾼다).
+  AdminBannerForm: { bannerId?: string } | undefined;
   // 소그룹 활동 사진 뷰어. index는 상세 photos(최신순) 기준 순번이다.
   GroupMeetingPhoto: { meetingId: string; index: number };
   // 메인 헤더 종 아이콘에서 진입하는 알림센터.

@@ -1,7 +1,7 @@
 const plugin = require("tailwindcss/plugin");
 
 const {
-  colors,
+  colorVarRefs,
   fontFamily,
   textStyles,
   boxShadow,
@@ -19,7 +19,8 @@ module.exports = {
     // colors는 extend가 아니라 통째로 교체 — Tailwind 기본 팔레트(gray/blue/...)를 아예 못 쓰게 막아서
     // DESIGN.md "semantic 토큰만 사용, 정의되지 않은 기본 팔레트 금지" 규칙을 강제한다.
     // 실제 값은 src/shared/theme/tokens.js가 단일 소스 — 여기서 중복 정의하지 않는다.
-    colors,
+    // 값은 hex가 아니라 CSS 변수 참조다 — 앱 루트(ThemeRoot)가 라이트/다크 팔레트를 vars()로 공급한다.
+    colors: colorVarRefs,
     // fontSize는 일부러 교체하지 않는다 — Tailwind 기본 text-xs/sm/base/... 를 살려둔다.
     // 이미 기본 사이즈로 작성된 코드를 깨지 않기 위해서이고, "등록된 텍스트 스타일만 쓴다"는
     // 설정이 아니라 규칙으로 지킨다 (DESIGN.md 타이포그래피 규칙).

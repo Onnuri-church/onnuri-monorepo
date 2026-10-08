@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Alert, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import {
@@ -21,6 +22,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 소그룹 갤러리 (상세의 "사진 N장 모두 보기") — 팀 갤러리와 같은 월 묶음 그리드.
 // 추가는 승인된 참여자·소그룹장·관리자(서버 규칙 동일), 편집(일괄 삭제)은 소그룹장·관리자만.
 export function GroupMeetingGalleryScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingGallery">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -84,10 +86,10 @@ export function GroupMeetingGalleryScreen() {
     try {
       const imageUrls = await Promise.all(result.assets.map((asset) => uploadImage(asset.uri)));
       addPhotos.mutate(imageUrls, {
-        onError: () => Alert.alert("사진을 등록하지 못했어요", "잠시 후 다시 시도해주세요."),
+        onError: () => Alert.alert(t("사진을 등록하지 못했어요"), t("잠시 후 다시 시도해주세요.")),
       });
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setUploading(false);
     }
@@ -95,7 +97,7 @@ export function GroupMeetingGalleryScreen() {
 
   const handleDeleteConfirm = () => {
     removePhotos.mutate(selectedIds, {
-      onError: () => Alert.alert("삭제하지 못했어요", "잠시 후 다시 시도해주세요."),
+      onError: () => Alert.alert(t("삭제하지 못했어요"), t("잠시 후 다시 시도해주세요.")),
     });
     setSelectedIds([]);
     setSelecting(false);
@@ -108,14 +110,14 @@ export function GroupMeetingGalleryScreen() {
       header: () => (
         <Header
           variant="sub"
-          title={meeting?.title ?? "취향 소그룹"}
+          title={meeting?.title ?? t("취향 소그룹")}
           rightAction={canEdit ? "text" : "none"}
-          rightLabel={selecting ? "완료" : "편집"}
+          rightLabel={selecting ? t("완료") : t("편집")}
           onPressRightLabel={handleEditPress}
         />
       ),
     });
-  }, [navigation, selecting, canEdit, meeting?.title]);
+  }, [navigation, selecting, canEdit, meeting?.title, t]);
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -126,7 +128,7 @@ export function GroupMeetingGalleryScreen() {
         {/* 헤더 바로 아래 가운데 정렬 (팀 갤러리와 같은 시안 값) */}
         {/* 업로드는 수 초 걸린다 — 장수 자리에 진행 중임을 알린다. */}
         <Text className="text-center text-caption-main text-text-alternative">
-          {uploading ? "사진 올리는 중..." : `전체 ${photos.length}장`}
+          {uploading ? t("사진 올리는 중...") : t("전체 {{count}}장", { count: photos.length })}
         </Text>
         <View className="mt-10 gap-9">
           {groups.map((group, index) => (
@@ -162,10 +164,10 @@ export function GroupMeetingGalleryScreen() {
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         placement="center"
         onConfirm={handleDeleteConfirm}
       />

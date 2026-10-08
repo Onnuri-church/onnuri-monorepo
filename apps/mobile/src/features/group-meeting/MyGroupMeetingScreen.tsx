@@ -3,6 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { fetchMyGroupMeetings } from "./api";
 import { CardImageFallback } from "./components/CardImageFallback";
@@ -61,6 +62,7 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 // 마이페이지 "취향 소그룹" — 내가 신청(대기중)·참여 중인 모임만 모아 보여준다.
 // 카드를 누르면 게시판과 같은 상세로 간다 (소그룹장은 거기서 수정·승인 등 관리).
 export function MyGroupMeetingScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const cardWidth = getCardWidth(width);
@@ -89,7 +91,7 @@ export function MyGroupMeetingScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">모임을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">{t("모임을 불러오지 못했어요")}</Text>
       </View>
     );
   }
@@ -98,11 +100,11 @@ export function MyGroupMeetingScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-6 bg-background-normal px-10">
         <Text className="text-body-medium text-text-alternative">
-          아직 참여 중인 소그룹이 없어요
+          {t("아직 참여 중인 소그룹이 없어요")}
         </Text>
         {/* 버튼 폭은 호출부가 정한다(Button 주석) — 가운데 정렬 컨테이너라 늘려서 준다. */}
         <View className="self-stretch">
-          <Button label="소그룹 둘러보기" onPress={() => navigation.navigate("GroupMeeting")} />
+          <Button label={t("소그룹 둘러보기")} onPress={() => navigation.navigate("GroupMeeting")} />
         </View>
       </View>
     );
@@ -126,10 +128,10 @@ export function MyGroupMeetingScreen() {
             <Text className="text-body-main text-text-normal">{meeting.title}</Text>
             {/* 내 상태 — 소그룹장이면서 대기중일 수는 없어서(소그룹장은 자동 승인) 한 줄이면 된다 */}
             {meeting.isLeader && (
-              <Text className="mt-1 text-label-small text-primary-normal">소그룹장</Text>
+              <Text className="mt-1 text-label-small text-primary-normal">{t("소그룹장")}</Text>
             )}
             {meeting.myStatus === "PENDING" && (
-              <Text className="mt-1 text-label-small text-text-neutral">승인 대기중</Text>
+              <Text className="mt-1 text-label-small text-text-neutral">{t("승인 대기중")}</Text>
             )}
             <View className="mt-auto flex-row items-center justify-between pt-4">
               <Text className="text-label-small text-text-neutral">

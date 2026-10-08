@@ -1,6 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { KeyboardAvoidingView, Pressable, ScrollView, View } from "react-native";
 
 import { useCreateTeam, useTeamDetail, useUpdateTeam } from "./api";
@@ -12,7 +13,7 @@ import { ImageUploadBoxSingle } from "../../shared/components/base/ImageUploadBo
 import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { SelectField } from "../../shared/components/composed/SelectField";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
 
@@ -41,6 +42,8 @@ const TEAM_ICONS: IconName[] = [
 // 팀을 새로 만들거나 기존 팀을 고치는 화면. teamId가 있으면 편집, 없으면 생성이다.
 // 두 모드가 폼도 항목도 같아서 화면을 나누지 않는다. 진입은 팀 관리(관리자의 팀스토리 탭)에서만.
 export function TeamFormScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamForm">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const teamId = params?.teamId;
@@ -108,12 +111,12 @@ export function TeamFormScreen() {
         >
           <View>
             {/* 시안에서 팀 이름만 안내 문구가 없다. */}
-            <TextField label="팀 이름" placeholder="" value={name} onChangeText={setName} />
+            <TextField label={t("팀 이름")} placeholder="" value={name} onChangeText={setName} />
           </View>
 
           <SelectField
-            label="팀장"
-            placeholder="팀장 이름을 선택해주세요."
+            label={t("팀장")}
+            placeholder={t("팀장 이름을 선택해주세요.")}
             options={memberNames}
             value={leaderName}
             onChange={setLeaderName}
@@ -121,7 +124,7 @@ export function TeamFormScreen() {
 
           <View>
             {/* 다시 누르면 해제 — 아이콘 없는 팀(회색 원)도 허용한다 */}
-            <Field label="팀 아이콘">
+            <Field label={t("팀 아이콘")}>
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {TEAM_ICONS.map((icon) => {
                   const selected = iconName === icon;
@@ -139,7 +142,7 @@ export function TeamFormScreen() {
                       <Icon
                         name={icon}
                         size={24}
-                        color={selected ? colors.primary.normal : colors.icon.normal}
+                        color={selected ? themeColors.primary.normal : themeColors.icon.normal}
                       />
                     </Pressable>
                   );
@@ -149,15 +152,15 @@ export function TeamFormScreen() {
           </View>
 
           <View>
-            <Field label="배경사진">
+            <Field label={t("배경사진")}>
               <ImageUploadBoxSingle imageUri={coverUri} onChange={setCoverUri} />
             </Field>
           </View>
 
           <View>
             <TextField
-              label="한 줄 소개"
-              placeholder="목록에 표시될 짧은 소개를 입력하세요."
+              label={t("한 줄 소개")}
+              placeholder={t("목록에 표시될 짧은 소개를 입력하세요.")}
               value={tagline}
               onChangeText={setTagline}
             />
@@ -165,8 +168,8 @@ export function TeamFormScreen() {
 
           <View>
             <TextAreaField
-              label="팀 소개"
-              placeholder="팀에 대한 자세한 설명을 입력하세요."
+              label={t("팀 소개")}
+              placeholder={t("팀에 대한 자세한 설명을 입력하세요.")}
               value={description}
               onChangeText={setDescription}
             />
@@ -174,7 +177,7 @@ export function TeamFormScreen() {
 
           <View className="mt-16">
             <Button
-              label={teamId ? "저장" : "등록하기"}
+              label={teamId ? t("저장") : t("등록하기")}
               onPress={handleSubmitPress}
               loading={submitting}
               disabled={

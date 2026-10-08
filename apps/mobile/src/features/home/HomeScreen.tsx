@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Image,
   Pressable,
@@ -48,13 +49,14 @@ const PRAYER_CAROUSEL_SIZE = 3;
 // 여백은 시안 값이 4px 스케일에서 1px 벗어난 경우(31·33·35·15·17·23) 스케일 값으로 맞췄고,
 // 양쪽에서 2px 떨어져 정할 수 없는 46만 tokens.js의 spacing에 등록했다 (mt-11.5).
 export function HomeScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [prayerPage, setPrayerPage] = useState(0);
 
-  // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (말씀 텍스트형 또는 포스터형).
+  // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (사진 위에 시리즈·구절·제목이 올라가는 말씀 배너).
   const { data: banner } = useHomeBanner();
 
   // 큐티나눔 최신 3건·부서활동 최신 5건 — 홈 전용 API 한 번으로 받는다.
@@ -69,7 +71,7 @@ export function HomeScreen() {
       const { items } = await fetchPrayers("all");
       return items
         .slice(0, PRAYER_CAROUSEL_SIZE)
-        .map((prayer) => ({ ...prayer, createdAtLabel: undefined, ddayLabel: undefined }));
+        .map((prayer) => ({ ...prayer, createdDate: undefined, ddayLabel: undefined }));
     },
   });
 
@@ -96,37 +98,21 @@ export function HomeScreen() {
       scrollEventThrottle={16}
     >
       <View className="px-5 pt-8">
-        {banner?.kind === "POSTER" && banner.imageUrl !== null ? (
-          /* 포스터 배너 — 텍스트 없이 이미지 + 주보 버튼만 남는다 (2026-09-23 확정).
-             이미지를 탭하면 원본 비율로 크게 보기. */
-          <WeeklySermonBanner
-            poster
-            imageUrl={banner.imageUrl}
-            onPressImage={() =>
-              navigation.navigate("BannerViewer", {
-                imageUrl: banner.imageUrl as string,
-                title: banner.title,
-              })
-            }
-            onPressShortcut={() => navigation.navigate("Bulletin")}
-          />
-        ) : (
-          <WeeklySermonBanner
-            seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
-            passage={banner?.passage ?? DEFAULT_SERMON.passage}
-            title={banner?.title ?? DEFAULT_SERMON.title}
-            imageUrl={banner?.imageUrl ?? undefined}
-            onPressShortcut={() => navigation.navigate("Bulletin")}
-          />
-        )}
+        <WeeklySermonBanner
+          seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
+          passage={banner?.passage ?? DEFAULT_SERMON.passage}
+          title={banner?.title ?? DEFAULT_SERMON.title}
+          imageUrl={banner?.imageUrl ?? undefined}
+          onPressShortcut={() => navigation.navigate("Bulletin")}
+        />
       </View>
 
       <View className="mt-8 px-5">
-        <SectionHeader title="기도제목" onPress={() => navigation.navigate("PrayerBoard")} />
+        <SectionHeader title={t("기도제목")} onPress={() => navigation.navigate("PrayerBoard")} />
         {(prayers ?? []).length === 0 ? (
           <View className="mt-4 items-center py-8">
             <Text className="text-body-medium text-text-alternative">
-              등록된 기도제목이 없어요
+              {t("등록된 기도제목이 없어요")}
             </Text>
           </View>
         ) : (
@@ -157,7 +143,7 @@ export function HomeScreen() {
       </View>
 
       <View className="mt-9 px-5">
-        <SectionHeader title="큐티나눔" onPress={() => navigation.navigate("QtBoard")} />
+        <SectionHeader title={t("큐티나눔")} onPress={() => navigation.navigate("QtBoard")} />
         {/* 큐티나눔에만 헤더 아래·목록 아래 구분선이 있다 (기도제목 섹션은 시안에서 꺼져 있음). */}
         <View className="mt-3.5 h-px bg-background-assistive" />
         {/* 목록만 좌우로 8 더 들어간다 (시안). 행 간격 10은 행 높이를 48로 맞추고도
@@ -199,7 +185,7 @@ export function HomeScreen() {
       <View className="mt-9">
         <View className="px-5">
           <SectionHeader
-            title="부서활동"
+            title={t("부서활동")}
             onPress={() => navigation.navigate("DepartmentActivity")}
           />
         </View>

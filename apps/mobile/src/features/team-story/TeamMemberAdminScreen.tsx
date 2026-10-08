@@ -2,6 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { TeamMemberInfo } from "@onnuri/shared";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { toTeamRoleLabel, useRemoveTeamMember, useTeamDetail } from "./api";
@@ -14,6 +15,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 팀장이 팀원을 빼고 새로 넣는 화면. 목록은 팀 상세·팀원 리스트와 같은 행을 쓴다.
 // 팀장은 이 화면에서 뺄 수 없다 (팀장 교체는 팀 편집에서) — 시안도 팀장 행에만 "팀장" 문구다.
 export function TeamMemberAdminScreen() {
+  const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamMemberAdmin">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -41,12 +43,12 @@ export function TeamMemberAdminScreen() {
       <ScrollView contentContainerClassName="px-5 pb-6">
         {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
         <Text className="text-center text-caption-main text-text-alternative">
-          총 {members.length}명
+          {t("총 {{count}}명", { count: members.length })}
         </Text>
 
         <View className="mt-4">
           {/* 검색은 아래 목록을 거를 뿐이다 — 추가는 점선 "팀원 추가" 버튼이 따로 한다 (문구 혼동 수정). */}
-          <SearchBar value={query} onChangeText={setQuery} placeholder="이름으로 검색" />
+          <SearchBar value={query} onChangeText={setQuery} placeholder={t("이름으로 검색")} />
         </View>
 
         <View className="mt-3 gap-3">
@@ -67,16 +69,16 @@ export function TeamMemberAdminScreen() {
           onPress={() => navigation.navigate("TeamMemberAdd", { teamId: params.teamId })}
         >
           <Icon name="plus" size={20} />
-          <Text className="text-body-main text-text-alternative">팀원 추가</Text>
+          <Text className="text-body-main text-text-alternative">{t("팀원 추가")}</Text>
         </Pressable>
       </ScrollView>
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         placement="center"
         onConfirm={handleDeleteConfirm}
       />

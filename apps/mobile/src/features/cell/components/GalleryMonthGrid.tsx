@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 export interface GalleryTile {
   id: string;
@@ -34,6 +36,7 @@ export function GalleryMonthGrid({
   onAddPress,
   showMonthLabel = true,
 }: GalleryMonthGridProps) {
+  const { t } = useTranslation();
   // 추가 슬롯은 그리드의 첫 칸을 차지한다 — null을 셀 목록에 끼워 넣고 렌더에서 구분한다.
   const slots: (GalleryTile | null)[] = onAddPress ? [null, ...tiles] : [...tiles];
   const rows: (GalleryTile | null)[][] = [];
@@ -55,7 +58,7 @@ export function GalleryMonthGrid({
                   onPress={onAddPress}
                 >
                   <Icon name="add-round-light" size={24} color={colors.icon.normal} />
-                  <Text className="mt-0.5 text-caption-main text-text-alternative">추가</Text>
+                  <Text className="mt-0.5 text-caption-main text-text-alternative">{t("추가")}</Text>
                 </Pressable>
               ) : (
                 <Pressable
@@ -85,13 +88,14 @@ export function GalleryMonthGrid({
 
 // 선택 모드 오버레이 (시안: 선택 시 검정 20% 딤 + 2px primary 테두리 + 체크, 미선택 시 흰 원만).
 function SelectionOverlay({ selected }: { selected: boolean }) {
+  const themeColors = useThemeColors();
   return (
     <View className="absolute inset-0">
       {selected && (
         <>
           <View
             className="absolute inset-0"
-            style={{ backgroundColor: colors.text.normal, opacity: 0.2 }}
+            style={{ backgroundColor: themeColors.text.normal, opacity: 0.2 }}
           />
           <View className="absolute inset-0 border-2 border-primary-normal" />
         </>

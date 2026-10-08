@@ -2,6 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, KeyboardAvoidingView, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -13,7 +14,7 @@ import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useMe } from "../profile/useMe";
@@ -28,6 +29,8 @@ import { canManageCell } from "./cellDetail";
 
 // 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "CellNewsDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -58,24 +61,24 @@ export function CellNewsDetailScreen() {
       header: () => (
         <Header
           variant="sub"
-          title={cell?.name ?? "셀 소식"}
+          title={cell?.name ?? t("셀 소식")}
           rightAction={canEdit ? "more" : "none"}
           menuItems={[
             {
               icon: "edit",
-              label: "수정하기",
+              label: t("수정하기"),
               onPress: () => navigation.navigate("CellNewsWrite", { cellId, newsId }),
             },
             {
               icon: "trash-can",
-              label: "삭제하기",
+              label: t("삭제하기"),
               onPress: () => deleteDialogRef.current?.open(),
             },
           ]}
         />
       ),
     });
-  }, [navigation, cell?.name, canEdit, cellId, newsId]);
+  }, [navigation, cell?.name, canEdit, cellId, newsId, t]);
 
   const confirmDelete = () => {
     deleteDialogRef.current?.close();
@@ -92,7 +95,7 @@ export function CellNewsDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-medium text-text-alternative">
-          {isLoading ? "소식을 불러오고 있어요." : "소식을 찾을 수 없어요."}
+          {isLoading ? t("소식을 불러오고 있어요.") : t("소식을 찾을 수 없어요.")}
         </Text>
       </View>
     );
@@ -163,10 +166,10 @@ export function CellNewsDetailScreen() {
             className="mt-4 px-5 pb-6 pt-4"
             style={{
               borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: colors.background.assistive,
+              borderTopColor: themeColors.background.assistive,
             }}
           >
-            <Text className="text-body-main text-text-normal">댓글 {news.comments.length}</Text>
+            <Text className="text-body-main text-text-normal">{t("댓글 {{count}}", { count: news.comments.length })}</Text>
             {news.comments.length === 0 ? (
               <CommentEmpty />
             ) : (
@@ -190,7 +193,7 @@ export function CellNewsDetailScreen() {
           style={{
             paddingBottom: insets.bottom + 8,
             borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: colors.background.assistive,
+            borderTopColor: themeColors.background.assistive,
           }}
         >
           <CommentInput
@@ -203,10 +206,10 @@ export function CellNewsDetailScreen() {
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>
