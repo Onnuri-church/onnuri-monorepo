@@ -63,8 +63,10 @@ export function AdminMemberListScreen() {
                 </View>
               )}
               <View className="flex-1">
-                <View className="flex-row items-center gap-1.5">
-                  <Text className="text-body-main text-text-normal">{member.name}</Text>
+                <View className="min-w-0 flex-row items-center gap-1.5">
+                  <Text className="shrink text-body-main text-text-normal" numberOfLines={1}>
+                    {member.name}
+                  </Text>
                   {member.badge && <MemberBadge badge={member.badge} />}
                 </View>
                 <Text className="mt-0.5 text-caption-main text-text-alternative">

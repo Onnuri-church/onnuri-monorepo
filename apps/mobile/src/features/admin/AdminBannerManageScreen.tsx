@@ -75,7 +75,7 @@ export function AdminBannerManageScreen() {
             key={banner.id}
             className="mx-5 flex-row items-center justify-between border-b border-background-assistive py-3"
           >
-            <View className="flex-1 flex-row items-center gap-3">
+            <View className="min-w-0 flex-1 flex-row items-center gap-3">
               {/* 홈 표시 체크 — 시안의 라디오 체크와 같은 모양 (켜짐: 초록 원 + 흰 체크) */}
               <Pressable
                 onPress={() => handleTogglePress(banner)}
@@ -98,21 +98,22 @@ export function AdminBannerManageScreen() {
                   <Icon name="book-open-alt-light" size={20} color={colors.icon.normal} />
                 </View>
               )}
-              <View className="flex-1">
-                <View className="flex-row items-center gap-1.5">
-                  <Text className="text-body-main text-text-normal" numberOfLines={1}>
-                    {banner.title}
+              <View className="min-w-0 flex-1">
+                <Text className="text-body-main text-text-normal" numberOfLines={1}>
+                  {banner.title}
+                </Text>
+                {/* 번역으로 길어져도 수정·삭제 버튼과 겹치지 않게 제목 아래 줄에 따로 둔다 */}
+                {banner.isActive && (
+                  <Text className="text-caption-main text-primary-normal" numberOfLines={1}>
+                    {t("홈에 표시 중")}
                   </Text>
-                  {banner.isActive && (
-                    <Text className="text-caption-main text-primary-normal">{t("홈에 표시 중")}</Text>
-                  )}
-                </View>
+                )}
                 <Text className="text-body-small text-text-alternative" numberOfLines={1}>
                   {banner.passage ?? t("성경 구절 없음 — 수정에서 입력해주세요")}
                 </Text>
               </View>
             </View>
-            <View className="flex-row items-center gap-4">
+            <View className="shrink-0 flex-row items-center gap-4 pl-3">
               <Pressable
                 onPress={() => navigation.navigate("AdminBannerForm", { bannerId: banner.id })}
                 hitSlop={10}

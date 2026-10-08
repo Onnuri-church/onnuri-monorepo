@@ -105,7 +105,7 @@ export function AdminAttendanceScreen() {
         }
       >
         {/* 필터 */}
-        <View className="flex-row items-center gap-5">
+        <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
           <RadioOption label={t("전체")} selected={filter === "all"} onPress={() => setFilter("all")} />
           <RadioOption
             label={t("특정 셀")}
@@ -169,9 +169,10 @@ export function AdminAttendanceScreen() {
         )}
 
         {/* 범례 */}
-        <View className="mt-4 flex-row items-center gap-2.5">
+        {/* 번역으로 길어지면 다음 줄로 넘어가게 wrap — 설명은 한 줄을 다 쓰고 색 범례는 그 아래로 내려간다. */}
+        <View className="mt-4 flex-row flex-wrap items-center gap-x-2.5 gap-y-1">
           <Text className="text-caption-main text-text-alternative">{t("왼쪽 예배 · 오른쪽 셀모임")}</Text>
-          <View className="ml-auto flex-row items-center gap-1">
+          <View className="flex-row items-center gap-1">
             <View className="h-3 w-3 bg-primary-normal" />
             <Text className="text-caption-main text-text-alternative">{t("출석")}</Text>
           </View>
@@ -252,12 +253,13 @@ export function AdminAttendanceScreen() {
                   <View key={row.id}>
                     {index > 0 && <View className="h-px bg-background-muted" />}
                     <View className="flex-row items-center py-2">
-                      <View className="flex-1 flex-row items-center gap-1.5">
+                      <View className="min-w-0 flex-1 flex-row items-center gap-1.5">
                         <Text
+                          numberOfLines={1}
                           className={
                             row.role
-                              ? "text-body-main text-text-normal"
-                              : "text-body-regular text-text-normal"
+                              ? "shrink text-body-main text-text-normal"
+                              : "shrink text-body-regular text-text-normal"
                           }
                         >
                           {row.name}
@@ -265,14 +267,14 @@ export function AdminAttendanceScreen() {
                         {row.role === "leader" && (
                           <View className="rounded bg-primary-normal px-1.5 py-0.5">
                             <Text className="text-caption-small text-text-disable">
-                              {row.roleLabel}
+                              {t(row.roleLabel ?? "")}
                             </Text>
                           </View>
                         )}
                         {row.role === "viceLeader" && (
                           <View className="rounded border border-primary-normal bg-background-normal px-1.5 py-0.5">
                             <Text className="text-caption-small text-primary-normal">
-                              {row.roleLabel}
+                              {t(row.roleLabel ?? "")}
                             </Text>
                           </View>
                         )}

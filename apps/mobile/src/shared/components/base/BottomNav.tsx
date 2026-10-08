@@ -170,7 +170,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 onPress={() => handleTabPress(route, isFocused)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isFocused }}
-                className="flex-1 items-center justify-center gap-2"
+                className="min-w-0 flex-1 items-center justify-center gap-2 px-0.5"
               >
                 {/* 활성/비활성은 색만 바꾼다. 탭별 활성 전용 아이콘은 없다 — 홈이 채워 보이는 건
                     nav-home 원본이 원래 채운 그림이기 때문이지 활성 상태 표현이 아니다. */}
@@ -180,10 +180,14 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                   color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
                 />
                 <Text
+                  // 번역으로 라벨이 길어져도 한 줄로 줄여 맞춘다 (두 줄이 되면 아이콘 위치가 탭마다 어긋난다).
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
                   className={
                     isFocused
-                      ? "text-label-nav text-text-normal"
-                      : "text-label-nav text-text-alternative"
+                      ? "text-center text-label-nav text-text-normal"
+                      : "text-center text-label-nav text-text-alternative"
                   }
                 >
                   {descriptors[route.key].options.title}

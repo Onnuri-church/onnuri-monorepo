@@ -259,7 +259,7 @@ export function GroupMeetingDetailScreen() {
 
         <View className="gap-2 pt-4" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <View className="flex-row items-center gap-2">
-            <Text className="text-label-medium text-primary-normal">{meeting.statusLabel}</Text>
+            <Text className="text-label-medium text-primary-normal">{t(meeting.statusLabel)}</Text>
             <Text className="text-label-medium text-text-alternative">{meeting.periodLabel}</Text>
           </View>
           <View className="flex-row items-center justify-between gap-2">

@@ -22,6 +22,7 @@ export function SearchBar({ value, onChangeText, placeholder, onSubmit }: Search
       <TextInput
         className="h-full flex-1 pl-5 text-body-medium text-text-normal"
         value={value}
+        numberOfLines={1}
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={themeColors.text.alternative}

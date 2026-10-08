@@ -1,0 +1,13 @@
+{
+  "{{count}}명_one": "{{count}} membre",
+  "회원 {{count}}명_one": "{{count}} membre",
+  "전체 {{count}}명_one": "{{count}} membre",
+  "총 {{count}}명_one": "{{count}} membre",
+  "외 {{count}}명_one": "et {{count}} autre",
+  "외 {{count}}줄_one": "et {{count}} autre ligne",
+  "출석부 {{count}}줄_one": "Présence : {{count}} ligne",
+  "전체 {{count}}장_one": "{{count}} photo",
+  "사진 {{count}}장 모두 보기_one": "Voir la photo",
+  "예배 {{worship}}명 출석 · 셀모임 {{meeting}}명 참석 · {{cell}} {{count}}명 기준_one": "Culte : {{worship}} présents · Réunion de cellule : {{meeting}} présents · {{cell}}, {{count}} membre",
+  "외 {{count}}명 더 보기_one": "Voir {{count}} de plus"
+}

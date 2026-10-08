@@ -33,8 +33,10 @@ export function MemberBadge({ badge }: MemberBadgeProps) {
   }[badge];
 
   return (
-    <View className={`rounded px-1.5 py-0.5 ${containerClassName}`}>
-      <Text className={`text-caption-small ${textClassName}`}>{label}</Text>
+    <View className={`shrink-0 rounded px-1.5 py-0.5 ${containerClassName}`}>
+      <Text className={`text-caption-small ${textClassName}`} numberOfLines={1}>
+        {label}
+      </Text>
     </View>
   );
 }

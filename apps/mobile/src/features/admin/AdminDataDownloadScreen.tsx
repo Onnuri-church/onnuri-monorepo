@@ -128,7 +128,7 @@ export function AdminDataDownloadScreen() {
       <ScrollView contentContainerClassName="gap-7 px-5 pb-6 pt-6">
         <View className="gap-4">
           <SectionLabel>{t("어떤 데이터가 필요하세요?")}</SectionLabel>
-          <View className="flex-row items-center gap-5">
+          <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
             <RadioOption
               label={t("회원 정보")}
               selected={dataKind === "member"}
@@ -149,7 +149,7 @@ export function AdminDataDownloadScreen() {
 
         <View className="gap-4">
           <SectionLabel>{t("누구의 데이터인가요?")}</SectionLabel>
-          <View className="flex-row items-center gap-5">
+          <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
             <RadioOption
               label={t("청년부 전체")}
               selected={target === "all"}

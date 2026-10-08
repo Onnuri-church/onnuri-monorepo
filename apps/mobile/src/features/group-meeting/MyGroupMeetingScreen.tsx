@@ -121,7 +121,7 @@ export function MyGroupMeetingScreen() {
           <Card
             imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
             imageFallback={<CardImageFallback />}
-            badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
+            badge={<Chip color={meeting.status} text={t(meeting.statusLabel)} />}
             dimmed={meeting.status === "closed"}
             onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
           >

@@ -45,7 +45,7 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
         return (
           <Pressable
             key={key}
-            className="h-full flex-row items-center gap-1"
+            className="h-full min-w-0 shrink flex-row items-center gap-1"
             onPress={() => onChange(key)}
             disabled={disabled}
           >
@@ -56,8 +56,12 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
                 color={isActive ? themeColors.semantic.warning : themeColors.icon.normal}
               />
             )}
+            {/* 번역으로 탭 라벨이 길어져 한 줄에 안 들어가면 탭이 줄어들고 글자도 같이 줄여 맞춘다. */}
             <Text
-              className={`text-body-main ${isActive ? activeColor : "text-text-alternative"}`}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              className={`shrink text-body-main ${isActive ? activeColor : "text-text-alternative"}`}
             >
               {labels[key]}
             </Text>

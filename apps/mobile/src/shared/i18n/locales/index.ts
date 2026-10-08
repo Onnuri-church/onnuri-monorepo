@@ -8,6 +8,7 @@ import en_g4 from "./en/g4-meeting.json";
 import en_g5 from "./en/g5-boards.json";
 import en_g6 from "./en/g6-team.json";
 import en_g7 from "./en/g7-shared.json";
+import en_g8 from "./en/g8-plural.json";
 import zh_g0 from "./zh/g0-settings.json";
 import zh_g1 from "./zh/g1-admin-a.json";
 import zh_g2 from "./zh/g2-admin-b.json";
@@ -32,6 +33,7 @@ import fr_g4 from "./fr/g4-meeting.json";
 import fr_g5 from "./fr/g5-boards.json";
 import fr_g6 from "./fr/g6-team.json";
 import fr_g7 from "./fr/g7-shared.json";
+import fr_g8 from "./fr/g8-plural.json";
 
 export const resources = {
   en: {
@@ -44,6 +46,7 @@ export const resources = {
       ...en_g5,
       ...en_g6,
       ...en_g7,
+      ...en_g8,
     } as Record<string, string>,
   },
   zh: {
@@ -80,6 +83,7 @@ export const resources = {
       ...fr_g5,
       ...fr_g6,
       ...fr_g7,
+      ...fr_g8,
     } as Record<string, string>,
   },
 };
