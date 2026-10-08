@@ -78,8 +78,10 @@ export interface QtShareDetail {
   imageUrls: string[];
   likeCount: number;
   likedByMe: boolean;
-  /** 내가 쓴 글인지 — 수정·삭제 메뉴를 띄울지 정한다. 권한 판단은 서버가 한다 */
+  /** 내가 쓴 글인지 */
   isMine: boolean;
+  /** 수정·삭제 메뉴를 띄울지 — 내 글이거나 관리자. 권한 판단은 서버가 한다 */
+  canManage: boolean;
 }
 
 /** 셀 소식 목록 항목 (GET /posts/cell-news?cellId=). */

@@ -4,7 +4,9 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 
@@ -14,6 +16,8 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateBannerDto } from './dto/create-banner.dto';
 import { CreateNoticeDto } from './dto/create-notice.dto';
+import { SetBannerActiveDto } from './dto/set-banner-active.dto';
+import { UpdateBannerDto } from './dto/update-banner.dto';
 import { NoticesService } from './notices.service';
 
 // 홈 배너·공지사항 — 조회는 게스트도 되고, 등록·삭제는 관리자만.
@@ -43,6 +47,19 @@ export class NoticesController {
   @Post('banners')
   createBanner(@CurrentUser() user: JwtPayload, @Body() dto: CreateBannerDto) {
     return this.noticesService.createBanner(user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Patch('banners/:id')
+  updateBanner(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
+    return this.noticesService.updateBanner(id, dto);
+  }
+
+  // 홈 표시 켜기/끄기 — 켜면 다른 배너는 자동으로 꺼진다.
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Put('banners/:id/active')
+  setBannerActive(@Param('id') id: string, @Body() dto: SetBannerActiveDto) {
+    return this.noticesService.setBannerActive(id, dto.active);
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)

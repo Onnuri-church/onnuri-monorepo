@@ -304,6 +304,7 @@ export class PostsService {
       },
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    const isAdmin = userId ? await this.isAdminUser(userId) : false;
 
     return {
       id: post.id,
@@ -321,7 +322,17 @@ export class PostsService {
       likeCount: post._count.likes,
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
+      // 관리자는 남의 글도 수정·삭제할 수 있다 — 메뉴 노출 기준이고, 실제 권한 판단은 서버가 한다.
+      canManage: post.authorId === userId || isAdmin,
     };
+  }
+
+  private async isAdminUser(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+    return user?.isAdmin === true;
   }
 
   // 큐티나눔 작성. 저장한 글을 상세 모양 그대로 돌려준다 — 앱이 등록 직후 상세로 갈 때
@@ -412,15 +423,15 @@ export class PostsService {
     });
   }
 
-  // 수정·삭제 권한 검사. 없는 글과 남의 글을 구분한다 — 남의 글에 404를 주면 앱에서
-  // "글이 사라졌다"로 보여 잘못된 안내가 나간다.
+  // 수정·삭제 권한 검사 — 본인 글 또는 관리자. 없는 글과 남의 글을 구분한다 — 남의 글에
+  // 404를 주면 앱에서 "글이 사라졌다"로 보여 잘못된 안내가 나간다.
   private async assertMyQtShare(id: string, userId: string): Promise<void> {
     const post = await this.prisma.post.findFirst({
       where: { id, board: 'QT_SHARE', deletedAt: null },
       select: { authorId: true },
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
-    if (post.authorId !== userId) {
+    if (post.authorId !== userId && !(await this.isAdminUser(userId))) {
       throw new ForbiddenException('내가 쓴 글만 수정·삭제할 수 있습니다.');
     }
   }

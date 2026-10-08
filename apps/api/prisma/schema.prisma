@@ -554,6 +554,7 @@ model Notice {
   linkUrl   String?
   startsOn  DateTime?  @db.Date // 배너 노출 시작
   endsOn    DateTime?  @db.Date // 배너 노출 종료
+  isActive  Boolean    @default(false) // 배너 전용 — 홈에 표시 중인 배너(한 번에 하나만 true). 켠 게 없으면 앱이 기본 배너로 폴백
   author    User       @relation(fields: [authorId], references: [id])
   authorId  String // 관리자
   createdAt DateTime   @default(now())
