@@ -6,9 +6,6 @@ import { resources } from "./locales";
 export const LANGUAGES = [
   { code: "ko", label: "한국어" },
   { code: "en", label: "English" },
-  { code: "zh", label: "中文" },
-  { code: "ja", label: "日本語" },
-  { code: "fr", label: "Français" },
 ] as const;
 
 export type LanguageCode = (typeof LANGUAGES)[number]["code"];

@@ -20,7 +20,7 @@ export const useLanguageStore = create<LanguageState>((set) => ({
   },
 }));
 
-const CODES: readonly string[] = ["ko", "en", "zh", "ja", "fr"];
+const CODES: readonly string[] = ["ko", "en"];
 
 // 앱 시작 때 한 번 — 저장된 언어를 읽어 반영한다.
 export async function restoreLanguage(): Promise<void> {

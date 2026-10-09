@@ -3,16 +3,19 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { apiClient } from "../../shared/api/client";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
 import { Icon } from "../../shared/components/base/Icon";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { signOut } from "../../shared/api/session";
+import { LANGUAGES } from "../../shared/i18n";
 import { useAuthStore } from "../../shared/store/useAuthStore";
+import { useLanguageStore } from "../../shared/store/useLanguageStore";
 import { useThemeStore } from "../../shared/store/useThemeStore";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
@@ -41,6 +44,10 @@ function SectionLabel({ children }: { children: string }) {
 export function SettingsScreen() {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const language = useLanguageStore((state) => state.language);
+  const setLanguage = useLanguageStore((state) => state.setLanguage);
+  const languageSheetRef = useRef<AppSheetRef>(null);
+  const currentLanguageLabel = LANGUAGES.find((option) => option.code === language)?.label;
   const themeMode = useThemeStore((state) => state.mode);
   const setThemeMode = useThemeStore((state) => state.setMode);
   const insets = useSafeAreaInsets();
@@ -112,8 +119,7 @@ export function SettingsScreen() {
     >
       <View className="gap-7.5">
         {/* 디스플레이 — 다크모드는 2026-10-07에 되살렸다 (팔레트는 tokens.js darkColors).
-            언어 선택(한국어/English/中文/日本語/Français)은 일단 뺐다 (2026-10-08) — 번역·레이아웃 감수가
-            끝나면 git 이력(SCRUM-138)에서 이 화면의 "언어" 섹션과 시트를 되살린다. */}
+            언어 선택(한국어/English)은 i18n(react-i18next, 번역 키 = 한국어 원문)을 붙이면서 되살렸다. */}
         <View className="gap-2">
           <SectionLabel>{t("디스플레이")}</SectionLabel>
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
@@ -130,6 +136,23 @@ export function SettingsScreen() {
                   value={themeMode === "dark"}
                   onValueChange={(value) => setThemeMode(value ? "dark" : "light")}
                 />
+              }
+            />
+          </View>
+        </View>
+
+        {/* 언어 — 고르면 앱 문구가 바로 바뀐다 (사용자가 쓴 글·서버가 만든 문구는 그대로) */}
+        <View className="gap-2">
+          <SectionLabel>{t("언어")}</SectionLabel>
+          <View className="rounded-5 bg-background-normal px-4 py-5 shadow-card">
+            <SettingRow
+              title={t("표시언어 선택")}
+              onPress={() => languageSheetRef.current?.open()}
+              right={
+                <View className="flex-row items-center gap-1">
+                  <Text className="text-body-small text-text-alternative">{currentLanguageLabel}</Text>
+                  <Icon name="arrow-drop-down" color={colors.icon.accent} />
+                </View>
               }
             />
           </View>
@@ -179,6 +202,45 @@ export function SettingsScreen() {
       <Text className="mt-10 pl-4.5 text-body-small text-text-neutral">
         {t("버전정보 {{version}}", { version: "1.0.0" })}
       </Text>
+
+      <AppSheet
+        ref={languageSheetRef}
+        footer={
+          <View className="bg-background-normal px-4 pb-4">
+            <View className="border-t-2 border-background-assistive" />
+            <Pressable
+              onPress={() => languageSheetRef.current?.close()}
+              className="pt-4"
+              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+            >
+              <Text className="text-center text-body-medium text-text-alternative">{t("취소")}</Text>
+            </Pressable>
+          </View>
+        }
+      >
+        <View className="gap-6 p-4 pb-9">
+          {LANGUAGES.map((option) => (
+            <Pressable
+              key={option.code}
+              onPress={() => {
+                setLanguage(option.code);
+                languageSheetRef.current?.close();
+              }}
+              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+            >
+              <Text
+                className={
+                  option.code === language
+                    ? "text-center text-body-main text-primary-normal"
+                    : "text-center text-body-medium text-text-normal"
+                }
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </AppSheet>
 
       <AppDialog
         ref={withdrawDialogRef}
