@@ -2,6 +2,7 @@ import type { MeResponse } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -10,6 +11,7 @@ import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { NotificationBell } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import { i18n } from "../../shared/i18n";
 import { signOut } from "../../shared/api/session";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
@@ -45,6 +47,7 @@ interface RoleLinkHandlers {
   onAttendancePress?: () => void;
   onMemberListPress?: () => void;
   onAttendanceSheetPress?: () => void;
+  onQtManagePress?: () => void;
   onPrayerManagePress?: () => void;
   onBannerManagePress?: () => void;
 }
@@ -53,25 +56,26 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
   switch (role) {
     case "teamLeader":
       return [
-        { label: `${team} 게시판 관리`, onPress: handlers.onBoardManagePress },
-        { label: `${team} 팀원 관리`, onPress: handlers.onTeamMemberPress },
+        { label: i18n.t("{{team}} 게시판 관리", { team }), onPress: handlers.onBoardManagePress },
+        { label: i18n.t("{{team}} 팀원 관리", { team }), onPress: handlers.onTeamMemberPress },
       ];
     case "cellLeader":
       // 셀 페이지 > 내 셀 > 관리 탭과 같은 화면으로 가는 지름길 — 내 셀 id로 연결한다.
       return [
-        { label: "팔로워 노트", onPress: handlers.onFollowerNotePress },
-        { label: "출석 관리", onPress: handlers.onAttendancePress },
+        { label: i18n.t("팔로워 노트"), onPress: handlers.onFollowerNotePress },
+        { label: i18n.t("출석 관리"), onPress: handlers.onAttendancePress },
       ];
     case "admin":
       // 2026-09-09 관리자 시안 기준 4개 — 첫 항목은 "팔로워 노트"였다가 셀 관리로 변경
       // (2026-09-10 지환님: 셀 전체 목록에서 생성·편집·삭제). 기도제목 관리는 별도 화면이
       // 아니라 같은 게시판이다 — 관리자에겐 실명 표시·삭제 줄이 붙는다 (2026-09-23 확정).
       return [
-        { label: "셀 관리", onPress: handlers.onCellManagePress },
-        { label: "회원 관리", onPress: handlers.onMemberListPress },
-        { label: "출석부", onPress: handlers.onAttendanceSheetPress },
-        { label: "기도제목 관리", onPress: handlers.onPrayerManagePress },
-        { label: "홈 배너 관리", onPress: handlers.onBannerManagePress },
+        { label: i18n.t("셀 관리"), onPress: handlers.onCellManagePress },
+        { label: i18n.t("회원 관리"), onPress: handlers.onMemberListPress },
+        { label: i18n.t("출석부"), onPress: handlers.onAttendanceSheetPress },
+        { label: i18n.t("큐티나눔 관리"), onPress: handlers.onQtManagePress },
+        { label: i18n.t("기도제목 관리"), onPress: handlers.onPrayerManagePress },
+        { label: i18n.t("홈 배너 관리"), onPress: handlers.onBannerManagePress },
       ];
     case "member":
       return [];
@@ -79,6 +83,7 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
 }
 
 export function MyPageScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const session = useAuthStore((state) => state.session);
@@ -95,13 +100,13 @@ export function MyPageScreen() {
   const { data: myStats } = useMyStats(session.status === "authenticated");
   const stats = [
     {
-      label: "큐티나눔",
+      label: t("큐티나눔"),
       value: myStats?.qtShareCount ?? 0,
       // 내가 쓴 글 모아보기 — 큐티나눔 게시판을 "내 글" 상태로 연다 (게스트는 통계가 없어 안 눌림).
       onPress: me ? () => navigation.navigate("QtBoard", { mine: true }) : undefined,
     },
-    { label: "출석주수", value: myStats?.attendanceWeeks ?? 0 },
-    { label: "받은하트", value: myStats?.receivedHearts ?? 0 },
+    { label: t("출석주수"), value: myStats?.attendanceWeeks ?? 0 },
+    { label: t("받은하트"), value: myStats?.receivedHearts ?? 0 },
   ];
 
   // 아바타 탭 → 확대 보기 (2026-10-07 확정: 마이페이지는 보기 전용, 사진 변경은
@@ -113,9 +118,9 @@ export function MyPageScreen() {
 
   // /users/me가 오기 전까지는 세션의 유저(로그인 응답)로 이름을 먼저 그린다.
   const sessionUser = session.status === "authenticated" ? session.user : null;
-  const name = me?.name ?? sessionUser?.name ?? "게스트";
-  const cell = me?.cell?.name ?? "없음";
-  const team = me?.team?.name ?? "없음";
+  const name = me?.name ?? sessionUser?.name ?? t("게스트");
+  const cell = me?.cell?.name ?? t("없음");
+  const team = me?.team?.name ?? t("없음");
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
   const myTeamId = me?.team?.id;
   const roleLinks = getRoleLinks(role, team, {
@@ -136,6 +141,8 @@ export function MyPageScreen() {
       : undefined,
     onMemberListPress: () => navigation.navigate("AdminMemberList"),
     onAttendanceSheetPress: () => navigation.navigate("AdminAttendance"),
+    // 큐티나눔 관리도 같은 게시판이다 — 관리자는 글쓰기·모든 글 수정·삭제가 된다.
+    onQtManagePress: () => navigation.navigate("QtBoard"),
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
     onBannerManagePress: () => navigation.navigate("AdminBannerManage"),
   });
@@ -180,7 +187,7 @@ export function MyPageScreen() {
             <Avatar imageUrl={me?.avatarUrl} size={100} />
           </Pressable>
           <Text className="mt-2.5 text-center text-title text-text-normal">
-            {name}님,{"\n"}안녕하세요!
+            {t("{{name}}님,\n안녕하세요!", { name })}
           </Text>
           {role !== "member" && (
             <View className="mt-2.5">
@@ -195,9 +202,9 @@ export function MyPageScreen() {
           {roleLinks.length > 0 && <MenuLinkCard links={roleLinks} />}
           <ProfileInfoCard
             rows={[
-              { label: "이름", value: name },
-              { label: "소속 셀", value: cell },
-              { label: "소속 팀", value: team },
+              { label: t("이름"), value: name },
+              { label: t("소속 셀"), value: cell },
+              { label: t("소속 팀"), value: team },
             ]}
           />
           <MenuLinkCard
@@ -205,17 +212,17 @@ export function MyPageScreen() {
               // 내가 신청·참여 중인 모임 모아보기 — 게시판에서 매번 찾지 않게 하는 지름길.
               // 관리자는 소그룹에 참여하지 않으므로 빈 "내 소그룹" 대신 게시판(관리 분기)으로 간다.
               {
-                label: "취향 소그룹",
+                label: t("취향 소그룹"),
                 onPress: () =>
                   navigation.navigate(role === "admin" ? "GroupMeeting" : "MyGroupMeetings"),
               },
-              { label: "공지사항", onPress: () => navigation.navigate("NoticeList") },
+              { label: t("공지사항"), onPress: () => navigation.navigate("NoticeList") },
             ]}
           />
         </View>
 
         <Pressable className="mt-5 self-start pl-4.5" onPress={handleLogoutPress}>
-          <Text className="text-caption-main text-text-alternative">로그아웃</Text>
+          <Text className="text-caption-main text-text-alternative">{t("로그아웃")}</Text>
         </Pressable>
       </ScrollView>
 

@@ -1,5 +1,6 @@
 import { StatusBar } from "expo-status-bar";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -27,6 +28,7 @@ const DEV_LOGIN_ENABLED = process.env.EXPO_PUBLIC_AUTH_DEV_LOGIN === "true";
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
 export function LoginScreen() {
+  const { t } = useTranslation();
   const startGuestSession = useAuthStore((state) => state.startGuestSession);
   const insets = useSafeAreaInsets();
   const [submitting, setSubmitting] = useState(false);
@@ -44,8 +46,8 @@ export function LoginScreen() {
     } catch (error) {
       // 흔한 원인: dev build가 아님(네이티브 모듈 없음), .env 키 미설정, 빌드 키(SHA-1/키 해시) 미등록.
       Alert.alert(
-        "로그인에 실패했습니다",
-        error instanceof Error ? error.message : "잠시 후 다시 시도해 주세요.",
+        t("로그인에 실패했습니다"),
+        error instanceof Error ? error.message : t("잠시 후 다시 시도해 주세요."),
       );
     } finally {
       setSubmitting(false);
@@ -69,7 +71,7 @@ export function LoginScreen() {
       <View className="flex-1 px-11 pb-12">
         <View className="flex-1 items-center justify-center">
           <Logo variant="symbol" />
-          <Text className="text-body-medium text-text-neutral">2026 온누리교회 청년부</Text>
+          <Text className="text-body-medium text-text-neutral">{t("2026 온누리교회 청년부")}</Text>
           {/* 타이틀 SVG가 글자에 딱 맞게 잘려 있어서 시안의 행간 여백이 없다 — 8px로 대신한다 */}
           <View className="mt-2">
             <Logo variant="wordmark" />
@@ -86,7 +88,7 @@ export function LoginScreen() {
           onPress={startGuestSession}
           style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
         >
-          <Text className="text-body-medium text-text-alternative">게스트로 로그인하기</Text>
+          <Text className="text-body-medium text-text-alternative">{t("게스트로 로그인하기")}</Text>
         </Pressable>
 
         {/* EXPO_PUBLIC_AUTH_DEV_LOGIN=true일 때만 — 소셜 SDK 없이 역할별 고정 계정의 진짜 세션으로 유저 기능을 확인하는 버튼 */}

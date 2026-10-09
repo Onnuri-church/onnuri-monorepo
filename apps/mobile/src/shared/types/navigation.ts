@@ -88,13 +88,16 @@ export type RootStackParamList = {
   AdminMemberDetail: { memberId: string };
   AdminMemberEdit: { memberId: string };
   AdminAttendance: undefined;
+  // 출석부의 "모임 없는 날 지정"에서 진입한다.
+  AdminOffDays: undefined;
   // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
   AdminDataDownload: undefined;
+  // 다운로드 화면에서 고른 조건(쿼리 문자열 키 그대로)으로 건수·앞쪽 몇 줄을 미리 본다.
+  AdminDataPreview: { query: Record<string, string> };
   // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.
   AdminBannerManage: undefined;
-  AdminBannerForm: undefined;
-  // 홈 포스터 배너 크게 보기 (검정 배경 뷰어).
-  BannerViewer: { imageUrl: string; title: string };
+  // bannerId가 있으면 수정 모드다 (유형은 못 바꾼다).
+  AdminBannerForm: { bannerId?: string } | undefined;
   // 소그룹 활동 사진 뷰어. index는 상세 photos(최신순) 기준 순번이다.
   GroupMeetingPhoto: { meetingId: string; index: number };
   // 메인 헤더 종 아이콘에서 진입하는 알림센터.

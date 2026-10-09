@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -12,12 +13,15 @@ interface GallerySelectionBarProps {
 // 언제 보일지는 화면이 정한다 — 이 컴포넌트는 개수만 받는다.
 // 시안 확정값: 위아래 여백 20, 위쪽 구분선 1, 아이콘 18, 아이콘-글자 간격 4.
 export function GallerySelectionBar({ selectedCount, onDeletePress }: GallerySelectionBarProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row items-center justify-between border-t border-text-assistive py-5">
-      <Text className="text-body-medium text-text-alternative">{selectedCount}장 선택됨</Text>
+      <Text className="text-body-medium text-text-alternative">
+        {t("{{count}}장 선택됨", { count: selectedCount })}
+      </Text>
       <Pressable className="flex-row items-center gap-1" onPress={onDeletePress}>
         <Icon name="trash-can" size={18} color={colors.semantic.danger} />
-        <Text className="text-body-medium text-semantic-danger">삭제</Text>
+        <Text className="text-body-medium text-semantic-danger">{t("삭제")}</Text>
       </Pressable>
     </View>
   );

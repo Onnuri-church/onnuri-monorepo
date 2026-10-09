@@ -14,6 +14,7 @@ import Svg, { Path } from "react-native-svg";
 
 import { useTabBarStore } from "../../store/useTabBarStore";
 import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 import type { RootTabParamList } from "../../types/navigation";
 import { Icon } from "./Icon";
 
@@ -67,6 +68,7 @@ function backgroundPath(width: number, height: number) {
 export const TAB_BAR_HEIGHT = 80;
 
 export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps) {
+  const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
 
@@ -149,7 +151,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
           height={80 + insets.bottom}
           style={StyleSheet.absoluteFill}
         >
-          <Path d={backgroundPath(width, 80 + insets.bottom)} fill={colors.background.normal} />
+          <Path d={backgroundPath(width, 80 + insets.bottom)} fill={themeColors.background.normal} />
         </Svg>
         <View className="h-20 flex-row">
           {state.routes.map((route, index) => {
@@ -168,20 +170,24 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 onPress={() => handleTabPress(route, isFocused)}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isFocused }}
-                className="flex-1 items-center justify-center gap-2"
+                className="min-w-0 flex-1 items-center justify-center gap-2 px-0.5"
               >
                 {/* 활성/비활성은 색만 바꾼다. 탭별 활성 전용 아이콘은 없다 — 홈이 채워 보이는 건
                     nav-home 원본이 원래 채운 그림이기 때문이지 활성 상태 표현이 아니다. */}
                 <Icon
                   name={icon.name}
                   size={icon.size}
-                  color={isFocused ? colors.icon.strong : colors.icon.normal}
+                  color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
                 />
                 <Text
+                  // 번역으로 라벨이 길어져도 한 줄로 줄여 맞춘다 (두 줄이 되면 아이콘 위치가 탭마다 어긋난다).
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.75}
                   className={
                     isFocused
-                      ? "text-label-nav text-text-normal"
-                      : "text-label-nav text-text-alternative"
+                      ? "text-center text-label-nav text-text-normal"
+                      : "text-center text-label-nav text-text-alternative"
                   }
                 >
                   {descriptors[route.key].options.title}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Text, View, ScrollView } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 
@@ -26,6 +27,7 @@ export function ImageUploadBoxMultiple({
   onChange,
   maxCount = DEFAULT_MAX_COUNT,
 }: ImageUploadBoxMultipleProps) {
+  const { t } = useTranslation();
   const handleDeletePress = (index: number) => {
     onChange?.(imageUris.filter((_, i) => i !== index));
   };
@@ -57,7 +59,7 @@ export function ImageUploadBoxMultiple({
     <View className="relative" onLayout={(event) => setContainerWidth(event.nativeEvent.layout.width)}>
       {imageUris.length > 1 && imageUris.length !== maxCount && (
         <View className="absolute -top-12 right-0 flex items-center justify-center h-8 w-auto px-3 rounded-xl bg-background-dark">
-          <Text className="text-caption-main text-text-disable">사진 추가 버튼은 제일 오른쪽에 있어요!</Text>
+          <Text className="text-caption-main text-text-onImage">{t("사진 추가 버튼은 제일 오른쪽에 있어요!")}</Text>
           <View className="absolute -bottom-1.5 w-4 h-4 rounded-b-sm bg-background-dark rotate-45" />
         </View>
       )}
@@ -80,15 +82,15 @@ export function ImageUploadBoxMultiple({
       </ScrollView>
 
       <View className="mt-4">
-        <Text className="text-body-small text-text-alternative">{`${imageUris.length}/${maxCount}장`}</Text>
+        <Text className="text-body-small text-text-alternative">{t("{{current}}/{{max}}장", { current: imageUris.length, max: maxCount })}</Text>
       </View>
 
       <ImagePickerSheet
         sheetRef={sheetRef}
         pickerItems={
           [
-            ["카메라로 촬영", handleTakePhoto],
-            ["앨범에서 선택", handlePickFromAlbum],
+            [t("카메라로 촬영"), handleTakePhoto],
+            [t("앨범에서 선택"), handlePickFromAlbum],
           ] as const
         }
       />

@@ -1,7 +1,7 @@
 import { TextInput } from "react-native";
 
 import { Field } from "./Field";
-import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 
 interface TextFieldProps {
   label: string;
@@ -13,6 +13,7 @@ interface TextFieldProps {
 // 라벨 + 밑줄 한 줄 입력. 입력줄은 시안 확정값(높이 48 / 좌우 8 / 아래 구분선)으로
 // DateField의 트리거 줄과 같은 스타일이다.
 export function TextField({ label, placeholder, value, onChangeText }: TextFieldProps) {
+  const themeColors = useThemeColors();
   return (
     <Field label={label}>
       <TextInput
@@ -20,7 +21,7 @@ export function TextField({ label, placeholder, value, onChangeText }: TextField
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.text.assistive}
+        placeholderTextColor={themeColors.text.assistive}
       />
     </Field>
   );

@@ -1,7 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useDeleteTeam, useTeams } from "./api";
@@ -16,12 +17,13 @@ import { useMe } from "../profile/useMe";
 // 관리자에게는 이 탭이 곧 팀 관리다 — 행 스와이프로 편집·삭제, 목록 끝 점선 행으로 생성
 // (셀 탭이 관리자에게 셀 관리로 뜨는 것과 같은 방식). 일반 유저·게스트는 목록만 본다.
 export function TeamStoryScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 하단 탭 화면이라 스크롤 내리면 탭바를 숨긴다 (홈·셀·말씀·마이페이지와 동일 —
   // 이 탭만 연결이 빠져 있었다).
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const insets = useSafeAreaInsets();
-  const { data: teams } = useTeams();
+  const { data: teams, refetch, isRefetching } = useTeams();
   const me = useMe();
   const canManage = me?.isAdmin === true;
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -48,6 +50,7 @@ export function TeamStoryScreen() {
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
         {(teams ?? []).map((team) => (
           <TeamListItem
@@ -72,17 +75,17 @@ export function TeamStoryScreen() {
             onPress={() => navigation.navigate("TeamForm")}
           >
             <Icon name="plus" size={20} />
-            <Text className="text-body-main text-text-alternative">팀 생성</Text>
+            <Text className="text-body-main text-text-alternative">{t("팀 생성")}</Text>
           </Pressable>
         )}
       </ScrollView>
 
       <AppDialog
         ref={deleteDialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         placement="center"
         onConfirm={handleDeleteConfirm}
       />

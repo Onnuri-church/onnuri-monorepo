@@ -3,7 +3,8 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
@@ -19,6 +20,7 @@ import { useAdminMembers } from "../admin/api";
 import { buildMemberOptions, findOptionByLabel } from "../admin/memberOptions";
 import { useMe } from "../profile/useMe";
 import { fetchGroupMeetingDetail, useCreateGroupMeeting, useUpdateGroupMeeting } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 interface LeaderPick {
   id: string;
@@ -29,6 +31,7 @@ interface LeaderPick {
 // 소그룹장 한 명 이상). 생성은 관리자 전용, 편집은 소그룹장도 들어온다(canManage).
 // meetingId가 있으면 편집 모드로 기존 값을 채운다.
 export function GroupMeetingFormScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "GroupMeetingForm">>();
   const meetingId = route.params?.meetingId;
@@ -91,7 +94,7 @@ export function GroupMeetingFormScreen() {
     try {
       coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     }
 
@@ -111,18 +114,18 @@ export function GroupMeetingFormScreen() {
       onError: (error) => {
         const message =
           (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-        Alert.alert("저장 실패", message ?? "잠시 후 다시 시도해주세요.");
+        Alert.alert(t("저장 실패"), message ?? t("잠시 후 다시 시도해주세요."));
       },
     });
   };
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingContainer>
         <ScrollView contentContainerClassName="gap-4 px-5 pb-6 pt-4" keyboardShouldPersistTaps="handled">
           {/* 배경사진 — 시안: 362x173 점선 슬롯 */}
           <View className="py-3">
-            <Text className="text-body-main text-text-normal">배경사진</Text>
+            <Text className="text-body-main text-text-normal">{t("배경사진")}</Text>
             <View className="mt-4 h-43">
               <ImageSlot
                 imageUri={coverUri}
@@ -134,16 +137,16 @@ export function GroupMeetingFormScreen() {
           </View>
 
           <TextField
-            label="취향소그룹 이름"
-            placeholder="소그룹 이름을 입력하세요."
+            label={t("취향소그룹 이름")}
+            placeholder={t("소그룹 이름을 입력하세요.")}
             value={title}
             onChangeText={setTitle}
           />
 
           <View>
             <TextAreaField
-              label="설명문"
-              placeholder="소그룹을 소개하는 글을 입력하세요."
+              label={t("설명문")}
+              placeholder={t("소그룹을 소개하는 글을 입력하세요.")}
               value={description}
               onChangeText={setDescription}
             />
@@ -151,26 +154,26 @@ export function GroupMeetingFormScreen() {
 
           {/* 모집일 — 시안은 기간 한 줄인데 기간 피커가 없어 시작/마감 두 줄로 근사 */}
           <DateField
-            label="모집 시작일"
-            placeholder="모집 시작일을 선택하세요."
+            label={t("모집 시작일")}
+            placeholder={t("모집 시작일을 선택하세요.")}
             value={recruitStart}
             onChange={setRecruitStart}
           />
           <DateField
-            label="모집 마감일"
-            placeholder="모집 마감일을 선택하세요."
+            label={t("모집 마감일")}
+            placeholder={t("모집 마감일을 선택하세요.")}
             value={recruitEnd}
             onChange={setRecruitEnd}
           />
 
-          <TextField label="장소" placeholder="모임 장소를 입력하세요." value={place} onChangeText={setPlace} />
-          <TextField label="비용" placeholder="1인당 비용을 입력하세요." value={cost} onChangeText={setCost} />
+          <TextField label={t("장소")} placeholder={t("모임 장소를 입력하세요.")} value={place} onChangeText={setPlace} />
+          <TextField label={t("비용")} placeholder={t("1인당 비용을 입력하세요.")} value={cost} onChangeText={setCost} />
 
           {/* 소그룹장 — 한 명 이상, 다중 가능 (2026-09-21 확정). 행의 X로 빼고 아래에서 추가한다. */}
           <View className="py-3">
             <View className="flex-row items-center gap-2">
-              <Text className="text-body-main text-text-normal">소그룹장</Text>
-              <Text className="text-caption-main text-text-alternative">한 명 이상</Text>
+              <Text className="text-body-main text-text-normal">{t("소그룹장")}</Text>
+              <Text className="text-caption-main text-text-alternative">{t("한 명 이상")}</Text>
             </View>
             <View className="mt-2">
               {leaders.map((leader) => (
@@ -194,7 +197,7 @@ export function GroupMeetingFormScreen() {
               <View className="-mt-2">
                 <SelectField
                   label=""
-                  placeholder="소그룹장 추가"
+                  placeholder={t("소그룹장 추가")}
                   options={memberOptions
                     .filter((option) => !leaders.some((leader) => leader.id === option.id))
                     .map((option) => option.label)}
@@ -207,14 +210,14 @@ export function GroupMeetingFormScreen() {
 
           <View className="mt-4">
             <Button
-              label={meetingId ? "저장하기" : "등록하기"}
+              label={meetingId ? t("저장하기") : t("등록하기")}
               disabled={!canSubmit}
               loading={saving}
               onPress={handleSubmitPress}
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

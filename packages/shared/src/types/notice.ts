@@ -3,31 +3,41 @@
  * 활성 배너 = 가장 최근 등록 1건. 내리기 = 삭제 — 그러면 이전 배너가 다시 표시된다.
  */
 
-export type HomeBannerKind = "SERMON" | "POSTER";
-
 export interface HomeBanner {
   id: string;
-  /** 구절(passage)이 있으면 SERMON, 없으면 POSTER — 서버가 판별해서 내려준다 */
-  kind: HomeBannerKind;
-  /** SERMON: 말씀 제목 / POSTER: 관리 목록에 보이는 이름 (예: "여름 수련회") */
+  /** 말씀 제목 */
   title: string;
-  /** SERMON형 성경 구절 (예: "마태복음 6:5-8") — POSTER형은 null */
+  /** 성경 구절 (예: "마태복음 6:5-8") — 말씀/포스터 배너를 통합하기 전에 포스터로 올린 옛 배너만 null */
   passage: string | null;
-  /** SERMON형 "9월 설교 시리즈" — 등록 월로 서버가 만든다. POSTER형은 null */
-  seriesLabel: string | null;
-  /** POSTER형 포스터 이미지(필수) / SERMON형 배경사진(선택) */
+  /** "9월 설교 시리즈" — 등록 월로 서버가 만든다 */
+  seriesLabel: string;
+  /** 배경사진(선택) — 없으면 회색 배경에 글만 올라간다 */
   imageUrl: string | null;
+  /** 홈에 표시 중인 배너 — 한 번에 하나만 true. 전부 false면 앱이 기본 배너로 폴백 */
+  isActive: boolean;
   /** ISO datetime */
   createdAt: string;
+}
+
+/** PUT /notices/banners/:id/active 요청 본문 (관리자 전용, 응답은 HomeBanner) — true면 다른 배너는 자동으로 꺼진다 */
+export interface SetHomeBannerActiveRequest {
+  active: boolean;
 }
 
 /** POST /notices/banners 요청 본문 (관리자 전용, 응답은 HomeBanner) */
 export interface CreateHomeBannerRequest {
   title: string;
-  /** SERMON형이면 필수 */
-  passage?: string;
-  /** POSTER형이면 필수, SERMON형이면 배경사진(선택) — POST /uploads가 돌려준 주소 */
+  passage: string;
+  /** 배경사진(선택) — POST /uploads가 돌려준 주소 */
   imageUrl?: string;
+}
+
+/** PATCH /notices/banners/:id 요청 본문 (관리자 전용, 응답은 HomeBanner) — 보낸 필드만 바꾼다.
+ *  배경사진은 imageUrl: null로 지울 수 있다. */
+export interface UpdateHomeBannerRequest {
+  title?: string;
+  passage?: string;
+  imageUrl?: string | null;
 }
 
 // ── 공지사항 (Notice type=NOTICE — 마이페이지 공지사항 메뉴) ─────────────────

@@ -2,10 +2,12 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../shared/components/base/Icon";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell, useCellGallery } from "./api";
@@ -13,6 +15,8 @@ import { useCell, useCellGallery } from "./api";
 // 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터 + 좌우 화살표).
 // 배경이 어두워 공통 sub 헤더를 못 쓰고 화면이 직접 그린다 — 등록부는 headerShown: false.
 export function CellGalleryPhotoScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "CellGalleryPhoto">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
@@ -34,9 +38,9 @@ export function CellGalleryPhotoScreen() {
           className="absolute left-5 h-8 w-8 items-center justify-center"
           onPress={() => navigation.goBack()}
         >
-          <Icon name="back" size={28} color={colors.icon.disable} />
+          <Icon name="back" size={28} color={themeColors.text.onImage} />
         </Pressable>
-        <Text className="text-heading-small text-text-disable">{cell?.name ?? "갤러리"}</Text>
+        <Text className="text-heading-small text-text-onImage">{cell?.name ?? t("갤러리")}</Text>
       </View>
       <Text className="mt-2 text-center text-caption-main text-text-alternative">
         {index + 1}/{totalCount}

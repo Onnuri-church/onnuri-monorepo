@@ -3,6 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 
 import { fetchTeamActivities } from "./api";
@@ -21,6 +22,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 const ALL_TEAMS = "";
 
 export function DepartmentActivityScreen() {
+  const { t } = useTranslation();
   // 팀 상세의 "OO팀 게시판"으로 들어오면 그 팀으로 필터된 채 시작한다.
   // 없는 팀이어도 서버가 전체로 되돌리므로(selectedTeamId 표시 규칙) 따로 검증하지 않는다.
   const route = useRoute<RouteProp<RootStackParamList, "DepartmentActivity">>();
@@ -60,7 +62,7 @@ export function DepartmentActivityScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-medium text-text-alternative">
-          부서활동을 불러오지 못했어요
+          {t("부서활동을 불러오지 못했어요")}
         </Text>
       </View>
     );
@@ -69,7 +71,7 @@ export function DepartmentActivityScreen() {
   const { teams, selectedTeamId, items } = data;
   // "전체"는 서버가 모르는 선택지라 앱이 맨 앞에 붙인다.
   const filterItems = [
-    { value: ALL_TEAMS, label: "전체" },
+    { value: ALL_TEAMS, label: t("전체") },
     ...teams.map((team) => ({ value: team.id, label: team.name })),
   ];
 

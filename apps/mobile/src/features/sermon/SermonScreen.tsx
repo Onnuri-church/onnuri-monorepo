@@ -2,6 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -15,6 +16,7 @@ import { SermonVideoCard } from "./components/SermonVideoCard";
 
 // 말씀 게시판. 월 필터 아래로 설교영상 카드가 쌓인다.
 export function SermonScreen() {
+  const { t } = useTranslation();
   // 처음에는 달을 고르지 않고 보낸다 — 영상이 있는 가장 최근 달을 서버가 골라 준다.
   const [month, setMonth] = useState<string>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -43,7 +45,9 @@ export function SermonScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-page">
-        <Text className="text-body-medium text-text-alternative">말씀을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">
+          {t("말씀을 불러오지 못했어요")}
+        </Text>
       </View>
     );
   }

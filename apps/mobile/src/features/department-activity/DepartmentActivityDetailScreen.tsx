@@ -2,12 +2,11 @@ import type { PostComment } from "@onnuri/shared";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   Image,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -32,13 +31,16 @@ import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { Header } from "../../shared/components/base/Header";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
+import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { useAuthStore } from "../../shared/store/useAuthStore";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 
 export function DepartmentActivityDetailScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { id } = useRoute<RouteProp<RootStackParamList, "DepartmentActivityDetail">>().params;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -62,20 +64,7 @@ export function DepartmentActivityDetailScreen() {
   // KeyboardAvoidingView를 쓰지 않는 이유: SDK 57은 edge-to-edge가 항상 켜져 있어 창이
   // 키보드만큼 줄어들지 않는다(매니페스트의 adjustResize가 무력화된다). 창 크기로 키보드를
   // 역산하는 KeyboardAvoidingView는 이 상태에서 올려야 할 높이를 0으로 계산한다.
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    // iOS는 애니메이션 시작에 맞춰 올려야 따라 붙는다. Android에는 will* 이벤트가 없다.
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const show = Keyboard.addListener(showEvent, (event) =>
-      setKeyboardHeight(event.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const keyboardHeight = useKeyboardHeight();
 
   const { data, isPending, isError } = useQuery({
     queryKey: ["team-activity", id],
@@ -104,7 +93,7 @@ export function DepartmentActivityDetailScreen() {
       navigation.goBack();
     },
     onError: () => {
-      Alert.alert("삭제하지 못했어요", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("삭제하지 못했어요"), t("잠시 후 다시 시도해주세요."));
     },
   });
 
@@ -116,7 +105,7 @@ export function DepartmentActivityDetailScreen() {
       refresh();
     },
     onError: () => {
-      Alert.alert("댓글을 남기지 못했어요", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("댓글을 남기지 못했어요"), t("잠시 후 다시 시도해주세요."));
     },
   });
 
@@ -124,7 +113,7 @@ export function DepartmentActivityDetailScreen() {
     mutationFn: (commentId: string) => deleteComment(id, commentId),
     onSuccess: refresh,
     onError: () => {
-      Alert.alert("댓글을 지우지 못했어요", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("댓글을 지우지 못했어요"), t("잠시 후 다시 시도해주세요."));
     },
   });
 
@@ -136,24 +125,24 @@ export function DepartmentActivityDetailScreen() {
       header: () => (
         <Header
           variant="sub"
-          title="부서활동 게시판"
+          title={t("부서활동 게시판")}
           rightAction={canManage ? "more" : "none"}
           menuItems={[
             {
               icon: "edit",
-              label: "수정하기",
+              label: t("수정하기"),
               onPress: () => navigation.navigate("DepartmentActivityWrite", { postId: id }),
             },
             {
               icon: "trash-can",
-              label: "삭제하기",
+              label: t("삭제하기"),
               onPress: () => dialogRef.current?.open(),
             },
           ]}
         />
       ),
     });
-  }, [navigation, canManage, id]);
+  }, [navigation, canManage, id, t]);
 
   const confirmDelete = () => {
     dialogRef.current?.close();
@@ -161,10 +150,10 @@ export function DepartmentActivityDetailScreen() {
   };
 
   const handleDeletePress = (comment: PostComment) => {
-    Alert.alert("댓글을 삭제할까요?", "삭제한 댓글은 되돌릴 수 없어요.", [
-      { text: "취소", style: "cancel" },
+    Alert.alert(t("댓글을 삭제할까요?"), t("삭제한 댓글은 되돌릴 수 없어요."), [
+      { text: t("취소"), style: "cancel" },
       {
-        text: "삭제",
+        text: t("삭제"),
         style: "destructive",
         onPress: () => removeComment(comment.id),
       },
@@ -192,7 +181,7 @@ export function DepartmentActivityDetailScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-medium text-text-alternative">
-          글을 불러오지 못했어요
+          {t("글을 불러오지 못했어요")}
         </Text>
       </View>
     );
@@ -275,7 +264,7 @@ export function DepartmentActivityDetailScreen() {
         <View className="mt-5 border-t border-t-text-assistive">
           {/* 대댓글은 수에서 뺀다 — 서버가 최상위만 세서 목록 카드와 같은 값이 된다. */}
           <Text className="my-4 text-body-main text-text-normal">
-            댓글 {data.comments.length}
+            {t("댓글 {{count}}", { count: data.comments.length })}
           </Text>
           {data.comments.length === 0 ? (
             <CommentEmpty />
@@ -304,18 +293,18 @@ export function DepartmentActivityDetailScreen() {
           paddingTop: 8,
           paddingBottom: (keyboardHeight || insets.bottom) + 8,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.text.assistive,
-          backgroundColor: colors.background.normal,
+          borderTopColor: themeColors.text.assistive,
+          backgroundColor: themeColors.background.normal,
         }}
       >
         {/* 답글 모드일 때만 누구에게 다는 중인지 보여주고 빠져나갈 길을 준다. */}
         {replyTo && (
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-body-small text-text-alternative">
-              {replyTo.authorName}님에게 답글
+              {t("{{name}}님에게 답글", { name: replyTo.authorName })}
             </Text>
             <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-              <Text className="text-body-small text-text-alternative">취소</Text>
+              <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
             </Pressable>
           </View>
         )}
@@ -324,16 +313,16 @@ export function DepartmentActivityDetailScreen() {
           onChangeText={setDraft}
           onSubmit={handleSubmit}
           avatarUrl={myAvatarUrl}
-          placeholder={replyTo ? "답글을 입력하세요" : "댓글을 입력하세요"}
+          placeholder={replyTo ? t("답글을 입력하세요") : t("댓글을 입력하세요")}
         />
       </View>
 
       <AppDialog
         ref={dialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

@@ -2,6 +2,7 @@ import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { Avatar } from "../../../shared/components/base/Avatar";
 
 interface MemberPickRowProps {
   name: string;
@@ -20,7 +21,7 @@ export function MemberPickRow({ name, affiliation, selected, onPress }: MemberPi
       onPress={onPress}
     >
       <View className="flex-row items-center gap-4">
-        <View className="h-10 w-10 rounded-full bg-text-assistive" />
+        <Avatar size={40} />
         <View>
           <Text className="text-body-main text-text-normal">{name}</Text>
           <Text className="text-body-small text-text-alternative">{affiliation}</Text>

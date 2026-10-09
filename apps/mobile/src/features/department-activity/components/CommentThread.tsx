@@ -25,7 +25,7 @@ export function CommentThread({
         timeAgo={toTimeAgo(comment.createdAt)}
         content={comment.content}
         onReplyPress={() => onReplyPress(comment)}
-        onDeletePress={comment.isMine ? () => onDeletePress(comment) : undefined}
+        onDeletePress={comment.canDelete ? () => onDeletePress(comment) : undefined}
       />
       {comment.replies.map((reply) => (
         <View
@@ -38,7 +38,7 @@ export function CommentThread({
             avatarUrl={reply.authorAvatarUrl}
             timeAgo={toTimeAgo(reply.createdAt)}
             content={reply.content}
-            onDeletePress={reply.isMine ? () => onDeletePress(reply) : undefined}
+            onDeletePress={reply.canDelete ? () => onDeletePress(reply) : undefined}
           />
         </View>
       ))}

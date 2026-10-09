@@ -2,7 +2,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Alert, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../../shared/components/base/AppDialog";
 import { FilterBar } from "../../../shared/components/base/FilterBar";
@@ -35,6 +36,7 @@ export function PrayerFilterList({
   editing,
   emptyText,
 }: PrayerFilterListProps) {
+  const { t } = useTranslation();
   const [category, setCategory] = useState<PrayerCategory>("all");
   // 삭제 확인 중인 기도제목. 시트는 하나만 두고 대상만 바꾼다.
   const [pendingDelete, setPendingDelete] = useState<PrayerRequest | null>(null);
@@ -43,7 +45,7 @@ export function PrayerFilterList({
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
     queryKey: ["prayers", name, category],
     queryFn: () => fetchList(category),
   });
@@ -57,7 +59,7 @@ export function PrayerFilterList({
     try {
       if (pendingDelete) await deletePrayer(pendingDelete.id);
     } catch {
-      Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
     }
     dialogRef.current?.close();
     setPendingDelete(null);
@@ -67,11 +69,18 @@ export function PrayerFilterList({
 
   return (
     <View className="flex-1 bg-background-normal">
-      <FilterBar items={[...PRAYER_CATEGORIES]} selected={category} onSelect={setCategory} />
+      <FilterBar
+        items={PRAYER_CATEGORIES.map((item) => ({ ...item, label: t(item.label) }))}
+        selected={category}
+        onSelect={setCategory}
+      />
 
       <ScrollView
         contentContainerClassName="gap-6 pb-6 pt-2.5"
         style={{ paddingHorizontal: CONTENT_PADDING }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }
       >
         {isPending && (
           <>
@@ -82,7 +91,7 @@ export function PrayerFilterList({
 
         {isError && (
           <Text className="text-center text-body-medium text-text-alternative">
-            기도제목을 불러오지 못했어요
+            {t("기도제목을 불러오지 못했어요")}
           </Text>
         )}
 
@@ -108,10 +117,10 @@ export function PrayerFilterList({
 
       <AppDialog
         ref={dialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

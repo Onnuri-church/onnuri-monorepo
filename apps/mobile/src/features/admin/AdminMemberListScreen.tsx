@@ -1,7 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
@@ -13,9 +14,10 @@ import { MemberBadge } from "./components/MemberBadge";
 
 // 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
 export function AdminMemberListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState("");
-  const { data } = useAdminMembers();
+  const { data, refetch, isRefetching } = useAdminMembers();
 
   // 시안 검색바 플레이스홀더가 "이름 · 셀 · 팀으로 검색" — 세 필드 모두에 부분 일치.
   const members = (data ?? []).filter((member) =>
@@ -36,11 +38,12 @@ export function AdminMemberListScreen() {
       className="bg-background-page"
       contentContainerClassName="px-5 pb-10 pt-4"
       keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
-      <SearchBar value={keyword} onChangeText={setKeyword} placeholder="이름 · 셀 · 팀으로 검색" />
+      <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("이름 · 셀 · 팀으로 검색")} />
 
       <Text className="mt-3 pl-1 text-caption-main text-text-alternative">
-        전체 {members.length}명
+        {t("전체 {{count}}명", { count: members.length })}
       </Text>
 
       <View className="mt-2 rounded-5 bg-background-normal px-4 py-2 shadow-card">
@@ -52,20 +55,16 @@ export function AdminMemberListScreen() {
               onPress={() => handleMemberPress(member.id)}
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              {member.avatarUrl ? (
-                <Avatar imageUrl={member.avatarUrl} size={40} />
-              ) : (
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-background-muted">
-                  <Icon name="user" size={20} />
-                </View>
-              )}
+              <Avatar imageUrl={member.avatarUrl} size={40} />
               <View className="flex-1">
-                <View className="flex-row items-center gap-1.5">
-                  <Text className="text-body-main text-text-normal">{member.name}</Text>
+                <View className="min-w-0 flex-row items-center gap-1.5">
+                  <Text className="shrink text-body-main text-text-normal" numberOfLines={1}>
+                    {member.name}
+                  </Text>
                   {member.badge && <MemberBadge badge={member.badge} />}
                 </View>
                 <Text className="mt-0.5 text-caption-main text-text-alternative">
-                  {member.cellName ?? "무소속"} · {member.teamName ?? "무소속"}
+                  {member.cellName ?? t("무소속")} · {member.teamName ?? t("무소속")}
                 </Text>
               </View>
               <Icon name="expand-right" size={16} color={colors.icon.normal} />
@@ -74,7 +73,7 @@ export function AdminMemberListScreen() {
         ))}
         {members.length === 0 && (
           <Text className="py-6 text-center text-body-regular text-text-alternative">
-            검색 결과가 없어요.
+            {t("검색 결과가 없어요.")}
           </Text>
         )}
       </View>

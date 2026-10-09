@@ -1,5 +1,6 @@
 import { Image } from "react-native";
 
+import { useThemeStore } from "../../store/useThemeStore";
 import LogoHorizontal from "../../assets/logo/logo-horizontal.svg";
 import LogoHorizontalGreen from "../../assets/logo/logo-horizontal-green.svg";
 import WordmarkTitle from "../../assets/logo/wordmark-title.svg";
@@ -30,6 +31,12 @@ interface LogoProps {
 // SVG에 색을 박아둔 전제가 무너진다. 자세한 배경은 DESIGN.md 아이콘 규칙의 로고 예외 조항 참고.
 export function Logo({ variant = "horizontal", width = VARIANTS[variant].width }: LogoProps) {
   const height = width / VARIANTS[variant].ratio;
+  // 초록 로고는 어두운 바탕에서 글자가 묻힌다 — 다크 테마에서는 흰 글자 가로형 로고로 바꿔 그린다
+  // (두 자산의 비율이 달라 높이는 바꾸는 쪽 비율로 다시 계산한다).
+  const mode = useThemeStore((state) => state.mode);
+  if (mode === "dark" && variant === "horizontal-green") {
+    return <LogoHorizontal width={width} height={width / VARIANTS.horizontal.ratio} />;
+  }
 
   if (variant === "symbol") {
     return (

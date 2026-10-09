@@ -1,5 +1,6 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Image, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -12,6 +13,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 // 시안이 배경 없는 어두운 헤더에 타이틀까지 요구하는데 sub(흰 배경)·overlay(타이틀 없음) 어느 쪽도 맞지 않고,
 // 이 모양을 쓰는 화면이 아직 여기뿐이다. 다른 뷰어가 같은 헤더를 쓰게 되면 그때 공용으로 올린다.
 export function TeamStoryPhotoViewerScreen() {
+  const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryPhotoViewer">>();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
@@ -39,8 +41,8 @@ export function TeamStoryPhotoViewerScreen() {
         <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
           <Icon name="back" size={28} color={colors.icon.strong} />
         </Pressable>
-        <Text className="text-heading-main text-text-disable">
-          {team?.name ?? "팀"} 사진
+        <Text className="text-heading-main text-text-onImage">
+          {t("{{name}} 사진", { name: team?.name ?? t("팀") })}
         </Text>
         {/* 자리를 남겨야 타이틀이 가운데 온다 */}
         <View className="w-7" />

@@ -1,4 +1,5 @@
 import { Pressable, Text, View } from "react-native";
+import { Avatar } from "../../../shared/components/base/Avatar";
 
 interface QtShareRowProps {
   author: string;
@@ -14,8 +15,8 @@ interface QtShareRowProps {
 export function QtShareRow({ author, passage, title, onPress }: QtShareRowProps) {
   return (
     <Pressable className="h-12 flex-row items-center gap-3 active:opacity-60" onPress={onPress}>
-      {/* 프로필 이미지는 아직 시안에 자리만 있어서 회색 원으로 둔다 (QtPostCard와 같은 처리). */}
-      <View className="h-12 w-12 rounded-full bg-text-assistive" />
+      {/* 목록 응답에 작성자 사진이 없어서 기본 프로필 이미지로 둔다. */}
+      <Avatar size={48} />
       <View className="flex-1 gap-1">
         <Text className="text-body-large text-text-normal" numberOfLines={1}>
           {title}

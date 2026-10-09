@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 import {Icon} from "./Icon";
 import {colors} from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 
 // 사이즈별 확정값. 원 지름과 아이콘 크기를 한 줄에 묶어둔다 — 따로 두면 한쪽만 바뀌어
 // 원 안에서 하트가 차지하는 비율이 깨진다.
@@ -25,6 +26,7 @@ interface FavoriteButtonProps {
 const buttonStyle = "flex items-center justify-center border border-semantic-info rounded-full bg-background-normal"
 
 export function FavoriteButton({count, className, size = "small", favorited, onPress}: FavoriteButtonProps) {
+  const themeColors = useThemeColors();
     const {button, icon} = SIZE[size];
 
     return (
@@ -34,7 +36,7 @@ export function FavoriteButton({count, className, size = "small", favorited, onP
                     currentColor로 치환하므로 color prop이 그대로 먹는다. */}
                 <Icon
                     name={favorited ? "favorite-fill" : "favorite-light"}
-                    color={favorited ? colors.semantic.danger : colors.icon.strongest}
+                    color={favorited ? themeColors.semantic.danger : themeColors.icon.strongest}
                     size={icon}
                 />
             </Pressable>

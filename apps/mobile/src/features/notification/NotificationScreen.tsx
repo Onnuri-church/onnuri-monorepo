@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
+import { useTranslation } from "react-i18next";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Header } from "../../shared/components/base/Header";
@@ -56,6 +57,7 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
 // 최신 1건을 크게 보여주고 나머지는 "N건 더보기"로 펼친다.
 // 안읽음이 있는 카드는 연녹색 배경, 전부 읽었으면 흰 배경에 회색 본문.
 export function NotificationScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const { data: notifications, isLoading, refetch, isRefetching } = useNotifications();
@@ -77,12 +79,12 @@ export function NotificationScreen() {
           variant="sub"
           title=""
           rightAction={hasItems ? "text" : "none"}
-          rightLabel="모두 지우기"
+          rightLabel={t("모두 지우기")}
           onPressRightLabel={() => clearDialogRef.current?.open()}
         />
       ),
     });
-  }, [navigation, hasItems]);
+  }, [navigation, hasItems, t]);
 
   const handleClearAllConfirm = () => {
     clearDialogRef.current?.close();
@@ -157,16 +159,16 @@ export function NotificationScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <Text className="mt-3 px-5 text-title text-text-normal">알림</Text>
+      <Text className="mt-3 px-5 text-title text-text-normal">{t("알림")}</Text>
 
       {!isLoading && groups.length === 0 ? (
         /* 빈 상태 — 짧은 회색 선 + 두 줄 안내 (시안) */
         <View className="flex-1 items-center justify-center gap-5 pb-20">
           <View className="h-1 w-9 bg-background-assistive" />
           <View className="items-center gap-2">
-            <Text className="text-heading-medium text-text-normal">아직 알림이 없어요</Text>
+            <Text className="text-heading-medium text-text-normal">{t("아직 알림이 없어요")}</Text>
             <Text className="text-heading-small text-text-alternative">
-              새로운 소식이 오면 여기에 표시돼요
+              {t("새로운 소식이 오면 여기에 표시돼요")}
             </Text>
           </View>
         </View>
@@ -245,7 +247,7 @@ export function NotificationScreen() {
                         hasUnread ? "text-primary-normal" : "text-text-alternative"
                       }`}
                     >
-                      {remaining > 0 ? `더보기 +${remaining}` : "접기"}
+                      {remaining > 0 ? t("더보기 +{{count}}", { count: remaining }) : t("접기")}
                     </Text>
                   </Pressable>
                 )}
@@ -257,10 +259,10 @@ export function NotificationScreen() {
 
       <AppDialog
         ref={clearDialogRef}
-        title="알림을 모두 지울까요?"
-        description="지운 알림은 되돌릴 수 없어요"
-        confirmLabel="모두 지우기"
-        cancelLabel="취소"
+        title={t("알림을 모두 지울까요?")}
+        description={t("지운 알림은 되돌릴 수 없어요")}
+        confirmLabel={t("모두 지우기")}
+        cancelLabel={t("취소")}
         onConfirm={handleClearAllConfirm}
       />
     </View>

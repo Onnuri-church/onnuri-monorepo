@@ -1,5 +1,6 @@
 import { useRoute, type RouteProp } from "@react-navigation/native";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Text, View } from "react-native";
 
 import { ImagePager } from "../../shared/components/base/ImagePager";
@@ -10,6 +11,7 @@ import { fetchBulletin } from "./api";
 // 주보와 한 응답(GET /bulletins/:id)에 같이 와서 캐시도 주보 상세와 같이 쓴다.
 // 나눔지에만 붙는 것(본문·나눔 질문 등)이 생기면 이 파일에만 더하면 된다.
 export function SharingSheetScreen() {
+  const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "SharingSheet">>();
   const { data, isPending, isError } = useQuery({
     queryKey: ["bulletin", params.id],
@@ -21,7 +23,7 @@ export function SharingSheetScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">나눔지를 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">{t("나눔지를 불러오지 못했어요")}</Text>
       </View>
     );
   }

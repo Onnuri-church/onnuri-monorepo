@@ -1,30 +1,38 @@
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import type {NativeStackNavigationProp} from "@react-navigation/native-stack";
 import {useLayoutEffect, useRef} from "react";
+import {useTranslation} from "react-i18next";
 import {Alert, ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
 import {AppDialog, type AppDialogRef} from "../../shared/components/base/AppDialog";
 import {FavoriteButton} from "../../shared/components/base/FavoriteButton";
 import {Header} from "../../shared/components/base/Header";
 import {Skeleton} from "../../shared/components/base/Skeleton";
 import type {RootStackParamList} from "../../shared/types/navigation";
+import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
 import {toTimeAgo} from "../../shared/utils/date";
 import {deleteQtShare, fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 // 본문사진 캐러셀의 좌우 여백. 아래 ScrollView의 mx-5(한 칸 4px × 5)와 같은 값이어야 한다 —
 // 사진 폭을 여기서 빼서 계산하므로 한쪽만 바꾸면 페이징이 어긋난다.
 const CAROUSEL_MARGIN_X = 20;
+const COVER_HEIGHT_RATIO = 0.35;
 
 export function QtBoardDetailScreen() {
+    const {t} = useTranslation();
     const route = useRoute<RouteProp<RootStackParamList, "QtBoardDetail">>();
     const {id} = route.params
     const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
     const dialogRef = useRef<AppDialogRef>(null);
     // 본문사진은 정사각형(시안)이고, 폭은 캐러셀 여백을 뺀 만큼이다. 훅을 쓰면
     // 회전·폴더블로 화면 폭이 바뀌어도 따라온다.
-    const {width} = useWindowDimensions();
+    const {width, height: windowHeight} = useWindowDimensions();
+    const insets = useSafeAreaInsets();
+    // 배경사진 영역은 화면 높이의 약 35% — 예전엔 400px 고정이라 작은 화면에서 절반을 넘게 차지했다.
+    const coverHeight = Math.max(260, Math.round(windowHeight * COVER_HEIGHT_RATIO));
     const imageSize = width - CAROUSEL_MARGIN_X * 2;
 
     const { data, isPending, isError } = useQuery({
@@ -32,9 +40,9 @@ export function QtBoardDetailScreen() {
         queryFn: () => fetchQtDetails(id)
     })
 
-    // 내 글인지는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다). 아직 못 받았으면
-    // 없는 것으로 본다 — 남의 글에 ⋮가 잠깐 보였다 사라지는 편보다 낫다.
-    const isMine = data?.isMine ?? false;
+    // 수정·삭제 가능 여부(내 글 또는 관리자)는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다).
+    // 아직 못 받았으면 없는 것으로 본다 — 남의 글에 ⋮가 잠깐 보였다 사라지는 편보다 낫다.
+    const canManage = data?.canManage ?? false;
 
     const toggleLike = useToggleQtLike();
     const queryClient = useQueryClient();
@@ -48,35 +56,35 @@ export function QtBoardDetailScreen() {
             navigation.goBack();
         },
         onError: () => {
-            Alert.alert("삭제하지 못했어요", "잠시 후 다시 시도해주세요.");
+            Alert.alert(t("삭제하지 못했어요"), t("잠시 후 다시 시도해주세요."));
         },
     });
 
-    // ⋮는 내 글일 때만 보이고 항목이 화면 데이터(작성자)에 의존하므로,
+    // ⋮는 수정·삭제할 수 있을 때만 보이고 항목이 화면 데이터(작성자)에 의존하므로,
     // 등록부(RootNavigator)가 아니라 화면이 헤더를 단독 등록한다.
     useLayoutEffect(() => {
         navigation.setOptions({
             header: () => (
                 <Header
                     variant="sub"
-                    title="큐티나눔"
-                    rightAction={isMine ? "more" : "none"}
+                    title={t("큐티나눔")}
+                    rightAction={canManage ? "more" : "none"}
                     menuItems={[
                         {
                             icon: "edit",
-                            label: "수정하기",
+                            label: t("수정하기"),
                             onPress: () => navigation.navigate("QtBoardWrite", {id}),
                         },
                         {
                             icon: "trash-can",
-                            label: "삭제하기",
+                            label: t("삭제하기"),
                             onPress: () => dialogRef.current?.open(),
                         },
                     ]}
                 />
             ),
         });
-    }, [navigation, isMine, id]);
+    }, [navigation, canManage, id, t]);
 
     const confirmDelete = () => {
         dialogRef.current?.close();
@@ -99,7 +107,7 @@ export function QtBoardDetailScreen() {
         return (
             <View className="flex-1 items-center justify-center bg-background-normal">
                 <Text className="text-body-medium text-text-alternative">
-                    큐티나눔을 불러오지 못했어요
+                    {t("큐티나눔을 불러오지 못했어요")}
                 </Text>
             </View>
         );
@@ -112,11 +120,13 @@ export function QtBoardDetailScreen() {
 
     return (
         <View className="flex-1 bg-background-normal">
-            <ScrollView>
+            {/* 본문이 아무리 길어도 끝까지 스크롤되고, 안드로이드 내비 바에 마지막 줄이 가리지 않게
+                바닥 여백에 안전영역을 더한다. */}
+            <ScrollView contentContainerStyle={{paddingBottom: insets.bottom}}>
                 {/* 이 영역에는 padding을 주지 않는다 — Yoga는 absolute 자식을 부모의 content box
                     기준으로 놓아서, 부모에 padding이 있으면 배경사진이 그만큼 안쪽으로 밀려
                     가장자리가 잘린 것처럼 보인다 (CSS와 다른 점). 여백은 아래 래퍼가 맡는다. */}
-                <View className="h-100 bg-background-assistive">
+                <View className="bg-background-assistive" style={{height: coverHeight}}>
                     {/* 배경사진은 안 올린 글도 있어서(coverImageUrl이 null) 있을 때만 그린다. */}
                     {data.coverImageUrl && (
                         <Image
@@ -130,10 +140,10 @@ export function QtBoardDetailScreen() {
                     <View className="flex-1 items-start justify-end pb-8 px-5">
                         <View className="flex flex-row items-center justify-between w-full">
                             <View className="flex flex-row items-center justify-start gap-2">
-                                <View className="w-10 h-10 bg-background-assistive rounded-full"></View>
+                                <Avatar imageUrl={data.authorAvatarUrl} size={40} />
                                 <View>
-                                    <Text className="text-heading-small text-text-disable">{data.authorName}</Text>
-                                    <Text className="text-body-small text-text-disable">
+                                    <Text className="text-heading-small text-text-onImage">{data.authorName}</Text>
+                                    <Text className="text-body-small text-text-onImage">
                                         {`${data.dateLabel} · ${toTimeAgo(data.createdAt)}`}
                                     </Text>
                                 </View>
@@ -186,10 +196,10 @@ export function QtBoardDetailScreen() {
 
             <AppDialog
                 ref={dialogRef}
-                title="정말 삭제하시겠습니까?"
-                description="삭제된 데이터는 복구할 수 없습니다."
-                confirmLabel="확인"
-                cancelLabel="취소"
+                title={t("정말 삭제하시겠습니까?")}
+                description={t("삭제된 데이터는 복구할 수 없습니다.")}
+                confirmLabel={t("확인")}
+                cancelLabel={t("취소")}
                 onConfirm={confirmDelete}
             />
         </View>

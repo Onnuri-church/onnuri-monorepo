@@ -5,9 +5,9 @@ import {
   IsNotEmpty,
   IsString,
   IsUrl,
-  Matches,
   ValidateIf,
 } from 'class-validator';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // 작성 화면의 "본문사진(최대 5장)"과 같은 값.
 export const QT_SHARE_MAX_IMAGES = 5;
@@ -18,7 +18,7 @@ export class CreateQtShareDto {
   // YYYY-MM-DD만 받는다 — Matches가 시각 붙은 ISO 문자열을 거르고,
   // strict가 2월 31일처럼 존재하지 않는 날짜를 거른다 (UpdateMyProfileDto와 같은 방식).
   @IsISO8601({ strict: true })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsYmdDate()
   eventDate!: string;
 
   @IsString()

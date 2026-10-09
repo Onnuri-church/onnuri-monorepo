@@ -1,16 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 export type CellTabKey = "news" | "gallery" | "members" | "manage";
 
-const TABS: { key: CellTabKey; label: string }[] = [
-  { key: "news", label: "소식" },
-  { key: "gallery", label: "갤러리" },
-  { key: "members", label: "구성원" },
-  { key: "manage", label: "관리" },
-];
+const TAB_KEYS: CellTabKey[] = ["news", "gallery", "members", "manage"];
 
 interface CellTabBarProps {
   active: CellTabKey;
@@ -23,15 +19,23 @@ interface CellTabBarProps {
 // 활성 탭은 검정 + 2px 밑줄, 관리 탭이 활성일 땐 warning 색(시안 확정)으로 바뀐다.
 // 커버 사진 아래에 붙고 스크롤 시 상단에 고정된다(stickyHeaderIndices) — 배경을 직접 칠한다.
 export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) {
+  const { t } = useTranslation();
+  const labels: Record<CellTabKey, string> = {
+    news: t("소식"),
+    gallery: t("갤러리"),
+    members: t("구성원"),
+    manage: t("관리"),
+  };
+  const themeColors = useThemeColors();
   return (
     <View
       className="h-12 flex-row items-center gap-9 bg-background-normal px-6"
       style={{
         borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.text.alternative,
+        borderBottomColor: themeColors.text.alternative,
       }}
     >
-      {TABS.map(({ key, label }) => {
+      {TAB_KEYS.map((key) => {
         const isManage = key === "manage";
         const disabled = isManage && manageLocked;
         const isActive = active === key;
@@ -41,7 +45,7 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
         return (
           <Pressable
             key={key}
-            className="h-full flex-row items-center gap-1"
+            className="h-full min-w-0 shrink flex-row items-center gap-1"
             onPress={() => onChange(key)}
             disabled={disabled}
           >
@@ -49,13 +53,17 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
               <Icon
                 name="lock"
                 size={12}
-                color={isActive ? colors.semantic.warning : colors.icon.normal}
+                color={isActive ? themeColors.semantic.warning : themeColors.icon.normal}
               />
             )}
+            {/* 번역으로 탭 라벨이 길어져 한 줄에 안 들어가면 탭이 줄어들고 글자도 같이 줄여 맞춘다. */}
             <Text
-              className={`text-body-main ${isActive ? activeColor : "text-text-alternative"}`}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+              className={`shrink text-body-main ${isActive ? activeColor : "text-text-alternative"}`}
             >
-              {label}
+              {labels[key]}
             </Text>
             {isActive && (
               <View

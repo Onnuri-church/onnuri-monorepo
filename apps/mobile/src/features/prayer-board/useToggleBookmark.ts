@@ -2,6 +2,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useCallback } from "react";
 import { Alert } from "react-native";
 
+import { i18n } from "../../shared/i18n";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { toggleBookmark } from "./api";
 
@@ -17,13 +18,13 @@ export function useToggleBookmark() {
       // 게시판 열람은 게스트도 되지만 북마크는 로그인부터 (댓글·참여 신청과 같은 안내).
       const { session } = useAuthStore.getState();
       if (session.status !== "authenticated") {
-        Alert.alert("로그인이 필요해요", "북마크는 로그인 후 할 수 있어요.");
+        Alert.alert(i18n.t("로그인이 필요해요"), i18n.t("북마크는 로그인 후 할 수 있어요."));
         return;
       }
       try {
         await toggleBookmark(id, bookmarked);
       } catch {
-        Alert.alert("요청 실패", "잠시 후 다시 시도해주세요.");
+        Alert.alert(i18n.t("요청 실패"), i18n.t("잠시 후 다시 시도해주세요."));
         return;
       }
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });

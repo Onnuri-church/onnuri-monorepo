@@ -6,9 +6,11 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Alert, Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { checkInWorship } from "./api";
 
@@ -31,6 +33,8 @@ interface ScanError {
 // 헤더를 Header 컴포넌트로 그리지 않고 여기서 직접 그린다 —
 // 시안이 검은 배경에 흰 타이틀인데 sub(흰 배경)에 그 조합이 없다 (사진 뷰어와 같은 이유).
 export function QrScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const [permission, requestPermission] = useCameraPermissions();
@@ -60,8 +64,8 @@ export function QrScreen() {
     // 코드 선검증 — 출석 QR이 아니면 서버까지 갈 필요가 없다 (서버도 재검증한다).
     if (data !== ATTENDANCE_QR_CODE) {
       setError({
-        title: "인식할 수 없는 QR코드예요",
-        sub: "출석용 QR을 확인 후 다시 스캔해주세요",
+        title: t("인식할 수 없는 QR코드예요"),
+        sub: t("출석용 QR을 확인 후 다시 스캔해주세요"),
       });
       return;
     }
@@ -73,14 +77,14 @@ export function QrScreen() {
       const response = (err as { response?: { status?: number; data?: { message?: string } } })
         .response;
       if (response?.status === 401) {
-        Alert.alert("로그인이 필요해요", "출석 체크는 로그인 후 할 수 있어요.");
+        Alert.alert(t("로그인이 필요해요"), t("출석 체크는 로그인 후 할 수 있어요."));
         lockedRef.current = false;
         return;
       }
       // 시간창 밖·요일 아님 등 — 서버 안내 문구를 카드 제목으로 그대로 보여준다.
       setError({
-        title: response?.data?.message ?? "출석 처리에 실패했어요",
-        sub: response?.data?.message ? null : "잠시 후 다시 스캔해주세요",
+        title: response?.data?.message ?? t("출석 처리에 실패했어요"),
+        sub: response?.data?.message ? null : t("잠시 후 다시 스캔해주세요"),
       });
     }
   };
@@ -109,9 +113,9 @@ export function QrScreen() {
         {/* 시안: 상태바 아래 27 띄우고 32 높이의 줄. 패딩으로 주면 높이 안에서 먹혀 줄이 눌린다. */}
         <View className="mt-7 h-8 flex-row items-center justify-between px-5">
           <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
-            <Icon name="back" size={28} color={colors.icon.disable} />
+            <Icon name="back" size={28} color={themeColors.text.onImage} />
           </Pressable>
-          <Text className="text-heading-small text-text-disable">출석체크</Text>
+          <Text className="text-heading-small text-text-onImage">{t("출석체크")}</Text>
           {/* 자리를 남겨야 타이틀이 가운데 온다 */}
           <View className="w-7" />
         </View>
@@ -127,27 +131,27 @@ export function QrScreen() {
           <Icon
             name="crosshair"
             size={CROSSHAIR_SIZE}
-            color={error ? colors.semantic.danger : colors.primary.normal}
+            color={error ? themeColors.semantic.danger : themeColors.primary.normal}
           />
         </Pressable>
 
         <View className="mt-14 items-center gap-3.5 px-5">
           {permission && !permission.granted ? (
             <>
-              <Text className="text-body-small-bold text-text-disable">
-                카메라 권한이 필요해요
+              <Text className="text-body-small-bold text-text-onImage">
+                {t("카메라 권한이 필요해요")}
               </Text>
-              <Text className="text-center text-body-regular text-text-disable">
-                출석 QR을 스캔하려면 설정에서{"\n"}카메라 접근을 허용해주세요
+              <Text className="text-center text-body-regular text-text-onImage">
+                {t("출석 QR을 스캔하려면 설정에서\n카메라 접근을 허용해주세요")}
               </Text>
             </>
           ) : (
             <>
-              <Text className="text-body-small-bold text-text-disable">
-                QR코드를 화면 안에 맞춰주세요
+              <Text className="text-body-small-bold text-text-onImage">
+                {t("QR코드를 화면 안에 맞춰주세요")}
               </Text>
-              <Text className="text-body-regular text-text-disable">
-                입구에 있는 출석 QR을 스캔해요
+              <Text className="text-body-regular text-text-onImage">
+                {t("입구에 있는 출석 QR을 스캔해요")}
               </Text>
             </>
           )}
@@ -178,7 +182,7 @@ export function QrScreen() {
                 style={{ width: CARD_BUTTON_WIDTH }}
                 onPress={handleRescanPress}
               >
-                <Text className="text-body-medium text-text-disable">다시 스캔하기</Text>
+                <Text className="text-body-medium text-text-onImage">{t("다시 스캔하기")}</Text>
               </Pressable>
             </View>
           </View>

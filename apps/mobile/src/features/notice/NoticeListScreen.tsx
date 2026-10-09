@@ -3,6 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { NoticeInfo } from "@onnuri/shared";
 import { useRef, useState } from "react";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Icon } from "../../shared/components/base/Icon";
@@ -14,6 +15,7 @@ import { toNoticeDateLabel, useDeleteNotice, useNotices } from "./api";
 // 마이페이지 > 공지사항 (자체 디자인 — 시안 없음, 홈 배너 관리 목록과 같은 결).
 // 열람은 누구나, 등록(점선 행)·삭제는 관리자에게만 보인다.
 export function NoticeListScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: notices, isLoading } = useNotices();
   const isAdmin = useMe()?.isAdmin === true;
@@ -31,7 +33,7 @@ export function NoticeListScreen() {
     dialogRef.current?.close();
     if (!pendingDelete) return;
     deleteNotice.mutate(pendingDelete.id, {
-      onError: () => Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요."),
+      onError: () => Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요.")),
     });
     setPendingDelete(null);
   };
@@ -56,7 +58,7 @@ export function NoticeListScreen() {
             </View>
             {isAdmin ? (
               <Pressable onPress={() => handleDeletePress(notice)} hitSlop={10}>
-                <Text className="text-body-small text-semantic-danger">삭제</Text>
+                <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
               </Pressable>
             ) : (
               <Icon name="expand-right" size={16} color={colors.icon.normal} />
@@ -66,7 +68,7 @@ export function NoticeListScreen() {
 
         {!isLoading && (notices ?? []).length === 0 && (
           <Text className="mt-10 text-center text-body-medium text-text-alternative">
-            등록된 공지가 없어요
+            {t("등록된 공지가 없어요")}
           </Text>
         )}
 
@@ -78,17 +80,17 @@ export function NoticeListScreen() {
             style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
           >
             <Icon name="plus" size={16} color={colors.icon.normal} />
-            <Text className="text-body-regular text-text-alternative">공지 등록</Text>
+            <Text className="text-body-regular text-text-alternative">{t("공지 등록")}</Text>
           </Pressable>
         )}
       </ScrollView>
 
       <AppDialog
         ref={dialogRef}
-        title={`"${pendingDelete?.title ?? ""}" 공지를 삭제하시겠습니까?`}
-        description="삭제된 공지는 복구할 수 없습니다."
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t("\"{{title}}\" 공지를 삭제하시겠습니까?", { title: pendingDelete?.title ?? "" })}
+        description={t("삭제된 공지는 복구할 수 없습니다.")}
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

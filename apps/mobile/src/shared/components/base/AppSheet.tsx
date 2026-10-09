@@ -10,7 +10,7 @@ import { type ReactNode, forwardRef, useCallback, useImperativeHandle, useRef } 
 import { View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 
 export interface AppSheetRef {
   open: () => void;
@@ -42,6 +42,7 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
   // 도로 열지 않도록 present/dismiss 시점을 기억한다.
   const presentedRef = useRef(false);
   const insets = useSafeAreaInsets();
+  const themeColors = useThemeColors();
   const { height } = useWindowDimensions();
 
   useImperativeHandle(
@@ -97,11 +98,15 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
       enablePanDownToClose
       // className을 못 받는 라이브러리 prop이라 style로 준다. 값은 시안 확정값:
       // 상단 라운드 20(borderRadius 토큰 5), 핸들 48x4(background.assistive).
-      backgroundStyle={{ borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+      backgroundStyle={{
+        borderTopLeftRadius: 20,
+        borderTopRightRadius: 20,
+        backgroundColor: themeColors.background.normal,
+      }}
       handleIndicatorStyle={{
         width: 48,
         height: 4,
-        backgroundColor: colors.background.assistive,
+        backgroundColor: themeColors.background.assistive,
       }}
     >
       {/* 내용이 최대 높이를 넘칠 때를 대비해 View가 아니라 ScrollView로 받는다.

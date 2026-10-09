@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ActivityIndicator, Alert, Pressable, Text, View } from "react-native";
 
 import { uploadImage } from "../../../shared/api/upload";
@@ -8,6 +9,7 @@ import { AppSheet, type AppSheetRef } from "../../../shared/components/base/AppS
 import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 import { patchMyAvatar } from "../api";
 
 interface AvatarEditorProps {
@@ -23,6 +25,8 @@ interface AvatarEditorProps {
 // 동작은 마이페이지 아바타 변경과 동일한 계약: 사진이 있으면 시트(앨범/기본 이미지),
 // 없으면 바로 앨범. 고르는 즉시 서버에 저장한다 (PATCH /users/me/avatar).
 export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorProps) {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const queryClient = useQueryClient();
   const sheetRef = useRef<AppSheetRef>(null);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +52,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
     try {
       await save(await uploadImage(result.assets[0].uri));
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setUploading(false);
     }
@@ -61,7 +65,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
     try {
       await save(null);
     } catch {
-      Alert.alert("변경 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("변경 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setUploading(false);
     }
@@ -87,7 +91,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
         <Avatar imageUrl={avatarUrl} size={size} />
         <View className="absolute bottom-0 right-0 h-7 w-7 items-center justify-center rounded-full border border-background-assistive bg-background-normal">
           {uploading ? (
-            <ActivityIndicator size="small" color={colors.primary.normal} />
+            <ActivityIndicator size="small" color={themeColors.primary.normal} />
           ) : (
             <Icon name="edit" size={14} color={colors.icon.normal} />
           )}
@@ -105,7 +109,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
               className="pt-4"
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              <Text className="text-center text-body-medium text-text-alternative">취소</Text>
+              <Text className="text-center text-body-medium text-text-alternative">{t("취소")}</Text>
             </Pressable>
           </View>
         }
@@ -116,7 +120,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
             style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
           >
             <Text className="text-center text-body-medium text-text-normal">
-              앨범에서 사진 선택
+              {t("앨범에서 사진 선택")}
             </Text>
           </Pressable>
           <Pressable
@@ -124,7 +128,7 @@ export function AvatarEditor({ avatarUrl, onChange, size = 100 }: AvatarEditorPr
             style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
           >
             <Text className="text-center text-body-medium text-semantic-danger">
-              기본 이미지로 변경
+              {t("기본 이미지로 변경")}
             </Text>
           </Pressable>
         </View>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 const MONTH_ROWS = [
@@ -17,6 +18,7 @@ interface MonthPickerProps {
 // 1~12월 선택 그리드 (시안: 52px 원형 알약 4열 × 3행 + 상단 "전체 기간" 점선 버튼).
 // 출석 관리의 주차별 보기와 팔로워 노트 게시판의 달력이 같은 그리드를 쓴다.
 export function MonthPicker({ selectedMonth, onSelectMonth, onSelectAll }: MonthPickerProps) {
+  const { t } = useTranslation();
   return (
     <View className="gap-5">
       {onSelectAll && (
@@ -31,7 +33,7 @@ export function MonthPicker({ selectedMonth, onSelectMonth, onSelectAll }: Month
                 : "text-body-main text-text-alternative"
             }
           >
-            전체 기간
+            {t("전체 기간")}
           </Text>
         </Pressable>
       )}
@@ -50,7 +52,7 @@ export function MonthPicker({ selectedMonth, onSelectMonth, onSelectAll }: Month
                 <Text
                   className={`text-body-main ${selected ? "text-text-disable" : "text-text-normal"}`}
                 >
-                  {month}월
+                  {t("{{month}}월", { month })}
                 </Text>
               </Pressable>
             );

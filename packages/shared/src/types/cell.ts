@@ -1,6 +1,7 @@
 // DB 스키마(apps/api/prisma/schema.prisma)의 Cell·CellMembership을 따른다 (docs/erd.md 참고).
 // 셀 목록 요약(CellSummary)은 프로필 설정과 같이 쓰는 계약이라 user.ts에 있다.
 
+import type { OffDayKind } from "./admin";
 import type { CellRole } from "./user";
 
 /** GET /cells/:id 응답의 구성원 한 명 — 진행 중(endedAt 없음) 멤버십 기준 */
@@ -63,6 +64,8 @@ export interface CellAttendanceMember {
 export interface CellAttendanceResponse {
   /** YYYY-MM-DD */
   date: string;
+  /** 관리자가 지정한 모임 없는 날 — 해당 쪽 체크는 서버가 막는다. null = 둘 다 있는 날 */
+  offDay: OffDayKind | null;
   members: CellAttendanceMember[];
 }
 

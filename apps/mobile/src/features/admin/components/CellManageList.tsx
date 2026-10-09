@@ -2,7 +2,8 @@ import type { CellSummary } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
@@ -24,10 +25,11 @@ interface CellManageListProps {
 // 생성은 목록 끝의 점선 "+ 셀 생성" 행 (2026-09-21 A안 시안 — 헤더 생성 버튼에서 이동).
 // 관리자 마이페이지의 셀 관리 화면과, 관리자용 하단 탭 "셀 페이지"가 같이 쓴다.
 export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProps) {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
   // 셀 캐시가 무효화돼 목록에서 빠진다.
-  const { data } = useCells();
+  const { data, refetch, isRefetching } = useCells();
   const [query, setQuery] = useState("");
   const cells = (data ?? []).filter((cell) =>
     query.trim() ? cell.name.includes(query.trim()) : true,
@@ -55,9 +57,10 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
       scrollEventThrottle={16}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <View className="px-5 pb-2">
-        <SearchBar value={query} onChangeText={setQuery} placeholder="셀 이름으로 검색" />
+        <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀 이름으로 검색")} />
       </View>
 
       {cells.map((cell, index) => (
@@ -82,8 +85,8 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
             >
               <Text className="text-body-main text-text-normal">{cell.name}</Text>
               <Text className="mt-1 text-caption-main text-text-alternative">
-                셀장 {cell.leaderName ?? "미지정"}
-                {cell.viceLeaderName ? ` · 부셀장 ${cell.viceLeaderName}` : ""}
+                {t("셀장 {{name}}", { name: cell.leaderName ?? t("미지정") })}
+                {cell.viceLeaderName ? ` · ${t("부셀장 {{name}}", { name: cell.viceLeaderName })}` : ""}
               </Text>
             </Pressable>
           </ReanimatedSwipeable>
@@ -97,7 +100,7 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
         style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
       >
         <Icon name="plus" size={16} color={colors.icon.normal} />
-        <Text className="text-body-regular text-text-alternative">셀 생성</Text>
+        <Text className="text-body-regular text-text-alternative">{t("셀 생성")}</Text>
       </Pressable>
 
       {/* 삭제 확인 모달 — 문구는 소프트 삭제(출석 기명 보존) 정책 기준으로 확정 (2026-09-21 지환님).
@@ -106,10 +109,10 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
         <View className="flex-1 items-center justify-center bg-background-dark/40 px-10">
           <View className="w-full rounded-5 bg-background-normal px-6 py-7">
             <Text className="text-center text-body-main text-text-normal">
-              {deleteTarget?.name}을 삭제하시겠습니까?
+              {t("{{name}}을 삭제하시겠습니까?", { name: deleteTarget?.name })}
             </Text>
             <Text className="mt-2 text-center text-body-regular text-text-alternative">
-              셀 페이지는 삭제되지만,{"\n"}출석 기록은 보존됩니다.
+              {t("셀 페이지는 삭제되지만,\n출석 기록은 보존됩니다.")}
             </Text>
             <View className="mt-5 flex-row justify-center gap-3.5">
               <Pressable
@@ -117,14 +120,14 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
                 onPress={() => setDeleteTarget(null)}
                 style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
               >
-                <Text className="text-body-regular text-text-normal">취소</Text>
+                <Text className="text-body-regular text-text-normal">{t("취소")}</Text>
               </Pressable>
               <Pressable
                 className="h-8 w-24 items-center justify-center rounded bg-semantic-danger"
                 onPress={handleDeleteConfirmPress}
                 style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
               >
-                <Text className="text-body-regular text-text-disable">삭제</Text>
+                <Text className="text-body-regular text-text-disable">{t("삭제")}</Text>
               </Pressable>
             </View>
           </View>

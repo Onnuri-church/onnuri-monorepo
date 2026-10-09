@@ -78,8 +78,10 @@ export interface QtShareDetail {
   imageUrls: string[];
   likeCount: number;
   likedByMe: boolean;
-  /** 내가 쓴 글인지 — 수정·삭제 메뉴를 띄울지 정한다. 권한 판단은 서버가 한다 */
+  /** 내가 쓴 글인지 */
   isMine: boolean;
+  /** 수정·삭제 메뉴를 띄울지 — 내 글이거나 관리자. 권한 판단은 서버가 한다 */
+  canManage: boolean;
 }
 
 /** 셀 소식 목록 항목 (GET /posts/cell-news?cellId=). */
@@ -101,6 +103,8 @@ export interface PostComment {
   content: string;
   /** 내가 쓴 댓글인지 — 삭제 버튼 노출 기준. 게스트로 보면 항상 false */
   isMine: boolean;
+  /** 삭제 버튼 노출 기준 — 내 댓글이거나 관리자일 때 true */
+  canDelete: boolean;
   /** 대댓글. 깊이는 1단계까지라 여기 담긴 댓글의 replies는 항상 빈 배열이다 */
   replies: PostComment[];
 }

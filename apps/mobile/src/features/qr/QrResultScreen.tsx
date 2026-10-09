@@ -3,42 +3,44 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { Fragment } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 시안 좌표(402x874): 아이콘 원 top 169 — 상태바(44) 아래로 125.
 const ICON_TOP = 125;
 
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
-
 // 출석 시각 ISO → "2026.08.02 (일) 13:40" (시안 문구, KST 기준).
-function toCheckedAtLabel(iso: string): string {
+function toCheckedAtLabel(iso: string, weekdays: string[]): string {
   const kst = new Date(new Date(iso).getTime() + 9 * 60 * 60 * 1000);
   const pad = (value: number) => String(value).padStart(2, "0");
-  return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} (${WEEKDAY_LABELS[kst.getUTCDay()]}) ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
+  return `${kst.getUTCFullYear()}.${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())} (${weekdays[kst.getUTCDay()]}) ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())}`;
 }
 
 // QR을 찍고 나서 보는 결과. 성공과 중복이 아이콘·문구·카드 행만 다르고 배치가 같아서 한 화면이 둘을 그린다.
 // 시안에 헤더가 없다 — 뒤로가기 없이 "확인"으로만 빠져나간다.
 export function QrResultScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const { params } = useRoute<RouteProp<RootStackParamList, "QrResult">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
 
   const { result } = params;
-  const timeLabel = toCheckedAtLabel(result.checkedAt);
+  const weekdays = [t("일"), t("월"), t("화"), t("수"), t("목"), t("금"), t("토")];
+  const timeLabel = toCheckedAtLabel(result.checkedAt, weekdays);
   const rows = result.duplicate
     ? [
-        { label: "예배", value: result.serviceName },
-        { label: "출석 시각", value: timeLabel },
+        { label: t("예배"), value: result.serviceName },
+        { label: t("출석 시각"), value: timeLabel },
       ]
     : [
-        { label: "예배", value: result.serviceName },
-        { label: "일시", value: timeLabel },
-        { label: "소속 셀", value: result.cellName ?? "없음" },
+        { label: t("예배"), value: result.serviceName },
+        { label: t("일시"), value: timeLabel },
+        { label: t("소속 셀"), value: result.cellName ?? t("없음") },
       ];
 
   // "확인"은 스캔 화면으로 돌아가지 않고 들어오기 전 화면까지 빠져나간다 — 출석이 끝난 뒤
@@ -56,19 +58,19 @@ export function QrResultScreen() {
         <Icon
           name={result.duplicate ? "warning" : "check"}
           size={40}
-          color={result.duplicate ? colors.semantic.warning : colors.primary.normal}
+          color={result.duplicate ? themeColors.semantic.warning : themeColors.primary.normal}
         />
       </View>
 
       {/* 시안 간격: 원-문구 38, 문구 사이 20 (4px 스케일로 40·20) */}
       <View className="mt-10 items-center gap-5">
         <Text className="text-body-small-bold text-text-normal">
-          {result.duplicate ? "이미 출석 체크가 완료됐어요" : "출석이 완료되었어요"}
+          {result.duplicate ? t("이미 출석 체크가 완료됐어요") : t("출석이 완료되었어요")}
         </Text>
         <Text className="text-center text-body-medium text-text-alternative">
           {result.duplicate
-            ? "오늘 이 예배는 이미 출석 처리가\n되어 있어요. QR을 다시 찍지 않아도 돼요."
-            : `오늘도 예배 자리에 나와주셔서\n감사해요, ${result.userName}님!`}
+            ? t("오늘 이 예배는 이미 출석 처리가\n되어 있어요. QR을 다시 찍지 않아도 돼요.")
+            : t("오늘도 예배 자리에 나와주셔서\n감사해요, {{name}}님!", { name: result.userName })}
         </Text>
       </View>
 
@@ -86,7 +88,7 @@ export function QrResultScreen() {
       </View>
 
       <View className="mt-12">
-        <Button label="확인" onPress={handleConfirmPress} />
+        <Button label={t("확인")} onPress={handleConfirmPress} />
       </View>
     </View>
   );

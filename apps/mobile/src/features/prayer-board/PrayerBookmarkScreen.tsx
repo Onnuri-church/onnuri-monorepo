@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
 import { fetchBookmarkedPrayers } from "./api";
 import { PrayerFilterList } from "./components/PrayerFilterList";
@@ -9,6 +10,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 게시판(PrayerBoardScreen)에서 ⋮ > "저장한 기도제목"으로 들어온다.
 export function PrayerBookmarkScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   // 기본 메뉴를 그대로 쓰면 지금 보고 있는 이 화면으로 가는 항목이 섞인다 —
@@ -17,11 +19,11 @@ export function PrayerBookmarkScreen() {
     () => [
       {
         icon: "user" as const,
-        label: "내 기도제목 보기",
+        label: t("내 기도제목 보기"),
         onPress: () => navigation.navigate("PrayerMine"),
       },
     ],
-    [navigation],
+    [navigation, t],
   );
 
   return (
@@ -30,9 +32,9 @@ export function PrayerBookmarkScreen() {
         name="bookmarked"
         fetchList={fetchBookmarkedPrayers}
         showBookmark
-        emptyText="저장한 기도제목이 없어요"
+        emptyText={t("저장한 기도제목이 없어요")}
       />
-      <PrayerMenu title="저장한 기도제목" items={menuItems} />
+      <PrayerMenu title={t("저장한 기도제목")} items={menuItems} />
     </>
   );
 }

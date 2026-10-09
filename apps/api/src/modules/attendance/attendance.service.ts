@@ -26,6 +26,15 @@ export class AttendanceService {
     const todayStr = kstNow.toISOString().slice(0, 10);
     const today = new Date(todayStr);
 
+    // 관리자가 예배 없는 날로 지정한 날은 QR 출석을 받지 않는다.
+    const offDay = await this.prisma.offDay.findUnique({
+      where: { date: today },
+      select: { kind: true },
+    });
+    if (offDay?.kind === 'WORSHIP_OFF' || offDay?.kind === 'BOTH_OFF') {
+      throw new BadRequestException('오늘은 예배 출석이 없는 날이에요.');
+    }
+
     // 오늘 회차가 있으면 그 회차의 시간창을 따른다 — 다른 요일의 특별 예배도 회차만
     // 만들어두면 QR을 받을 수 있다. 없으면 주일(일요일)에만 기본값으로 자동 생성한다
     // (팔로워 노트·출석 저장의 upsert와 같은 임시 처리 — 회차 관리 기능이 생기면 조인다).

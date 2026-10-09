@@ -1,11 +1,13 @@
 import type { FollowerNoteInfo } from "@onnuri/shared";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { CommentInput } from "../../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../../shared/components/composed/CommentItem";
 import { colors } from "../../../shared/theme/tokens";
+import { useThemeColors } from "../../../shared/theme/useThemeColors";
 
 interface FollowerNoteCardProps {
   note: FollowerNoteInfo;
@@ -25,6 +27,8 @@ export function FollowerNoteCard({
   onDeletePress,
   onCommentSubmit,
 }: FollowerNoteCardProps) {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const [expanded, setExpanded] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
 
@@ -50,18 +54,18 @@ export function FollowerNoteCard({
             <View className="flex-row items-center gap-4">
               <Pressable className="flex-row items-center gap-0.5" onPress={onEditPress}>
                 <Icon name="edit" size={12} color={colors.icon.normal} />
-                <Text className="text-caption-main text-text-alternative">수정</Text>
+                <Text className="text-caption-main text-text-alternative">{t("수정")}</Text>
               </Pressable>
               {onDeletePress && (
                 <Pressable className="flex-row items-center gap-0.5" onPress={onDeletePress}>
                   <Icon name="trash-can" size={12} color={colors.semantic.danger} />
-                  <Text className="text-caption-main text-semantic-danger">삭제</Text>
+                  <Text className="text-caption-main text-semantic-danger">{t("삭제")}</Text>
                 </Pressable>
               )}
             </View>
           )}
         </View>
-        <Text className="mt-1 text-caption-main text-text-neutral">{note.authorName} 작성</Text>
+        <Text className="mt-1 text-caption-main text-text-neutral">{t("{{name}} 작성", { name: note.authorName })}</Text>
       </Pressable>
 
       <Pressable
@@ -74,7 +78,7 @@ export function FollowerNoteCard({
           <Icon
             name="comment-light"
             size={24}
-            color={hasPastorComment ? colors.primary.normal : colors.text.alternative}
+            color={hasPastorComment ? themeColors.primary.normal : themeColors.text.alternative}
           />
           <Text
             className={
@@ -84,16 +88,16 @@ export function FollowerNoteCard({
             }
           >
             {hasPastorComment
-              ? "목사님 댓글"
+              ? t("목사님 댓글")
               : note.comments.length > 0
-                ? `댓글 ${note.comments.length}`
-                : "아직 댓글이 없어요"}
+                ? t("댓글 {{count}}", { count: note.comments.length })
+                : t("아직 댓글이 없어요")}
           </Text>
         </View>
         <Icon
           name="arrow-drop-down"
           size={14}
-          color={hasPastorComment ? colors.primary.normal : colors.icon.normal}
+          color={hasPastorComment ? themeColors.primary.normal : themeColors.icon.normal}
         />
       </Pressable>
 
@@ -113,7 +117,7 @@ export function FollowerNoteCard({
             value={commentDraft}
             onChangeText={setCommentDraft}
             onSubmit={handleCommentSubmit}
-            placeholder="답변을 남겨보세요."
+            placeholder={t("답변을 남겨보세요.")}
           />
         </View>
       )}

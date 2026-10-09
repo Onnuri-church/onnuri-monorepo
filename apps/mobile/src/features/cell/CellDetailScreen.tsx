@@ -3,12 +3,14 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { uploadImage } from "../../shared/api/upload";
 import { useMe } from "../profile/useMe";
@@ -41,6 +43,8 @@ interface GalleryMonthState {
 // 시안의 갤러리-관리/선택은 별도 화면이 아니라 갤러리 탭의 편집·선택 모드로 구현했다
 // (탭 구조를 유지한 채 같은 동작이 나온다 — 화면 분리가 필요해지면 그때 라우트로 뺀다).
 export function CellDetailScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "CellDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
@@ -133,7 +137,7 @@ export function CellDetailScreen() {
       const url = await uploadImage(result.assets[0].uri);
       addGalleryPhoto.mutate(url);
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
     }
   };
 
@@ -184,7 +188,7 @@ export function CellDetailScreen() {
             ))}
             {(news ?? []).length === 0 && (
               <Text className="pt-10 text-center text-body-medium text-text-alternative">
-                {newsLoading ? "소식을 불러오고 있어요." : "아직 올라온 소식이 없어요."}
+                {newsLoading ? t("소식을 불러오고 있어요.") : t("아직 올라온 소식이 없어요.")}
               </Text>
             )}
           </View>
@@ -200,7 +204,7 @@ export function CellDetailScreen() {
                   onPress={() => setMonthDropdownOpen((prev) => !prev)}
                 >
                   <Text className="text-body-main text-text-normal">
-                    {galleryMonthFilter ?? "전체"}
+                    {galleryMonthFilter ?? t("전체")}
                   </Text>
                   <View
                     style={monthDropdownOpen ? { transform: [{ rotate: "180deg" }] } : undefined}
@@ -211,7 +215,7 @@ export function CellDetailScreen() {
                 {canManage && (
                   <Pressable onPress={handleEditTogglePress}>
                     <Text className="text-body-main text-primary-normal">
-                      {selecting ? "완료" : "편집"}
+                      {selecting ? t("완료") : t("편집")}
                     </Text>
                   </Pressable>
                 )}
@@ -230,7 +234,7 @@ export function CellDetailScreen() {
                         galleryMonthFilter === null ? "text-primary-normal" : "text-text-alternative"
                       }`}
                     >
-                      전체
+                      {t("전체")}
                     </Text>
                   </Pressable>
                   {galleryMonths.map((section, index) => {
@@ -314,23 +318,23 @@ export function CellDetailScreen() {
           <View className="px-5 pb-10 pt-5">
             <View className="self-start rounded-5 bg-background-gold px-2.5 py-1">
               <Text className="text-caption-main text-semantic-warning">
-                셀장 · 관리자만 볼 수 있어요
+                {t("셀장 · 관리자만 볼 수 있어요")}
               </Text>
             </View>
             <View className="mt-6 gap-4.5">
               <ManageLinkCard
-                title="셀원 관리"
-                description="셀원을 추가하거나 관리해요"
+                title={t("셀원 관리")}
+                description={t("셀원을 추가하거나 관리해요")}
                 onPress={() => navigation.navigate("CellMemberManage", { cellId })}
               />
               <ManageLinkCard
-                title="팔로워 노트"
-                description="셀원별 케어 기록을 남기고 확인해요"
+                title={t("팔로워 노트")}
+                description={t("셀원별 케어 기록을 남기고 확인해요")}
                 onPress={() => navigation.navigate("FollowerNoteBoard", { cellId })}
               />
               <ManageLinkCard
-                title="출석 관리"
-                description="셀원들의 출석을 관리해요"
+                title={t("출석 관리")}
+                description={t("셀원들의 출석을 관리해요")}
                 onPress={() => navigation.navigate("CellAttendance", { cellId })}
               />
             </View>
@@ -351,11 +355,11 @@ export function CellDetailScreen() {
           className="flex-row items-center justify-between bg-background-normal px-5 py-5"
           style={{
             borderTopWidth: StyleSheet.hairlineWidth,
-            borderTopColor: colors.background.assistive,
+            borderTopColor: themeColors.background.assistive,
           }}
         >
           <Text className="text-body-medium text-text-alternative">
-            {selectedIds.length}장 선택됨
+            {t("{{count}}장 선택됨", { count: selectedIds.length })}
           </Text>
           <Pressable
             className="flex-row items-center gap-1"
@@ -363,17 +367,17 @@ export function CellDetailScreen() {
             onPress={() => deleteDialogRef.current?.open()}
           >
             <Icon name="trash-can" size={18} color={colors.semantic.danger} />
-            <Text className="text-body-medium text-semantic-danger">삭제</Text>
+            <Text className="text-body-medium text-semantic-danger">{t("삭제")}</Text>
           </Pressable>
         </View>
       )}
 
       <AppDialog
         ref={deleteDialogRef}
-        title="선택한 사진을 삭제하시겠습니까?"
-        description="삭제된 사진은 복구할 수 없습니다."
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t("선택한 사진을 삭제하시겠습니까?")}
+        description={t("삭제된 사진은 복구할 수 없습니다.")}
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDeleteSelected}
       />
     </View>

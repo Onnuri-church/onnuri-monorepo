@@ -31,3 +31,67 @@ export interface AdminAttendanceResponse {
   dates: string[];
   groups: AdminAttendanceGroup[];
 }
+
+/** 모임 없는 날 종류 — 지정이 없는 일요일은 예배·셀모임 둘 다 있는 날 */
+export type OffDayKind = "WORSHIP_OFF" | "CELL_MEETING_OFF" | "BOTH_OFF";
+
+export interface AdminOffDay {
+  /** YYYY-MM-DD (일요일) */
+  date: string;
+  /** "10/4" */
+  label: string;
+  /** null = 지정 없음(모임 있는 날) */
+  kind: OffDayKind | null;
+}
+
+/** GET /admin/off-days?month= 응답 — 그 달의 일요일 전부 */
+export interface AdminOffDaysResponse {
+  month: string;
+  monthLabel: string;
+  days: AdminOffDay[];
+}
+
+/** PUT /admin/off-days/:date 요청 본문 — kind null이면 지정 해제 */
+export interface SetOffDayRequest {
+  kind: OffDayKind | null;
+  /** 지울 기존 출석 기록이 있을 때 확인을 받은 뒤 true로 다시 보낸다 */
+  confirm?: boolean;
+}
+
+/** PUT /admin/off-days/:date가 409로 돌려주는 본문 — 지정하면 삭제될 기록 수 */
+export interface OffDayConflictBody {
+  message: string;
+  worshipCount: number;
+  cellMeetingCount: number;
+}
+
+/** GET /admin/download/preview 응답 — 다운로드 전 건수와 앞쪽 몇 줄 (연락처·생년월일은 싣지 않는다) */
+export interface AdminDownloadPreview {
+  /** "2026-01-01 ~ 2026-12-31" */
+  rangeLabel: string;
+  /** kind가 attendance면 null */
+  member: {
+    total: number;
+    rows: {
+      name: string;
+      gender: "남" | "여" | null;
+      age: number | null;
+      team: string | null;
+      cell: string | null;
+    }[];
+  } | null;
+  /** kind가 member면 null — total은 엑셀 출석부 시트의 줄 수(셀 멤버십 기간별) */
+  attendance: {
+    total: number;
+    weekCount: number;
+    rows: {
+      name: string;
+      cell: string;
+      role: string;
+      period: string;
+      worshipCount: number;
+      meetingCount: number;
+      weekTotal: number;
+    }[];
+  } | null;
+}

@@ -5,15 +5,13 @@ import {
   IsDateString,
   IsNotEmpty,
   IsString,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /bulletins 요청 본문 — 등록 시안(날짜 / 주보 2장 고정 / 나눔지 최대 5장).
 // 계약은 @onnuri/shared의 CreateBulletinRequest.
 export class CreateBulletinDto {
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'date는 YYYY-MM-DD 형식이어야 합니다.',
-  })
+  @IsYmdDate({ message: 'date는 YYYY-MM-DD 형식이어야 합니다.' })
   // 형식만 보면 2026-13-01은 Invalid Date로 DB에서 500이 나고, 2026-02-30은 3월 2일로
   // 조용히 넘어가 엉뚱한 날짜에 주보가 붙는다 — 실제로 있는 날짜인지까지 본다.
   @IsDateString({ strict: true }, { message: '없는 날짜예요.' })

@@ -1,4 +1,6 @@
-import { Image, Pressable, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Pressable, Text, View } from "react-native";
+import { Avatar } from "../base/Avatar";
 
 interface CommentItemProps {
   authorName: string;
@@ -22,13 +24,10 @@ export function CommentItem({
   onReplyPress,
   onDeletePress,
 }: CommentItemProps) {
+  const { t } = useTranslation();
   return (
     <View className="flex-row gap-2 py-2">
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} className="h-9 w-9 rounded-full" />
-      ) : (
-        <View className="h-9 w-9 rounded-full bg-text-assistive" />
-      )}
+      <Avatar imageUrl={avatarUrl} size={36} />
       <View className="flex-1 pt-1.5">
         <View className="flex-row items-center gap-2">
           <Text className="text-body-main text-text-normal">{authorName}</Text>
@@ -40,12 +39,12 @@ export function CommentItem({
           <View className="mt-1 flex-row gap-3">
             {onReplyPress && (
               <Pressable onPress={onReplyPress} hitSlop={8}>
-                <Text className="text-body-small text-text-alternative">답글</Text>
+                <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
               </Pressable>
             )}
             {onDeletePress && (
               <Pressable onPress={onDeletePress} hitSlop={8}>
-                <Text className="text-body-small text-text-alternative">삭제</Text>
+                <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
               </Pressable>
             )}
           </View>

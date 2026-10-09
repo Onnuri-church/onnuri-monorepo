@@ -2,11 +2,10 @@ import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   Alert,
   BackHandler,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -20,10 +19,11 @@ import { PHONE_NUMBER_REGEX, type Gender } from "@onnuri/shared";
 import { signOut } from "../../shared/api/session";
 import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
-import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
 import { AvatarEditor } from "./components/AvatarEditor";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
 const NONE_OPTION = "없음";
@@ -66,6 +66,8 @@ function findIdByName(
 // 저장은 둘 다 PATCH /users/me — 끝나면 onboarding은 setSession으로 메인 트리 전환을 트리거하고,
 // 수정 모드는 스토어의 유저만 갈아끼우고 뒤로 돌아간다.
 export function ProfileSetupScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const session = useAuthStore((state) => state.session);
   const setSession = useAuthStore((state) => state.setSession);
   const navigation = useNavigation();
@@ -114,8 +116,12 @@ export function ProfileSetupScreen() {
 
   const { data: cells } = useQuery({ queryKey: ["cells"], queryFn: fetchCells });
   const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: fetchTeams });
-  const cellOptions = [NONE_OPTION, ...(cells ?? []).map((item) => item.name)];
-  const teamOptions = [NONE_OPTION, ...(teams ?? []).map((item) => item.name)];
+  // NONE_OPTION은 상태·id 조회용 원문 키로 두고, 선택지에 보이는 문구만 번역한다.
+  const noneLabel = t("없음");
+  const toLabel = (value: string | null) => (value === NONE_OPTION ? noneLabel : value);
+  const toValue = (label: string) => (label === noneLabel ? NONE_OPTION : label);
+  const cellOptions = [noneLabel, ...(cells ?? []).map((item) => item.name)];
+  const teamOptions = [noneLabel, ...(teams ?? []).map((item) => item.name)];
 
   // 모든 항목을 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
   const canSubmit =
@@ -157,7 +163,7 @@ export function ProfileSetupScreen() {
         }
       }
     } catch {
-      Alert.alert("프로필 저장에 실패했습니다", "잠시 후 다시 시도해 주세요.");
+      Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
     } finally {
       setSubmitting(false);
     }
@@ -168,10 +174,7 @@ export function ProfileSetupScreen() {
       {/* 배경이 흰색이라 상태바 글자·아이콘은 어둡게 */}
       <StatusBar style="dark" />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingContainer>
         {/* 시안은 402x874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 입력 목록이 스크롤되고
             등록하기는 아래에 붙는 구조로 옮겼다 (LoginScreen과 같은 방식). */}
         <ScrollView
@@ -192,33 +195,33 @@ export function ProfileSetupScreen() {
           </View>
 
           <View className="py-4">
-            <Text className="text-body-main text-text-normal">생년월일</Text>
+            <Text className="text-body-main text-text-normal">{t("생년월일")}</Text>
             <TextInput
               className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
               value={birthday}
               onChangeText={setBirthday}
-              placeholder="예) 000310 (2000년 3월 10일)"
-              placeholderTextColor={colors.text.assistive}
+              placeholder={t("예) 000310 (2000년 3월 10일)")}
+              placeholderTextColor={themeColors.text.assistive}
               keyboardType="number-pad"
               maxLength={6}
             />
           </View>
 
           <View className="py-4">
-            <Text className="text-body-main text-text-normal">전화번호</Text>
+            <Text className="text-body-main text-text-normal">{t("전화번호")}</Text>
             <TextInput
               className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
               value={phone}
               onChangeText={setPhone}
-              placeholder="예) 01012345678"
-              placeholderTextColor={colors.text.assistive}
+              placeholder={t("예) 01012345678")}
+              placeholderTextColor={themeColors.text.assistive}
               keyboardType="number-pad"
               maxLength={11}
             />
           </View>
 
           <View className="py-4">
-            <Text className="text-body-main text-text-normal">성별</Text>
+            <Text className="text-body-main text-text-normal">{t("성별")}</Text>
             {/* 시안에 둘 다 안 고른 상태가 없어서, 처음에는 둘 다 미선택(회색) 스타일이다.
                 테두리는 시안이 0.5px이지만 기본 스케일에 없어서 1px(border)로 넣었다. */}
             <View className="mt-5 flex-row gap-2">
@@ -240,7 +243,7 @@ export function ProfileSetupScreen() {
                         : "text-body-main text-text-alternative"
                     }
                   >
-                    {option.label}
+                    {t(option.label)}
                   </Text>
                 </Pressable>
               ))}
@@ -248,26 +251,26 @@ export function ProfileSetupScreen() {
           </View>
 
           <SelectField
-            label="소속 셀"
-            placeholder="나의 셀을 선택하세요."
+            label={t("소속 셀")}
+            placeholder={t("나의 셀을 선택하세요.")}
             options={cellOptions}
-            value={cell}
-            onChange={setCell}
+            value={toLabel(cell)}
+            onChange={(picked) => setCell(toValue(picked))}
           />
 
           <SelectField
-            label="소속 팀"
-            placeholder="나의 팀을 선택하세요."
+            label={t("소속 팀")}
+            placeholder={t("나의 팀을 선택하세요.")}
             options={teamOptions}
-            value={team}
-            onChange={setTeam}
+            value={toLabel(team)}
+            onChange={(picked) => setTeam(toValue(picked))}
           />
         </ScrollView>
 
         <View className="px-5 pb-12">
-          <Button label="등록하기" disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
+          <Button label={t("등록하기")} disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

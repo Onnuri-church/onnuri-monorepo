@@ -1,6 +1,7 @@
 import {Text, View} from "react-native";
 import {Chip} from "../../../shared/components/base/Chip";
 import {getDepartmentColor} from "../departmentColor";
+import { Avatar } from "../../../shared/components/base/Avatar";
 
 interface PostAuthorProps {
     authorName: string;
@@ -14,10 +15,10 @@ interface PostAuthorProps {
 export function PostAuthor({authorName, department, categoryName, date} : PostAuthorProps) {
     return (
         <View className="flex flex-row justify-start items-center gap-2 mt-5">
-            <View className="w-10 h-10 rounded-full bg-background-assistive"></View>
+            <Avatar size={40} />
             <View>
                 <View className="flex flex-row justify-start items-center gap-1">
-                    <Text className="text-heading-small">{authorName}</Text>
+                    <Text className="text-heading-small text-text-normal">{authorName}</Text>
                     <Chip color={getDepartmentColor(department)} text={categoryName}/>
                 </View>
                 <Text className="text-body-small text-text-alternative">{date}</Text>

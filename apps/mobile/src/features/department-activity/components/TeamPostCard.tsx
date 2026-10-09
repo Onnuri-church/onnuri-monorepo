@@ -30,7 +30,7 @@ export function TeamPostCard({post, onPress}: TeamPostCardProps) {
                 <Chip color={getDepartmentColor(post.department)} text={post.categoryName}/>
                 <Text className="text-caption-main text-text-alternative">{post.date}</Text>
             </View>
-            <Text className="mt-1 text-heading-main">{post.title}</Text>
+            <Text className="mt-1 text-heading-main text-text-normal">{post.title}</Text>
             <Text className="mt-1 text-body-main text-text-alternative">{post.description}</Text>
             <View className="mt-4 items-center justify-between flex-row pt-2 border-t border-t-text-assistive">
                 <Text className="text-caption-main text-text-alternative">{post.time}</Text>

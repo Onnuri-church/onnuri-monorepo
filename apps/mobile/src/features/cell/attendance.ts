@@ -1,3 +1,5 @@
+import { i18n } from "../../shared/i18n";
+
 // 출석 관리 화면 타입·날짜 헬퍼. 출석 데이터는 /cells/:id/attendance 실데이터 (api.ts).
 // 셀모임은 일요일 단위라 날짜 선택지는 "그 달의 일요일들"이다.
 
@@ -13,7 +15,16 @@ export interface MemberAttendance {
   meeting: AttendanceStatus;
 }
 
-const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"];
+// 언어가 바뀌어도 따라가도록 호출 시점에 번역한다.
+const getWeekdayLabels = () => [
+  i18n.t("일"),
+  i18n.t("월"),
+  i18n.t("화"),
+  i18n.t("수"),
+  i18n.t("목"),
+  i18n.t("금"),
+  i18n.t("토"),
+];
 
 /** 해당 연·월(1~12)의 일요일 목록. */
 export function getSundaysOfMonth(year: number, month: number): Date[] {
@@ -30,7 +41,7 @@ export function getSundaysOfMonth(year: number, month: number): Date[] {
 export function formatSundayLabel(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}.${month}.${day} (${WEEKDAY_LABELS[date.getDay()]})`;
+  return `${date.getFullYear()}.${month}.${day} (${getWeekdayLabels()[date.getDay()]})`;
 }
 
 /** 가장 최근 일요일 — 출석 관리의 기본 선택 날짜. */

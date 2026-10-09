@@ -9,12 +9,14 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
 import { CreateNoticeDto } from './dto/create-notice.dto';
+import { UpdateBannerDto } from './dto/update-banner.dto';
 
 type BannerRow = {
   id: string;
   title: string;
   content: string | null;
   imageUrl: string | null;
+  isActive: boolean;
   createdAt: Date;
 };
 
@@ -23,6 +25,7 @@ const BANNER_SELECT = {
   title: true,
   content: true,
   imageUrl: true,
+  isActive: true,
   createdAt: true,
 } as const;
 
@@ -33,8 +36,8 @@ function toSeriesLabel(createdAt: Date): string {
 }
 
 // 홈 배너 — Notice(type=BANNER)를 쓴다 (erd.md 설계 그대로).
-// 활성 배너 = 가장 최근 등록 1건, 내리기 = 삭제. 수련회 포스터를 지우면 그 전
-// 배너(설교)가 자동으로 다시 표시되는 스택 구조라 별도 활성 플래그가 없다.
+// 홈에 표시되는 배너 = isActive가 켜진 1건 (한 번에 하나만). 새로 등록하면 그 배너가 켜지고
+// 나머지는 꺼진다. 켠 게 없으면(전부 끄거나 켜진 배너를 삭제) 앱이 기본 배너로 폴백한다.
 @Injectable()
 export class NoticesService {
   constructor(
@@ -43,30 +46,28 @@ export class NoticesService {
   ) {}
 
   private toBanner(row: BannerRow): HomeBanner {
-    // 유형 판별은 구절(content) 유무 — 말씀 배너도 배경사진을 가질 수 있어 이미지로는 못 가른다.
-    const kind = row.content !== null ? 'SERMON' : 'POSTER';
     return {
       id: row.id,
-      kind,
       title: row.title,
       passage: row.content,
-      seriesLabel: kind === 'SERMON' ? toSeriesLabel(row.createdAt) : null,
+      seriesLabel: toSeriesLabel(row.createdAt),
       imageUrl: row.imageUrl,
+      isActive: row.isActive,
       createdAt: row.createdAt.toISOString(),
     };
   }
 
-  // 홈이 그리는 현재 배너. 등록된 게 없으면 null — 앱이 기본 문구로 폴백한다.
+  // 홈이 그리는 현재 배너. 켜진 게 없으면 null — 앱이 기본 문구로 폴백한다.
   async findActiveBanner(): Promise<HomeBanner | null> {
     const row = await this.prisma.notice.findFirst({
-      where: { type: 'BANNER' },
+      where: { type: 'BANNER', isActive: true },
       select: BANNER_SELECT,
       orderBy: { createdAt: 'desc' },
     });
     return row ? this.toBanner(row) : null;
   }
 
-  // 배너 관리 목록 (관리자) — 최신순. 첫 항목이 지금 홈에 표시 중인 배너다.
+  // 배너 관리 목록 (관리자) — 최신순. isActive가 켜진 항목이 지금 홈에 표시 중인 배너다.
   async findBanners(): Promise<HomeBanner[]> {
     const rows = await this.prisma.notice.findMany({
       where: { type: 'BANNER' },
@@ -77,24 +78,70 @@ export class NoticesService {
   }
 
   async createBanner(adminId: string, dto: CreateBannerDto): Promise<HomeBanner> {
-    if (!dto.imageUrl && !dto.passage) {
-      throw new BadRequestException(
-        '성경 구절(말씀 배너) 또는 포스터 이미지 중 하나는 필요합니다.',
-      );
-    }
-    const row = await this.prisma.notice.create({
+    // 새 배너는 등록 즉시 홈에 표시된다 — 기존에 켜진 배너는 같은 트랜잭션에서 끈다.
+    const [, row] = await this.prisma.$transaction([
+      this.prisma.notice.updateMany({
+        where: { type: 'BANNER', isActive: true },
+        data: { isActive: false },
+      }),
+      this.prisma.notice.create({
+        data: {
+          type: 'BANNER',
+          title: dto.title,
+          // 말씀 배너의 구절은 content 컬럼에 담는다 — Notice에 전용 컬럼이 없어서다.
+          // 이미지는 두 유형 다 가질 수 있다 (말씀 배너의 배경사진 / 포스터).
+          content: dto.passage,
+          imageUrl: dto.imageUrl ?? null,
+          authorId: adminId,
+          isActive: true,
+        },
+        select: BANNER_SELECT,
+      }),
+    ]);
+    return this.toBanner(row);
+  }
+
+  // 홈 표시 켜기/끄기 — 켜면 다른 배너는 모두 꺼진다 (한 번에 하나만).
+  async setBannerActive(id: string, active: boolean): Promise<HomeBanner> {
+    const exists = await this.prisma.notice.findFirst({
+      where: { id, type: 'BANNER' },
+      select: { id: true },
+    });
+    if (!exists) throw new NotFoundException('배너를 찾을 수 없습니다.');
+
+    const [, row] = await this.prisma.$transaction([
+      this.prisma.notice.updateMany({
+        where: { type: 'BANNER', isActive: true, id: { not: id } },
+        data: { isActive: false },
+      }),
+      this.prisma.notice.update({
+        where: { id },
+        data: { isActive: active },
+        select: BANNER_SELECT,
+      }),
+    ]);
+    return this.toBanner(row);
+  }
+
+  // 수정 — 보낸 필드만 바꾼다. createdAt이 안 바뀌어서
+  // 목록 순서(= 홈 표시 배너)도 그대로다.
+  async updateBanner(id: string, dto: UpdateBannerDto): Promise<HomeBanner> {
+    const row = await this.prisma.notice.findFirst({
+      where: { id, type: 'BANNER' },
+      select: BANNER_SELECT,
+    });
+    if (!row) throw new NotFoundException('배너를 찾을 수 없습니다.');
+
+    const updated = await this.prisma.notice.update({
+      where: { id },
       data: {
-        type: 'BANNER',
-        title: dto.title,
-        // 말씀 배너의 구절은 content 컬럼에 담는다 — Notice에 전용 컬럼이 없어서다.
-        // 이미지는 두 유형 다 가질 수 있다 (말씀 배너의 배경사진 / 포스터).
-        content: dto.passage ?? null,
-        imageUrl: dto.imageUrl ?? null,
-        authorId: adminId,
+        ...(dto.title !== undefined && { title: dto.title }),
+        ...(dto.passage !== undefined && { content: dto.passage }),
+        ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       },
       select: BANNER_SELECT,
     });
-    return this.toBanner(row);
+    return this.toBanner(updated);
   }
 
   // ── 공지사항 (type=NOTICE) — 마이페이지 공지사항 메뉴 ──────────────────────

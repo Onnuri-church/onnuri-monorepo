@@ -1,4 +1,5 @@
 import type { CellSummary } from "@onnuri/shared";
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Avatar } from "../../../shared/components/base/Avatar";
@@ -13,10 +14,14 @@ interface CellListRowProps {
 
 // 전체 셀 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
 export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
+  const { t } = useTranslation();
   // 셀장 멤버십이 아직 없는 셀(시드 직후 등)은 "미지정"으로 표시한다.
   const leaderLine = cell.viceLeaderName
-    ? `셀장 ${cell.leaderName ?? "미지정"} / 부셀장 ${cell.viceLeaderName}`
-    : `셀장 ${cell.leaderName ?? "미지정"}`;
+    ? t("셀장 {{leader}} / 부셀장 {{vice}}", {
+        leader: cell.leaderName ?? t("미지정"),
+        vice: cell.viceLeaderName,
+      })
+    : t("셀장 {{leader}}", { leader: cell.leaderName ?? t("미지정") });
 
   return (
     <Pressable
@@ -34,7 +39,7 @@ export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
       </View>
       {isMyCell && (
         <View className="rounded-2xl bg-background-alternative px-2.5 py-1">
-          <Text className="text-caption-main text-primary-normal">나의 셀</Text>
+          <Text className="text-caption-main text-primary-normal">{t("나의 셀")}</Text>
         </View>
       )}
       <Icon name="expand-right" size={28} />

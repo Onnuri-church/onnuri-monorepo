@@ -2,7 +2,8 @@ import type { MyGroupMeeting } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { fetchMyGroupMeetings } from "./api";
 import { CardImageFallback } from "./components/CardImageFallback";
@@ -11,6 +12,7 @@ import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 // 카드 폭·마감일 표기·참여자 아바타는 게시판(GroupMeetingScreen)과 같은 규칙이다.
 // 그쪽 지역 헬퍼를 끌어오면 화면 파일을 화면이 import하는 모양이 돼서 작게 복제했다 —
@@ -36,24 +38,9 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 
   return (
     <View className="flex-row">
-      {slots.map((url, index) =>
-        url ? (
-          <Image
-            key={url}
-            source={{ uri: url }}
-            className={index === 0 ? "h-6 w-6 rounded-full" : "-ml-2 h-6 w-6 rounded-full"}
-          />
-        ) : (
-          <View
-            key={index}
-            className={
-              index === 0
-                ? "h-6 w-6 rounded-full bg-text-assistive"
-                : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
-            }
-          />
-        ),
-      )}
+      {slots.map((url, index) => (
+        <Avatar key={url ?? index} imageUrl={url} size={24} className={index === 0 ? "" : "-ml-2"} />
+      ))}
     </View>
   );
 }
@@ -61,6 +48,7 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 // 마이페이지 "취향 소그룹" — 내가 신청(대기중)·참여 중인 모임만 모아 보여준다.
 // 카드를 누르면 게시판과 같은 상세로 간다 (소그룹장은 거기서 수정·승인 등 관리).
 export function MyGroupMeetingScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const cardWidth = getCardWidth(width);
@@ -89,7 +77,7 @@ export function MyGroupMeetingScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">모임을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">{t("모임을 불러오지 못했어요")}</Text>
       </View>
     );
   }
@@ -98,11 +86,11 @@ export function MyGroupMeetingScreen() {
     return (
       <View className="flex-1 items-center justify-center gap-6 bg-background-normal px-10">
         <Text className="text-body-medium text-text-alternative">
-          아직 참여 중인 소그룹이 없어요
+          {t("아직 참여 중인 소그룹이 없어요")}
         </Text>
         {/* 버튼 폭은 호출부가 정한다(Button 주석) — 가운데 정렬 컨테이너라 늘려서 준다. */}
         <View className="self-stretch">
-          <Button label="소그룹 둘러보기" onPress={() => navigation.navigate("GroupMeeting")} />
+          <Button label={t("소그룹 둘러보기")} onPress={() => navigation.navigate("GroupMeeting")} />
         </View>
       </View>
     );
@@ -119,17 +107,17 @@ export function MyGroupMeetingScreen() {
           <Card
             imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
             imageFallback={<CardImageFallback />}
-            badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
+            badge={<Chip color={meeting.status} text={t(meeting.statusLabel)} />}
             dimmed={meeting.status === "closed"}
             onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
           >
             <Text className="text-body-main text-text-normal">{meeting.title}</Text>
             {/* 내 상태 — 소그룹장이면서 대기중일 수는 없어서(소그룹장은 자동 승인) 한 줄이면 된다 */}
             {meeting.isLeader && (
-              <Text className="mt-1 text-label-small text-primary-normal">소그룹장</Text>
+              <Text className="mt-1 text-label-small text-primary-normal">{t("소그룹장")}</Text>
             )}
             {meeting.myStatus === "PENDING" && (
-              <Text className="mt-1 text-label-small text-text-neutral">승인 대기중</Text>
+              <Text className="mt-1 text-label-small text-text-neutral">{t("승인 대기중")}</Text>
             )}
             <View className="mt-auto flex-row items-center justify-between pt-4">
               <Text className="text-label-small text-text-neutral">

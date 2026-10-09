@@ -1,10 +1,14 @@
 import type {
   AdminAttendanceResponse,
+  AdminDownloadPreview,
+  AdminOffDaysResponse,
   AdminMemberDetail,
   AdminMemberSummary,
   CellDetailResponse,
   CreateHomeBannerRequest,
   HomeBanner,
+  UpdateHomeBannerRequest,
+  OffDayKind,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -80,6 +84,8 @@ export function useAdminAttendance(params: AdminAttendanceParams) {
       apiClient
         .get<AdminAttendanceResponse>("/admin/attendance", { params })
         .then((res) => res.data),
+    // 셀·멤버 구성이 바뀐 직후에도 최신이 보이도록 캐시를 쓰지 않는다 (기본 staleTime 1분).
+    staleTime: 0,
     // 특정 셀/팀 필터인데 아직 선택지가 안 뽑혔으면(목록 로딩 전) 기다린다.
     enabled: params.scope === "all" || params.groupId !== undefined,
   });
@@ -177,11 +183,78 @@ export function useCreateHomeBanner() {
   });
 }
 
+export function useUpdateHomeBanner(bannerId: string) {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: (payload: UpdateHomeBannerRequest) =>
+      apiClient
+        .patch<HomeBanner>(`/notices/banners/${bannerId}`, payload)
+        .then((res) => res.data),
+    onSuccess: invalidateBanners,
+  });
+}
+
+// 홈 표시 켜기/끄기 — 켜면 서버가 다른 배너를 꺼서 목록 전체가 바뀐다.
+export function useSetHomeBannerActive() {
+  const invalidateBanners = useInvalidateBanners();
+  return useMutation({
+    mutationFn: ({ bannerId, active }: { bannerId: string; active: boolean }) =>
+      apiClient
+        .put<HomeBanner>(`/notices/banners/${bannerId}/active`, { active })
+        .then((res) => res.data),
+    onSuccess: invalidateBanners,
+  });
+}
+
 export function useDeleteHomeBanner() {
   const invalidateBanners = useInvalidateBanners();
   return useMutation({
     mutationFn: (bannerId: string) =>
       apiClient.delete(`/notices/banners/${bannerId}`).then((res) => res.data),
     onSuccess: invalidateBanners,
+  });
+}
+
+// 모임 없는 날 — 그 달 일요일별 지정 상태. 지정/해제는 출석부·셀 출석 화면 데이터도 바꾸므로 같이 무효화한다.
+export function useAdminOffDays(month: string) {
+  return useQuery({
+    queryKey: ["admin", "off-days", month],
+    queryFn: () =>
+      apiClient
+        .get<AdminOffDaysResponse>("/admin/off-days", { params: { month } })
+        .then((res) => res.data),
+  });
+}
+
+export function useSetAdminOffDay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      date,
+      kind,
+      confirm,
+    }: {
+      date: string;
+      kind: OffDayKind | null;
+      confirm?: boolean;
+    }) => apiClient.put(`/admin/off-days/${date}`, { kind, confirm }).then((res) => res.data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin"] });
+      void queryClient.invalidateQueries({ queryKey: ["cell-attendance"] });
+    },
+  });
+}
+
+// 데이터 다운로드 전 미리보기 — 다운로드와 같은 쿼리(kind/scope/groupId/period/from/to)로 건수와 앞쪽 몇 줄을 받는다.
+export type DownloadPreviewParams = Record<string, string>;
+
+export function useAdminDownloadPreview(params: DownloadPreviewParams | null) {
+  return useQuery({
+    queryKey: ["admin", "download-preview", params],
+    queryFn: () =>
+      apiClient
+        .get<AdminDownloadPreview>("/admin/download/preview", { params })
+        .then((res) => res.data),
+    enabled: params !== null,
   });
 }

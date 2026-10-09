@@ -3,7 +3,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { useTranslation } from "react-i18next";
 
 import { fetchGroupMeetings, useDeleteGroupMeeting } from "./api";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -17,9 +18,11 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 type Filter = "all" | GroupMeetingStatus;
 
+// i18n: t("전체") t("모집중") t("마감") — 렌더 시 t(label)로 번역한다.
 const FILTERS: { value: Filter; label: string }[] = [
   { value: "all", label: "전체" },
   { value: "open", label: "모집중" },
@@ -53,29 +56,15 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 
   return (
     <View className="flex-row">
-      {slots.map((url, index) =>
-        url ? (
-          <Image
-            key={url}
-            source={{ uri: url }}
-            className={index === 0 ? "h-6 w-6 rounded-full" : "-ml-2 h-6 w-6 rounded-full"}
-          />
-        ) : (
-          <View
-            key={index}
-            className={
-              index === 0
-                ? "h-6 w-6 rounded-full bg-text-assistive"
-                : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
-            }
-          />
-        ),
-      )}
+      {slots.map((url, index) => (
+        <Avatar key={url ?? index} imageUrl={url} size={24} className={index === 0 ? "" : "-ml-2"} />
+      ))}
     </View>
   );
 }
 
 export function GroupMeetingScreen() {
+  const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>("all");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
@@ -104,16 +93,16 @@ export function GroupMeetingScreen() {
         isAdmin ? (
           <Header
             variant="sub"
-            title="취향소그룹 게시판"
+            title={t("취향소그룹 게시판")}
             rightAction="text"
-            rightLabel={editing ? "완료" : "편집"}
+            rightLabel={editing ? t("완료") : t("편집")}
             onPressRightLabel={() => setEditing((prev) => !prev)}
           />
         ) : (
-          <Header variant="sub" title="취향소그룹 게시판" rightAction="home" />
+          <Header variant="sub" title={t("취향소그룹 게시판")} rightAction="home" />
         ),
     });
-  }, [navigation, isAdmin, editing]);
+  }, [navigation, isAdmin, editing, t]);
 
   const handleDeletePress = (meeting: GroupMeeting) => {
     setDeleteTarget(meeting);
@@ -133,7 +122,7 @@ export function GroupMeetingScreen() {
       {FILTERS.map(({ value, label }) => (
         <FilterChip
           key={value}
-          label={label}
+          label={t(label)}
           selected={filter === value}
           onPress={() => setFilter(value)}
         />
@@ -159,7 +148,7 @@ export function GroupMeetingScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center">
-        <Text className="text-body-medium text-text-alternative">모임을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">{t("모임을 불러오지 못했어요")}</Text>
       </View>
     );
   }
@@ -178,7 +167,7 @@ export function GroupMeetingScreen() {
             <Card
               imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
               imageFallback={<CardImageFallback />}
-              badge={<Chip color={meeting.status} text={meeting.statusLabel} />}
+              badge={<Chip color={meeting.status} text={t(meeting.statusLabel)} />}
               dimmed={meeting.status === "closed"}
               onPress={() => navigation.navigate("GroupMeetingDetail", { id: meeting.id })}
             >
@@ -223,7 +212,7 @@ export function GroupMeetingScreen() {
             onPress={() => navigation.navigate("GroupMeetingForm", {})}
           >
             <Icon name="plus" size={16} color={colors.icon.normal} />
-            <Text className="text-body-regular text-text-alternative">소그룹 생성</Text>
+            <Text className="text-body-regular text-text-alternative">{t("소그룹 생성")}</Text>
           </Pressable>
         )}
       </ScrollView>
@@ -231,10 +220,10 @@ export function GroupMeetingScreen() {
       {/* 삭제 확정 문구 (2026-09-21 시안) — 소그룹은 hard delete라 참여 기록까지 지워진다 */}
       <AppDialog
         ref={deleteDialogRef}
-        title={`'${deleteTarget?.title ?? ""}'를 삭제하시겠습니까?`}
-        description={"게시글과 참여 기록이 모두 삭제되며\n복구할 수 없습니다."}
-        confirmLabel="삭제"
-        cancelLabel="취소"
+        title={t("'{{title}}'를 삭제하시겠습니까?", { title: deleteTarget?.title ?? "" })}
+        description={t("게시글과 참여 기록이 모두 삭제되며\n복구할 수 없습니다.")}
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
         onConfirm={confirmDelete}
       />
     </View>

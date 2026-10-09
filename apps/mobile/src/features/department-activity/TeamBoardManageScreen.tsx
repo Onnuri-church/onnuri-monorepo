@@ -2,6 +2,7 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 
 import { fetchTeamActivities } from "./api";
@@ -14,6 +15,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 // 수정·삭제는 상세의 ⋮에서 한다 (팀장은 팀원 글도 가능 — 서버 canManage 기준).
 // 게시판과 같은 카드를 쓰되, 팀이 하나로 고정이라 필터 칩과 글쓰기 버튼은 없다.
 export function TeamBoardManageScreen() {
+  const { t } = useTranslation();
   const { teamId } = useRoute<RouteProp<RootStackParamList, "TeamBoardManage">>().params;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -37,7 +39,7 @@ export function TeamBoardManageScreen() {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
         <Text className="text-body-medium text-text-alternative">
-          게시글을 불러오지 못했어요
+          {t("게시글을 불러오지 못했어요")}
         </Text>
       </View>
     );
@@ -48,7 +50,7 @@ export function TeamBoardManageScreen() {
       {data.items.length === 0 ? (
         <View className="flex-1 items-center justify-center">
           <Text className="text-body-medium text-text-alternative">
-            아직 우리 팀 게시글이 없어요
+            {t("아직 우리 팀 게시글이 없어요")}
           </Text>
         </View>
       ) : (

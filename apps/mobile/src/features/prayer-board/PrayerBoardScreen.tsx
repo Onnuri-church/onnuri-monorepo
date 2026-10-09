@@ -2,14 +2,24 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Trans, useTranslation } from "react-i18next";
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { ContextMenu } from "../../shared/components/base/ContextMenu";
 import { FilterBar } from "../../shared/components/base/FilterBar";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { Skeleton } from "../../shared/components/base/Skeleton";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { PRAYER_CATEGORIES, deletePrayer, fetchPrayers, type PrayerCategory } from "./api";
@@ -22,6 +32,7 @@ import { PrayerMenu } from "./components/PrayerMenu";
 const CONTENT_PADDING = 20;
 
 export function PrayerBoardScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
   const queryClient = useQueryClient();
@@ -30,13 +41,18 @@ export function PrayerBoardScreen() {
   // 삭제 확인 중인 기도제목 (관리자용). 다이얼로그는 하나만 두고 대상만 바꾼다 — PrayerFilterList와 같다.
   const [pendingDelete, setPendingDelete] = useState<PrayerRequest | null>(null);
   const dialogRef = useRef<AppDialogRef>(null);
+  // 관리자 카드의 ⋮ 메뉴 위치 (큐티나눔 관리와 같은 방식). 메뉴는 삭제 하나뿐이다.
+  const { width: windowWidth } = useWindowDimensions();
+  const [menu, setMenu] = useState<{ prayer: PrayerRequest; top: number; right: number } | null>(
+    null,
+  );
 
   // 관리자용 게시판(시안: 기도제목 게시판-관리자용)은 별도 화면이 아니라 같은 게시판의 role 분기다.
   // 등록 개수 문구 대신 경고 문구, 북마크·글쓰기 FAB 없음, 카드마다 삭제 줄이 항상 붙는다.
   // 익명 글의 실명 노출은 서버가 요청자 기준으로 판단한다 — 여기서는 화면 분기만 한다.
   const isAdmin = useMe()?.isAdmin === true;
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
     // isAdmin이 로그인 정보 로딩 후 뒤늦게 true가 되면 실명 붙은 목록으로 다시 받는다.
     queryKey: ["prayers", "board", category, isAdmin],
     queryFn: () => fetchPrayers(category),
@@ -49,6 +65,15 @@ export function PrayerBoardScreen() {
     (prayer) => query === "" || prayer.title.includes(query),
   );
 
+  // 게스트는 작성까지 다 한 뒤 등록 실패(401)를 만나게 된다 — 들어가기 전에 안내한다 (큐티나눔과 같다).
+  const handleWritePress = () => {
+    if (useAuthStore.getState().session.status !== "authenticated") {
+      Alert.alert(t("로그인이 필요해요"), t("글쓰기는 로그인 후 할 수 있어요."));
+      return;
+    }
+    navigation.navigate("PrayerWrite");
+  };
+
   const handleDeletePress = (prayer: PrayerRequest) => {
     setPendingDelete(prayer);
     dialogRef.current?.open();
@@ -58,7 +83,7 @@ export function PrayerBoardScreen() {
     try {
       if (pendingDelete) await deletePrayer(pendingDelete.id);
     } catch {
-      Alert.alert("삭제 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
     }
     dialogRef.current?.close();
     setPendingDelete(null);
@@ -68,28 +93,41 @@ export function PrayerBoardScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <FilterBar items={[...PRAYER_CATEGORIES]} selected={category} onSelect={setCategory} />
+      <FilterBar
+        items={PRAYER_CATEGORIES.map((item) => ({ ...item, label: t(item.label) }))}
+        selected={category}
+        onSelect={setCategory}
+      />
 
-      <ScrollView contentContainerClassName="pb-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+      <ScrollView
+        contentContainerClassName="pb-6"
+        style={{ paddingHorizontal: CONTENT_PADDING }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }
+      >
         {isAdmin ? (
           // 시안: Body/Small 13px, Semantic/Warning, 자물쇠 12·간격 3(기본 스케일에 없어 4로 넣었다).
           <View className="mt-2 flex-row items-center justify-center gap-1">
             <Icon name="lock" size={12} color={colors.semantic.warning} />
             <Text className="text-body-small text-semantic-warning">
-              관리자만 실제 작성자를 확인할 수 있어요
+              {t("관리자만 실제 작성자를 확인할 수 있어요")}
             </Text>
           </View>
         ) : (
           // 시안: Title/Main 22px Bold, 행간 26(2줄 = 52). 등록 개수만 브랜드 색으로 강조한다.
           // 공용 TEXT_STYLE은 행간이 140%라 여기서만 시안 값을 지정한다 (PrayerCard와 같은 이유).
           <Text className="mt-2 text-center text-title text-text-normal" style={{ lineHeight: 26 }}>
-            현재 <Text className="text-primary-normal">{data?.totalCount ?? 0}개</Text>의 기도제목이
-            {"\n"}등록되어 있어요
+            <Trans
+              i18nKey={"현재 <0>{{count}}개</0>의 기도제목이\n등록되어 있어요"}
+              values={{ count: data?.totalCount ?? 0 }}
+              components={{ 0: <Text className="text-primary-normal" /> }}
+            />
           </Text>
         )}
 
         <View className="mt-6">
-          <SearchBar value={keyword} onChangeText={setKeyword} placeholder="기도제목 검색" />
+          <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("기도제목 검색")} />
         </View>
 
         <View className="mt-6 gap-6">
@@ -102,13 +140,13 @@ export function PrayerBoardScreen() {
 
           {isError && (
             <Text className="text-center text-body-medium text-text-alternative">
-              기도제목을 불러오지 못했어요
+              {t("기도제목을 불러오지 못했어요")}
             </Text>
           )}
 
           {!isPending && !isError && query !== "" && visibleItems.length === 0 && (
             <Text className="text-center text-body-medium text-text-alternative">
-              검색 결과가 없어요
+              {t("검색 결과가 없어요")}
             </Text>
           )}
 
@@ -117,30 +155,51 @@ export function PrayerBoardScreen() {
               key={prayer.id}
               prayer={prayer}
               showBookmark={!isAdmin}
-              editing={isAdmin}
-              deleteOnly
               onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
               onToggleBookmark={() => toggleBookmark(prayer.id, prayer.bookmarked ?? false)}
-              onDelete={() => handleDeletePress(prayer)}
+              onMenuPress={
+                isAdmin
+                  ? (anchor) =>
+                      setMenu({
+                        prayer,
+                        top: anchor.y + anchor.height + 4,
+                        right: windowWidth - (anchor.x + anchor.width),
+                      })
+                  : undefined
+              }
             />
           ))}
         </View>
       </ScrollView>
 
       {!isAdmin && (
-        <FloatingButton onPress={() => navigation.navigate("PrayerWrite")}>
+        <FloatingButton onPress={handleWritePress}>
           <Icon name="write" size={24} color={colors.icon.disable} />
         </FloatingButton>
       )}
 
-      <PrayerMenu title="기도제목 게시판" />
+      <PrayerMenu title={t("기도제목 게시판")} />
+
+      {/* 관리자는 남의 글을 고치지 않는다 — 수정은 작성자만 (서버도 같은 규칙). */}
+      <ContextMenu
+        visible={menu !== null}
+        onClose={() => setMenu(null)}
+        style={menu ? { top: menu.top, right: menu.right } : undefined}
+        items={[
+          {
+            icon: "trash-can",
+            label: t("삭제하기"),
+            onPress: () => menu && handleDeletePress(menu.prayer),
+          },
+        ]}
+      />
 
       <AppDialog
         ref={dialogRef}
-        title="정말 삭제하시겠습니까?"
-        description="삭제된 데이터는 복구할 수 없습니다."
-        confirmLabel="확인"
-        cancelLabel="취소"
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
         onConfirm={handleDeleteConfirm}
       />
     </View>

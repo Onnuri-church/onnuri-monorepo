@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -26,6 +27,7 @@ const SMALL_COUNT = 3;
 // 팀 상세의 활동 사진 섹션. 큰 사진 한 장 아래 작은 사진 세 장이 오고, 마지막 칸에 남은 장수를 겹친다.
 // 사진에 캡션·장수가 있다는 걸 아는 도메인 컴포넌트라 feature에 둔다.
 export function ActivityPhotos({ photos, totalCount, onViewAllPress }: ActivityPhotosProps) {
+  const { t } = useTranslation();
   const [large, ...rest] = photos;
   const small = rest.slice(0, SMALL_COUNT);
   // 마지막 작은 칸에 겹칠 남은 장수. 큰 1장 + 작은 3장을 뺀 나머지다.
@@ -33,7 +35,7 @@ export function ActivityPhotos({ photos, totalCount, onViewAllPress }: ActivityP
 
   return (
     <View className="gap-3">
-      <Text className="text-heading-small text-text-normal">활동 사진</Text>
+      <Text className="text-heading-small text-text-normal">{t("활동 사진")}</Text>
       <View>
         {/* 시안은 큰 사진 아래쪽에 그라데이션을 깔아 캡션을 읽히게 한다 — 토큰도 없고
             expo-linear-gradient도 안 깔려 있어서 이번 범위에서 뺐다. 확정되면 여기 얹는다. */}
@@ -61,7 +63,7 @@ export function ActivityPhotos({ photos, totalCount, onViewAllPress }: ActivityP
           onPress={onViewAllPress}
         >
           <Text className="text-body-small text-text-alternative">
-            사진 {totalCount}장 모두 보기
+            {t("사진 {{count}}장 모두 보기", { count: totalCount })}
           </Text>
           <Icon name="expand-right" size={18} />
         </Pressable>

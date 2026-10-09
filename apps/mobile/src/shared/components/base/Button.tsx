@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, Text } from "react-native";
 
-import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
 
 interface ButtonProps {
   label: string;
@@ -14,6 +14,7 @@ interface ButtonProps {
 // 눌림은 active: 변형으로 준다 — className과 함수형 style을 같이 주면 NativeWind가
 // 함수 style을 무시해서 크기까지 통째로 빠진다.
 export function Button({ label, onPress, disabled, loading }: ButtonProps) {
+  const themeColors = useThemeColors();
   const blocked = disabled || loading;
   return (
     <Pressable
@@ -27,7 +28,7 @@ export function Button({ label, onPress, disabled, loading }: ButtonProps) {
       }
     >
       {loading ? (
-        <ActivityIndicator color={colors.background.normal} />
+        <ActivityIndicator color={themeColors.background.normal} />
       ) : (
         <Text className="text-body-main text-background-normal">{label}</Text>
       )}

@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 
 import { Gender } from '../../../../generated/prisma';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /users/me 요청 본문 — 계약은 @onnuri/shared의 UpdateMyProfileRequest.
 // 프로필 설정 화면이 모든 항목을 채워 보내므로 부분 수정(필드 생략)은 받지 않는다.
@@ -15,7 +16,7 @@ export class UpdateMyProfileDto {
   // YYYY-MM-DD만 받는다 — Matches가 시각 붙은 ISO 문자열을 거르고,
   // strict가 2월 31일처럼 존재하지 않는 날짜를 거른다.
   @IsISO8601({ strict: true })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsYmdDate()
   birthDate!: string;
 
   @IsEnum(Gender)

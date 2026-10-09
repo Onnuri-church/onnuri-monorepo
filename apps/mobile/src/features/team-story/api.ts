@@ -11,6 +11,7 @@ import type {
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
+import { i18n } from "../../shared/i18n";
 import { uploadImage } from "../../shared/api/upload";
 import { fetchTeams } from "../profile/api";
 
@@ -48,7 +49,7 @@ export function useTeamGallery(teamId: string) {
 
 // 서버 enum(TeamRole) → 화면에 그대로 찍는 역할 문구.
 export function toTeamRoleLabel(role: TeamRole): string {
-  return role === "LEADER" ? "팀장" : "팀원";
+  return role === "LEADER" ? i18n.t("팀장") : i18n.t("팀원");
 }
 
 // 갤러리 사진 추가 — 화면이 포토 피커로 고른 로컬 사진을 먼저 uploadImage로 올리고

@@ -3,7 +3,8 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Alert, KeyboardAvoidingView, ScrollView, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Alert, ScrollView, View } from "react-native";
 
 import { createTeamActivity, fetchTeamActivities, fetchTeamActivity, updateTeamActivity } from "./api";
 import { writableTeamNames } from "./permissions";
@@ -17,10 +18,12 @@ import { SelectField } from "../../shared/components/composed/SelectField";
 import { uploadImage } from "../../shared/api/upload";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 작성·수정 겸용 — postId가 있으면 수정 모드. 상세를 거쳐 들어오므로 캐시가 있어
 // 첫 렌더에 프리필된다 (CellNewsWriteScreen과 같은 방식).
 export function DepartmentActivityWriteScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "DepartmentActivityWrite">>();
   const postId = route.params?.postId;
@@ -100,7 +103,10 @@ export function DepartmentActivityWriteScreen() {
     },
 
     onError: () => {
-      Alert.alert(isEditing ? "저장하지 못했어요" : "등록하지 못했어요", "잠시 후 다시 시도해주세요.");
+      Alert.alert(
+        isEditing ? t("저장하지 못했어요") : t("등록하지 못했어요"),
+        t("잠시 후 다시 시도해주세요."),
+      );
     },
   });
 
@@ -117,43 +123,43 @@ export function DepartmentActivityWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="flex-1 h-full"
           contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
           keyboardShouldPersistTaps="handled"
         >
           <DateField
-            label="날짜"
-            placeholder="날짜를 입력해주세요"
+            label={t("날짜")}
+            placeholder={t("날짜를 입력해주세요")}
             value={selectDate}
             onChange={setSelectDate}
           />
 
           <SelectField
-            label="부서"
-            placeholder="부서를 선택하세요."
+            label={t("부서")}
+            placeholder={t("부서를 선택하세요.")}
             options={teamNames}
             value={teamName}
             onChange={setTeamName}
           />
 
-          <Field label="사진(최대 5장)">
+          <Field label={t("사진(최대 5장)")}>
             <ImageUploadBoxMultiple imageUris={photoUris} onChange={setPhotoUris} />
           </Field>
 
           <TextField
-            label="제목"
-            placeholder="제목을 입력해주세요."
+            label={t("제목")}
+            placeholder={t("제목을 입력해주세요.")}
             value={title}
             onChangeText={setTitle}
           />
 
           <TextAreaField
-            label="내용"
-            placeholder={
-              "오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요."
-            }
+            label={t("내용")}
+            placeholder={t(
+              "오늘 은혜받은 말씀을 기록해보세요!\n욕설 및 비방은 예고 없이 삭제될 수 있어요.",
+            )}
             value={content}
             onChangeText={setContent}
           />
@@ -161,14 +167,14 @@ export function DepartmentActivityWriteScreen() {
           <View className="mt-16">
             {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
             <Button
-              label={isEditing ? "저장하기" : "등록하기"}
+              label={isEditing ? t("저장하기") : t("등록하기")}
               onPress={handleSubmitPress}
               disabled={!canSubmit}
               loading={isPending}
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

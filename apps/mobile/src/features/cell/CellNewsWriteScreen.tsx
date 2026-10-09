@@ -2,7 +2,8 @@ import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, ScrollView, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Alert, ScrollView, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
@@ -13,12 +14,14 @@ import { DateField, toDateString } from "../../shared/components/composed/DateFi
 import { uploadImage } from "../../shared/api/upload";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCellNewsDetail, useCreateCellNews, useUpdateCellNews } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 const MAX_PHOTOS = 5;
 
 // 셀 소식 글쓰기·수정 겸용 (시안 게시판 글쓰기: 날짜 → 사진(최대 5장) → 제목 → 내용 → 등록).
 // newsId가 있으면 수정 모드 — 상세를 거쳐 들어오므로 캐시가 있어 첫 렌더에 프리필된다.
 export function CellNewsWriteScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "CellNewsWrite">>();
   const { cellId, newsId } = route.params;
@@ -48,7 +51,7 @@ export function CellNewsWriteScreen() {
     try {
       imageUrls = await Promise.all(photoUris.map((uri) => uploadImage(uri)));
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     } finally {
       setUploading(false);
@@ -58,27 +61,27 @@ export function CellNewsWriteScreen() {
     const mutation = isEditing ? updateNews : createNews;
     mutation.mutate(payload, {
       onSuccess: () => navigation.goBack(),
-      onError: () => Alert.alert(isEditing ? "저장 실패" : "등록 실패", "잠시 후 다시 시도해주세요."),
+      onError: () => Alert.alert(isEditing ? t("저장 실패") : t("등록 실패"), t("잠시 후 다시 시도해주세요.")),
     });
   };
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="h-full flex-1"
           contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-8"
           keyboardShouldPersistTaps="handled"
         >
           <DateField
-            label="날짜"
-            placeholder="날짜를 선택하세요."
+            label={t("날짜")}
+            placeholder={t("날짜를 선택하세요.")}
             value={selectDate}
             onChange={setSelectDate}
           />
 
           <View>
-            <Field label={`사진(최대 ${MAX_PHOTOS}장)`}>
+            <Field label={t("사진(최대 {{count}}장)", { count: MAX_PHOTOS })}>
               <ImageUploadBoxMultiple
                 imageUris={photoUris}
                 onChange={setPhotoUris}
@@ -89,8 +92,8 @@ export function CellNewsWriteScreen() {
 
           <View>
             <TextField
-              label="제목"
-              placeholder="제목을 입력해주세요."
+              label={t("제목")}
+              placeholder={t("제목을 입력해주세요.")}
               value={title}
               onChangeText={setTitle}
             />
@@ -98,8 +101,8 @@ export function CellNewsWriteScreen() {
 
           <View>
             <TextAreaField
-              label="내용"
-              placeholder="셀원들에게 전할 소식을 적어보세요!"
+              label={t("내용")}
+              placeholder={t("셀원들에게 전할 소식을 적어보세요!")}
               value={content}
               onChangeText={setContent}
             />
@@ -107,14 +110,14 @@ export function CellNewsWriteScreen() {
 
           <View className="mt-16">
             <Button
-              label={isEditing ? "저장하기" : "등록하기"}
+              label={isEditing ? t("저장하기") : t("등록하기")}
               onPress={handleSubmitPress}
               disabled={title.trim().length === 0 || content.trim().length === 0}
               loading={saving || uploading}
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

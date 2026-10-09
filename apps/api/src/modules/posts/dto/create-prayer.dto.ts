@@ -6,9 +6,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
 import type { PrayerCategoryValue } from '@onnuri/shared';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 export const PRAYER_CATEGORIES: PrayerCategoryValue[] = [
   'PERSONAL_SPIRITUAL',
@@ -34,9 +34,7 @@ export class CreatePrayerDto {
   @IsBoolean()
   isAnonymous!: boolean;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'visibleUntil은 YYYY-MM-DD 형식이어야 합니다.',
-  })
+  @IsYmdDate({ message: 'visibleUntil은 YYYY-MM-DD 형식이어야 합니다.' })
   visibleUntil!: string;
 
   @IsOptional()

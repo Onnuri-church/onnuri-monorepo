@@ -2,12 +2,10 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import type { GroupMeetingMember } from "@onnuri/shared";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Alert,
   Image,
-  Keyboard,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -16,6 +14,7 @@ import {
   useWindowDimensions,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useTranslation } from "react-i18next";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -38,8 +37,10 @@ import { InfoBox } from "../../shared/components/base/InfoBox";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { Thumbnail } from "../../shared/components/base/Thumbnail";
 import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
+import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
 import { useMe } from "../profile/useMe";
@@ -80,6 +81,8 @@ function getThumbLayout(screenWidth: number) {
 }
 
 export function GroupMeetingDetailScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [comment, setComment] = useState("");
@@ -88,19 +91,7 @@ export function GroupMeetingDetailScreen() {
   // KeyboardAvoidingView를 쓰지 않는 이유는 부서활동 상세와 같다 — SDK 57은 edge-to-edge가
   // 항상 켜져 있어 창이 줄어들지 않아서, 창 크기로 역산하는 방식은 0으로 계산된다.
   const insets = useSafeAreaInsets();
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
-  useEffect(() => {
-    const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
-    const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
-    const show = Keyboard.addListener(showEvent, (event) =>
-      setKeyboardHeight(event.endCoordinates.height),
-    );
-    const hide = Keyboard.addListener(hideEvent, () => setKeyboardHeight(0));
-    return () => {
-      show.remove();
-      hide.remove();
-    };
-  }, []);
+  const keyboardHeight = useKeyboardHeight();
   const { width } = useWindowDimensions();
   const thumb = getThumbLayout(width);
 
@@ -128,7 +119,7 @@ export function GroupMeetingDetailScreen() {
       const imageUrls = await Promise.all(result.assets.map((asset) => uploadImage(asset.uri)));
       await addPhotos.mutateAsync(imageUrls);
     } catch {
-      Alert.alert("사진 업로드 실패", "잠시 후 다시 시도해주세요.");
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setPhotoUploading(false);
     }
@@ -142,7 +133,7 @@ export function GroupMeetingDetailScreen() {
     if (decideMember.isPending) return;
     decideMember.mutate(
       { userId, status },
-      { onError: () => Alert.alert("처리 실패", "잠시 후 다시 시도해주세요.") },
+      { onError: () => Alert.alert(t("처리 실패"), t("잠시 후 다시 시도해주세요.")) },
     );
   };
 
@@ -169,7 +160,7 @@ export function GroupMeetingDetailScreen() {
     const content = comment.trim();
     if (!content || addComment.isPending) return;
     if (!me) {
-      Alert.alert("로그인이 필요해요", "댓글은 로그인 후 남길 수 있어요.");
+      Alert.alert(t("로그인이 필요해요"), t("댓글은 로그인 후 남길 수 있어요."));
       return;
     }
     addComment.mutate(content, { onSuccess: () => setComment("") });
@@ -179,7 +170,7 @@ export function GroupMeetingDetailScreen() {
   const handleJoinPress = () => {
     if (!meeting || join.isPending || cancelJoin.isPending) return;
     if (!me) {
-      Alert.alert("로그인이 필요해요", "참여 신청은 로그인 후 할 수 있어요.");
+      Alert.alert(t("로그인이 필요해요"), t("참여 신청은 로그인 후 할 수 있어요."));
       return;
     }
     const mutation = meeting.myStatus === null || meeting.myStatus === "REJECTED" ? join : cancelJoin;
@@ -187,7 +178,7 @@ export function GroupMeetingDetailScreen() {
       onError: (error) => {
         const message =
           (error as { response?: { data?: { message?: string } } }).response?.data?.message;
-        Alert.alert("요청 실패", message ?? "잠시 후 다시 시도해주세요.");
+        Alert.alert(t("요청 실패"), message ?? t("잠시 후 다시 시도해주세요."));
       },
     });
   };
@@ -211,7 +202,7 @@ export function GroupMeetingDetailScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">모임을 불러오지 못했어요</Text>
+        <Text className="text-body-medium text-text-alternative">{t("모임을 불러오지 못했어요")}</Text>
       </View>
     );
   }
@@ -248,14 +239,14 @@ export function GroupMeetingDetailScreen() {
           >
             <View className="h-2 w-2 rounded-full bg-semantic-danger" />
             <Text className="text-body-small text-text-neutral">
-              아쉽지만 이번 소그룹 참여가 어려워요
+              {t("아쉽지만 이번 소그룹 참여가 어려워요")}
             </Text>
           </View>
         )}
 
         <View className="gap-2 pt-4" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <View className="flex-row items-center gap-2">
-            <Text className="text-label-medium text-primary-normal">{meeting.statusLabel}</Text>
+            <Text className="text-label-medium text-primary-normal">{t(meeting.statusLabel)}</Text>
             <Text className="text-label-medium text-text-alternative">{meeting.periodLabel}</Text>
           </View>
           <View className="flex-row items-center justify-between gap-2">
@@ -269,7 +260,7 @@ export function GroupMeetingDetailScreen() {
                   navigation.navigate("GroupMeetingForm", { meetingId: params.id })
                 }
               >
-                <Text className="text-body-small text-text-neutral">수정</Text>
+                <Text className="text-body-small text-text-neutral">{t("수정")}</Text>
               </Pressable>
             )}
           </View>
@@ -281,15 +272,15 @@ export function GroupMeetingDetailScreen() {
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <InfoBox
             rows={[
-              { icon: "calendar", label: "모임일", value: meeting.schedule },
-              { icon: "place", label: "장소", value: meeting.place },
-              { icon: "card", label: "비용", value: meeting.cost },
+              { icon: "calendar", label: t("모임일"), value: meeting.schedule },
+              { icon: "place", label: t("장소"), value: meeting.place },
+              { icon: "card", label: t("비용"), value: meeting.cost },
             ]}
           />
         </View>
 
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
-          <Text className="text-heading-small text-text-normal">참여 멤버</Text>
+          <Text className="text-heading-small text-text-normal">{t("참여 멤버")}</Text>
           {/* 행 전체가 참여멤버 명단으로 가는 버튼이다 (시안의 참여멤버 보기 화면). */}
           <Pressable
             className="mt-3 flex-row items-center gap-3"
@@ -328,7 +319,7 @@ export function GroupMeetingDetailScreen() {
               ))}
             </View>
             <Text className="text-body-small text-text-neutral">
-              총 {meeting.participantCount}명
+              {t("총 {{count}}명", { count: meeting.participantCount })}
             </Text>
             <View className="ml-auto">
               <Icon name="expand-right" color={colors.icon.normal} />
@@ -341,7 +332,7 @@ export function GroupMeetingDetailScreen() {
         {meeting.canManage && meeting.pendingMembers.length > 0 && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
             <View className="flex-row items-center gap-1.5">
-              <Text className="text-heading-small text-text-normal">신청 대기</Text>
+              <Text className="text-heading-small text-text-normal">{t("신청 대기")}</Text>
               <Text className="text-heading-small text-primary-normal">
                 {meeting.pendingMembers.length}
               </Text>
@@ -362,14 +353,14 @@ export function GroupMeetingDetailScreen() {
                       onPress={() => handleDecide(member.id, "APPROVED")}
                       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                     >
-                      <Text className="text-body-small text-text-disable">승인</Text>
+                      <Text className="text-body-small text-text-disable">{t("승인")}</Text>
                     </Pressable>
                     <Pressable
                       className="h-8 items-center justify-center rounded-lg border border-semantic-danger px-3"
                       onPress={() => handleRejectPress(member)}
                       style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                     >
-                      <Text className="text-body-small text-semantic-danger">거절</Text>
+                      <Text className="text-body-small text-semantic-danger">{t("거절")}</Text>
                     </Pressable>
                   </View>
                 </View>
@@ -383,7 +374,7 @@ export function GroupMeetingDetailScreen() {
         {(leadPhoto || meeting.canManage || meeting.myStatus === "APPROVED") && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
             <View className="flex-row items-center justify-between">
-              <Text className="text-heading-small text-text-normal">활동 사진</Text>
+              <Text className="text-heading-small text-text-normal">{t("활동 사진")}</Text>
               {(meeting.canManage || meeting.myStatus === "APPROVED") && (
                 <Pressable
                   onPress={() => void handlePhotoAddPress()}
@@ -391,7 +382,7 @@ export function GroupMeetingDetailScreen() {
                   hitSlop={8}
                 >
                   <Text className="text-body-small text-primary-normal">
-                    {photoUploading ? "올리는 중..." : "사진 추가"}
+                    {photoUploading ? t("올리는 중...") : t("사진 추가")}
                   </Text>
                 </Pressable>
               )}
@@ -434,7 +425,7 @@ export function GroupMeetingDetailScreen() {
                   }
                 >
                   <Text className="text-label-small text-text-alternative">
-                    사진 {meeting.photoCount}장 모두 보기
+                    {t("사진 {{count}}장 모두 보기", { count: meeting.photoCount })}
                   </Text>
                   {/* 오른쪽 화살표 아이콘이 세트에 없어 back(왼쪽)을 뒤집어 쓴다 —
                       손으로 새 SVG를 그리면 획 굵기·그리드가 세트와 어긋난다. */}
@@ -451,7 +442,7 @@ export function GroupMeetingDetailScreen() {
                 style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
               >
                 <Text className="text-body-regular text-text-alternative">
-                  {photoUploading ? "올리는 중..." : "+ 첫 활동 사진을 올려보세요"}
+                  {photoUploading ? t("올리는 중...") : t("+ 첫 활동 사진을 올려보세요")}
                 </Text>
               </Pressable>
             )}
@@ -460,7 +451,7 @@ export function GroupMeetingDetailScreen() {
 
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <Text className="text-heading-small text-text-normal">
-            댓글 {meeting.comments.length}
+            {t("댓글 {{count}}", { count: meeting.comments.length })}
           </Text>
           <View className="mt-2">
             {meeting.comments.map((item) => (
@@ -484,12 +475,12 @@ export function GroupMeetingDetailScreen() {
             <Button
               label={
                 meeting.myStatus === "PENDING"
-                  ? "신청 취소하기"
+                  ? t("신청 취소하기")
                   : meeting.myStatus === "APPROVED"
-                    ? "탈퇴하기"
+                    ? t("탈퇴하기")
                     : meeting.status === "closed"
-                      ? "모집이 마감됐어요"
-                      : "참여 신청하기"
+                      ? t("모집이 마감됐어요")
+                      : t("참여 신청하기")
               }
               disabled={meeting.status === "closed" && meeting.myStatus === null}
               loading={join.isPending || cancelJoin.isPending}
@@ -509,8 +500,8 @@ export function GroupMeetingDetailScreen() {
           paddingTop: 8,
           paddingBottom: (keyboardHeight || insets.bottom) + 8,
           borderTopWidth: StyleSheet.hairlineWidth,
-          borderTopColor: colors.text.assistive,
-          backgroundColor: colors.background.normal,
+          borderTopColor: themeColors.text.assistive,
+          backgroundColor: themeColors.background.normal,
         }}
       >
         <CommentInput value={comment} onChangeText={setComment} onSubmit={handleCommentSubmit} />
@@ -518,9 +509,9 @@ export function GroupMeetingDetailScreen() {
 
       <AppDialog
         ref={rejectDialogRef}
-        title={`${pendingReject?.name ?? ""}님의 신청을 거절하시겠습니까?`}
-        confirmLabel="거절"
-        cancelLabel="취소"
+        title={t("{{name}}님의 신청을 거절하시겠습니까?", { name: pendingReject?.name ?? "" })}
+        confirmLabel={t("거절")}
+        cancelLabel={t("취소")}
         onConfirm={confirmReject}
       />
     </View>

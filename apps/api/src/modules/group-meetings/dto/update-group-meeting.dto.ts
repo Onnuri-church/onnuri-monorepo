@@ -4,8 +4,8 @@ import {
   IsIn,
   IsOptional,
   IsString,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /group-meetings/:id 요청 본문 — 보낸 필드만 반영.
 // leaderIds는 전체 교체: 빠진 기존 소그룹장은 일반 참여자(MEMBER)로 남는다.
@@ -19,11 +19,11 @@ export class UpdateGroupMeetingDto {
   description?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsYmdDate()
   recruitStart?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsYmdDate()
   recruitEnd?: string;
 
   @IsOptional()

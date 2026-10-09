@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import type { AdminDownloadPreview } from '@onnuri/shared';
 import * as ExcelJS from 'exceljs';
 
 import { pad } from '../../common/utils/date';
@@ -22,6 +23,25 @@ function toPeriodLabel(startedAt: Date, endedAt: Date | null): string {
   const part = (date: Date) =>
     `${String(date.getUTCFullYear()).slice(2)}.${pad(date.getUTCMonth() + 1)}`;
   return `${part(startedAt)}~${endedAt ? part(endedAt) : '현재'}`;
+}
+
+const PREVIEW_ROWS = 10;
+
+type DownloadUser = Awaited<ReturnType<AdminDownloadService['findUsers']>>[number];
+
+interface AttendanceRow {
+  userId: string;
+  name: string;
+  cellLabel: string;
+  roleLabel: string;
+  periodLabel: string;
+  marks: string[];
+  worshipOnly: number;
+  meetingOnly: number;
+  both: number;
+  worshipTotal: number;
+  meetingTotal: number;
+  weekTotal: number;
 }
 
 // 데이터 다운로드 (관리자 전용) — attendance-data-model.md §4의 시트 2장을 그대로 만든다.
@@ -127,7 +147,7 @@ export class AdminDownloadService {
   // 시트 1 — 유저 정보 (§4.2): 유저ID / 이름 / 생년월일(나이) / 성별 / 소속 팀.
   private addMemberSheet(
     workbook: ExcelJS.Workbook,
-    users: Awaited<ReturnType<AdminDownloadService['findUsers']>>,
+    users: DownloadUser[],
   ) {
     const sheet = workbook.addWorksheet('유저 정보');
     sheet.addRow(['유저ID', '이름', '생년월일(나이)', '성별', '소속 팀']);
@@ -156,15 +176,15 @@ export class AdminDownloadService {
   }
 
   // 시트 2 — 출석부 (§4.3): 셀 멤버십 기간별로 한 사람이 여러 줄. 날짜 칸 = "예배/셀모임",
-  // 멤버십 기간 밖은 빈칸, 셀모임 없던 주는 '-'. 끝 3칸은 예배만/셀모임만/둘다 횟수.
+  // 멤버십 기간 밖은 빈칸, 관리자가 지정한 모임 없는 날은 '-'. 끝 3칸은 예배만/셀모임만/둘다 횟수.
   private async addAttendanceSheet(
     workbook: ExcelJS.Workbook,
-    users: Awaited<ReturnType<AdminDownloadService['findUsers']>>,
+    users: DownloadUser[],
     from: Date,
     to: Date,
   ) {
     const sheet = workbook.addWorksheet('출석부');
-    const sundays = sundaysInRange(from, to);
+    const { sundays, rows } = await this.buildAttendanceRows(users, from, to);
     sheet.addRow([
       '유저ID',
       '이름',
@@ -178,78 +198,168 @@ export class AdminDownloadService {
     ]);
     sheet.getRow(1).font = { bold: true };
 
+    for (const row of rows) {
+      sheet.addRow([
+        row.userId,
+        row.name,
+        row.cellLabel,
+        row.roleLabel,
+        row.periodLabel,
+        ...row.marks,
+        row.worshipOnly,
+        row.meetingOnly,
+        row.both,
+      ]);
+    }
+  }
+
+  // 출석부 행 계산 — 엑셀 시트와 다운로드 전 미리보기가 같이 쓴다.
+  private async buildAttendanceRows(users: DownloadUser[], from: Date, to: Date) {
+    const sundays = sundaysInRange(from, to);
     const userIds = users.map((user) => user.id);
-    const cellIds = [
-      ...new Set(users.flatMap((user) => user.cellMemberships.map((m) => m.cell.id))),
-    ];
-    const services = await this.prisma.worshipService.findMany({
-      where: { date: { in: sundays } },
-      select: {
-        date: true,
-        attendances: {
-          where: { userId: { in: userIds } },
-          select: { userId: true, attended: true },
-        },
-        cellMeetings: {
-          where: { cellId: { in: cellIds } },
-          select: {
-            cellId: true,
-            attendances: {
-              where: { userId: { in: userIds } },
-              select: { userId: true, attended: true },
+    const [services, offDays] = await Promise.all([
+      this.prisma.worshipService.findMany({
+        where: { date: { in: sundays } },
+        select: {
+          date: true,
+          attendances: {
+            where: { userId: { in: userIds } },
+            select: { userId: true, attended: true },
+          },
+          cellMeetings: {
+            select: {
+              attendances: {
+                where: { userId: { in: userIds } },
+                select: { userId: true, attended: true },
+              },
             },
           },
         },
-      },
-    });
+      }),
+      this.prisma.offDay.findMany({
+        where: { date: { in: sundays } },
+        select: { date: true, kind: true },
+      }),
+    ]);
     const worshipByKey = new Map<string, boolean>();
-    const meetingExists = new Set<string>();
     const meetingByKey = new Map<string, boolean>();
     for (const service of services) {
       const week = String(service.date.getTime());
       for (const row of service.attendances) worshipByKey.set(`${week}:${row.userId}`, row.attended);
       for (const meeting of service.cellMeetings) {
-        meetingExists.add(`${week}:${meeting.cellId}`);
         for (const row of meeting.attendances) meetingByKey.set(`${week}:${row.userId}`, row.attended);
       }
     }
+    const offKindByWeek = new Map(offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]));
 
+    const rows: AttendanceRow[] = [];
     for (const user of users) {
       for (const membership of user.cellMemberships) {
         let worshipOnly = 0;
         let meetingOnly = 0;
         let both = 0;
+        let worshipTotal = 0;
+        let meetingTotal = 0;
+        let weekTotal = 0;
         const marks = sundays.map((sunday) => {
           const inMembership =
             sunday >= membership.startedAt &&
             (membership.endedAt === null || sunday <= membership.endedAt);
           if (!inMembership) return '';
           const week = String(sunday.getTime());
-          const worship = worshipByKey.get(`${week}:${user.id}`) ? 'O' : 'X';
-          const meeting = meetingExists.has(`${week}:${membership.cell.id}`)
-            ? meetingByKey.get(`${week}:${user.id}`)
-              ? 'O'
-              : 'X'
-            : '-';
+          const offKind = offKindByWeek.get(week);
+          const worship =
+            offKind === 'WORSHIP_OFF' || offKind === 'BOTH_OFF'
+              ? '-'
+              : worshipByKey.get(`${week}:${user.id}`)
+                ? 'O'
+                : 'X';
+          const meeting =
+            offKind === 'CELL_MEETING_OFF' || offKind === 'BOTH_OFF'
+              ? '-'
+              : meetingByKey.get(`${week}:${user.id}`)
+                ? 'O'
+                : 'X';
+          weekTotal += 1;
+          if (worship === 'O') worshipTotal += 1;
+          if (meeting === 'O') meetingTotal += 1;
           if (worship === 'O' && meeting === 'O') both += 1;
           else if (worship === 'O') worshipOnly += 1;
           else if (meeting === 'O') meetingOnly += 1;
           return `${worship}/${meeting}`;
         });
 
-        sheet.addRow([
-          user.id,
-          user.name,
+        rows.push({
+          userId: user.id,
+          name: user.name,
           // 삭제된 셀의 기록도 남는다 (2026-09-04 확정) — 표시만 구분
-          membership.cell.deletedAt ? `${membership.cell.name} (삭제된 셀)` : membership.cell.name,
-          membership.role === 'LEADER' ? '셀장' : membership.role === 'SUB_LEADER' ? '부셀장' : '셀원',
-          toPeriodLabel(membership.startedAt, membership.endedAt),
-          ...marks,
+          cellLabel: membership.cell.deletedAt
+            ? `${membership.cell.name} (삭제된 셀)`
+            : membership.cell.name,
+          roleLabel:
+            membership.role === 'LEADER' ? '셀장' : membership.role === 'SUB_LEADER' ? '부셀장' : '셀원',
+          periodLabel: toPeriodLabel(membership.startedAt, membership.endedAt),
+          marks,
           worshipOnly,
           meetingOnly,
           both,
-        ]);
+          worshipTotal,
+          meetingTotal,
+          weekTotal,
+        });
       }
     }
+    return { sundays, rows };
+  }
+
+  // 다운로드 전 미리보기 — 같은 조건으로 건수와 앞쪽 몇 줄만 보여준다. 연락처·생년월일은 싣지 않는다.
+  async preview(dto: FindAdminDownloadDto): Promise<AdminDownloadPreview> {
+    const { from, to } = await this.resolveRange(dto);
+    const users = await this.findUsers(dto, from, to);
+    const result: AdminDownloadPreview = {
+      rangeLabel: `${from.toISOString().slice(0, 10)} ~ ${to.toISOString().slice(0, 10)}`,
+      member: null,
+      attendance: null,
+    };
+
+    if (dto.kind !== 'attendance') {
+      result.member = {
+        total: users.length,
+        rows: users.slice(0, PREVIEW_ROWS).map((user) => ({
+          name: user.name,
+          gender: user.gender ? (user.gender === 'MALE' ? '남' : '여') : null,
+          age: user.birthDate ? this.ageOf(user.birthDate) : null,
+          team: user.teamMemberships[0]?.team.name ?? null,
+          cell: user.cellMemberships.at(-1)?.cell.name ?? null,
+        })),
+      };
+    }
+    if (dto.kind !== 'member') {
+      const { sundays, rows } = await this.buildAttendanceRows(users, from, to);
+      result.attendance = {
+        total: rows.length,
+        weekCount: sundays.length,
+        rows: rows.slice(0, PREVIEW_ROWS).map((row) => ({
+          name: row.name,
+          cell: row.cellLabel,
+          role: row.roleLabel,
+          period: row.periodLabel,
+          worshipCount: row.worshipTotal,
+          meetingCount: row.meetingTotal,
+          weekTotal: row.weekTotal,
+        })),
+      };
+    }
+    return result;
+  }
+
+  private ageOf(birth: Date): number {
+    const today = new Date();
+    let age = today.getUTCFullYear() - birth.getUTCFullYear();
+    const hadBirthday =
+      today.getUTCMonth() > birth.getUTCMonth() ||
+      (today.getUTCMonth() === birth.getUTCMonth() && today.getUTCDate() >= birth.getUTCDate());
+    if (!hadBirthday) age -= 1;
+    return age;
   }
 }

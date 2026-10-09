@@ -1,7 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
-import { FlatList, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import { FlatList, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
@@ -19,12 +20,13 @@ import { CellListRow } from "./components/CellListRow";
 // 관리자는 이 탭이 바로 셀 관리(생성·편집·삭제 목록)로 뜬다 (2026-09-11 지환님 확정) —
 // 마이페이지 관리자 메뉴의 셀 관리와 같은 목록(CellManageList)을 탭 껍데기만 바꿔 그린다.
 export function CellScreen() {
+  const { t } = useTranslation();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [query, setQuery] = useState("");
 
-  const { data: cells, isLoading } = useCells();
+  const { data: cells, isLoading, refetch, isRefetching } = useCells();
   // "나의 셀" 뱃지 기준은 /users/me의 현재 소속 — 게스트는 me가 없어 뱃지가 안 붙는다.
   const me = useMe();
 
@@ -37,7 +39,7 @@ export function CellScreen() {
       <View className="flex-1 bg-background-normal" style={{ paddingTop: insets.top }}>
         {/* 탭 화면이라 뒤로가기 없이 가운데 타이틀만 — 생성은 목록 끝의 점선 "셀 생성" 행 (2026-09-21 시안) */}
         <View className="h-14 items-center justify-center">
-          <Text className="text-heading-small text-text-normal">셀 관리</Text>
+          <Text className="text-heading-small text-text-normal">{t("셀 관리")}</Text>
         </View>
         <CellManageList
           bottomInset={TAB_BAR_HEIGHT + insets.bottom}
@@ -52,11 +54,11 @@ export function CellScreen() {
       {/* 시안 헤더는 뒤로가기 없는 가운데 타이틀 하나라, main/sub 헤더 대신 직접 그린다
           (마이페이지가 액션 바를 직접 그리는 것과 같은 방식). 타이틀 스타일은 시안 근사(heading-small). */}
       <View className="h-14 items-center justify-center">
-        <Text className="text-heading-small text-text-normal">전체 셀</Text>
+        <Text className="text-heading-small text-text-normal">{t("전체 셀")}</Text>
       </View>
 
       <View className="px-5">
-        <SearchBar value={query} onChangeText={setQuery} placeholder="셀 이름으로 검색" />
+        <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀 이름으로 검색")} />
       </View>
 
       <FlatList
@@ -68,6 +70,7 @@ export function CellScreen() {
         contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
         renderItem={({ item }) => (
           <CellListRow
             cell={item}
@@ -77,7 +80,7 @@ export function CellScreen() {
         )}
         ListEmptyComponent={
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
-            {isLoading ? "셀 목록을 불러오고 있어요." : "검색 결과가 없어요."}
+            {isLoading ? t("셀 목록을 불러오고 있어요.") : t("검색 결과가 없어요.")}
           </Text>
         }
       />
