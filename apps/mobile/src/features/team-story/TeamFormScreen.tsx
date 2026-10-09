@@ -2,7 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyboardAvoidingView, Pressable, ScrollView, View } from "react-native";
+import { Pressable, ScrollView, View } from "react-native";
 
 import { useCreateTeam, useTeamDetail, useUpdateTeam } from "./api";
 import { uploadImage } from "../../shared/api/upload";
@@ -16,6 +16,7 @@ import { SelectField } from "../../shared/components/composed/SelectField";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 팀 목록 아이콘 선택지 — Icon 에셋 중 팀 성격에 맞는 16종. 앞 7개는 현재 팀들이 쓰는 값,
 // 뒤 9개는 앞으로 생길 만한 팀 예상(홍보·교육/새가족·친교·행사·섬김·환영·안내·행정·재정).
@@ -103,7 +104,7 @@ export function TeamFormScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="h-full flex-1"
           contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-8"
@@ -189,7 +190,7 @@ export function TeamFormScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

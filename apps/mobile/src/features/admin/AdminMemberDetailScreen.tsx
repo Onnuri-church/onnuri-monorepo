@@ -62,13 +62,7 @@ export function AdminMemberDetailScreen() {
     >
       {/* 프로필 영역 */}
       <View className="items-center">
-        {member?.avatarUrl ? (
-          <Avatar imageUrl={member.avatarUrl} size={80} />
-        ) : (
-          <View className="h-20 w-20 items-center justify-center rounded-full bg-background-muted">
-            <Icon name="user" size={40} />
-          </View>
-        )}
+        <Avatar imageUrl={member?.avatarUrl} size={80} />
         <Text className="mt-2.5 text-heading-main text-text-normal">{member.name}</Text>
         {member.badge && (
           <View className="mt-1.5">

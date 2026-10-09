@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 import {FavoriteButton} from "../../../shared/components/base/FavoriteButton";
 import { Icon } from "../../../shared/components/base/Icon";
 import { colors } from "../../../shared/theme/tokens";
+import { Avatar } from "../../../shared/components/base/Avatar";
 
 
 export interface QtPost {
@@ -36,8 +37,8 @@ export function QtPostCard({ post, onPress, onFavoritePress, onMenuPress }: QtPo
   return (
     <Pressable className="p-6 rounded-3xl shadow-card" onPress={onPress}>
       <View className="flex-row items-center gap-3">
-        {/* 프로필 이미지는 아직 시안에 플레이스홀더만 있어서 회색 원으로 둔다. */}
-        <View className="h-10 w-10 rounded-full bg-text-assistive" />
+        {/* 목록 응답에 작성자 사진이 없어서 기본 프로필 이미지로 둔다. */}
+        <Avatar size={40} />
         <View className="flex-1">
           <Text className="text-label-medium text-text-normal">{post.author}</Text>
           <Text className="text-body-small text-text-alternative">{post.date}</Text>

@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useDeleteTeam, useTeams } from "./api";
@@ -23,7 +23,7 @@ export function TeamStoryScreen() {
   // 이 탭만 연결이 빠져 있었다).
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const insets = useSafeAreaInsets();
-  const { data: teams } = useTeams();
+  const { data: teams, refetch, isRefetching } = useTeams();
   const me = useMe();
   const canManage = me?.isAdmin === true;
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -50,6 +50,7 @@ export function TeamStoryScreen() {
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
         {(teams ?? []).map((team) => (
           <TeamListItem

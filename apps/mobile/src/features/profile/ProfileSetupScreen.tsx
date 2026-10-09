@@ -6,8 +6,6 @@ import { useTranslation } from "react-i18next";
 import {
   Alert,
   BackHandler,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   Text,
@@ -25,6 +23,7 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
 import { AvatarEditor } from "./components/AvatarEditor";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
 const NONE_OPTION = "없음";
@@ -175,10 +174,7 @@ export function ProfileSetupScreen() {
       {/* 배경이 흰색이라 상태바 글자·아이콘은 어둡게 */}
       <StatusBar style="dark" />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingContainer>
         {/* 시안은 402x874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 입력 목록이 스크롤되고
             등록하기는 아래에 붙는 구조로 옮겼다 (LoginScreen과 같은 방식). */}
         <ScrollView
@@ -274,7 +270,7 @@ export function ProfileSetupScreen() {
         <View className="px-5 pb-12">
           <Button label={t("등록하기")} disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

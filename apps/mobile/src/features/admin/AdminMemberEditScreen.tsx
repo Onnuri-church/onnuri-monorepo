@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import { Header } from "../../shared/components/base/Header";
 import { TextField } from "../../shared/components/base/TextField";
@@ -14,6 +14,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
 import { fetchTeams } from "../profile/api";
 import { useAdminMember, useUpdateAdminMember } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 회원 편집 (회원 상세 헤더 "편집" — 2026-09-21 시안). 시안은 카드 안 행별 편집(인라인
 // 연필·휠 피커·액션시트)인데, 앱의 기존 폼 관례(TextField/DateField/SelectField 스택)로
@@ -103,7 +104,7 @@ export function AdminMemberEditScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingContainer>
         <ScrollView contentContainerClassName="gap-2 px-5 pb-10 pt-4" keyboardShouldPersistTaps="handled">
           <TextField
             label={t("이름")}
@@ -182,7 +183,7 @@ export function AdminMemberEditScreen() {
             <Text className="text-body-regular text-text-alternative">{member.joinedAtLabel}</Text>
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

@@ -3,7 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
@@ -14,6 +14,7 @@ import { DateField, toDateString } from "../../shared/components/composed/DateFi
 import { uploadImage } from "../../shared/api/upload";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCellNewsDetail, useCreateCellNews, useUpdateCellNews } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 const MAX_PHOTOS = 5;
 
@@ -66,7 +67,7 @@ export function CellNewsWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="h-full flex-1"
           contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-8"
@@ -116,7 +117,7 @@ export function CellNewsWriteScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

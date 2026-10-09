@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, Text, View } from "react-native";
+import { FlatList, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
@@ -26,7 +26,7 @@ export function CellScreen() {
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [query, setQuery] = useState("");
 
-  const { data: cells, isLoading } = useCells();
+  const { data: cells, isLoading, refetch, isRefetching } = useCells();
   // "나의 셀" 뱃지 기준은 /users/me의 현재 소속 — 게스트는 me가 없어 뱃지가 안 붙는다.
   const me = useMe();
 
@@ -70,6 +70,7 @@ export function CellScreen() {
         contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
         renderItem={({ item }) => (
           <CellListRow
             cell={item}

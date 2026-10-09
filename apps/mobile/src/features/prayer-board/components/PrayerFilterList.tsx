@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../../shared/components/base/AppDialog";
 import { FilterBar } from "../../../shared/components/base/FilterBar";
@@ -45,7 +45,7 @@ export function PrayerFilterList({
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
     queryKey: ["prayers", name, category],
     queryFn: () => fetchList(category),
   });
@@ -78,6 +78,9 @@ export function PrayerFilterList({
       <ScrollView
         contentContainerClassName="gap-6 pb-6 pt-2.5"
         style={{ paddingHorizontal: CONTENT_PADDING }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }
       >
         {isPending && (
           <>

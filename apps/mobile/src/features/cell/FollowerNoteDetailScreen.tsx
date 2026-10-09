@@ -3,13 +3,14 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { KeyboardAvoidingView, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Header } from "../../shared/components/base/Header";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
+import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
@@ -30,6 +31,7 @@ export function FollowerNoteDetailScreen() {
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
+  const keyboardHeight = useKeyboardHeight();
   const { cellId, noteId } = route.params;
 
   // 게시판을 거쳐 들어오므로 목록 캐시에서 찾는다 (목록 응답이 상세 전체를 담는 계약).
@@ -90,7 +92,7 @@ export function FollowerNoteDetailScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <View style={{ flex: 1 }}>
         <ScrollView keyboardShouldPersistTaps="handled">
           <View className="px-5 pt-4">
             <View className="flex-row items-center gap-2">
@@ -159,7 +161,8 @@ export function FollowerNoteDetailScreen() {
         <View
           className="px-5 pt-3"
           style={{
-            paddingBottom: insets.bottom + 8,
+            // 키보드가 올라오면 그 높이만큼 띄운다 — 이때 내비 바 인셋은 더하지 않는다 (키보드가 그 자리를 덮는다).
+            paddingBottom: (keyboardHeight || insets.bottom) + 8,
             borderTopWidth: StyleSheet.hairlineWidth,
             borderTopColor: themeColors.background.assistive,
           }}
@@ -171,7 +174,7 @@ export function FollowerNoteDetailScreen() {
             placeholder={t("답변을 남겨보세요.")}
           />
         </View>
-      </KeyboardAvoidingView>
+      </View>
 
       <AppDialog
         ref={deleteDialogRef}

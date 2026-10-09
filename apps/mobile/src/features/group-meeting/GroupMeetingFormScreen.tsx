@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
@@ -20,6 +20,7 @@ import { useAdminMembers } from "../admin/api";
 import { buildMemberOptions, findOptionByLabel } from "../admin/memberOptions";
 import { useMe } from "../profile/useMe";
 import { fetchGroupMeetingDetail, useCreateGroupMeeting, useUpdateGroupMeeting } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 interface LeaderPick {
   id: string;
@@ -120,7 +121,7 @@ export function GroupMeetingFormScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingContainer>
         <ScrollView contentContainerClassName="gap-4 px-5 pb-6 pt-4" keyboardShouldPersistTaps="handled">
           {/* 배경사진 — 시안: 362x173 점선 슬롯 */}
           <View className="py-3">
@@ -216,7 +217,7 @@ export function GroupMeetingFormScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

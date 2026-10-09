@@ -3,7 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { toDateString } from "../../shared/components/composed/DateField";
@@ -14,6 +14,7 @@ import { useCreateFollowerNote, useFollowerNotes, useUpdateFollowerNote } from "
 import { formatSundayLabel, getSundaysOfMonth } from "./attendance";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
 import { getNoteQuestions } from "./followerNotes";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 팔로워 노트 작성·수정 겸용 (시안: 날짜 선택 + 3문항 박스 + 등록하기).
 // 노트는 셀모임 날짜(일요일) 단위 주간 보고 — 시안 CSS의 "대상셀원" 라벨은 옛 레이어명이고
@@ -76,7 +77,7 @@ export function FollowerNoteWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="h-full flex-1"
           contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-4"
@@ -131,7 +132,7 @@ export function FollowerNoteWriteScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

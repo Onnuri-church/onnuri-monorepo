@@ -1,4 +1,4 @@
-import {Alert, KeyboardAvoidingView, ScrollView, View} from "react-native";
+import {Alert, ScrollView, View} from "react-native";
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useNavigation, useRoute, type RouteProp} from "@react-navigation/native";
@@ -14,6 +14,7 @@ import {ImageUploadBoxMultiple} from "../../shared/components/base/ImageUploadBo
 import {uploadImage} from "../../shared/api/upload";
 import type {RootStackParamList} from "../../shared/types/navigation";
 import {createQtShare, fetchQtDetails, updateQtShare} from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 export function QtBoardWriteScreen () {
     const {t} = useTranslation()
@@ -95,7 +96,7 @@ export function QtBoardWriteScreen () {
             {/* 키보드 높이만큼 아래 패딩을 넣어 입력이 가려지지 않게 한다. Android도 필요하다 —
                 SDK 57은 edge-to-edge가 항상 켜져 있어 OS가 화면을 줄여주지 않는다(adjustResize 무력화).
                 (ProfileSetupScreen은 iOS만 처리하고 있어 같은 문제가 있을 것.) */}
-            <KeyboardAvoidingView style={{flex: 1}} behavior="padding">
+            <KeyboardAvoidingContainer>
                 <ScrollView
                     className="flex-1 h-full"
                     contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
@@ -127,7 +128,7 @@ export function QtBoardWriteScreen () {
                         <Button label={t("등록하기")} onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending}/>
                     </View>
                 </ScrollView>
-            </KeyboardAvoidingView>
+            </KeyboardAvoidingContainer>
         </View>
     )
 }

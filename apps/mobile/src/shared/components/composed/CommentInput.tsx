@@ -1,14 +1,16 @@
 import { useTranslation } from "react-i18next";
-import { Image, Pressable, TextInput, View } from "react-native";
+import { Alert, Pressable, TextInput, View } from "react-native";
 
+import { Avatar } from "../base/Avatar";
 import { Icon } from "../base/Icon";
+import { useAuthStore } from "../../store/useAuthStore";
 import { useThemeColors } from "../../theme/useThemeColors";
 
 interface CommentInputProps {
   value: string;
   onChangeText: (text: string) => void;
   onSubmit: () => void;
-  /** 로그인한 사용자 프로필. 없으면 회색 원으로 자리만 잡는다. */
+  /** 로그인한 사용자 프로필 사진. 없으면(게스트 포함) 기본 프로필 이미지(OY 심볼)가 나온다. */
   avatarUrl?: string | null;
   placeholder?: string;
 }
@@ -27,27 +29,43 @@ export function CommentInput({
   const { t } = useTranslation();
   const themeColors = useThemeColors();
   const canSubmit = value.trim().length > 0;
+  // 사진을 안 넘긴 화면도 로그인한 내 사진이 나오게 세션 값을 기본으로 쓴다.
+  const myAvatarUrl = useAuthStore((state) =>
+    state.session.status === "authenticated" ? state.session.user.avatarUrl : null,
+  );
+  // 게스트는 댓글을 못 쓴다 — 입력창을 누르면 키보드 대신 로그인 안내를 띄운다.
+  const isGuest = useAuthStore((state) => state.session.status !== "authenticated");
+  const handleGuestPress = () =>
+    Alert.alert(t("로그인이 필요해요"), t("댓글은 로그인 후 작성할 수 있어요."));
 
   return (
     <View className="flex-row items-center gap-2">
-      {avatarUrl ? (
-        <Image source={{ uri: avatarUrl }} className="h-9 w-9 rounded-full" />
+      <Avatar imageUrl={avatarUrl === undefined ? myAvatarUrl : avatarUrl} size={36} />
+      {isGuest ? (
+        <Pressable className="flex-1" onPress={handleGuestPress}>
+          <TextInput
+            className="h-9 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
+            editable={false}
+            pointerEvents="none"
+            placeholder={placeholder ?? t("댓글을 입력하세요")}
+            placeholderTextColor={themeColors.text.alternative}
+          />
+        </Pressable>
       ) : (
-        <View className="h-9 w-9 rounded-full bg-text-assistive" />
+        <TextInput
+          className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder ?? t("댓글을 입력하세요")}
+          placeholderTextColor={themeColors.text.alternative}
+          onSubmitEditing={canSubmit ? onSubmit : undefined}
+          returnKeyType="send"
+        />
       )}
-      <TextInput
-        className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder ?? t("댓글을 입력하세요")}
-        placeholderTextColor={themeColors.text.alternative}
-        onSubmitEditing={canSubmit ? onSubmit : undefined}
-        returnKeyType="send"
-      />
       {/* 눌림은 active: 변형 — className과 함수형 style을 같이 주면 함수 style이 무시된다. */}
       <Pressable
-        onPress={onSubmit}
-        disabled={!canSubmit}
+        onPress={isGuest ? handleGuestPress : onSubmit}
+        disabled={!isGuest && !canSubmit}
         className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
       >
         <Icon

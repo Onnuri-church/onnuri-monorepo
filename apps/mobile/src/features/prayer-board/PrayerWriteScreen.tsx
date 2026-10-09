@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
@@ -24,6 +24,7 @@ import {
   fetchPrayerDetail,
   updatePrayer,
 } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 카테고리 선택지는 목록 필터와 같은 소스를 쓰되 "전체"만 뺀다 — 글에 "전체"를 달 수는 없다.
 const WRITE_CATEGORIES = PRAYER_CATEGORIES.filter((category) => category.value !== "all").map(
@@ -131,7 +132,7 @@ export function PrayerWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="h-full flex-1"
           contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-8"
@@ -211,7 +212,7 @@ export function PrayerWriteScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

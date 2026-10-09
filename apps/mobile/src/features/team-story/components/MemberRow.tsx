@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
+import { Avatar } from "../../../shared/components/base/Avatar";
 
 interface MemberRowProps {
   name: string;
@@ -21,11 +22,7 @@ export function MemberRow({ name, roleLabel, avatarUrl, onDeletePress }: MemberR
   return (
     <View className="flex-row items-center justify-between border-b border-text-assistive py-2.5">
       <View className="flex-row items-center gap-4">
-        {avatarUrl ? (
-          <Image source={{ uri: avatarUrl }} className="h-10 w-10 rounded-full" />
-        ) : (
-          <View className="h-10 w-10 rounded-full bg-text-assistive" />
-        )}
+        <Avatar imageUrl={avatarUrl} size={40} />
         <Text className="text-body-main text-text-normal">{name}</Text>
       </View>
       {onDeletePress ? (

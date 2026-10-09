@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
@@ -15,6 +15,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
 import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
 import { buildMemberOptions, findOptionByLabel, findOptionById } from "./memberOptions";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
 // cellId가 있으면 편집 모드로 기존 값을 채워서 연다.
@@ -88,7 +89,7 @@ export function AdminCellFormScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingContainer>
         <ScrollView
           contentContainerClassName="gap-4 px-5 pb-6 pt-4"
           keyboardShouldPersistTaps="handled"
@@ -178,7 +179,7 @@ export function AdminCellFormScreen() {
             onPress={handleSubmitPress}
           />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

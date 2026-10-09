@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, ScrollView, View } from "react-native";
+import { Alert, ScrollView, View } from "react-native";
 
 import { createTeamActivity, fetchTeamActivities, fetchTeamActivity, updateTeamActivity } from "./api";
 import { writableTeamNames } from "./permissions";
@@ -18,6 +18,7 @@ import { SelectField } from "../../shared/components/composed/SelectField";
 import { uploadImage } from "../../shared/api/upload";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 작성·수정 겸용 — postId가 있으면 수정 모드. 상세를 거쳐 들어오므로 캐시가 있어
 // 첫 렌더에 프리필된다 (CellNewsWriteScreen과 같은 방식).
@@ -122,7 +123,7 @@ export function DepartmentActivityWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+      <KeyboardAvoidingContainer>
         <ScrollView
           className="flex-1 h-full"
           contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
@@ -173,7 +174,7 @@ export function DepartmentActivityWriteScreen() {
             />
           </View>
         </ScrollView>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next";
 import {
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -57,15 +58,15 @@ export function HomeScreen() {
   const [prayerPage, setPrayerPage] = useState(0);
 
   // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (사진 위에 시리즈·구절·제목이 올라가는 말씀 배너).
-  const { data: banner } = useHomeBanner();
+  const { data: banner, refetch: refetchBanner } = useHomeBanner();
 
   // 큐티나눔 최신 3건·부서활동 최신 5건 — 홈 전용 API 한 번으로 받는다.
-  const { data: homePosts } = useHomePosts();
+  const { data: homePosts, refetch: refetchHomePosts } = useHomePosts();
 
   // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
   // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
   // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
-  const { data: prayers } = useQuery({
+  const { data: prayers, refetch: refetchPrayers } = useQuery({
     queryKey: ["prayers", "home"],
     queryFn: async () => {
       const { items } = await fetchPrayers("all");
@@ -74,6 +75,15 @@ export function HomeScreen() {
         .map((prayer) => ({ ...prayer, createdDate: undefined, ddayLabel: undefined }));
     },
   });
+
+  // 당겨서 새로고침 — 세 요청을 같이 다시 받는다. isRefetching은 백그라운드 갱신에도 켜져서
+  // 스피너가 멋대로 돌므로 쓰지 않고, 당긴 동안만 직접 true로 둔다.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.allSettled([refetchBanner(), refetchHomePosts(), refetchPrayers()]);
+    setRefreshing(false);
+  };
 
   // 캐러셀 한 장의 폭. pagingEnabled가 스크롤뷰 폭 단위로 멈추므로 카드도 같은 폭이어야 한다.
   const prayerPageWidth = width - SCREEN_PADDING * 2;
@@ -96,6 +106,7 @@ export function HomeScreen() {
       contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
       onScroll={handleHideTabBarScroll}
       scrollEventThrottle={16}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
     >
       <View className="px-5 pt-8">
         <WeeklySermonBanner

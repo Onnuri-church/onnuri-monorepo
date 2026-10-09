@@ -55,13 +55,7 @@ export function AdminMemberListScreen() {
               onPress={() => handleMemberPress(member.id)}
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              {member.avatarUrl ? (
-                <Avatar imageUrl={member.avatarUrl} size={40} />
-              ) : (
-                <View className="h-10 w-10 items-center justify-center rounded-full bg-background-muted">
-                  <Icon name="user" size={20} />
-                </View>
-              )}
+              <Avatar imageUrl={member.avatarUrl} size={40} />
               <View className="flex-1">
                 <View className="min-w-0 flex-row items-center gap-1.5">
                   <Text className="shrink text-body-main text-text-normal" numberOfLines={1}>

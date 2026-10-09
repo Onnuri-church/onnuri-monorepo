@@ -14,6 +14,7 @@ import {toTimeAgo} from "../../shared/utils/date";
 import {deleteQtShare, fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 // 본문사진 캐러셀의 좌우 여백. 아래 ScrollView의 mx-5(한 칸 4px × 5)와 같은 값이어야 한다 —
 // 사진 폭을 여기서 빼서 계산하므로 한쪽만 바꾸면 페이징이 어긋난다.
@@ -139,7 +140,7 @@ export function QtBoardDetailScreen() {
                     <View className="flex-1 items-start justify-end pb-8 px-5">
                         <View className="flex flex-row items-center justify-between w-full">
                             <View className="flex flex-row items-center justify-start gap-2">
-                                <View className="w-10 h-10 bg-background-assistive rounded-full"></View>
+                                <Avatar imageUrl={data.authorAvatarUrl} size={40} />
                                 <View>
                                     <Text className="text-heading-small text-text-onImage">{data.authorName}</Text>
                                     <Text className="text-body-small text-text-onImage">

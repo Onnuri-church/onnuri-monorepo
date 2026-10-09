@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { uploadImage } from "../../shared/api/upload";
@@ -13,6 +13,7 @@ import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateNotice } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 공지 등록 (관리자 전용, 자체 디자인 — 시안 없음). 내용이나 사진 중 하나는 있어야 한다
 // (포스터 한 장짜리 공지도 되고, 글만 있는 공지도 된다 — 서버도 같은 규칙).
@@ -56,7 +57,7 @@ export function NoticeWriteScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+      <KeyboardAvoidingContainer>
         <ScrollView
           contentContainerClassName="gap-6 px-5 pb-6 pt-6"
           keyboardShouldPersistTaps="handled"
@@ -102,7 +103,7 @@ export function NoticeWriteScreen() {
             onPress={handleSubmitPress}
           />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

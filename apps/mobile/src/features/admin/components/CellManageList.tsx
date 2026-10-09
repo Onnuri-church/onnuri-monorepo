@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
@@ -29,7 +29,7 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
   // 셀 캐시가 무효화돼 목록에서 빠진다.
-  const { data } = useCells();
+  const { data, refetch, isRefetching } = useCells();
   const [query, setQuery] = useState("");
   const cells = (data ?? []).filter((cell) =>
     query.trim() ? cell.name.includes(query.trim()) : true,
@@ -57,6 +57,7 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
       scrollEventThrottle={16}
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >
       <View className="px-5 pb-2">
         <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀 이름으로 검색")} />

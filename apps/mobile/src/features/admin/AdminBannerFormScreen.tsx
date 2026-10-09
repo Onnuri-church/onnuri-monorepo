@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, KeyboardAvoidingView, Platform, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
@@ -12,6 +12,7 @@ import { TextField } from "../../shared/components/base/TextField";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateHomeBanner, useHomeBanners, useUpdateHomeBanner } from "./api";
 import { RadioOption } from "./components/RadioOption";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 홈 배너 등록·수정 (자체 디자인 — 시안 없음). 말씀 제목·성경 구절을 입력하고 배경사진을 고르면
 // 홈 배너에 "N월 설교 시리즈 / 구절 / 제목"이 사진 위에 올라간다. "9월 설교 시리즈" 라벨은
@@ -88,10 +89,7 @@ export function AdminBannerFormScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
+      <KeyboardAvoidingContainer>
         <ScrollView
           contentContainerClassName="gap-6 px-5 pb-6 pt-6"
           keyboardShouldPersistTaps="handled"
@@ -145,7 +143,7 @@ export function AdminBannerFormScreen() {
             onPress={handleSubmitPress}
           />
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardAvoidingContainer>
     </View>
   );
 }

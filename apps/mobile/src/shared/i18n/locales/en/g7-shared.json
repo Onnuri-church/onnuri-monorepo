@@ -68,5 +68,6 @@
   "방금 전": "Just now",
   "{{count}}분 전": "{{count}} min ago",
   "{{count}}시간 전": "{{count}} hr ago",
-  "{{count}}일 전": "{{count}} days ago"
+  "{{count}}일 전": "{{count}} days ago",
+  "댓글은 로그인 후 작성할 수 있어요.": "You can comment after logging in."
 }

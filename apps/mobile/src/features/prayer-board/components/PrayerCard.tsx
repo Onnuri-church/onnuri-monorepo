@@ -1,4 +1,5 @@
 import { useTranslation } from "react-i18next";
+import { useRef } from "react";
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -36,6 +37,11 @@ interface PrayerCardProps {
   deleteOnly?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
+  /**
+   * 카드 우상단 ⋮ — 안 주면 그리지 않는다 (북마크와 같은 자리라 둘을 같이 쓰지 않는다). 관리자 게시판이
+   * 삭제 줄 대신 쓴다. 메뉴를 붙일 위치(⋮ 버튼의 화면 좌표)를 함께 넘긴다.
+   */
+  onMenuPress?: (anchor: { x: number; y: number; width: number; height: number }) => void;
 }
 
 // 기도제목 카드. 번호·D-day·북마크 같은 기도제목 도메인을 알아서 base가 아니라 feature에 둔다
@@ -61,9 +67,16 @@ export function PrayerCard({
   deleteOnly,
   onEdit,
   onDelete,
+  onMenuPress,
 }: PrayerCardProps) {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const menuButtonRef = useRef<View>(null);
+  const handleMenuPress = () => {
+    menuButtonRef.current?.measureInWindow((x, y, width, height) =>
+      onMenuPress?.({ x, y, width, height }),
+    );
+  };
   return (
     <Pressable
       className="rounded-5 border border-background-muted bg-background-normal p-4 active:opacity-80"
@@ -120,6 +133,17 @@ export function PrayerCard({
             size={24}
             color={prayer.bookmarked ? themeColors.primary.normal : themeColors.text.alternative}
           />
+        </Pressable>
+      )}
+
+      {onMenuPress && (
+        <Pressable
+          ref={menuButtonRef}
+          className="absolute right-3.25 top-2.25 active:opacity-60"
+          onPress={handleMenuPress}
+          hitSlop={8}
+        >
+          <Icon name="more" size={24} color={themeColors.icon.normal} />
         </Pressable>
       )}
 

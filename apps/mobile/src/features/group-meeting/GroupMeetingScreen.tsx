@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Image, Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { fetchGroupMeetings, useDeleteGroupMeeting } from "./api";
@@ -18,6 +18,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 type Filter = "all" | GroupMeetingStatus;
 
@@ -55,24 +56,9 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 
   return (
     <View className="flex-row">
-      {slots.map((url, index) =>
-        url ? (
-          <Image
-            key={url}
-            source={{ uri: url }}
-            className={index === 0 ? "h-6 w-6 rounded-full" : "-ml-2 h-6 w-6 rounded-full"}
-          />
-        ) : (
-          <View
-            key={index}
-            className={
-              index === 0
-                ? "h-6 w-6 rounded-full bg-text-assistive"
-                : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
-            }
-          />
-        ),
-      )}
+      {slots.map((url, index) => (
+        <Avatar key={url ?? index} imageUrl={url} size={24} className={index === 0 ? "" : "-ml-2"} />
+      ))}
     </View>
   );
 }

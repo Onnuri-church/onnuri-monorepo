@@ -2,7 +2,7 @@ import type { MyGroupMeeting } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { Image, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { fetchMyGroupMeetings } from "./api";
@@ -12,6 +12,7 @@ import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { Avatar } from "../../shared/components/base/Avatar";
 
 // 카드 폭·마감일 표기·참여자 아바타는 게시판(GroupMeetingScreen)과 같은 규칙이다.
 // 그쪽 지역 헬퍼를 끌어오면 화면 파일을 화면이 import하는 모양이 돼서 작게 복제했다 —
@@ -37,24 +38,9 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 
   return (
     <View className="flex-row">
-      {slots.map((url, index) =>
-        url ? (
-          <Image
-            key={url}
-            source={{ uri: url }}
-            className={index === 0 ? "h-6 w-6 rounded-full" : "-ml-2 h-6 w-6 rounded-full"}
-          />
-        ) : (
-          <View
-            key={index}
-            className={
-              index === 0
-                ? "h-6 w-6 rounded-full bg-text-assistive"
-                : "-ml-2 h-6 w-6 rounded-full bg-text-assistive"
-            }
-          />
-        ),
-      )}
+      {slots.map((url, index) => (
+        <Avatar key={url ?? index} imageUrl={url} size={24} className={index === 0 ? "" : "-ml-2"} />
+      ))}
     </View>
   );
 }
