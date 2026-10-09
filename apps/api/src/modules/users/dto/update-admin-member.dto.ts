@@ -1,4 +1,5 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /users/:id 요청 본문 (관리자 전용) — 회원 편집 시안의 필드들. 보낸 것만 반영한다.
 // cellId/teamId는 "생략 = 유지, null = 소속 없음"으로 구분한다 (UpdateCellDto와 같은 규칙).
@@ -9,9 +10,7 @@ export class UpdateAdminMemberDto {
   name?: string;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'birthDate는 YYYY-MM-DD 형식이어야 합니다.',
-  })
+  @IsYmdDate({ message: 'birthDate는 YYYY-MM-DD 형식이어야 합니다.' })
   birthDate?: string;
 
   @IsOptional()

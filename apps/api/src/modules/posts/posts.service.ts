@@ -113,6 +113,7 @@ function toPostComment(
     author: { name: string; avatarUrl: string | null };
   },
   userId?: string,
+  isAdmin = false,
 ): PostComment {
   return {
     id: comment.id,
@@ -121,6 +122,8 @@ function toPostComment(
     createdAt: comment.createdAt.toISOString(),
     content: comment.content,
     isMine: comment.authorId === userId,
+    // 관리자는 남의 댓글도 지울 수 있다 (removeComment와 같은 규칙).
+    canDelete: comment.authorId === userId || isAdmin,
     replies: [],
   };
 }
@@ -491,6 +494,8 @@ export class PostsService {
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
 
+    const isAdmin = userId ? await this.isAdminUser(userId) : false;
+
     return {
       id: post.id,
       // 소식은 항상 셀에 속한다 (작성 시 cellId 필수) — 스키마상 nullable이라 방어만 해둔다.
@@ -508,7 +513,9 @@ export class PostsService {
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
       // 셀 소식은 대댓글을 쓰지 않아 replies가 항상 빈 배열이다 (부서활동만 1단계로 쓴다).
-      comments: post.comments.map((comment) => toPostComment(comment, userId)),
+      comments: post.comments.map((comment) =>
+        toPostComment(comment, userId, isAdmin),
+      ),
     };
   }
 
@@ -650,6 +657,8 @@ export class PostsService {
       (post.authorId === userId ||
         (await this.isTeamManager(userId, post.teamId)));
 
+    const isAdmin = userId ? await this.isAdminUser(userId) : false;
+
     return {
       id: post.id,
       teamId: post.teamId ?? '',
@@ -669,8 +678,10 @@ export class PostsService {
       isMine: post.authorId === userId,
       canManage,
       comments: post.comments.map((comment) => ({
-        ...toPostComment(comment, userId),
-        replies: comment.replies.map((reply) => toPostComment(reply, userId)),
+        ...toPostComment(comment, userId, isAdmin),
+        replies: comment.replies.map((reply) =>
+          toPostComment(reply, userId, isAdmin),
+        ),
       })),
     };
   }
@@ -983,7 +994,8 @@ export class PostsService {
       select: { authorId: true },
     });
     if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
-    if (comment.authorId !== userId) {
+    // 관리자는 운영을 위해 남의 댓글도 지울 수 있다.
+    if (comment.authorId !== userId && !(await this.isAdminUser(userId))) {
       throw new ForbiddenException('내가 쓴 댓글만 삭제할 수 있습니다.');
     }
     await this.prisma.comment.update({

@@ -6,10 +6,10 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
 
 import { QT_SHARE_MAX_IMAGES } from './create-qt-share.dto';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /posts/qt-shares/:id 요청 본문 — 계약은 @onnuri/shared의 UpdateQtShareRequest.
 // 보낸 항목만 바꾼다. @nestjs/mapped-types의 PartialType을 쓰려면 의존성이 하나 늘어서,
@@ -17,7 +17,7 @@ import { QT_SHARE_MAX_IMAGES } from './create-qt-share.dto';
 export class UpdateQtShareDto {
   @IsOptional()
   @IsISO8601({ strict: true })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsYmdDate()
   eventDate?: string;
 
   @IsOptional()

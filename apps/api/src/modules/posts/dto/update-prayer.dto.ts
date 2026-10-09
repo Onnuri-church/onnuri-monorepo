@@ -6,11 +6,11 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
 import type { PrayerCategoryValue } from '@onnuri/shared';
 
 import { PRAYER_CATEGORIES } from './create-prayer.dto';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /posts/prayers/:id 요청 본문 — 보낸 필드만 반영, imageUrls는 전체 교체.
 export class UpdatePrayerDto {
@@ -33,9 +33,7 @@ export class UpdatePrayerDto {
   isAnonymous?: boolean;
 
   @IsOptional()
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'visibleUntil은 YYYY-MM-DD 형식이어야 합니다.',
-  })
+  @IsYmdDate({ message: 'visibleUntil은 YYYY-MM-DD 형식이어야 합니다.' })
   visibleUntil?: string;
 
   @IsOptional()

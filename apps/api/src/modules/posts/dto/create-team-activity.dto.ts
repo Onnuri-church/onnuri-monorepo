@@ -4,8 +4,8 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  Matches,
-} from 'class-validator';
+  } from 'class-validator';
+import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /posts/team-activities 요청 본문 — 작성 시안(날짜/부서/사진 최대 5장/제목/내용).
 // 계약은 @onnuri/shared의 CreateTeamActivityRequest.
@@ -22,9 +22,7 @@ export class CreateTeamActivityDto {
   @IsNotEmpty({ message: '내용을 입력해주세요.' })
   content!: string;
 
-  @Matches(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'eventDate는 YYYY-MM-DD 형식이어야 합니다.',
-  })
+  @IsYmdDate({ message: 'eventDate는 YYYY-MM-DD 형식이어야 합니다.' })
   eventDate!: string;
 
   // POST /uploads가 돌려준 주소들 — 사진 파일이 아니라 주소만 받는다.
