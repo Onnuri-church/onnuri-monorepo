@@ -13,6 +13,7 @@ import { uploadImage } from "../../shared/api/upload";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
+import { CELL_COVER_ASPECT } from "../cell/cellDetail";
 import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
 import { buildMemberOptions, findOptionByLabel, findOptionById } from "./memberOptions";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
@@ -56,7 +57,13 @@ export function AdminCellFormScreen() {
 
   const handleCoverUploadPress = async () => {
     // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+    // 셀 페이지 상단 배경사진 비율에 맞춰 자른다 (프로필 사진 자르기와 같은 방식).
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: CELL_COVER_ASPECT,
+      quality: 0.8,
+    });
     if (result.canceled) return;
     setCoverUri(result.assets[0].uri);
   };
@@ -97,7 +104,10 @@ export function AdminCellFormScreen() {
           {/* 배경사진 — 시안: 362x173 점선 슬롯, 탭하면 업로드 */}
           <View className="py-3">
             <Text className="text-body-main text-text-normal">{t("배경사진")}</Text>
-            <View className="mt-4 h-43">
+            <View
+              className="mt-4"
+              style={{ aspectRatio: CELL_COVER_ASPECT[0] / CELL_COVER_ASPECT[1] }}
+            >
               <ImageSlot
                 imageUri={coverUri}
                 outline

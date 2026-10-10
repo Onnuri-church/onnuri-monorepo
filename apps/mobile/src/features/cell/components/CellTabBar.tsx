@@ -17,7 +17,7 @@ interface CellTabBarProps {
 
 // 개별 셀 페이지 상단 탭 (시안: 높이 48, 좌우 25, 탭 간격 35 — 24/36으로 근사).
 // 활성 탭은 검정 + 2px 밑줄, 관리 탭이 활성일 땐 warning 색(시안 확정)으로 바뀐다.
-// 커버 사진 아래에 붙고 스크롤 시 상단에 고정된다(stickyHeaderIndices) — 배경을 직접 칠한다.
+// 커버 사진 아래에 붙고, 커버와 함께 고정된 채 탭 내용만 스크롤된다 — 배경을 직접 칠한다.
 export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) {
   const { t } = useTranslation();
   const labels: Record<CellTabKey, string> = {

@@ -5,6 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
@@ -22,7 +23,7 @@ import {
   useCellNews,
   useRemoveGalleryPhotos,
 } from "./api";
-import { canManageCell, canPostToCell } from "./cellDetail";
+import { CELL_COVER_ASPECT, canManageCell, canPostToCell } from "./cellDetail";
 import type { CellMember } from "./cellDetail";
 import { CellMemberItem } from "./components/CellMemberItem";
 import { CellNewsRow } from "./components/CellNewsRow";
@@ -37,14 +38,15 @@ interface GalleryMonthState {
   tiles: GalleryTile[];
 }
 
-// 개별 셀 페이지. 커버 사진 아래 소식/갤러리/구성원/관리 4탭이 붙고, 탭 바는 스크롤 시
-// 상단에 고정된다(stickyHeaderIndices). 어떤 셀이든 cellId만 받아 그린다 — 셀은 관리자가
+// 개별 셀 페이지. 커버 사진 아래 소식/갤러리/구성원/관리 4탭이 붙고, 커버와 탭 바는 고정되고 탭 내용만 스크롤된다.
+// 어떤 셀이든 cellId만 받아 그린다 — 셀은 관리자가
 // 만들고 종료하는 유동 데이터라 화면이 특정 셀을 몰라야 한다.
 // 시안의 갤러리-관리/선택은 별도 화면이 아니라 갤러리 탭의 편집·선택 모드로 구현했다
 // (탭 구조를 유지한 채 같은 동작이 나온다 — 화면 분리가 필요해지면 그때 라우트로 뺀다).
 export function CellDetailScreen() {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
   const route = useRoute<RouteProp<RootStackParamList, "CellDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId } = route.params;
@@ -128,8 +130,10 @@ export function CellDetailScreen() {
 
   // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (PhotoUploadBox와 동일).
   const handleAddPhotoPress = async () => {
+    // allowsEditing: 고른 사진에서 올릴 부분을 잘라낸다 (비율은 자유).
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      allowsEditing: true,
       quality: 0.8,
     });
     if (result.canceled || addGalleryPhoto.isPending) return;
@@ -163,20 +167,27 @@ export function CellDetailScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView stickyHeaderIndices={[1]}>
-        {/* 셀 커버(단체) 사진 (시안 402x402) — 아직 없으면 회색 자리 */}
-        {cellData?.coverImageUrl ? (
-          <Image
-            source={{ uri: cellData.coverImageUrl }}
-            className="aspect-square w-full"
-            resizeMode="cover"
-          />
-        ) : (
-          <View className="aspect-square w-full bg-background-muted" />
-        )}
+      {/* 배경사진과 탭 바는 고정하고 탭 안의 내용만 스크롤한다. */}
+      {cellData?.coverImageUrl ? (
+        <Image
+          source={{ uri: cellData.coverImageUrl }}
+          style={{ aspectRatio: CELL_COVER_ASPECT[0] / CELL_COVER_ASPECT[1], width: "100%" }}
+          resizeMode="cover"
+        />
+      ) : (
+        <View
+          className="w-full bg-background-muted"
+          style={{ aspectRatio: CELL_COVER_ASPECT[0] / CELL_COVER_ASPECT[1] }}
+        />
+      )}
 
-        <CellTabBar active={activeTab} onChange={handleTabChange} manageLocked={!canManage} />
+      <CellTabBar active={activeTab} onChange={handleTabChange} manageLocked={!canManage} />
 
+      {/* 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 카드가 가리지 않게. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: insets.bottom + 40 }}
+      >
         {activeTab === "news" && (
           <View className="px-5 pb-10">
             {(news ?? []).map((item) => (

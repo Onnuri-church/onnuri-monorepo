@@ -21,6 +21,11 @@ export function canPostToCell(cellId: string, me: MeResponse | undefined): boole
 }
 
 // 관리 탭·갤러리 삭제(편집) 권한: 그 셀의 셀장·부셀장과 관리자만.
+// 셀 페이지 상단 배경사진의 가로:세로 비율. 정사각형(1:1)이면 탭 바가 화면 아래쪽에 걸려 탭 내용이
+// 좁게 보여서 낮췄다. 셀 생성·편집의 배경사진 자르기도 같은 값을 써서, 올린 사진이 페이지에서
+// 잘리지 않고 그대로 보이게 한다.
+export const CELL_COVER_ASPECT: [number, number] = [3, 2];
+
 export function canManageCell(cellId: string, me: MeResponse | undefined): boolean {
   const role = myRoleIn(cellId, me);
   return me?.isAdmin === true || role === "LEADER" || role === "SUB_LEADER";
