@@ -135,6 +135,7 @@ model User {
   refreshTokens          RefreshToken[]
   pushTokens             PushToken[]
   teamMemberships        TeamMembership[]
+  teamMessages           TeamMessage[]
   cellMemberships        CellMembership[]
   worshipAttendances     WorshipAttendance[]     @relation("WorshipAttendee")
   recordedWorshipChecks  WorshipAttendance[]     @relation("WorshipRecorder")
@@ -196,6 +197,21 @@ model Team {
   memberships TeamMembership[]
   posts       Post[]
   images      Image[]
+  messages    TeamMessage[]
+}
+
+// 팀 단톡 — 그 팀 팀원·관리자만 읽고 쓴다. 실시간 푸시 없이 앱이 주기적으로 받아온다.
+model TeamMessage {
+  id        String    @id @default(cuid())
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId    String
+  author    User      @relation(fields: [authorId], references: [id])
+  authorId  String
+  content   String
+  deletedAt DateTime? // 작성자·관리자 삭제 soft delete
+  createdAt DateTime  @default(now())
+
+  @@index([teamId, createdAt])
 }
 
 model TeamMembership {

@@ -84,3 +84,22 @@ export interface TeamMemberCandidate {
 export interface AddTeamMembersRequest {
   userIds: string[];
 }
+
+/** GET /teams/:id/messages 응답 항목 — 팀 단톡 메시지 한 건 */
+export interface TeamMessageInfo {
+  id: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  content: string;
+  /** ISO datetime */
+  createdAt: string;
+  /** 내가 쓴 메시지인지 — 말풍선 위치·삭제 노출 기준 */
+  isMine: boolean;
+  /** 삭제 버튼 노출 기준 — 내 메시지이거나 관리자 */
+  canDelete: boolean;
+}
+
+/** POST /teams/:id/messages 요청 본문 */
+export interface CreateTeamMessageRequest {
+  content: string;
+}

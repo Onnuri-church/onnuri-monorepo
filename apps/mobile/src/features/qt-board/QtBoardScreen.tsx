@@ -15,7 +15,7 @@ import {
 import { useAuthStore } from "../../shared/store/useAuthStore";
 
 import { deleteQtShare, fetchQtShares } from "./api";
-import { PickerPill } from "./components/PickerPill";
+import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { QtPostCard } from "./components/QtPostCard";
 import { useToggleQtLike } from "./useToggleQtLike";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";

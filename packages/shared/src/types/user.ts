@@ -36,6 +36,8 @@ export interface User {
 export interface MeResponse extends User {
   cell: { id: string; name: string; role: CellRole } | null;
   team: { id: string; name: string; role: TeamRole } | null;
+  /** 진행 중인 팀 소속 전부 (여러 팀 소속 가능). `team`은 이 중 첫 번째다 */
+  teams: { id: string; name: string; role: TeamRole }[];
 }
 
 /** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지와 전체 셀 목록이 같이 쓴다 */
@@ -170,5 +172,6 @@ export interface UpdateMyProfileRequest {
   /** 하이픈 없는 숫자만 (PHONE_NUMBER_REGEX) */
   phone: string;
   cellId: string | null;
-  teamId: string | null;
+  /** 소속 팀 전부 — 빈 배열이 "소속 없음"이다 (여러 팀 소속 가능) */
+  teamIds: string[];
 }

@@ -69,5 +69,6 @@
   "{{count}}분 전": "{{count}} min ago",
   "{{count}}시간 전": "{{count}} hr ago",
   "{{count}}일 전": "{{count}} days ago",
-  "댓글은 로그인 후 작성할 수 있어요.": "You can comment after logging in."
+  "댓글은 로그인 후 작성할 수 있어요.": "You can comment after logging in.",
+  "여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.": "You can pick more than one team. Leave empty if none."
 }

@@ -25,6 +25,7 @@ import { NoticeListScreen } from "../features/notice/NoticeListScreen";
 import { NotificationScreen } from "../features/notification/NotificationScreen";
 import { AvatarViewerScreen } from "../features/profile/AvatarViewerScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
+import { CellMemberAddScreen } from "../features/cell/CellMemberAddScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
@@ -58,6 +59,7 @@ import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
+import { TeamChatScreen } from "../features/team-story/TeamChatScreen";
 import { TeamMemberAddScreen } from "../features/team-story/TeamMemberAddScreen";
 import { TeamMemberAdminScreen } from "../features/team-story/TeamMemberAdminScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
@@ -206,7 +208,7 @@ export function RootNavigator() {
             component={BulletinScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title={t("마태복음 시리즈")} rightAction="none" />,
+              header: () => <Header variant="sub" title={t("주보")} rightAction="none" />,
             }}
           />
           <Stack.Screen
@@ -329,6 +331,12 @@ export function RootNavigator() {
               header: () => <TeamStoryDetailHeader teamId={route.params.teamId} />,
             })}
           />
+          {/* 헤더는 화면이 단독 등록한다 (타이틀이 팀 이름이라 화면 데이터에 의존). */}
+          <Stack.Screen
+            name="TeamChat"
+            component={TeamChatScreen}
+            options={{ headerShown: true }}
+          />
           <Stack.Screen
             name="TeamStoryGallery"
             component={TeamStoryGalleryScreen}
@@ -406,6 +414,12 @@ export function RootNavigator() {
           {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
           <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
           <Stack.Screen name="GroupMeetingPhoto" component={GroupMeetingPhotoScreen} />
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존). */}
+          <Stack.Screen
+            name="CellMemberAdd"
+            component={CellMemberAddScreen}
+            options={{ headerShown: true }}
+          />
           <Stack.Screen
             name="CellMemberManage"
             component={CellMemberManageScreen}

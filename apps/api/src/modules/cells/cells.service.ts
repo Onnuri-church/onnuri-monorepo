@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -217,7 +216,6 @@ export class CellsService {
   // 셀원 제거 — 관리자 또는 그 셀의 셀장/부셀장만. 셀장·부셀장 본인은 이 경로로 못 빼고
   // 셀 편집(교체)으로만 바꾼다 (셀원 관리 시안: 일반 셀원에게만 삭제 버튼).
   async removeMember(
-    requesterId: string,
     cellId: string,
     memberId: string,
   ): Promise<{ id: string }> {
@@ -226,25 +224,6 @@ export class CellsService {
       select: { id: true },
     });
     if (!cell) throw new NotFoundException('존재하지 않는 셀입니다.');
-
-    const requester = await this.prisma.user.findUnique({
-      where: { id: requesterId },
-      select: {
-        isAdmin: true,
-        cellMemberships: {
-          where: {
-            cellId,
-            endedAt: null,
-            role: { in: ['LEADER', 'SUB_LEADER'] },
-          },
-          select: { id: true },
-        },
-      },
-    });
-    const isCellLeader = (requester?.cellMemberships.length ?? 0) > 0;
-    if (!requester || (!requester.isAdmin && !isCellLeader)) {
-      throw new ForbiddenException('셀장 또는 관리자만 셀원을 제거할 수 있습니다.');
-    }
 
     const membership = await this.prisma.cellMembership.findFirst({
       where: { cellId, userId: memberId, endedAt: null },
@@ -260,6 +239,34 @@ export class CellsService {
       data: { endedAt: new Date() },
     });
     return { id: memberId };
+  }
+
+  // 셀원 추가 (관리자 전용) — 이미 다른 셀에 있으면 그 셀에서 빠지고 이 셀로 옮겨진다
+  // (한 사람은 한 셀에만 속한다). 이 셀의 셀장·부셀장·셀원은 건드리지 않는다.
+  async addMembers(
+    cellId: string,
+    userIds: string[],
+  ): Promise<{ added: number }> {
+    const cell = await this.prisma.cell.findFirst({
+      where: { id: cellId, deletedAt: null },
+      select: { id: true },
+    });
+    if (!cell) throw new NotFoundException('존재하지 않는 셀입니다.');
+
+    let added = 0;
+    await this.prisma.$transaction(async (tx) => {
+      const already = await tx.cellMembership.findMany({
+        where: { cellId, endedAt: null, userId: { in: userIds } },
+        select: { userId: true },
+      });
+      const alreadyIds = new Set(already.map((row) => row.userId));
+      for (const userId of userIds) {
+        if (alreadyIds.has(userId)) continue;
+        await this.assignRole(tx, cellId, userId, 'MEMBER');
+        added += 1;
+      }
+    });
+    return { added };
   }
 
   // 역할 지정 — 소속 있는 회원은 자동 이동 (2026-09-08 확정): 진행 중인 셀 멤버십을 전부

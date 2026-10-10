@@ -65,25 +65,29 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) return null;
 
-    const [cellMembership, teamMembership] = await Promise.all([
+    const [cellMembership, teamMemberships] = await Promise.all([
       this.prisma.cellMembership.findFirst({
         where: { userId: id, endedAt: null, cell: { deletedAt: null } },
         select: { role: true, cell: { select: { id: true, name: true } } },
       }),
-      this.prisma.teamMembership.findFirst({
+      this.prisma.teamMembership.findMany({
         where: { userId: id, endedAt: null, team: { deletedAt: null } },
         select: { role: true, team: { select: { id: true, name: true } } },
+        orderBy: { startedAt: 'asc' },
       }),
     ]);
+    const teams = teamMemberships.map((membership) => ({
+      ...membership.team,
+      role: membership.role,
+    }));
 
     return {
       ...user,
       cell: cellMembership
         ? { ...cellMembership.cell, role: cellMembership.role }
         : null,
-      team: teamMembership
-        ? { ...teamMembership.team, role: teamMembership.role }
-        : null,
+      team: teams[0] ?? null,
+      teams,
     };
   }
 
@@ -500,12 +504,13 @@ export class UsersService {
         });
         if (!cell) throw new BadRequestException('존재하지 않는 셀입니다.');
       }
-      if (dto.teamId) {
-        const team = await tx.team.findUnique({
-          where: { id: dto.teamId },
-          select: { id: true },
+      if (dto.teamIds.length > 0) {
+        const found = await tx.team.count({
+          where: { id: { in: dto.teamIds }, deletedAt: null },
         });
-        if (!team) throw new BadRequestException('존재하지 않는 팀입니다.');
+        if (found !== dto.teamIds.length) {
+          throw new BadRequestException('존재하지 않는 팀입니다.');
+        }
       }
 
       await tx.user.update({
@@ -517,7 +522,7 @@ export class UsersService {
         },
       });
       await this.syncCellMembership(tx, userId, dto.cellId);
-      await this.syncTeamMembership(tx, userId, dto.teamId);
+      await this.syncTeamMemberships(tx, userId, dto.teamIds);
     });
 
     // 방금 update가 성공했으므로 유저는 반드시 있다.
@@ -551,21 +556,52 @@ export class UsersService {
     }
   }
 
+  // 여러 팀 소속용 — 목록에 없는 현재 소속은 끝내고, 새로 고른 팀만 만든다.
+  // 이미 소속인 팀의 행은 그대로 둔다(팀장 역할이 유지된다).
+  private async syncTeamMemberships(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    teamIds: string[],
+  ) {
+    const active = await tx.teamMembership.findMany({
+      where: { userId, endedAt: null },
+      select: { id: true, teamId: true },
+    });
+    const today = new Date();
+    const stale = active.filter((row) => !teamIds.includes(row.teamId));
+    if (stale.length > 0) {
+      await tx.teamMembership.updateMany({
+        where: { id: { in: stale.map((row) => row.id) } },
+        data: { endedAt: today },
+      });
+    }
+    const kept = new Set(active.map((row) => row.teamId));
+    for (const teamId of teamIds) {
+      if (kept.has(teamId)) continue;
+      await tx.teamMembership.create({
+        data: { userId, teamId, startedAt: today },
+      });
+    }
+  }
+
   private async syncTeamMembership(
     tx: Prisma.TransactionClient,
     userId: string,
     teamId: string | null,
   ) {
-    const active = await tx.teamMembership.findFirst({
+    // 관리자 편집은 팀을 하나만 고르는 화면이라, 이미 그 팀 소속이면 다른 팀 소속은 건드리지 않는다.
+    const active = await tx.teamMembership.findMany({
       where: { userId, endedAt: null },
       select: { id: true, teamId: true },
     });
-    if ((active?.teamId ?? null) === teamId) return;
+    if (teamId === null ? active.length === 0 : active.some((row) => row.teamId === teamId)) {
+      return;
+    }
 
     const today = new Date();
-    if (active) {
-      await tx.teamMembership.update({
-        where: { id: active.id },
+    if (active.length > 0) {
+      await tx.teamMembership.updateMany({
+        where: { id: { in: active.map((row) => row.id) } },
         data: { endedAt: today },
       });
     }

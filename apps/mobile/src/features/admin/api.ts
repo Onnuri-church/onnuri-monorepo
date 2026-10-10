@@ -141,7 +141,19 @@ export function useDeleteCell() {
   });
 }
 
-// 셀원 제거 — 관리자 또는 그 셀의 셀장/부셀장 (권한 검증은 서버).
+// 셀원 추가 — 관리자 전용. 다른 셀에 있던 회원은 이 셀로 옮겨진다.
+export function useAddCellMembers(cellId: string) {
+  const invalidateCells = useInvalidateCells();
+  return useMutation({
+    mutationFn: (userIds: string[]) =>
+      apiClient
+        .post<{ added: number }>(`/cells/${cellId}/members`, { userIds })
+        .then((res) => res.data),
+    onSuccess: invalidateCells,
+  });
+}
+
+// 셀원 제거 — 관리자 전용 (권한 검증은 서버).
 export function useRemoveCellMember(cellId: string) {
   const invalidateCells = useInvalidateCells();
   return useMutation({

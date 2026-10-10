@@ -7,7 +7,7 @@ import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
-import { FilterBar } from "../../shared/components/base/FilterBar";
+import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -58,8 +58,18 @@ export function SermonScreen() {
     <View className="flex-1 bg-background-page">
       {/* 요청한 달(month)이 아니라 서버가 고른 달을 표시한다 — 요청한 달에 영상이 없으면
           서버가 최신 달로 폴백하는데, 요청값을 쓰면 목록과 어긋난다. */}
-      <FilterBar items={months} selected={selectedMonth ?? ""} onSelect={setMonth} />
-      {/* 시안의 필터-목록 간격 36 중 16은 FilterBar가 자기 padding으로 갖고 있어서 20만 더한다. */}
+      {/* 달이 많아지면 옆으로 끝없이 늘어서 지저분해서, 큐티나눔처럼 토글(드롭다운)로 둔다 —
+          펼치면 5개까지 보이고 안에서 위아래로 스크롤한다. */}
+      {selectedMonth !== null && (
+        <View className="flex-row px-5 pb-1 pt-4">
+          <PickerPill
+            label={months.find((item) => item.value === selectedMonth)?.label ?? selectedMonth}
+            options={months}
+            selected={selectedMonth}
+            onSelect={setMonth}
+          />
+        </View>
+      )}
       <ScrollView
         contentContainerClassName="gap-7 px-5 pt-5"
         // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에

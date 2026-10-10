@@ -9,7 +9,7 @@ import type { TeamMemberCandidate } from '@onnuri/shared';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 팀원 추가·제거 (그 팀 팀장과 관리자만 — docs/attendance-data-model.md §1 "팀장: 팀원 추가").
-// 한 사람은 한 팀에만 속한다 (프로필의 소속 팀과 같은 규칙) — 다른 팀 사람을 넣으면 그 소속은 종료된다.
+// 한 사람이 여러 팀에 속할 수 있다 — 다른 팀 사람을 넣어도 그쪽 소속은 그대로 둔다.
 @Injectable()
 export class TeamMembersService {
   constructor(private readonly prisma: PrismaService) {}
@@ -59,11 +59,7 @@ export class TeamMembersService {
 
     const now = new Date();
     await this.prisma.$transaction(async (tx) => {
-      // 다른 팀 소속은 종료하고 새로 넣는다. 이미 이 팀 사람이면 아무 일도 없다.
-      await tx.teamMembership.updateMany({
-        where: { userId: { in: userIds }, endedAt: null, teamId: { not: teamId } },
-        data: { endedAt: now },
-      });
+      // 이미 이 팀 사람이면 아무 일도 없다.
       const already = await tx.teamMembership.findMany({
         where: { userId: { in: userIds }, teamId, endedAt: null },
         select: { userId: true },
