@@ -23,6 +23,8 @@ export interface PrayerRequest {
   /** 남은 기간 (예: "D-2"). 없으면 표시하지 않는다 */
   ddayLabel?: string | null;
   bookmarked?: boolean;
+  /** 내가 쓴 글인지 — 목록의 수정·삭제 ⋮ 노출 기준 */
+  isMine?: boolean;
 }
 
 interface PrayerCardProps {

@@ -10,6 +10,7 @@ import { MemberRow } from "./components/MemberRow";
 import { TeamBoardLink } from "./components/TeamBoardLink";
 import { TeamProfile } from "./components/TeamProfile";
 import { isIconName } from "../../shared/components/base/Icon";
+import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
 // 시안이 팀원을 네 명까지만 보여주고 나머지는 "외 N명 더 보기"로 접는다.
@@ -25,6 +26,11 @@ export function TeamStoryDetailScreen() {
   const { data: team } = useTeamDetail(params.teamId);
   // 사진은 갤러리 조회를 같이 쓴다 — 미리보기만 잘라 쓰고 전체 장수도 여기서 센다.
   const { data: gallery } = useTeamGallery(params.teamId);
+
+  // 단톡은 그 팀 팀원과 관리자에게만 보인다 (서버도 같은 규칙).
+  const me = useMe();
+  const canChat =
+    me?.isAdmin === true || (me?.teams ?? []).some((item) => item.id === params.teamId);
 
   const members = team?.members ?? [];
   const previewMembers = members.slice(0, MEMBER_PREVIEW_COUNT);
@@ -87,7 +93,17 @@ export function TeamStoryDetailScreen() {
         </View>
       </View>
 
-      <View className="mt-20">
+      {canChat && (
+        <View className="mt-12">
+          <TeamBoardLink
+            title={t("{{name}} 단톡방", { name: team?.name ?? t("팀") })}
+            description={t("팀원끼리 이야기를 나눠요")}
+            onPress={() => navigation.navigate("TeamChat", { teamId: params.teamId })}
+          />
+        </View>
+      )}
+
+      <View className="mt-12">
         <TeamBoardLink
           title={t("{{name}} 게시판", { name: team?.name ?? t("팀") })}
           description={t("연습 일정, 셋리스트, 공지를 확인해요")}

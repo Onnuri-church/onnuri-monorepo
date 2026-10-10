@@ -84,7 +84,9 @@ export function ProfileSetupScreen() {
   const [phone, setPhone] = useState(sessionUser?.phone ?? "");
   const [gender, setGender] = useState<Gender | null>(sessionUser?.gender ?? null);
   const [cell, setCell] = useState<string | null>(null);
-  const [team, setTeam] = useState<string | null>(null);
+  // 여러 팀에 소속될 수 있다 — 고른 팀 이름 목록(빈 배열 = 소속 없음). 수정 모드는 me로 채운다.
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const teamsTouched = useRef(false);
   const [submitting, setSubmitting] = useState(false);
 
   // 수정 모드 프리필 — 소속은 세션 유저에 없어서 /users/me로 받아 채운다 (소속 없음 = "없음").
@@ -98,7 +100,7 @@ export function ProfileSetupScreen() {
   useEffect(() => {
     if (!isEditing || !me) return;
     setCell((prev) => prev ?? me.cell?.name ?? NONE_OPTION);
-    setTeam((prev) => prev ?? me.team?.name ?? NONE_OPTION);
+    if (!teamsTouched.current) setSelectedTeams(me.teams.map((item) => item.name));
     if (!avatarTouched.current) setAvatarUrl(me.avatarUrl ?? null);
   }, [isEditing, me]);
 
@@ -121,7 +123,6 @@ export function ProfileSetupScreen() {
   const toLabel = (value: string | null) => (value === NONE_OPTION ? noneLabel : value);
   const toValue = (label: string) => (label === noneLabel ? NONE_OPTION : label);
   const cellOptions = [noneLabel, ...(cells ?? []).map((item) => item.name)];
-  const teamOptions = [noneLabel, ...(teams ?? []).map((item) => item.name)];
 
   // 모든 항목을 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
   const canSubmit =
@@ -129,7 +130,6 @@ export function ProfileSetupScreen() {
     PHONE_NUMBER_REGEX.test(phone) &&
     gender !== null &&
     cell !== null &&
-    team !== null &&
     !submitting;
 
   const handleSubmitPress = async () => {
@@ -143,7 +143,9 @@ export function ProfileSetupScreen() {
         gender,
         phone,
         cellId: findIdByName(cells, cell),
-        teamId: findIdByName(teams, team),
+        teamIds: selectedTeams
+          .map((name) => findIdByName(teams, name))
+          .filter((id): id is string => id !== null),
       });
 
       // 마이페이지 등이 보는 /users/me 캐시를 비운다 — 안 비우면 바뀐 소속이 이전 값으로 보인다.
@@ -258,13 +260,45 @@ export function ProfileSetupScreen() {
             onChange={(picked) => setCell(toValue(picked))}
           />
 
-          <SelectField
-            label={t("소속 팀")}
-            placeholder={t("나의 팀을 선택하세요.")}
-            options={teamOptions}
-            value={toLabel(team)}
-            onChange={(picked) => setTeam(toValue(picked))}
-          />
+          {/* 팀은 여러 개를 고를 수 있어 시트 대신 토글 칩으로 둔다 — 하나도 안 고르면 소속 없음. */}
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">{t("소속 팀")}</Text>
+            <Text className="mt-1 text-caption-main text-text-alternative">
+              {t("여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.")}
+            </Text>
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              {(teams ?? []).map((item) => {
+                const selected = selectedTeams.includes(item.name);
+                return (
+                  <Pressable
+                    key={item.id}
+                    onPress={() => {
+                      teamsTouched.current = true;
+                      setSelectedTeams((prev) =>
+                        selected ? prev.filter((name) => name !== item.name) : [...prev, item.name],
+                      );
+                    }}
+                    style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+                    className={
+                      selected
+                        ? "h-10 items-center justify-center rounded-2xl border border-primary-normal bg-background-alternative px-4"
+                        : "h-10 items-center justify-center rounded-2xl border border-text-alternative bg-background-muted px-4"
+                    }
+                  >
+                    <Text
+                      className={
+                        selected
+                          ? "text-body-main text-primary-normal"
+                          : "text-body-main text-text-alternative"
+                      }
+                    >
+                      {item.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
         </ScrollView>
 
         <View className="px-5 pb-12">

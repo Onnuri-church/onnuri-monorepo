@@ -154,11 +154,13 @@ export function PrayerBoardScreen() {
             <PrayerCard
               key={prayer.id}
               prayer={prayer}
-              showBookmark={!isAdmin}
+              // ⋮와 북마크는 같은 자리라, 내 글이면 ⋮(수정·삭제)를 쓰고 북마크는 뺀다.
+              showBookmark={!isAdmin && !prayer.isMine}
               onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
               onToggleBookmark={() => toggleBookmark(prayer.id, prayer.bookmarked ?? false)}
+              // 내 글이면 수정·삭제, 관리자는 남의 글 삭제 (서버도 같은 규칙).
               onMenuPress={
-                isAdmin
+                isAdmin || prayer.isMine
                   ? (anchor) =>
                       setMenu({
                         prayer,
@@ -180,12 +182,21 @@ export function PrayerBoardScreen() {
 
       <PrayerMenu title={t("기도제목 게시판")} />
 
-      {/* 관리자는 남의 글을 고치지 않는다 — 수정은 작성자만 (서버도 같은 규칙). */}
+      {/* 수정은 작성자만 — 관리자는 남의 글을 고치지 않고 삭제만 한다 (서버도 같은 규칙). */}
       <ContextMenu
         visible={menu !== null}
         onClose={() => setMenu(null)}
         style={menu ? { top: menu.top, right: menu.right } : undefined}
         items={[
+          ...(menu?.prayer.isMine === true
+            ? [
+                {
+                  icon: "edit" as const,
+                  label: t("수정하기"),
+                  onPress: () => menu && navigation.navigate("PrayerWrite", { id: menu.prayer.id }),
+                },
+              ]
+            : []),
           {
             icon: "trash-can",
             label: t("삭제하기"),

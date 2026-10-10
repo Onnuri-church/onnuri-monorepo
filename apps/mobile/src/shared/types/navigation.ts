@@ -56,6 +56,7 @@ export type RootStackParamList = {
   // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
   BulletinWrite: undefined;
   TeamStoryDetail: { teamId: string };
+  TeamChat: { teamId: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;
   TeamStoryGallery: { teamId: string };
@@ -75,6 +76,7 @@ export type RootStackParamList = {
   CellGalleryPhoto: { cellId: string; index: number };
   // 관리 탭에서 진입하는 셀장·관리자 전용 화면들.
   CellMemberManage: { cellId: string };
+  CellMemberAdd: { cellId: string };
   CellAttendance: { cellId: string };
   FollowerNoteBoard: { cellId: string };
   FollowerNoteWrite: { cellId: string; noteId?: string };

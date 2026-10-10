@@ -6,10 +6,10 @@ import { useTranslation } from "react-i18next";
 import { ScrollView, Text, View } from "react-native";
 
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { FilterBar } from "../../shared/components/base/FilterBar";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
+import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { colors } from "../../shared/theme/tokens";
 import { useHomeBanner } from "../home/api";
 import { useMe } from "../profile/useMe";
@@ -65,8 +65,18 @@ export function BulletinScreen() {
     <View className="flex-1 bg-background-normal">
       {/* 요청한 달(month)이 아니라 서버가 고른 달을 표시한다 — 요청한 달에 주보가 없으면
           서버가 최신 달로 폴백하는데, 요청값을 쓰면 목록과 어긋난다. */}
-      <FilterBar items={months} selected={selectedMonth ?? ""} onSelect={setMonth} />
-      {/* 시안의 필터-배너 간격 36 중 16은 FilterBar가 자기 padding으로 갖고 있어서 20만 더한다. */}
+      {/* 달이 많아져도 옆으로 늘어서지 않게 말씀 게시판처럼 토글(드롭다운)로 둔다 —
+          펼치면 5개까지 보이고 안에서 위아래로 스크롤한다. */}
+      {selectedMonth !== null && (
+        <View className="flex-row px-5 pb-1 pt-4">
+          <PickerPill
+            label={months.find((item) => item.value === selectedMonth)?.label ?? selectedMonth}
+            options={months}
+            selected={selectedMonth}
+            onSelect={setMonth}
+          />
+        </View>
+      )}
       <ScrollView contentContainerClassName="px-5 pb-6 pt-5">
         {/* 시안의 배너-목록 간격 40 중 24는 BulletinCard가 자기 py로 갖고 있어서 16만 더한다. */}
         {sermonBanner && (

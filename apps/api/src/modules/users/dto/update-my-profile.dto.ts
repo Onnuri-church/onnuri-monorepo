@@ -1,5 +1,7 @@
 import { PHONE_NUMBER_REGEX } from '@onnuri/shared';
 import {
+  ArrayUnique,
+  IsArray,
   IsEnum,
   IsISO8601,
   IsString,
@@ -32,7 +34,9 @@ export class UpdateMyProfileDto {
   @IsString()
   cellId!: string | null;
 
-  @ValidateIf((_, value) => value !== null)
-  @IsString()
-  teamId!: string | null;
+  // 여러 팀에 소속될 수 있다 — 빈 배열이 "소속 없음".
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  teamIds!: string[];
 }

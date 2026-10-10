@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 
-import { Icon } from "../../../shared/components/base/Icon";
-import { colors } from "../../../shared/theme/tokens";
+import { Icon } from "../base/Icon";
+import { colors } from "../../theme/tokens";
 
 interface PickerPillProps<T extends number | string> {
   /** 버튼에 보이는 현재 값 (예: "2026년") */

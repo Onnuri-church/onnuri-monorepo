@@ -1,25 +1,29 @@
-import { useRoute } from "@react-navigation/native";
+import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useRemoveCellMember } from "../admin/api";
 import { toCellMemberRole, useCellDetail } from "./api";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { useMe } from "../profile/useMe";
 import { type CellMember } from "./cellDetail";
 
 // 셀원 관리 (관리 탭 > 셀원 관리 — 셀장·관리자 전용 경로로만 진입한다).
-// 시안: "총 N명" 캡션 → 검색 바 → 셀원 목록. 셀장·부셀장은 라벨만 붙고,
-// 일반 셀원 행에는 빨간 "삭제"가 붙는다. 시안에 추가 버튼은 아직 없다 —
-// 카드 설명("셀원을 추가하거나 관리해요")과 어긋나서 디자이너 확인 필요.
+// 시안: "총 N명" 캡션 → 검색 바 → 셀원 목록. 셀장·부셀장은 라벨만 붙는다.
+// 추가·삭제는 관리자만 한다 — 셀장은 목록을 보기만 한다 (서버도 같은 규칙).
 export function CellMemberManageScreen() {
   const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "CellMemberManage">>();
   const { cellId } = route.params;
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const isAdmin = useMe()?.isAdmin === true;
 
   // 셀원 목록은 서버에서 온다. 삭제는 DELETE /cells/:id/members/:userId — 멤버십 종료
   // (soft) 후 셀 캐시가 무효화돼 목록에서 빠진다.
@@ -68,7 +72,7 @@ export function CellMemberManageScreen() {
             <MemberRow
               key={member.id}
               member={member}
-              onDeletePress={() => handleDeletePress(member)}
+              onDeletePress={isAdmin ? () => handleDeletePress(member) : undefined}
             />
           ))}
           {visibleMembers.length === 0 && (
@@ -77,6 +81,16 @@ export function CellMemberManageScreen() {
             </Text>
           )}
         </View>
+
+        {isAdmin && (
+          <Pressable
+            className="mt-4 h-12 flex-row items-center justify-center gap-1 rounded-xl border border-dashed border-icon-normal active:opacity-60"
+            onPress={() => navigation.navigate("CellMemberAdd", { cellId })}
+          >
+            <Icon name="plus" size={20} />
+            <Text className="text-body-main text-text-alternative">{t("셀원 추가")}</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       <AppDialog
@@ -92,7 +106,8 @@ export function CellMemberManageScreen() {
 
 interface MemberRowProps {
   member: CellMember;
-  onDeletePress: () => void;
+  /** 관리자에게만 준다 — 없으면 일반 셀원 행에도 삭제가 붙지 않는다. */
+  onDeletePress?: () => void;
 }
 
 // 셀원 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
@@ -105,9 +120,11 @@ function MemberRow({ member, onDeletePress }: MemberRowProps) {
         <Text className="text-body-main text-text-normal">{member.name}</Text>
       </View>
       {member.role === "member" ? (
+        onDeletePress && (
         <Pressable onPress={onDeletePress} hitSlop={10}>
           <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
         </Pressable>
+        )
       ) : (
         <Text className="text-body-small text-primary-normal">
           {member.role === "leader" ? t("셀장") : t("부셀장")}

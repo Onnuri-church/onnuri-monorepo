@@ -90,5 +90,10 @@
   "활동 사진": "Activity photos",
   "사진 {{count}}장 모두 보기": "View all {{count}} photos",
   "{{count}}장 선택됨": "{{count}} selected",
-  "추가": "Add"
+  "추가": "Add",
+  "{{name}} 단톡방": "{{name}} chat",
+  "팀원끼리 이야기를 나눠요": "Chat with your teammates",
+  "메시지를 삭제할까요?": "Delete this message?",
+  "아직 대화가 없어요. 첫 메시지를 남겨보세요.": "No messages yet. Send the first one.",
+  "메시지를 입력하세요": "Type a message"
 }

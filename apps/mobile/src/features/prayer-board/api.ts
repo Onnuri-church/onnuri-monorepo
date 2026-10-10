@@ -77,6 +77,7 @@ function toCard(item: PrayerListItem): PrayerRequest {
     createdDate: toDotDate(item.createdAt),
     ddayLabel: toDdayLabel(item.visibleUntil),
     bookmarked: item.bookmarked,
+    isMine: item.isMine,
   };
 }
 

@@ -1,9 +1,11 @@
 import type {
   AddTeamMembersRequest,
+  CreateTeamMessageRequest,
   CreateTeamRequest,
   TeamDetailResponse,
   TeamGalleryMonth,
   TeamMemberCandidate,
+  TeamMessageInfo,
   TeamRole,
   TeamSummary,
   UpdateTeamRequest,
@@ -24,6 +26,39 @@ export function useTeams() {
 export function useTeam(teamId: string): TeamSummary | undefined {
   const { data } = useTeams();
   return data?.find((team) => team.id === teamId);
+}
+
+// 팀 단톡 — 실시간 연결 없이 켜져 있는 동안 몇 초마다 새로 받는다 (푸시 알림은 없다).
+const TEAM_CHAT_POLL_MS = 4000;
+
+export function useTeamMessages(teamId: string, polling: boolean) {
+  return useQuery({
+    queryKey: ["team-messages", teamId],
+    queryFn: () =>
+      apiClient.get<TeamMessageInfo[]>(`/teams/${teamId}/messages`).then((res) => res.data),
+    refetchInterval: polling ? TEAM_CHAT_POLL_MS : false,
+  });
+}
+
+export function useSendTeamMessage(teamId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (content: string) =>
+      apiClient
+        .post<TeamMessageInfo>(`/teams/${teamId}/messages`, {
+          content,
+        } satisfies CreateTeamMessageRequest)
+        .then((res) => res.data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-messages", teamId] }),
+  });
+}
+
+export function useDeleteTeamMessage(teamId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => apiClient.delete(`/teams/${teamId}/messages/${messageId}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["team-messages", teamId] }),
+  });
 }
 
 // 팀 상세·팀원 리스트용. 팀원 목록이 이 응답에 들어 있어 팀원 화면도 같은 캐시를 쓴다.
