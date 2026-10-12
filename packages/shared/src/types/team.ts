@@ -27,6 +27,10 @@ export interface TeamDetailResponse {
   /** 상세의 팀 소개 본문 */
   description: string | null;
   coverImageUrl: string | null;
+  /** 이 팀의 팀원(팀장 포함)이 주보를 등록할 수 있는지 — 관리자가 팀 편집에서 켠다 */
+  canUploadBulletin: boolean;
+  /** 이 팀의 팀원(팀장 포함)이 홈 배너를 관리할 수 있는지 */
+  canManageBanner: boolean;
   members: TeamMemberInfo[];
 }
 
@@ -59,6 +63,8 @@ export interface CreateTeamRequest {
   tagline?: string | null;
   description?: string | null;
   coverImageUrl?: string | null;
+  canUploadBulletin?: boolean;
+  canManageBanner?: boolean;
 }
 
 /** PATCH /teams/:id 요청 본문 — 보낸 필드만 반영된다. */

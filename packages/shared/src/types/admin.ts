@@ -29,7 +29,20 @@ export interface AdminAttendanceResponse {
   monthLabel: string;
   /** 표 머리 주차 라벨 ("8/2") — 그 달의 일요일들 */
   dates: string[];
+  /** dates와 같은 순서의 YYYY-MM-DD — 칸을 눌러 고칠 때 PUT /admin/attendance의 date로 쓴다 */
+  dateKeys: string[];
   groups: AdminAttendanceGroup[];
+}
+
+/** PUT /admin/attendance 요청 본문 (관리자 전용) — 보낸 항목만 고친다 */
+export interface UpdateAdminAttendanceRequest {
+  userId: string;
+  /** YYYY-MM-DD */
+  date: string;
+  /** 예배 출석 여부 */
+  worship?: boolean;
+  /** 셀모임 출석 여부 */
+  meeting?: boolean;
 }
 
 /** 모임 없는 날 종류 — 지정이 없는 일요일은 예배·셀모임 둘 다 있는 날 */

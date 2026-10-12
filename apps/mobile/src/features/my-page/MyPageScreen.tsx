@@ -153,6 +153,19 @@ export function MyPageScreen() {
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
     onBannerManagePress: () => navigation.navigate("AdminBannerManage"),
   });
+  // 업로드 권한이 켜진 팀의 팀원(팀장 포함)에게는 등급과 무관하게 해당 메뉴가 붙는다.
+  // 관리자는 이미 홈 배너 관리가 있으니 중복해서 붙이지 않는다.
+  if (role !== "admin") {
+    if (me?.canUploadBulletin) {
+      roleLinks.push({ label: t("주보 올리기"), onPress: () => navigation.navigate("BulletinWrite") });
+    }
+    if (me?.canManageBanner) {
+      roleLinks.push({
+        label: t("홈 배너 관리"),
+        onPress: () => navigation.navigate("AdminBannerManage"),
+      });
+    }
+  }
 
   const handleLogoutPress = () => {
     // 토큰·푸시·계정별 캐시까지 정리한다 (설정 로그아웃과 동일).
@@ -210,10 +223,26 @@ export function MyPageScreen() {
           <ProfileInfoCard
             rows={[
               { label: t("이름"), value: name },
-              { label: t("소속 셀"), value: cell },
+              {
+                label: t("소속 셀"),
+                value: cell,
+                // 눌러서 내 셀 페이지로 — 소속이 없으면 "없음"만 그린다.
+                links: me?.cell
+                  ? [
+                      {
+                        label: me.cell.name,
+                        onPress: () => navigation.navigate("CellDetail", { cellId: me.cell!.id }),
+                      },
+                    ]
+                  : undefined,
+              },
               {
                 label: t("소속 팀"),
                 value: me && me.teams.length > 0 ? me.teams.map((item) => item.name).join(", ") : t("없음"),
+                links: me?.teams.map((item) => ({
+                  label: item.name,
+                  onPress: () => navigation.navigate("TeamStoryDetail", { teamId: item.id }),
+                })),
               },
             ]}
           />

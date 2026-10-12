@@ -127,6 +127,12 @@ export function NotificationScreen() {
       case "notice":
         navigation.navigate("NoticeDetail", { id: first });
         break;
+      case "bulletin":
+        navigation.navigate("BulletinDetail", { id: first });
+        break;
+      case "group-room":
+        navigation.navigate("GroupChat", { meetingId: first });
+        break;
       case "team-room":
         navigation.navigate("ChatRoom", { roomId: first });
         break;

@@ -5,10 +5,15 @@ import { Image, Linking, Pressable, Text, View } from "react-native";
 import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
 import { toTimeAgo } from "../../../shared/utils/date";
+import type { ChatKind } from "../api";
 import { MentionText } from "./MentionText";
+import { PollCard } from "./PollCard";
 
 interface ChatBubbleProps {
   message: ChatMessageInfo;
+  /** 투표 카드가 서버에 요청할 때 쓰는 방 종류·id */
+  kind: ChatKind;
+  roomId: string;
   onLongPress: () => void;
   onImagePress: (index: number) => void;
   onReactionPress: (emoji: string) => void;
@@ -24,11 +29,21 @@ function formatSize(bytes: number): string {
 
 // 단톡방 메시지 한 건 — 내 메시지는 오른쪽, 남의 메시지는 왼쪽(프로필·이름 포함).
 // 답장 인용, 사진, 본문(언급 강조), 이모지 반응 줄이 쌓인다. 길게 누르면 메뉴가 열린다.
-export function ChatBubble({ message, onLongPress, onImagePress, onReactionPress }: ChatBubbleProps) {
+export function ChatBubble({
+  message,
+  kind,
+  roomId,
+  onLongPress,
+  onImagePress,
+  onReactionPress,
+}: ChatBubbleProps) {
   const { t } = useTranslation();
   const mine = message.isMine;
 
-  const body = (
+  // 투표 메시지는 말풍선 대신 투표 카드로 그린다.
+  const body = message.poll ? (
+    <PollCard poll={message.poll} kind={kind} id={roomId} onLongPress={onLongPress} />
+  ) : (
     <Pressable
       onLongPress={onLongPress}
       className={

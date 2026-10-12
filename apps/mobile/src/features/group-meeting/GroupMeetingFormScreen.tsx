@@ -12,12 +12,11 @@ import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField } from "../../shared/components/composed/DateField";
-import { SelectField } from "../../shared/components/composed/SelectField";
+import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
 import { uploadImage } from "../../shared/api/upload";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
-import { buildMemberOptions, findOptionByLabel } from "../admin/memberOptions";
 import { useMe } from "../profile/useMe";
 import { fetchGroupMeetingDetail, useCreateGroupMeeting, useUpdateGroupMeeting } from "./api";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
@@ -77,14 +76,17 @@ export function GroupMeetingFormScreen() {
     setCoverUri(result.assets[0].uri);
   };
 
-  // 소그룹장 추가 — SelectField를 "추가" 트리거로 쓴다 (고르면 목록에 붙고 선택값은 비운다).
-  // 동명이인 구별: "이름 (소속)" 라벨로 고르고 id로 다룬다 (admin/memberOptions.ts).
-  const memberOptions = buildMemberOptions(members);
-  const handleLeaderAdd = (label: string) => {
-    const option = findOptionByLabel(memberOptions, label);
-    const member = (members ?? []).find((item) => item.id === option?.id);
-    if (!member || leaders.some((leader) => leader.id === member.id)) return;
-    setLeaders((prev) => [...prev, { id: member.id, name: member.name }]);
+  // 소그룹장 추가 — 검색 선택 필드를 "추가" 트리거로 쓴다 (고르면 목록에 붙고 선택값은 비운다).
+  // 선택은 id로 한다 (동명이인 안전).
+  const handleLeaderAdd = (memberId: string) => {
+    const member = (members ?? []).find((item) => item.id === memberId);
+    if (!member) return;
+    // 중복 검사는 최신 상태(prev)로 한다 — 같은 선택이 연달아 두 번 들어와도 한 번만 붙게 한다.
+    setLeaders((prev) =>
+      prev.some((leader) => leader.id === member.id)
+        ? prev
+        : [...prev, { id: member.id, name: member.name }],
+    );
   };
 
   const handleSubmitPress = async () => {
@@ -195,14 +197,13 @@ export function GroupMeetingFormScreen() {
             </View>
             {isAdmin && (
               <View className="-mt-2">
-                <SelectField
+                <MemberPickerField
                   label=""
                   placeholder={t("소그룹장 추가")}
-                  options={memberOptions
-                    .filter((option) => !leaders.some((leader) => leader.id === option.id))
-                    .map((option) => option.label)}
-                  value={null}
-                  onChange={handleLeaderAdd}
+                  members={members}
+                  valueId={null}
+                  onSelect={handleLeaderAdd}
+                  excludeIds={leaders.map((leader) => leader.id)}
                 />
               </View>
             )}

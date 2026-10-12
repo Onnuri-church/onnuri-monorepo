@@ -71,6 +71,8 @@ export function PhotoGrid({
                 <Pressable
                   key={photo.id}
                   className="aspect-square flex-1 bg-text-assistive"
+                  // 사진끼리 붙어 보이지 않게 검은 선으로 구분한다 (칸 사이는 1px 선 2개 = 2px).
+                  style={{ borderWidth: 1, borderColor: "#000000" }}
                   onPress={() => onPhotoPress?.(photo.id)}
                 >
                   {/* 목업 사진은 url이 없어 회색 칸으로 남는다 — 방금 올린 사진만 그려진다. */}

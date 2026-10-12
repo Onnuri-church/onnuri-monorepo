@@ -65,7 +65,7 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) return null;
 
-    const [cellMembership, teamMemberships] = await Promise.all([
+    const [cellMembership, teamMemberships, grantedTeam] = await Promise.all([
       this.prisma.cellMembership.findFirst({
         where: { userId: id, endedAt: null, cell: { deletedAt: null } },
         select: { role: true, cell: { select: { id: true, name: true } } },
@@ -74,6 +74,15 @@ export class UsersService {
         where: { userId: id, endedAt: null, team: { deletedAt: null } },
         select: { role: true, team: { select: { id: true, name: true } } },
         orderBy: { startedAt: 'asc' },
+      }),
+      // 소속 팀 중 콘텐츠 업로드 권한이 켜진 팀 — 앱이 주보 등록·배너 관리 진입점을 띄우는 기준.
+      this.prisma.team.findMany({
+        where: {
+          deletedAt: null,
+          memberships: { some: { userId: id, endedAt: null } },
+          OR: [{ canUploadBulletin: true }, { canManageBanner: true }],
+        },
+        select: { canUploadBulletin: true, canManageBanner: true },
       }),
     ]);
     const teams = teamMemberships.map((membership) => ({
@@ -88,6 +97,10 @@ export class UsersService {
         : null,
       team: teams[0] ?? null,
       teams,
+      canUploadBulletin:
+        user.isAdmin || grantedTeam.some((team) => team.canUploadBulletin),
+      canManageBanner:
+        user.isAdmin || grantedTeam.some((team) => team.canManageBanner),
     };
   }
 

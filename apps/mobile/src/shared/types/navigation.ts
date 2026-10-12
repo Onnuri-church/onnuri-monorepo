@@ -63,10 +63,15 @@ export type RootStackParamList = {
   BulletinDetail: { id: string };
   SharingSheet: { id: string };
   // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
-  BulletinWrite: undefined;
+  /** id가 있으면 그 주보를 수정한다 */
+  BulletinWrite: { id?: string } | undefined;
   TeamStoryDetail: { teamId: string };
   // 소속팀 공간 — 그 팀 팀원·관리자 전용. 안에 팀 게시판과 팀 단톡방이 있다.
   TeamSpace: { teamId: string };
+  // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group)의 + 메뉴에서 연다.
+  ChatPollCreate: { kind: "room" | "cell" | "group"; id: string };
+  // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
+  GroupChat: { meetingId: string };
   TeamBoard: { teamId: string };
   TeamBoardDetail: { teamId: string; postId: string };
   // postId가 있으면 수정 모드

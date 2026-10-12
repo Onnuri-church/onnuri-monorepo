@@ -45,6 +45,8 @@ export class TeamsService {
         tagline: true,
         description: true,
         coverImageUrl: true,
+        canUploadBulletin: true,
+        canManageBanner: true,
         memberships: {
           where: { endedAt: null },
           select: {
@@ -76,6 +78,8 @@ export class TeamsService {
       tagline: team.tagline,
       description: team.description,
       coverImageUrl: team.coverImageUrl,
+      canUploadBulletin: team.canUploadBulletin,
+      canManageBanner: team.canManageBanner,
       members,
     };
   }
@@ -98,6 +102,8 @@ export class TeamsService {
           tagline: dto.tagline ?? null,
           description: dto.description ?? null,
           coverImageUrl: dto.coverImageUrl ?? null,
+          canUploadBulletin: dto.canUploadBulletin ?? false,
+          canManageBanner: dto.canManageBanner ?? false,
         },
         select: { id: true },
       });
@@ -121,6 +127,12 @@ export class TeamsService {
           ...(dto.tagline !== undefined && { tagline: dto.tagline }),
           ...(dto.description !== undefined && { description: dto.description }),
           ...(dto.coverImageUrl !== undefined && { coverImageUrl: dto.coverImageUrl }),
+          ...(dto.canUploadBulletin !== undefined && {
+            canUploadBulletin: dto.canUploadBulletin,
+          }),
+          ...(dto.canManageBanner !== undefined && {
+            canManageBanner: dto.canManageBanner,
+          }),
         },
       });
       if (dto.leaderId) await this.setLeader(tx, id, dto.leaderId);

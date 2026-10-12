@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import {
   FlatList,
-  Image,
   View,
   useWindowDimensions,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from "react-native";
+
+import { ZoomableImage } from "./ZoomableImage";
 
 interface PhotoPagerProps {
   urls: string[];
@@ -16,15 +18,17 @@ interface PhotoPagerProps {
   onIndexChange?: (index: number) => void;
 }
 
-// 시안 402x617 — 화면 폭에 맞춘 콘텐츠 비율 영역이다 (DESIGN.md 사이즈 규칙 예외).
-const IMAGE_ASPECT_RATIO = 402 / 617;
-
-// 사진 뷰어의 본체. 좌우로 밀어서 넘긴다(슬라이드) — 화살표 버튼은 두지 않는다.
+// 사진 뷰어의 본체. 좌우로 밀어서 넘기고(슬라이드), 두 손가락으로 확대·축소, 두 번 탭해 확대한다.
+// 사진은 이 컴포넌트가 차지한 영역의 가운데에 비율을 지켜 꽉 차게 놓는다 — 화살표 버튼은 두지 않는다.
 // 사진을 한 장씩 넘겨 보는 화면은 버튼식이 아니라 이 컴포넌트를 쓴다 (2026-10-10 결정).
 export function PhotoPager({ urls, initialIndex = 0, onIndexChange }: PhotoPagerProps) {
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<string>>(null);
   const [index, setIndex] = useState(initialIndex);
+  // 사진을 확대한 동안에는 옆으로 넘어가지 않게 가로 스크롤을 멈춘다 (한 손가락 이동이 확대 사진을 움직여야 한다).
+  const [zoomed, setZoomed] = useState(false);
+  // 사진이 놓일 영역의 실제 크기 — 화면 가운데에 오게 이 영역을 꽉 채운다.
+  const [box, setBox] = useState<{ width: number; height: number } | null>(null);
   const appliedInitial = useRef(false);
   const total = urls.length;
 
@@ -54,10 +58,17 @@ export function PhotoPager({ urls, initialIndex = 0, onIndexChange }: PhotoPager
 
   const handleScrollEnd = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     setIndex(Math.round(event.nativeEvent.contentOffset.x / width));
+    setZoomed(false);
+  };
+
+  const handleLayout = (event: LayoutChangeEvent) => {
+    const { width: boxWidth, height: boxHeight } = event.nativeEvent.layout;
+    setBox({ width: boxWidth, height: boxHeight });
   };
 
   return (
-    <View className="flex-1 justify-center">
+    <View className="flex-1" onLayout={handleLayout}>
+      {box && (
       <FlatList
         ref={listRef}
         data={urls}
@@ -65,6 +76,7 @@ export function PhotoPager({ urls, initialIndex = 0, onIndexChange }: PhotoPager
         horizontal
         pagingEnabled
         showsHorizontalScrollIndicator={false}
+        scrollEnabled={!zoomed}
         initialScrollIndex={Math.min(initialIndex, Math.max(total - 1, 0))}
         getItemLayout={(_, itemIndex) => ({
           length: width,
@@ -73,15 +85,18 @@ export function PhotoPager({ urls, initialIndex = 0, onIndexChange }: PhotoPager
         })}
         onMomentumScrollEnd={handleScrollEnd}
         renderItem={({ item }) => (
-          <View className="justify-center" style={{ width }}>
-            <Image
-              source={{ uri: item }}
-              style={{ width: "100%", aspectRatio: IMAGE_ASPECT_RATIO }}
-              resizeMode="contain"
+          <View style={{ width, height: box.height }}>
+            <ZoomableImage
+              uri={item}
+              width={width}
+              height={box.height}
+              zoomed={zoomed}
+              onZoomChange={setZoomed}
             />
           </View>
         )}
       />
+      )}
     </View>
   );
 }

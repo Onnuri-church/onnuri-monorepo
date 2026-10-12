@@ -7,6 +7,7 @@ import {
 import type {
   GroupMeeting,
   GroupMeetingDetail,
+  GroupMeetingListResponse,
   MyGroupMeeting,
 } from '@onnuri/shared';
 
@@ -17,6 +18,9 @@ import { UploadsService } from '../uploads/uploads.service';
 import { AddPhotosDto } from './dto/add-photos.dto';
 import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
+
+// 한 번에 내려주는 목록 개수
+const LIST_PAGE_SIZE = 20;
 
 // "7/1 ~ 7/28" — 모집 기간 표시 (시안 카드·상세). @db.Date라 UTC 기준으로 읽는다.
 // 갤러리 월 묶음 라벨 — "2026년 7월". takenOn이 없으면 묶을 수 없어 null.
@@ -41,9 +45,39 @@ export class GroupMeetingsService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async findAll(): Promise<GroupMeeting[]> {
-    const groups = await this.prisma.hobbyGroup.findMany({
-      where: { post: { deletedAt: null } },
+  // 목록 — 모집중/마감 중 하나를 20개씩 끊어 준다 (마감이 계속 쌓이므로 한 번에 다 주지 않는다).
+  // "마감"은 toStatus와 같은 기준이다: 상태가 CLOSED이거나 모집 종료일이 지난 모임.
+  async findAll(
+    status: 'open' | 'closed',
+    cursor?: string,
+    limit = LIST_PAGE_SIZE,
+  ): Promise<GroupMeetingListResponse> {
+    const take = Math.min(Math.max(Math.floor(limit), 1), 50);
+    const today = new Date();
+    const todayDate = new Date(
+      `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
+    );
+    const openWhere = {
+      status: 'RECRUITING' as const,
+      OR: [{ recruitEnd: null }, { recruitEnd: { gte: todayDate } }],
+    };
+    const closedWhere = {
+      OR: [{ status: 'CLOSED' as const }, { recruitEnd: { lt: todayDate } }],
+    };
+
+    if (cursor) {
+      const exists = await this.prisma.hobbyGroup.findFirst({
+        where: { postId: cursor, post: { deletedAt: null } },
+        select: { postId: true },
+      });
+      if (!exists) throw new BadRequestException('잘못된 cursor입니다.');
+    }
+
+    const rows = await this.prisma.hobbyGroup.findMany({
+      where: {
+        post: { deletedAt: null },
+        ...(status === 'open' ? openWhere : closedWhere),
+      },
       select: {
         postId: true,
         status: true,
@@ -54,10 +88,16 @@ export class GroupMeetingsService {
           select: { user: { select: { avatarUrl: true } } },
         },
       },
-      orderBy: { post: { createdAt: 'desc' } },
+      orderBy: [{ post: { createdAt: 'desc' } }, { postId: 'desc' }],
+      take: take + 1,
+      ...(cursor ? { cursor: { postId: cursor }, skip: 1 } : {}),
     });
-
-    return groups.map((group) => this.toSummary(group));
+    const hasMore = rows.length > take;
+    const page = hasMore ? rows.slice(0, take) : rows;
+    return {
+      items: page.map((group) => this.toSummary(group)),
+      nextCursor: hasMore ? page[page.length - 1].postId : null,
+    };
   }
 
   // 마이페이지 "취향 소그룹" — 내가 신청(PENDING)·참여(APPROVED) 중인 모임. 거절은 뺀다.

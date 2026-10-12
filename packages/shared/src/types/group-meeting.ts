@@ -4,6 +4,15 @@ import type { HobbyGroupMemberStatus } from "./post";
 
 export type GroupMeetingStatus = "open" | "closed";
 
+/**
+ * GET /group-meetings?status=open|closed&cursor= 응답 — 20개씩 끊어 내려주는 목록(최신 등록순).
+ * 다음 쪽은 `cursor=<nextCursor>`로 받고, nextCursor가 null이면 마지막이다.
+ */
+export interface GroupMeetingListResponse {
+  items: GroupMeeting[];
+  nextCursor: string | null;
+}
+
 export interface GroupMeeting {
   /** postId — 댓글·좋아요 등 게시판 공용 API도 이 id를 쓴다 */
   id: string;

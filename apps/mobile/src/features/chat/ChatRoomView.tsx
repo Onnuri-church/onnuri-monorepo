@@ -1,5 +1,6 @@
 import type { ChatMessageInfo } from "@onnuri/shared";
-import { useIsFocused } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadAttachment, uploadImage } from "../../shared/api/upload";
+import type { RootStackParamList } from "../../shared/types/navigation";
 import { Icon } from "../../shared/components/base/Icon";
 import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { colors } from "../../shared/theme/tokens";
@@ -66,6 +68,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
   const focused = useIsFocused();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { data: room } = useChatRoom(kind, id, focused);
   const send = useSendChatMessage(kind, id);
@@ -291,6 +294,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           <ChatBubble
             key={message.id}
             message={message}
+            kind={kind}
+            roomId={id}
             onLongPress={() => setActionTarget(message)}
             onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
             onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
@@ -445,6 +450,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         onClose={() => setAttachmentSheetOpen(false)}
         onPickMedia={() => void handlePickMedia()}
         onPickFile={() => void handlePickFile()}
+        onPickPoll={() => {
+          setAttachmentSheetOpen(false);
+          navigation.navigate("ChatPollCreate", { kind, id });
+        }}
       />
 
       <MessageActionModal

@@ -14,6 +14,7 @@ import type {
 import { pad } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
+import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
 
 const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER: 2 };
 
@@ -136,6 +137,8 @@ export class AdminAttendanceService {
       dates: sundays.map(
         (sunday) => `${sunday.getUTCMonth() + 1}/${sunday.getUTCDate()}`,
       ),
+      // 칸을 눌러 고칠 때 서버에 보내는 날짜 — dates와 같은 순서.
+      dateKeys: sundays.map((sunday) => sunday.toISOString().slice(0, 10)),
       groups: groups.map(
         (group): AdminAttendanceGroup => ({
           id: group.id,
@@ -152,6 +155,146 @@ export class AdminAttendanceService {
         }),
       ),
     };
+  }
+
+  // 출석부 칸 수정 — 날짜 제한 없이 관리자가 한 회원의 예배·셀모임 출석을 대신 고친다.
+  // 모임 없는 날로 지정된 쪽은 고칠 수 없다 (모임 없는 날 지정을 먼저 바꿔야 한다).
+  // 알림은 보내지 않고, 실제로 값이 바뀐 것만 AttendanceEditLog에 남긴다.
+  async updateMark(
+    editorId: string,
+    dto: UpdateAdminAttendanceDto,
+  ): Promise<{ worship: boolean; meeting: boolean }> {
+    if (dto.worship === undefined && dto.meeting === undefined) {
+      throw new BadRequestException('worship 또는 meeting 중 하나는 필요합니다.');
+    }
+    const date = new Date(dto.date);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: dto.userId, withdrawnAt: null },
+      select: {
+        id: true,
+        cellMemberships: {
+          where: { endedAt: null, cell: { deletedAt: null } },
+          select: { cellId: true },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('존재하지 않는 회원입니다.');
+    const cellId = user.cellMemberships[0]?.cellId ?? null;
+
+    const offDay = await this.prisma.offDay.findUnique({
+      where: { date },
+      select: { kind: true },
+    });
+    const worshipOff = offDay?.kind === 'WORSHIP_OFF' || offDay?.kind === 'BOTH_OFF';
+    const meetingOff =
+      offDay?.kind === 'CELL_MEETING_OFF' || offDay?.kind === 'BOTH_OFF';
+    if (dto.worship !== undefined && worshipOff) {
+      throw new BadRequestException(
+        '예배가 없는 날로 지정돼 있어요. 모임 없는 날 지정에서 먼저 바꿔주세요.',
+      );
+    }
+    if (dto.meeting !== undefined) {
+      if (meetingOff) {
+        throw new BadRequestException(
+          '셀모임이 없는 날로 지정돼 있어요. 모임 없는 날 지정에서 먼저 바꿔주세요.',
+        );
+      }
+      if (!cellId) {
+        throw new BadRequestException('소속 셀이 없는 회원은 셀모임 출석을 고칠 수 없어요.');
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 예배 회차가 없으면 만든다 — 회차 관리 기능 전 임시 처리 (셀 출석 관리와 동일).
+      const service = await tx.worshipService.upsert({
+        where: { date },
+        update: {},
+        create: { date, name: '주일예배' },
+      });
+      const log = (kind: 'WORSHIP' | 'CELL_MEETING', before: boolean, after: boolean) =>
+        before === after
+          ? undefined
+          : tx.attendanceEditLog.create({
+              data: { userId: user.id, editorId, date, kind, before, after },
+            });
+
+      let worship = false;
+      const worshipRow = await tx.worshipAttendance.findUnique({
+        where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+        select: { attended: true },
+      });
+      worship = worshipRow?.attended ?? false;
+      if (dto.worship !== undefined) {
+        const before = worship;
+        if (dto.worship) {
+          await tx.worshipAttendance.upsert({
+            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+            update: { attended: true, method: 'MANUAL', recordedById: editorId },
+            create: {
+              serviceId: service.id,
+              userId: user.id,
+              attended: true,
+              method: 'MANUAL',
+              recordedById: editorId,
+            },
+          });
+        } else if (worshipRow) {
+          // 행이 있을 때만 명시적 결석으로 정정한다 (행 없음 = 이미 결석).
+          await tx.worshipAttendance.update({
+            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+            data: { attended: false, method: 'MANUAL', recordedById: editorId },
+          });
+        }
+        worship = dto.worship;
+        await log('WORSHIP', before, worship);
+      }
+
+      let meeting = false;
+      if (cellId) {
+        const meetingRow = await tx.cellMeeting.findUnique({
+          where: { cellId_serviceId: { cellId, serviceId: service.id } },
+          select: {
+            id: true,
+            attendances: {
+              where: { userId: user.id },
+              select: { attended: true },
+            },
+          },
+        });
+        meeting = meetingRow?.attendances[0]?.attended ?? false;
+        if (dto.meeting !== undefined) {
+          const before = meeting;
+          const meetingId =
+            meetingRow?.id ??
+            (
+              await tx.cellMeeting.create({
+                data: { cellId, serviceId: service.id, createdById: editorId },
+                select: { id: true },
+              })
+            ).id;
+          if (dto.meeting) {
+            await tx.cellMeetingAttendance.upsert({
+              where: { meetingId_userId: { meetingId, userId: user.id } },
+              update: { attended: true, recordedById: editorId },
+              create: {
+                meetingId,
+                userId: user.id,
+                attended: true,
+                recordedById: editorId,
+              },
+            });
+          } else {
+            await tx.cellMeetingAttendance.deleteMany({
+              where: { meetingId, userId: user.id },
+            });
+          }
+          meeting = dto.meeting;
+          await log('CELL_MEETING', before, meeting);
+        }
+      }
+      return { worship, meeting };
+    });
   }
 
   // 스코프별 그룹·구성원. 전체/특정 셀은 셀 단위(셀장→부셀장→이름순), 특정 팀은 팀원들

@@ -9,12 +9,15 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { AdminAttendanceService } from './admin-attendance.service';
 import { AdminDownloadService } from './admin-download.service';
 import { AdminOffDaysService } from './admin-off-days.service';
 import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
+import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
 import { FindAdminDownloadDto } from './dto/find-admin-download.dto';
 import { FindOffDaysDto } from './dto/find-off-days.dto';
 import { SetOffDayDto } from './dto/set-off-day.dto';
@@ -32,6 +35,15 @@ export class AdminController {
   @Get('attendance')
   findAttendance(@Query() query: FindAdminAttendanceDto) {
     return this.adminAttendanceService.find(query);
+  }
+
+  // 출석부 칸 수정 — 관리자가 날짜 제한 없이 예배·셀모임 출석을 대신 고친다 (알림 없음).
+  @Put('attendance')
+  updateAttendance(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateAdminAttendanceDto,
+  ) {
+    return this.adminAttendanceService.updateMark(user.sub, dto);
   }
 
   @Get('off-days')

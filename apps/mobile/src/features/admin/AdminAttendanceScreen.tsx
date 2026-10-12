@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
@@ -14,7 +14,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
 import { MonthPicker } from "../cell/components/MonthPicker";
 import { fetchTeams } from "../profile/api";
-import { useAdminAttendance } from "./api";
+import { useAdminAttendance, useUpdateAdminAttendance } from "./api";
 import { RadioOption } from "./components/RadioOption";
 
 type AttendanceFilter = "all" | "cell" | "team";
@@ -50,6 +50,11 @@ export function AdminAttendanceScreen() {
   const [selectedCellId, setSelectedCellId] = useState<string | null>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const pickerSheetRef = useRef<AppSheetRef>(null);
+  // 칸을 눌러 출석을 고치는 시트 — 누른 회원·주차만 들고, 현재 값은 조회 데이터에서 읽는다
+  // (고친 직후 다시 받은 값이 시트에 바로 반영되게).
+  const editSheetRef = useRef<AppSheetRef>(null);
+  const [editTarget, setEditTarget] = useState<{ userId: string; weekIndex: number } | null>(null);
+  const updateAttendance = useUpdateAdminAttendance();
   // 전체 필터에서 접어 둔 셀 그룹 id
   const [collapsedIds, setCollapsedIds] = useState<string[]>([]);
   const toggleGroup = (id: string) =>
@@ -85,6 +90,37 @@ export function AdminAttendanceScreen() {
     filter === "team"
       ? (teams?.find((team) => team.id === teamId)?.name ?? "")
       : (cells?.find((cell) => cell.id === cellId)?.name ?? "");
+
+  // 시트가 보여줄 회원 행 — 전체 그룹에서 찾는다.
+  const editRow = editTarget
+    ? groups.flatMap((group) => group.rows).find((row) => row.id === editTarget.userId)
+    : undefined;
+  const editWeek = editRow && editTarget ? editRow.weeks[editTarget.weekIndex] : undefined;
+  const editDateKey = editTarget ? data?.dateKeys?.[editTarget.weekIndex] : undefined;
+
+  const handleCellPress = (userId: string, weekIndex: number) => {
+    setEditTarget({ userId, weekIndex });
+    editSheetRef.current?.open();
+  };
+
+  const handleMarkChange = (field: "worship" | "meeting", attended: boolean) => {
+    if (!editTarget || !editDateKey || updateAttendance.isPending) return;
+    updateAttendance.mutate(
+      { userId: editTarget.userId, date: editDateKey, [field]: attended },
+      {
+        onError: (error) => {
+          const message = (error as { response?: { data?: { message?: string } } }).response?.data
+            ?.message;
+          Alert.alert(t("수정 실패"), message ?? t("잠시 후 다시 시도해주세요."));
+        },
+      },
+    );
+  };
+
+  const handleOffDaysPress = () => {
+    editSheetRef.current?.close();
+    navigation.navigate("AdminOffDays");
+  };
 
   const handlePickerSelect = (optionId: string) => {
     if (filter === "team") {
@@ -171,7 +207,7 @@ export function AdminAttendanceScreen() {
         {/* 범례 */}
         {/* 번역으로 길어지면 다음 줄로 넘어가게 wrap — 설명은 한 줄을 다 쓰고 색 범례는 그 아래로 내려간다. */}
         <View className="mt-4 flex-row flex-wrap items-center gap-x-2.5 gap-y-1">
-          <Text className="text-caption-main text-text-alternative">{t("왼쪽 예배 · 오른쪽 셀모임")}</Text>
+          <Text className="text-caption-main text-text-alternative">{t("왼쪽 예배 · 오른쪽 셀모임 · 칸을 누르면 출석을 고쳐요")}</Text>
           <View className="flex-row items-center gap-1">
             <View className="h-3 w-3 bg-primary-normal" />
             <Text className="text-caption-main text-text-alternative">{t("출석")}</Text>
@@ -280,7 +316,14 @@ export function AdminAttendanceScreen() {
                         )}
                       </View>
                       {row.weeks.map((week, weekIndex) => (
-                        <AttendanceMarkPair key={weekIndex} marks={week} />
+                        <Pressable
+                          key={weekIndex}
+                          onPress={() => handleCellPress(row.id, weekIndex)}
+                          hitSlop={4}
+                          style={({ pressed }) => (pressed ? { opacity: 0.5 } : null)}
+                        >
+                          <AttendanceMarkPair marks={week} />
+                        </Pressable>
                       ))}
                     </View>
                   </View>
@@ -294,6 +337,80 @@ export function AdminAttendanceScreen() {
           </Text>
         )}
       </ScrollView>
+
+      {/* 출석 수정 시트 — 관리자가 날짜 제한 없이 예배·셀모임 출석을 대신 고친다 (알림 없음) */}
+      <AppSheet
+        ref={editSheetRef}
+        footer={
+          <Pressable
+            className="items-center bg-background-normal py-4"
+            onPress={() => editSheetRef.current?.close()}
+          >
+            <Text className="text-body-regular text-text-alternative">{t("닫기")}</Text>
+          </Pressable>
+        }
+      >
+        <View className="gap-5 px-6 pb-4 pt-1">
+          <Text className="text-body-main text-text-normal">
+            {editRow?.name}
+            {" · "}
+            {editTarget ? (data?.dates?.[editTarget.weekIndex] ?? "") : ""}
+          </Text>
+          {(
+            [
+              { field: "worship", label: t("예배"), mark: editWeek?.[0] },
+              { field: "meeting", label: t("셀모임"), mark: editWeek?.[1] },
+            ] as const
+          ).map(({ field, label, mark }) => (
+            <View key={field} className="gap-2">
+              <Text className="text-body-small text-text-alternative">{label}</Text>
+              {mark === "-" ? (
+                <Pressable
+                  className="rounded-2.5 bg-background-muted px-4 py-3"
+                  onPress={handleOffDaysPress}
+                >
+                  <Text className="text-body-regular text-text-alternative">
+                    {field === "worship"
+                      ? t("예배가 없는 날이에요. 고치려면 먼저 모임 없는 날 지정을 바꿔주세요.")
+                      : t("셀모임이 없는 날이거나 소속 셀이 없어요. 모임 없는 날 지정을 확인해주세요.")}
+                  </Text>
+                  <Text className="mt-1 text-body-main text-primary-normal">
+                    {t("모임 없는 날 지정 열기")}
+                  </Text>
+                </Pressable>
+              ) : (
+                <View className="flex-row gap-3">
+                  {([true, false] as const).map((attended) => {
+                    const selected = (mark === "O") === attended;
+                    return (
+                      <Pressable
+                        key={String(attended)}
+                        className={
+                          selected
+                            ? "h-11 flex-1 items-center justify-center rounded-2.5 bg-primary-normal"
+                            : "h-11 flex-1 items-center justify-center rounded-2.5 bg-background-muted"
+                        }
+                        disabled={updateAttendance.isPending}
+                        onPress={() => handleMarkChange(field, attended)}
+                      >
+                        <Text
+                          className={
+                            selected
+                              ? "text-body-main text-text-disable"
+                              : "text-body-regular text-text-normal"
+                          }
+                        >
+                          {attended ? t("출석") : t("결석")}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      </AppSheet>
 
       {/* 셀/팀 선택 시트 (시안 액션시트) */}
       <AppSheet

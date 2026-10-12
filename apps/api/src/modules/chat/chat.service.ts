@@ -8,20 +8,27 @@ import type {
   ChatFile,
   ChatMember,
   ChatMessageInfo,
+  ChatPollInfo,
   ChatRoomResponse,
 } from '@onnuri/shared';
 
+import type { Prisma } from '../../../generated/prisma';
+import { Cron } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import {
+  POLL_MAX_OPTIONS,
+  POLL_MIN_OPTIONS,
+  SendChatMessageDto,
+} from './dto/send-chat-message.dto';
 
 // 처음 열 때 받는 최근 메시지 수 — 그 이전은 지금 단계에서 불러오지 않는다.
 const RECENT_LIMIT = 100;
 // 알림 본문에 싣는 메시지 미리보기 길이
 const SNIPPET_LENGTH = 40;
 
-/** 단톡방 하나 — 팀 단톡방(roomId)이나 셀 단톡방(cellId) 중 하나. */
-export type ChatRoom = { roomId: string } | { cellId: string };
+/** 단톡방 하나 — 팀 단톡방(roomId), 셀 단톡방(cellId), 취향소그룹 단톡방(groupId) 중 하나. */
+export type ChatRoom = { roomId: string } | { cellId: string } | { groupId: string };
 
 interface RoomAccess {
   isAdmin: boolean;
@@ -51,7 +58,32 @@ const MESSAGE_SELECT = {
     },
   },
   reactions: { select: { userId: true, emoji: true } },
-} as const;
+  poll: {
+    select: {
+      id: true,
+      title: true,
+      multiple: true,
+      anonymous: true,
+      allowAddOptions: true,
+      closesAt: true,
+      closedAt: true,
+      createdById: true,
+      options: {
+        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+        select: {
+          id: true,
+          text: true,
+          votes: {
+            select: {
+              userId: true,
+              user: { select: { name: true, avatarUrl: true } },
+            },
+          },
+        },
+      },
+    },
+  },
+} satisfies Prisma.ChatMessageSelect;
 
 type MessageRow = {
   id: string;
@@ -72,9 +104,24 @@ type MessageRow = {
     author: { name: string };
   } | null;
   reactions: { userId: string; emoji: string }[];
+  poll: {
+    id: string;
+    title: string;
+    multiple: boolean;
+    anonymous: boolean;
+    allowAddOptions: boolean;
+    closesAt: Date | null;
+    closedAt: Date | null;
+    createdById: string;
+    options: {
+      id: string;
+      text: string;
+      votes: { userId: string; user: { name: string; avatarUrl: string | null } }[];
+    }[];
+  } | null;
 };
 
-// 단톡방 — 팀·셀 단톡방이 같은 로직을 쓴다. 그 방의 소속 멤버와 관리자만 읽고 쓴다.
+// 단톡방 — 팀·셀·소그룹 단톡방이 같은 로직을 쓴다. 그 방의 소속 멤버와 관리자만 읽고 쓴다.
 @Injectable()
 export class ChatService {
   constructor(
@@ -103,9 +150,9 @@ export class ChatService {
     return {
       messages: recent
         .reverse()
-        .map((row) => this.toInfo(row, userId, access.isAdmin, memberNames)),
+        .map((row) => this.toInfo(row, userId, access, memberNames)),
       notice: latestNotice
-        ? this.toInfo(latestNotice, userId, access.isAdmin, memberNames)
+        ? this.toInfo(latestNotice, userId, access, memberNames)
         : null,
       members: access.members,
       canNotice: access.canNotice,
@@ -118,10 +165,12 @@ export class ChatService {
     dto: SendChatMessageDto,
   ): Promise<ChatMessageInfo> {
     const access = await this.assertAccess(userId, room);
-    const content = dto.content.trim();
-    const imageUrls = dto.imageUrls ?? [];
-    const videoUrls = dto.videoUrls ?? [];
-    const files = (dto.files ?? []).map((file) => ({
+    // 투표 메시지면 내용은 투표 제목이고 첨부는 받지 않는다.
+    const poll = dto.poll ? this.normalizePoll(dto.poll) : null;
+    const content = poll ? poll.title : dto.content.trim();
+    const imageUrls = poll ? [] : (dto.imageUrls ?? []);
+    const videoUrls = poll ? [] : (dto.videoUrls ?? []);
+    const files = (poll ? [] : (dto.files ?? [])).map((file) => ({
       url: file.url,
       name: file.name,
       size: file.size,
@@ -158,12 +207,27 @@ export class ChatService {
         replyToId: dto.replyToId ?? null,
         mentionedUserIds,
         noticeAt: dto.asNotice ? new Date() : null,
+        ...(poll && {
+          poll: {
+            create: {
+              title: poll.title,
+              multiple: poll.multiple,
+              anonymous: poll.anonymous,
+              allowAddOptions: poll.allowAddOptions,
+              closesAt: poll.closesAt,
+              createdById: userId,
+              options: {
+                create: poll.options.map((text, index) => ({ text, sortOrder: index })),
+              },
+            },
+          },
+        }),
       },
       select: MESSAGE_SELECT,
     });
 
     const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
-    const info = this.toInfo(row, userId, access.isAdmin, memberNames);
+    const info = this.toInfo(row, userId, access, memberNames);
     await this.notifyRoom(userId, info, access, mentionedUserIds, dto.asNotice === true);
     return info;
   }
@@ -186,7 +250,7 @@ export class ChatService {
       select: MESSAGE_SELECT,
     });
     const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
-    return this.toInfo(row, userId, access.isAdmin, memberNames);
+    return this.toInfo(row, userId, access, memberNames);
   }
 
   // 이모지 반응 토글 — 이미 눌렀으면 취소, 아니면 추가.
@@ -214,7 +278,162 @@ export class ChatService {
       select: MESSAGE_SELECT,
     });
     const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
-    return this.toInfo(row, userId, access.isAdmin, memberNames);
+    return this.toInfo(row, userId, access, memberNames);
+  }
+
+  // ---- 투표 ------------------------------------------------------------
+
+  // 내 선택 전체를 교체한다 (빈 배열이면 투표 취소). 마감 후에는 못 바꾼다.
+  async votePoll(userId: string, pollId: string, optionIds: string[]): Promise<ChatMessageInfo> {
+    const { poll, access } = await this.loadPoll(userId, pollId);
+    this.assertPollOpen(poll);
+    const unique = Array.from(new Set(optionIds));
+    const valid = new Set(poll.options.map((option) => option.id));
+    if (unique.some((id) => !valid.has(id))) {
+      throw new BadRequestException('이 투표에 없는 항목이에요.');
+    }
+    if (!poll.multiple && unique.length > 1) {
+      throw new BadRequestException('이 투표는 하나만 고를 수 있어요.');
+    }
+    await this.prisma.$transaction([
+      this.prisma.chatPollVote.deleteMany({ where: { pollId, userId } }),
+      this.prisma.chatPollVote.createMany({
+        data: unique.map((optionId) => ({ pollId, optionId, userId })),
+      }),
+    ]);
+    return this.reloadPollMessage(userId, poll.message.id, access);
+  }
+
+  // 항목 추가 — 만든 사람이 허용한 투표에서, 마감 전에만. 같은 이름이 이미 있으면 그대로 둔다.
+  async addPollOption(userId: string, pollId: string, text: string): Promise<ChatMessageInfo> {
+    const { poll, access } = await this.loadPoll(userId, pollId);
+    this.assertPollOpen(poll);
+    if (!poll.allowAddOptions && poll.createdById !== userId) {
+      throw new ForbiddenException('이 투표는 항목을 추가할 수 없어요.');
+    }
+    const trimmed = text.trim();
+    if (!trimmed) throw new BadRequestException('항목을 입력해주세요.');
+    if (poll.options.length >= POLL_MAX_OPTIONS) {
+      throw new BadRequestException('항목은 10개까지 만들 수 있어요.');
+    }
+    const exists = poll.options.some((option) => option.text === trimmed);
+    if (!exists) {
+      await this.prisma.chatPollOption.create({
+        data: {
+          pollId,
+          text: trimmed,
+          sortOrder: poll.options.length,
+          createdById: userId,
+        },
+      });
+    }
+    return this.reloadPollMessage(userId, poll.message.id, access);
+  }
+
+  // 직접 마감 — 만든 사람, 그 방의 팀장·셀장·소그룹장, 관리자.
+  async closePoll(userId: string, pollId: string): Promise<ChatMessageInfo> {
+    const { poll, access } = await this.loadPoll(userId, pollId);
+    if (poll.createdById !== userId && !access.canNotice && !access.isAdmin) {
+      throw new ForbiddenException('투표를 마감할 권한이 없어요.');
+    }
+    if (poll.closedAt === null) {
+      await this.prisma.chatPoll.update({
+        where: { id: pollId },
+        data: { closedAt: new Date() },
+      });
+      // 다른 사람이 마감했으면 만든 사람에게 알려 준다.
+      if (poll.createdById !== userId) {
+        await this.notifications.notify([poll.createdById], {
+          type: 'CHAT',
+          title: '단톡방',
+          body: `투표가 마감됐어요: ${poll.title}`,
+          linkUrl: access.linkUrl,
+        });
+      }
+    }
+    return this.reloadPollMessage(userId, poll.message.id, access);
+  }
+
+  // 마감 시각이 지난 투표를 마감 처리하고 만든 사람에게 알린다 (5분마다).
+  @Cron('*/5 * * * *')
+  async closeExpiredPolls(): Promise<void> {
+    const now = new Date();
+    const expired = await this.prisma.chatPoll.findMany({
+      where: { closedAt: null, closesAt: { lte: now } },
+      select: {
+        id: true,
+        title: true,
+        closesAt: true,
+        createdById: true,
+        message: { select: { roomId: true, cellId: true, groupId: true } },
+      },
+    });
+    for (const poll of expired) {
+      await this.prisma.chatPoll.update({
+        where: { id: poll.id },
+        data: { closedAt: poll.closesAt ?? now },
+      });
+      const { roomId, cellId, groupId } = poll.message;
+      const linkUrl = roomId
+        ? `team-room/${roomId}`
+        : groupId
+          ? `group-room/${groupId}`
+          : `cell-chat/${cellId}`;
+      await this.notifications.notify([poll.createdById], {
+        type: 'CHAT',
+        title: '단톡방',
+        body: `투표가 마감됐어요: ${poll.title}`,
+        linkUrl,
+      });
+    }
+  }
+
+  // 투표를 찾고, 그 투표가 올라온 방의 접근 권한까지 확인한다.
+  private async loadPoll(userId: string, pollId: string) {
+    const poll = await this.prisma.chatPoll.findUnique({
+      where: { id: pollId },
+      select: {
+        id: true,
+        title: true,
+        multiple: true,
+        allowAddOptions: true,
+        closesAt: true,
+        closedAt: true,
+        createdById: true,
+        options: { select: { id: true, text: true } },
+        message: {
+          select: { id: true, deletedAt: true, roomId: true, cellId: true, groupId: true },
+        },
+      },
+    });
+    if (!poll || poll.message.deletedAt) throw new NotFoundException('투표를 찾을 수 없어요.');
+    const { roomId, cellId, groupId } = poll.message;
+    const room: ChatRoom = roomId
+      ? { roomId }
+      : groupId
+        ? { groupId }
+        : { cellId: cellId as string };
+    const access = await this.assertAccess(userId, room);
+    return { poll, access };
+  }
+
+  private assertPollOpen(poll: { closedAt: Date | null; closesAt: Date | null }) {
+    const closed =
+      poll.closedAt !== null || (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
+    if (closed) throw new BadRequestException('마감된 투표예요.');
+  }
+
+  private async reloadPollMessage(
+    userId: string,
+    messageId: string,
+    access: RoomAccess,
+  ): Promise<ChatMessageInfo> {
+    const row = await this.prisma.chatMessage.findUniqueOrThrow({
+      where: { id: messageId },
+      select: MESSAGE_SELECT,
+    });
+    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    return this.toInfo(row, userId, access, memberNames);
   }
 
   // 내 메시지 또는 관리자만 지울 수 있다 (soft delete).
@@ -231,7 +450,9 @@ export class ChatService {
   }
 
   private roomWhere(room: ChatRoom) {
-    return 'roomId' in room ? { roomId: room.roomId } : { cellId: room.cellId };
+    if ('roomId' in room) return { roomId: room.roomId };
+    if ('groupId' in room) return { groupId: room.groupId };
+    return { cellId: room.cellId };
   }
 
   private async assertMessage(room: ChatRoom, messageId: string) {
@@ -281,6 +502,34 @@ export class ChatService {
         canNotice: isAdmin || isLeader || chatRoom.createdById === userId,
         members: this.toMembers(chatRoom.members.map((m) => m.user)),
         linkUrl: `team-room/${room.roomId}`,
+      };
+    }
+
+    if ('groupId' in room) {
+      // 취향소그룹 단톡방 — 승인된 참여자(소그룹장 포함)와 관리자만 들어온다. 신청만 했거나 거절된
+      // 사람은 멤버 상태가 APPROVED가 아니라 자동으로 막힌다.
+      const group = await this.prisma.hobbyGroup.findFirst({
+        where: { postId: room.groupId, post: { deletedAt: null } },
+        select: {
+          members: {
+            where: { status: 'APPROVED' },
+            select: {
+              role: true,
+              user: { select: { id: true, name: true, avatarUrl: true } },
+            },
+          },
+        },
+      });
+      if (!group) throw new NotFoundException('존재하지 않는 소그룹입니다.');
+      const mine = group.members.find((m) => m.user.id === userId);
+      if (!isAdmin && !mine) {
+        throw new ForbiddenException('이 소그룹에 참여 중인 사람만 볼 수 있습니다.');
+      }
+      return {
+        isAdmin,
+        canNotice: isAdmin || mine?.role === 'LEADER',
+        members: this.toMembers(group.members.map((m) => m.user)),
+        linkUrl: `group-room/${room.groupId}`,
       };
     }
 
@@ -359,6 +608,7 @@ export class ChatService {
   }
 
   private snippet(info: ChatMessageInfo): string {
+    if (info.poll) return `투표: ${info.poll.title}`;
     const text = info.content.trim();
     if (!text) {
       if (info.videoUrls.length > 0) return '동영상을 보냈어요';
@@ -379,12 +629,84 @@ export class ChatService {
     });
   }
 
+  // 투표 입력 정리 — 항목 공백 제거·중복 제거, 개수·마감 시각 검사.
+  private normalizePoll(input: {
+    title: string;
+    options: string[];
+    multiple?: boolean;
+    anonymous?: boolean;
+    allowAddOptions?: boolean;
+    closesAt?: string;
+  }) {
+    const title = input.title.trim();
+    const options = Array.from(new Set(input.options.map((text) => text.trim()).filter(Boolean)));
+    if (!title) throw new BadRequestException('투표 제목을 입력해주세요.');
+    if (options.length < POLL_MIN_OPTIONS || options.length > POLL_MAX_OPTIONS) {
+      throw new BadRequestException('항목은 서로 다른 2~10개여야 해요.');
+    }
+    let closesAt: Date | null = null;
+    if (input.closesAt) {
+      closesAt = new Date(input.closesAt);
+      if (Number.isNaN(closesAt.getTime()) || closesAt.getTime() <= Date.now()) {
+        throw new BadRequestException('마감 시각은 지금보다 뒤여야 해요.');
+      }
+    }
+    return {
+      title,
+      options,
+      multiple: input.multiple === true,
+      anonymous: input.anonymous === true,
+      allowAddOptions: input.allowAddOptions === true,
+      closesAt,
+    };
+  }
+
+  private toPollInfo(
+    poll: NonNullable<MessageRow['poll']>,
+    requesterId: string,
+    access: { isAdmin: boolean; canNotice: boolean },
+  ): ChatPollInfo {
+    const voterIds = new Set<string>();
+    const options = poll.options.map((option) => {
+      for (const vote of option.votes) voterIds.add(vote.userId);
+      return {
+        id: option.id,
+        text: option.text,
+        count: option.votes.length,
+        votedByMe: option.votes.some((vote) => vote.userId === requesterId),
+        // 익명 투표는 누가 골랐는지 내려보내지 않는다 (만든 사람·관리자에게도).
+        voters: poll.anonymous
+          ? []
+          : option.votes.map((vote) => ({
+              id: vote.userId,
+              name: vote.user.name,
+              avatarUrl: vote.user.avatarUrl,
+            })),
+      };
+    });
+    const closed =
+      poll.closedAt !== null || (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
+    return {
+      id: poll.id,
+      title: poll.title,
+      options,
+      multiple: poll.multiple,
+      anonymous: poll.anonymous,
+      allowAddOptions: poll.allowAddOptions,
+      closesAt: poll.closesAt?.toISOString() ?? null,
+      closed,
+      voterCount: voterIds.size,
+      canClose: !closed && (poll.createdById === requesterId || access.canNotice || access.isAdmin),
+    };
+  }
+
   private toInfo(
     row: MessageRow,
     requesterId: string,
-    isAdmin: boolean,
+    access: { isAdmin: boolean; canNotice: boolean },
     memberNames: Map<string, string>,
   ): ChatMessageInfo {
+    const isAdmin = access.isAdmin;
     const isMine = row.authorId === requesterId;
     const counts = new Map<string, { count: number; reactedByMe: boolean }>();
     for (const reaction of row.reactions) {
@@ -413,6 +735,7 @@ export class ChatService {
               hasImage: row.replyTo.imageUrls.length > 0,
             }
           : null,
+      poll: row.poll ? this.toPollInfo(row.poll, requesterId, access) : null,
       mentions: row.mentionedUserIds.flatMap((id) => {
         const name = memberNames.get(id);
         return name ? [{ id, name }] : [];

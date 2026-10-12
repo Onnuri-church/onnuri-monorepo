@@ -122,5 +122,7 @@
   "출석 QR을 스캔하려면 설정에서\n카메라 접근을 허용해주세요": "To scan the attendance QR,\nallow camera access in Settings",
   "QR코드를 화면 안에 맞춰주세요": "Fit the QR code within the frame",
   "입구에 있는 출석 QR을 스캔해요": "Scan the attendance QR at the entrance",
-  "다시 스캔하기": "Scan again"
+  "다시 스캔하기": "Scan again",
+  "지금 모집 중인 모임이 없어요": "No groups are recruiting right now",
+  "마감된 모임이 없어요": "No closed groups"
 }

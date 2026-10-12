@@ -2,6 +2,7 @@ import type {
   BulletinDetail,
   BulletinListResponse,
   CreateBulletinRequest,
+  UpdateBulletinRequest,
 } from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
@@ -21,9 +22,23 @@ export async function fetchBulletin(id: string): Promise<BulletinDetail> {
   return data;
 }
 
-// 주보 등록 (POST /bulletins). 관리자만 쓸 수 있고, 이미 주보가 있는 날짜면 400이다.
+// 주보 등록 (POST /bulletins). 관리자·업로드 권한 팀원만 쓸 수 있고, 이미 주보가 있는 날짜면 400이다.
 // 사진은 URL로만 보낸다 (파일은 shared/api/upload의 uploadImage가 먼저 올린다).
 export async function createBulletin(body: CreateBulletinRequest): Promise<BulletinDetail> {
   const { data } = await apiClient.post<BulletinDetail>("/bulletins", body);
   return data;
+}
+
+// 주보 수정 (PATCH /bulletins/:id) — 날짜는 그대로, 주보·나눔지 이미지를 통째로 바꾼다.
+export async function updateBulletin(
+  id: string,
+  body: UpdateBulletinRequest,
+): Promise<BulletinDetail> {
+  const { data } = await apiClient.patch<BulletinDetail>(`/bulletins/${id}`, body);
+  return data;
+}
+
+// 주보 삭제 (DELETE /bulletins/:id) — 그 회차의 주보·나눔지 이미지가 지워진다.
+export async function deleteBulletin(id: string): Promise<void> {
+  await apiClient.delete(`/bulletins/${id}`);
 }

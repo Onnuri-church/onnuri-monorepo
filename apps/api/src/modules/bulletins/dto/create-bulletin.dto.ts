@@ -8,7 +8,7 @@ import {
   } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
-// POST /bulletins 요청 본문 — 등록 시안(날짜 / 주보 2장 고정 / 나눔지 최대 5장).
+// POST /bulletins 요청 본문 — 등록 시안(날짜 / 주보 2장 고정 / 나눔지 0~5장).
 // 계약은 @onnuri/shared의 CreateBulletinRequest.
 export class CreateBulletinDto {
   @IsYmdDate({ message: 'date는 YYYY-MM-DD 형식이어야 합니다.' })
@@ -25,8 +25,8 @@ export class CreateBulletinDto {
   @IsNotEmpty({ each: true })
   bulletinImageUrls!: string[];
 
+  // 나눔지는 없어도 된다 (주보만 올리는 주).
   @IsArray()
-  @ArrayMinSize(1, { message: '나눔지를 1장 이상 올려주세요.' })
   @ArrayMaxSize(5, { message: '나눔지는 최대 5장까지 올릴 수 있어요.' })
   @IsString({ each: true })
   @IsNotEmpty({ each: true })

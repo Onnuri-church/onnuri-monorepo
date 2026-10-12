@@ -64,6 +64,8 @@ import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
+import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
+import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
 import { ChatRoomFormScreen } from "../features/team-space/ChatRoomFormScreen";
 import { ChatRoomListScreen } from "../features/team-space/ChatRoomListScreen";
 import { ChatRoomScreen } from "../features/team-space/ChatRoomScreen";
@@ -416,6 +418,16 @@ export function RootNavigator() {
             options={{ headerShown: true }}
           />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: true }} />
+          <Stack.Screen
+            name="ChatPollCreate"
+            component={ChatPollCreateScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("투표 만들기")} rightAction="none" />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (타이틀이 소그룹 제목이라 화면 데이터에 의존). */}
+          <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ headerShown: true }} />
           <Stack.Screen
             name="TeamStoryGallery"
             component={TeamStoryGalleryScreen}

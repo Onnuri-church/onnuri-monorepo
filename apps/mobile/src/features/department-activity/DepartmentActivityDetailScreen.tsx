@@ -25,6 +25,7 @@ import {
   updateComment,
 } from "./api";
 import { CommentThread } from "./components/CommentThread";
+import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 import { PostAuthor } from "./components/PostAuthor";
 import { ReactionBar } from "./components/ReactionBar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
@@ -50,6 +51,8 @@ export function DepartmentActivityDetailScreen() {
 
   const [draft, setDraft] = useState("");
   const [photoIndex, setPhotoIndex] = useState(0);
+  // 사진을 누르면 그 사진부터 전체 화면 뷰어(좌우 슬라이드)로 연다. null이면 닫힘.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   // 사진 폭 = 화면 폭 - 좌우 여백(px-5 = 20씩)
   const { width } = useWindowDimensions();
   const photoWidth = width - 40;
@@ -245,14 +248,15 @@ export function DepartmentActivityDetailScreen() {
                 )
               }
             >
-              {photos.map((url) => (
-                <Image
-                  key={url}
-                  source={{ uri: url }}
-                  style={{ width: photoWidth, aspectRatio: 1 }}
-                  className="bg-background-assistive"
-                  resizeMode="cover"
-                />
+              {photos.map((url, index) => (
+                <Pressable key={url} onPress={() => setViewerIndex(index)}>
+                  <Image
+                    source={{ uri: url }}
+                    style={{ width: photoWidth, aspectRatio: 1 }}
+                    className="bg-background-assistive"
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
             {photos.length > 1 && (
@@ -356,6 +360,8 @@ export function DepartmentActivityDetailScreen() {
           placeholder={replyTo ? t("답글을 입력하세요") : t("댓글을 입력하세요")}
         />
       </View>
+
+      <ChatImageViewer urls={photos} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
 
       <AppDialog
         ref={dialogRef}

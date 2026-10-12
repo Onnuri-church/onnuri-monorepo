@@ -34,6 +34,7 @@ import Note from "../../assets/icons/note.svg";
 import Paperclip from "../../assets/icons/paperclip.svg";
 import Palette from "../../assets/icons/palette.svg";
 import Place from "../../assets/icons/place.svg";
+import Poll from "../../assets/icons/poll.svg";
 import Play from "../../assets/icons/play.svg";
 import Plus from "../../assets/icons/plus.svg";
 import Pray from "../../assets/icons/pray.svg";
@@ -96,6 +97,7 @@ const ICONS = {
   paperclip: Paperclip,
   palette: Palette,
   place: Place,
+  poll: Poll,
   play: Play,
   plus: Plus,
   pray: Pray,

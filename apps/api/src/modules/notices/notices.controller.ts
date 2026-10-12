@@ -13,6 +13,10 @@ import {
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
+import {
+  ContentManagerGuard,
+  RequireContentPermission,
+} from '../../common/guards/content-manager.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateBannerDto } from './dto/create-banner.dto';
@@ -22,7 +26,8 @@ import { UpdateBannerDto } from './dto/update-banner.dto';
 import { UpdateNoticeDto } from './dto/update-notice.dto';
 import { NoticesService } from './notices.service';
 
-// 홈 배너·공지사항 — 조회는 게스트도 되고, 등록·삭제는 관리자만.
+// 홈 배너·공지사항 — 조회는 게스트도 된다. 배너 관리는 관리자와 배너 권한이 켜진 팀의 팀원,
+// 공지사항 등록·수정·삭제는 관리자만.
 // 정적 라우트('banner'/'banners')를 ':id'보다 먼저 둔다 — Express는 등록 순서 매칭.
 @Controller('notices')
 export class NoticesController {
@@ -39,32 +44,37 @@ export class NoticesController {
     return this.noticesService.findActiveBanner();
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard, ContentManagerGuard)
+  @RequireContentPermission('canManageBanner')
   @Get('banners')
   findBanners() {
     return this.noticesService.findBanners();
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard, ContentManagerGuard)
+  @RequireContentPermission('canManageBanner')
   @Post('banners')
   createBanner(@CurrentUser() user: JwtPayload, @Body() dto: CreateBannerDto) {
     return this.noticesService.createBanner(user.sub, dto);
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard, ContentManagerGuard)
+  @RequireContentPermission('canManageBanner')
   @Patch('banners/:id')
   updateBanner(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
     return this.noticesService.updateBanner(id, dto);
   }
 
   // 홈 표시 켜기/끄기 — 켜면 다른 배너는 자동으로 꺼진다.
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard, ContentManagerGuard)
+  @RequireContentPermission('canManageBanner')
   @Put('banners/:id/active')
   setBannerActive(@Param('id') id: string, @Body() dto: SetBannerActiveDto) {
     return this.noticesService.setBannerActive(id, dto.active);
   }
 
-  @UseGuards(JwtAuthGuard, AdminGuard)
+  @UseGuards(JwtAuthGuard, ContentManagerGuard)
+  @RequireContentPermission('canManageBanner')
   @Delete('banners/:id')
   removeBanner(@Param('id') id: string) {
     return this.noticesService.removeBanner(id);

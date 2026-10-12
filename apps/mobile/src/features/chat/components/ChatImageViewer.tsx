@@ -1,4 +1,5 @@
-import { Modal, Pressable, View } from "react-native";
+import { Modal, Pressable } from "react-native";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -17,12 +18,20 @@ export function ChatImageViewer({ urls, startIndex, onClose }: ChatImageViewerPr
   const insets = useSafeAreaInsets();
   return (
     <Modal visible={startIndex !== null} transparent animationType="fade" onRequestClose={onClose}>
-      <View className="flex-1 bg-background-dark" style={{ paddingTop: insets.top }}>
-        <Pressable className="h-12 justify-center px-5" onPress={onClose} hitSlop={8}>
+      {/* Android의 Modal은 별도 창이라 제스처(확대·축소)를 쓰려면 이 안에 루트 뷰가 따로 필요하다. */}
+      {/* className이 아니라 style로 검정을 준다 — GestureHandlerRootView는 NativeWind 클래스를 못 받아 배경이 투명해진다. */}
+      <GestureHandlerRootView style={{ flex: 1, backgroundColor: "#000000" }}>
+        {startIndex !== null && <PhotoPager urls={urls} initialIndex={startIndex} />}
+        {/* 닫기 버튼은 사진 위에 얹는다 — 사진이 화면 가운데에 오게 영역을 나누지 않는다. */}
+        <Pressable
+          className="absolute left-5 h-10 w-10 items-center justify-center rounded-full bg-background-dark/50"
+          style={{ top: insets.top + 8 }}
+          onPress={onClose}
+          hitSlop={8}
+        >
           <Icon name="back" size={28} color={colors.icon.strong} />
         </Pressable>
-        {startIndex !== null && <PhotoPager urls={urls} initialIndex={startIndex} />}
-      </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

@@ -38,6 +38,10 @@ export interface MeResponse extends User {
   team: { id: string; name: string; role: TeamRole } | null;
   /** 진행 중인 팀 소속 전부 (여러 팀 소속 가능). `team`은 이 중 첫 번째다 */
   teams: { id: string; name: string; role: TeamRole }[];
+  /** 주보 등록 가능 — 관리자이거나 업로드 권한이 켜진 팀의 팀원 */
+  canUploadBulletin: boolean;
+  /** 홈 배너 관리 가능 — 관리자이거나 배너 권한이 켜진 팀의 팀원 */
+  canManageBanner: boolean;
 }
 
 /** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지와 전체 셀 목록이 같이 쓴다 */

@@ -1,11 +1,13 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { HomeBanner } from "@onnuri/shared";
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { FloatingButton } from "../../shared/components/base/FloatingButton";
+import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -22,6 +24,32 @@ export function AdminBannerManageScreen() {
   const { data: banners } = useHomeBanners();
   const deleteBanner = useDeleteHomeBanner();
   const setActive = useSetHomeBannerActive();
+
+  // 헤더 ⋮ > 편집하기로 수정·삭제 버튼을 켠다 — 평소에는 목록만 깔끔하게 보인다.
+  const [editing, setEditing] = useState(false);
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      header: () =>
+        editing ? (
+          <Header
+            variant="sub"
+            title={t("홈 배너 관리")}
+            rightAction="text"
+            rightLabel={t("완료")}
+            onPressRightLabel={() => setEditing(false)}
+          />
+        ) : (
+          <Header
+            variant="sub"
+            title={t("홈 배너 관리")}
+            rightAction="more"
+            menuItems={[
+              { icon: "edit", label: t("편집하기"), onPress: () => setEditing(true) },
+            ]}
+          />
+        ),
+    });
+  }, [navigation, editing, t]);
 
   const [pendingDelete, setPendingDelete] = useState<HomeBanner | null>(null);
   const dialogRef = useRef<AppDialogRef>(null);
@@ -69,7 +97,7 @@ export function AdminBannerManageScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView contentContainerClassName="pt-2"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
-        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
+        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
         <Text className="px-5 py-2 text-body-small text-text-alternative">
           {t("체크한 배너가 홈에 표시돼요. 하나를 체크하면 나머지는 꺼지고, 모두 끄면 기본 배너가 보여요.")}
         </Text>
@@ -77,7 +105,9 @@ export function AdminBannerManageScreen() {
         {(banners ?? []).map((banner) => (
           <View
             key={banner.id}
-            className="mx-5 flex-row items-center justify-between border-b border-background-assistive py-3"
+            className="mx-5 flex-row items-center justify-between rounded-xl border-b border-background-assistive px-3 py-3"
+            // 홈에 표시 중인 배너는 아주 연한 초록으로 칠한다 (primary.normal 8%).
+            style={banner.isActive ? { backgroundColor: "rgba(39, 110, 76, 0.08)" } : undefined}
           >
             <View className="min-w-0 flex-1 flex-row items-center gap-3">
               {/* 홈 표시 체크 — 시안의 라디오 체크와 같은 모양 (켜짐: 초록 원 + 흰 체크) */}
@@ -117,6 +147,7 @@ export function AdminBannerManageScreen() {
                 </Text>
               </View>
             </View>
+            {editing && (
             <View className="shrink-0 flex-row items-center gap-4 pl-3">
               <Pressable
                 onPress={() => navigation.navigate("AdminBannerForm", { bannerId: banner.id })}
@@ -128,6 +159,7 @@ export function AdminBannerManageScreen() {
                 <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
               </Pressable>
             </View>
+            )}
           </View>
         ))}
 
@@ -137,16 +169,12 @@ export function AdminBannerManageScreen() {
           </Text>
         )}
 
-        {/* 등록 — 셀 관리의 점선 행과 같은 패턴 */}
-        <Pressable
-          className="mx-5 mt-4 h-14 flex-row items-center justify-center gap-2 rounded-xl border border-dashed border-background-assistive"
-          onPress={() => navigation.navigate("AdminBannerForm")}
-          style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-        >
-          <Icon name="plus" size={16} color={colors.icon.normal} />
-          <Text className="text-body-regular text-text-alternative">{t("배너 등록")}</Text>
-        </Pressable>
       </ScrollView>
+
+      {/* 등록 — 다른 게시판과 같은 오른쪽 아래 초록 + 버튼 */}
+      <FloatingButton onPress={() => navigation.navigate("AdminBannerForm")}>
+        <Icon name="plus" color={colors.icon.disable} />
+      </FloatingButton>
 
       <AppDialog
         ref={publishDialogRef}

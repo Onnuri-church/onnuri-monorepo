@@ -25,6 +25,58 @@ export interface ChatReplyPreview {
   hasImage: boolean;
 }
 
+/** 투표 항목 하나 */
+export interface ChatPollOptionInfo {
+  id: string;
+  text: string;
+  /** 이 항목에 투표한 사람 수 */
+  count: number;
+  /** 내가 이 항목에 투표했는지 */
+  votedByMe: boolean;
+  /** 투표한 사람들 — 익명 투표면 빈 배열이다 (이름은 아무에게도 안 내려간다) */
+  voters: { id: string; name: string; avatarUrl: string | null }[];
+}
+
+/** 단톡방 투표 — 메시지 목록에서 `poll`로 같이 온다 */
+export interface ChatPollInfo {
+  id: string;
+  title: string;
+  options: ChatPollOptionInfo[];
+  multiple: boolean;
+  anonymous: boolean;
+  allowAddOptions: boolean;
+  /** 자동 마감 시각 (ISO) — 없으면 직접 마감할 때까지 열려 있다 */
+  closesAt: string | null;
+  /** 마감됐는지 — 직접 마감했거나 마감 시각이 지난 경우 */
+  closed: boolean;
+  /** 투표에 참여한 사람 수 (복수 선택이어도 한 명은 한 번만 센다) */
+  voterCount: number;
+  /** 마감 버튼 노출 기준 — 만든 사람, 그 방의 팀장·셀장·소그룹장, 관리자 */
+  canClose: boolean;
+}
+
+/** 투표 만들기 입력 — 메시지 보내기(SendChatMessageRequest.poll)에 담아 보낸다 */
+export interface CreateChatPollRequest {
+  title: string;
+  /** 2~10개 */
+  options: string[];
+  multiple?: boolean;
+  anonymous?: boolean;
+  allowAddOptions?: boolean;
+  /** 자동 마감 시각 (ISO). 없으면 직접 마감 */
+  closesAt?: string;
+}
+
+/** PUT /chat-polls/:pollId/votes 요청 본문 — 내 선택 전체를 교체한다 (빈 배열이면 투표 취소) */
+export interface VoteChatPollRequest {
+  optionIds: string[];
+}
+
+/** POST /chat-polls/:pollId/options 요청 본문 — allowAddOptions인 투표만 */
+export interface AddChatPollOptionRequest {
+  text: string;
+}
+
 /** 단톡방에 첨부한 파일 (악보·문서) */
 export interface ChatFile {
   url: string;
@@ -45,6 +97,8 @@ export interface ChatMessageInfo {
   videoUrls: string[];
   files: ChatFile[];
   replyTo: ChatReplyPreview | null;
+  /** 투표 메시지면 그 투표 (content는 투표 제목) */
+  poll: ChatPollInfo | null;
   /** 언급(@)된 멤버 — 본문에 "@이름"으로 들어 있고, 앱이 강조해서 그린다 */
   mentions: { id: string; name: string }[];
   /** 공지로 등록된 메시지인지 */
@@ -75,7 +129,7 @@ export interface ChatRoomResponse {
   canNotice: boolean;
 }
 
-/** POST …/messages 요청 본문 — 내용이나 첨부(사진·동영상·파일) 중 하나는 있어야 한다 */
+/** POST …/messages 요청 본문 — 내용이나 첨부(사진·동영상·파일) 중 하나는 있어야 하고, 투표도 보낼 수 있다 */
 export interface SendChatMessageRequest {
   content: string;
   /** 최대 5장 */
@@ -88,6 +142,8 @@ export interface SendChatMessageRequest {
   mentionedUserIds?: string[];
   /** true면 공지로 등록해서 보낸다 (canNotice인 사람만) */
   asNotice?: boolean;
+  /** 있으면 투표 메시지로 보낸다 (content는 무시하고 poll.title을 쓴다) */
+  poll?: CreateChatPollRequest;
 }
 
 /** PUT …/messages/:id/notice 요청 본문 */

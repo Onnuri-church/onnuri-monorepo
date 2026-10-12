@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 // POST /teams 요청 본문 (관리자 전용) — 팀 생성 폼(팀 이름/팀장/아이콘/배경사진/한 줄 소개/팀 소개).
 export class CreateTeamDto {
@@ -26,4 +26,12 @@ export class CreateTeamDto {
   @IsOptional()
   @IsString()
   coverImageUrl?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  canUploadBulletin?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  canManageBanner?: boolean;
 }
