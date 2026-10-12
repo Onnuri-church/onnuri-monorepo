@@ -58,7 +58,8 @@ export function TeamFormScreen() {
   const updateTeam = useUpdateTeam(teamId ?? "");
 
   const [name, setName] = useState("");
-  const [leaderId, setLeaderId] = useState<string | null>(null);
+  // 팀장은 한 명 이상 — 팀에 따라 여러 명이다 (셀장·부셀장처럼).
+  const [leaderIds, setLeaderIds] = useState<string[]>([]);
   // 목록 아이콘 — 안 고르면 회색 원으로 보인다. 선택사항이라 제출 조건에 넣지 않는다.
   const [iconName, setIconName] = useState<IconName | null>(null);
   // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
@@ -74,7 +75,7 @@ export function TeamFormScreen() {
   useEffect(() => {
     if (!team) return;
     setName(team.name);
-    setLeaderId(team.members.find((member) => member.role === "LEADER")?.id ?? null);
+    setLeaderIds(team.members.filter((member) => member.role === "LEADER").map((member) => member.id));
     setIconName(
       team.iconName && TEAM_ICONS.includes(team.iconName as IconName)
         ? (team.iconName as IconName)
@@ -88,12 +89,12 @@ export function TeamFormScreen() {
   }, [team]);
 
   const handleSubmitPress = async () => {
-    if (!leaderId) return;
+    if (leaderIds.length === 0) return;
 
     const coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
     const body = {
       name,
-      leaderId,
+      leaderIds,
       iconName,
       tagline,
       description,
@@ -124,13 +125,48 @@ export function TeamFormScreen() {
             <TextField label={t("팀 이름")} placeholder="" value={name} onChangeText={setName} />
           </View>
 
-          <MemberPickerField
-            label={t("팀장")}
-            placeholder={t("팀장 이름을 선택해주세요.")}
-            members={members}
-            valueId={leaderId}
-            onSelect={setLeaderId}
-          />
+          {/* 팀장 — 한 명 이상, 여러 명 가능. 행의 X로 빼고 아래 검색 선택으로 추가한다. */}
+          <View className="py-3">
+            <View className="flex-row items-center gap-2">
+              <Text className="text-body-main text-text-normal">{t("팀장")}</Text>
+              <Text className="text-caption-main text-text-alternative">{t("한 명 이상")}</Text>
+            </View>
+            <View className="mt-2">
+              {leaderIds.map((id) => {
+                const member = (members ?? []).find((item) => item.id === id);
+                const teamName = team?.members.find((item) => item.id === id)?.name;
+                return (
+                  <View
+                    key={id}
+                    className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
+                  >
+                    <Text className="text-body-main text-text-normal">
+                      {member?.name ?? teamName ?? ""}
+                    </Text>
+                    <Pressable
+                      onPress={() => setLeaderIds((prev) => prev.filter((value) => value !== id))}
+                      hitSlop={8}
+                    >
+                      <Icon name="close-square" size={18} color={themeColors.icon.normal} />
+                    </Pressable>
+                  </View>
+                );
+              })}
+            </View>
+            <View className="-mt-2">
+              <MemberPickerField
+                label=""
+                placeholder={t("팀장 추가")}
+                members={members}
+                valueId={null}
+                // 같은 사람이 연달아 두 번 들어와도 한 번만 붙게 최신 상태로 거른다.
+                onSelect={(memberId) =>
+                  setLeaderIds((prev) => (prev.includes(memberId) ? prev : [...prev, memberId]))
+                }
+                excludeIds={leaderIds}
+              />
+            </View>
+          </View>
 
           <View>
             {/* 다시 누르면 해제 — 아이콘 없는 팀(회색 원)도 허용한다 */}
@@ -217,7 +253,7 @@ export function TeamFormScreen() {
               loading={submitting}
               disabled={
                 name.trim().length === 0 ||
-                leaderId === null ||
+                leaderIds.length === 0 ||
                 tagline.trim().length === 0 ||
                 description.trim().length === 0
               }

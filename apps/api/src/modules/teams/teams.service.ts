@@ -86,7 +86,7 @@ export class TeamsService {
 
   // 팀 생성 (관리자 전용) — 팀장 지정은 LEADER 멤버십 한 줄로 표현한다.
   async create(dto: CreateTeamDto): Promise<{ id: string }> {
-    await this.assertUserExists(dto.leaderId);
+    await this.assertUsersExist(dto.leaderIds);
     const duplicated = await this.prisma.team.findUnique({
       where: { name: dto.name },
       select: { id: true },
@@ -107,16 +107,17 @@ export class TeamsService {
         },
         select: { id: true },
       });
-      await this.setLeader(tx, created.id, dto.leaderId);
+      await this.setLeaders(tx, created.id, dto.leaderIds);
       return created;
     });
     return team;
   }
 
-  // 보낸 필드만 반영한다. 팀장을 바꾸면 이전 팀장은 팀원으로 내려온다 (팀에서 빠지진 않는다).
+  // 보낸 필드만 반영한다. 팀장 목록(leaderIds)을 보내면 그 목록이 팀장 전체가 되고,
+  // 목록에서 빠진 기존 팀장은 팀원으로 내려온다 (팀에서 빠지진 않는다).
   async update(id: string, dto: UpdateTeamDto): Promise<{ id: string }> {
     await this.assertTeamExists(id);
-    if (dto.leaderId) await this.assertUserExists(dto.leaderId);
+    if (dto.leaderIds) await this.assertUsersExist(dto.leaderIds);
 
     await this.prisma.$transaction(async (tx) => {
       await tx.team.update({
@@ -135,7 +136,7 @@ export class TeamsService {
           }),
         },
       });
-      if (dto.leaderId) await this.setLeader(tx, id, dto.leaderId);
+      if (dto.leaderIds) await this.setLeaders(tx, id, dto.leaderIds);
     });
     return { id };
   }
@@ -154,30 +155,32 @@ export class TeamsService {
     return { id };
   }
 
-  // 팀장은 팀당 한 명이다 — 기존 팀장을 팀원으로 내리고 대상자를 팀장으로 올린다.
-  // 대상자가 다른 팀 소속이면 그 소속을 종료한다 (한 사람은 한 팀 — 프로필의 소속 팀과 같은 규칙).
-  private async setLeader(
+  // 팀장은 여러 명일 수 있다 — 목록에 없는 기존 팀장은 팀원으로 내리고, 목록의 사람은 팀장으로 올린다
+  // (팀 소속이 없던 사람은 새로 넣는다).
+  // 여러 팀에 소속될 수 있어 다른 팀 소속은 건드리지 않는다 — 이 팀 소속만 바꾼다.
+  private async setLeaders(
     tx: Prisma.TransactionClient,
     teamId: string,
-    leaderId: string,
+    leaderIds: string[],
   ) {
     await tx.teamMembership.updateMany({
-      where: { teamId, endedAt: null, role: 'LEADER' },
+      where: { teamId, endedAt: null, role: 'LEADER', userId: { notIn: leaderIds } },
       data: { role: 'MEMBER' },
     });
 
-    // 여러 팀에 소속될 수 있어 다른 팀 소속은 건드리지 않는다 — 이 팀 소속만 팀장으로 올린다.
-    const mine = await tx.teamMembership.findFirst({
-      where: { userId: leaderId, teamId, endedAt: null },
-      select: { id: true },
-    });
-    if (mine) {
-      await tx.teamMembership.update({ where: { id: mine.id }, data: { role: 'LEADER' } });
-      return;
+    for (const leaderId of leaderIds) {
+      const mine = await tx.teamMembership.findFirst({
+        where: { userId: leaderId, teamId, endedAt: null },
+        select: { id: true },
+      });
+      if (mine) {
+        await tx.teamMembership.update({ where: { id: mine.id }, data: { role: 'LEADER' } });
+        continue;
+      }
+      await tx.teamMembership.create({
+        data: { teamId, userId: leaderId, role: 'LEADER', startedAt: new Date() },
+      });
     }
-    await tx.teamMembership.create({
-      data: { teamId, userId: leaderId, role: 'LEADER', startedAt: new Date() },
-    });
   }
 
   private async assertTeamExists(id: string) {
@@ -188,11 +191,10 @@ export class TeamsService {
     if (!team) throw new NotFoundException('존재하지 않는 팀입니다.');
   }
 
-  private async assertUserExists(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { id: true },
-    });
-    if (!user) throw new BadRequestException('존재하지 않는 유저입니다.');
+  private async assertUsersExist(userIds: string[]) {
+    const count = await this.prisma.user.count({ where: { id: { in: userIds } } });
+    if (count !== new Set(userIds).size) {
+      throw new BadRequestException('존재하지 않는 유저입니다.');
+    }
   }
 }
