@@ -56,8 +56,8 @@ export interface TeamGalleryMonth {
 /** POST /teams 요청 본문 — 팀 생성 폼(팀 이름/팀장/아이콘/배경사진/한 줄 소개/팀 소개). */
 export interface CreateTeamRequest {
   name: string;
-  /** 팀장으로 지정할 userId — LEADER 멤버십으로 반영된다 */
-  leaderId: string;
+  /** 팀장으로 지정할 userId들 (한 명 이상) — LEADER 멤버십으로 반영된다 */
+  leaderIds: string[];
   /** 목록 아이콘 이름 (앱 Icon 에셋 기준) — 없으면 회색 원으로 표시된다 */
   iconName?: string | null;
   tagline?: string | null;
