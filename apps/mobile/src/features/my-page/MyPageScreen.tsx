@@ -34,7 +34,7 @@ function deriveRole(me: MeResponse | undefined, isAdmin: boolean): UserRole {
   if (isAdmin) return "admin";
   if (!me) return "member";
   if (me.cell && me.cell.role !== "MEMBER") return "cellLeader";
-  if (me.team?.role === "LEADER") return "teamLeader";
+  if (me.teams.some((team) => team.role === "LEADER")) return "teamLeader";
   return "member";
 }
 
@@ -106,7 +106,12 @@ export function MyPageScreen() {
       onPress: me ? () => navigation.navigate("QtBoard", { mine: true }) : undefined,
     },
     { label: t("출석주수"), value: myStats?.attendanceWeeks ?? 0 },
-    { label: t("받은하트"), value: myStats?.receivedHearts ?? 0 },
+    {
+      label: t("기도제목"),
+      value: myStats?.prayerCount ?? 0,
+      // 내가 쓴 기도제목 모아보기 — 기도제목 게시판의 "내 기도제목" 화면을 연다.
+      onPress: me ? () => navigation.navigate("PrayerMine") : undefined,
+    },
   ];
 
   // 아바타 탭 → 확대 보기 (2026-10-07 확정: 마이페이지는 보기 전용, 사진 변경은
@@ -120,9 +125,11 @@ export function MyPageScreen() {
   const sessionUser = session.status === "authenticated" ? session.user : null;
   const name = me?.name ?? sessionUser?.name ?? t("게스트");
   const cell = me?.cell?.name ?? t("없음");
-  const team = me?.team?.name ?? t("없음");
+  // 팀은 여러 개일 수 있다 — 표시는 쉼표로 잇고, 팀장 메뉴는 내가 팀장인 첫 팀 기준이다.
+  const leaderTeam = me?.teams.find((item) => item.role === "LEADER");
+  const team = leaderTeam?.name ?? me?.team?.name ?? t("없음");
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
-  const myTeamId = me?.team?.id;
+  const myTeamId = leaderTeam?.id ?? me?.team?.id;
   const roleLinks = getRoleLinks(role, team, {
     // 팀장 메뉴 — 내 팀이 있어야 갈 곳이 정해진다 (teamLeader 판정 자체가 me.team 기준이라 항상 있다).
     onBoardManagePress: myTeamId
@@ -204,7 +211,10 @@ export function MyPageScreen() {
             rows={[
               { label: t("이름"), value: name },
               { label: t("소속 셀"), value: cell },
-              { label: t("소속 팀"), value: team },
+              {
+                label: t("소속 팀"),
+                value: me && me.teams.length > 0 ? me.teams.map((item) => item.name).join(", ") : t("없음"),
+              },
             ]}
           />
           <MenuLinkCard

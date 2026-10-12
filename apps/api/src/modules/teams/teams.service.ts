@@ -154,16 +154,14 @@ export class TeamsService {
       data: { role: 'MEMBER' },
     });
 
+    // 여러 팀에 소속될 수 있어 다른 팀 소속은 건드리지 않는다 — 이 팀 소속만 팀장으로 올린다.
     const mine = await tx.teamMembership.findFirst({
-      where: { userId: leaderId, endedAt: null },
-      select: { id: true, teamId: true },
+      where: { userId: leaderId, teamId, endedAt: null },
+      select: { id: true },
     });
-    if (mine?.teamId === teamId) {
+    if (mine) {
       await tx.teamMembership.update({ where: { id: mine.id }, data: { role: 'LEADER' } });
       return;
-    }
-    if (mine) {
-      await tx.teamMembership.update({ where: { id: mine.id }, data: { endedAt: new Date() } });
     }
     await tx.teamMembership.create({
       data: { teamId, userId: leaderId, role: 'LEADER', startedAt: new Date() },

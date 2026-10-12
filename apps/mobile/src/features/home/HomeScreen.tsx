@@ -22,10 +22,12 @@ import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useLatestNotice } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
 import { useHomeBanner, useHomePosts } from "./api";
 import { DepartmentActivityCard } from "./components/DepartmentActivityCard";
+import { NoticeBar } from "./components/NoticeBar";
 import { QtShareRow } from "./components/QtShareRow";
 import { SectionHeader } from "./components/SectionHeader";
 import { WeeklySermonBanner } from "./components/WeeklySermonBanner";
@@ -63,6 +65,9 @@ export function HomeScreen() {
   // 큐티나눔 최신 3건·부서활동 최신 5건 — 홈 전용 API 한 번으로 받는다.
   const { data: homePosts, refetch: refetchHomePosts } = useHomePosts();
 
+  // 가장 최근 공지(서버가 최신순으로 준다) — 홈 맨 위 한 줄에 제목만 보여준다.
+  const { data: latestNotice, refetch: refetchNotices } = useLatestNotice();
+
   // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
   // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
   // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
@@ -81,7 +86,12 @@ export function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const handleRefresh = async () => {
     setRefreshing(true);
-    await Promise.allSettled([refetchBanner(), refetchHomePosts(), refetchPrayers()]);
+    await Promise.allSettled([
+      refetchBanner(),
+      refetchHomePosts(),
+      refetchPrayers(),
+      refetchNotices(),
+    ]);
     setRefreshing(false);
   };
 
@@ -108,7 +118,17 @@ export function HomeScreen() {
       scrollEventThrottle={16}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
     >
-      <View className="px-5 pt-8">
+      {latestNotice && (
+        <View className="px-5 pt-4">
+          <NoticeBar
+            title={latestNotice.title}
+            onListPress={() => navigation.navigate("NoticeList")}
+            onTitlePress={() => navigation.navigate("NoticeDetail", { id: latestNotice.id })}
+          />
+        </View>
+      )}
+
+      <View className={latestNotice ? "px-5 pt-4" : "px-5 pt-8"}>
         <WeeklySermonBanner
           seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
           passage={banner?.passage ?? DEFAULT_SERMON.passage}

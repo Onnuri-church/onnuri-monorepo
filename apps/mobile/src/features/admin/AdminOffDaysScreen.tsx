@@ -10,10 +10,12 @@ import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { MonthPicker } from "../cell/components/MonthPicker";
 import { useAdminOffDays, useSetAdminOffDay } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 출석부 > 모임 없는 날 지정 — 일요일마다 예배/셀모임이 없는 날을 지정한다. 지정한 쪽은 출석부에서
 // "-"로 보이고, 셀 출석 관리·QR 출석이 그 날은 받지 않는다. 지정 안 한 날은 둘 다 있는 날이다.
 export function AdminOffDaysScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const themeColors = useThemeColors();
   const KIND_LABEL: Record<OffDayKind, string> = {
@@ -81,7 +83,9 @@ export function AdminOffDaysScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-4">
+      <ScrollView contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         <View className="rounded-2.5 bg-background-alternative px-4 py-2.5">
           <Text className="text-caption-main text-primary-normal">
             {t("지정하지 않은 일요일은 예배와 셀모임이 모두 있는 날이에요.\n지정하면 그 날의 해당 출석 기록은 삭제돼요.")}

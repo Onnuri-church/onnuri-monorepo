@@ -105,6 +105,7 @@ enum NotificationType {
   LIKE
   NOTICE
   GROUP_MEETING
+  CHAT
 }
 
 // ---------------------------------------------------------------------
@@ -135,7 +136,14 @@ model User {
   refreshTokens          RefreshToken[]
   pushTokens             PushToken[]
   teamMemberships        TeamMembership[]
-  teamMessages           TeamMessage[]
+  chatMessages           ChatMessage[]           @relation("ChatAuthor")
+  chatReactions          ChatReaction[]          @relation("ChatReactor")
+  chatRoomsCreated       ChatRoom[]              @relation("ChatRoomCreator")
+  chatRoomMemberships    ChatRoomMember[]
+  teamBoardPosts         TeamBoardPost[]         @relation("TeamBoardAuthor")
+  teamBoardComments      TeamBoardComment[]      @relation("TeamBoardCommentAuthor")
+  teamBoardReactions     TeamBoardReaction[]     @relation("TeamBoardReactor")
+  teamBoardReads         TeamBoardRead[]         @relation("TeamBoardReader")
   cellMemberships        CellMembership[]
   worshipAttendances     WorshipAttendance[]     @relation("WorshipAttendee")
   recordedWorshipChecks  WorshipAttendance[]     @relation("WorshipRecorder")
@@ -148,6 +156,7 @@ model User {
   posts                  Post[]
   comments               Comment[]
   postLikes              PostLike[]
+  postReactions          PostReaction[]
   bookmarks              Bookmark[]
   hobbyGroupMemberships  HobbyGroupMember[]
   uploadedImages         Image[]
@@ -197,21 +206,143 @@ model Team {
   memberships TeamMembership[]
   posts       Post[]
   images      Image[]
-  messages    TeamMessage[]
+  chatRooms   ChatRoom[]
+  boardPosts  TeamBoardPost[]
 }
 
-// 팀 단톡 — 그 팀 팀원·관리자만 읽고 쓴다. 실시간 푸시 없이 앱이 주기적으로 받아온다.
-model TeamMessage {
-  id        String    @id @default(cuid())
-  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+// 단톡방 메시지 — 팀 단톡방(roomId)과 셀 단톡방(cellId)이 같은 구조를 쓴다 (둘 중 하나만 채운다).
+// 그 방의 소속 멤버·관리자만 읽고 쓴다. 실시간 연결 없이 앱이 주기적으로 받아온다.
+model ChatMessage {
+  id               String         @id @default(cuid())
+  room             ChatRoom?      @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId           String? // 팀 단톡방 (팀장이 만든 방)
+  cell             Cell?          @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId           String?
+  author           User           @relation("ChatAuthor", fields: [authorId], references: [id])
+  authorId         String
+  content          String // 사진만 보내면 빈 문자열
+  imageUrls        String[]       @default([])
+  videoUrls        String[]       @default([])
+  files            Json           @default("[]") // [{ url, name, size }] 첨부 파일(악보·문서)
+  replyTo          ChatMessage?   @relation("ChatReply", fields: [replyToId], references: [id], onDelete: SetNull)
+  replyToId        String?
+  replies          ChatMessage[]  @relation("ChatReply")
+  mentionedUserIds String[]       @default([]) // 언급(@)된 멤버 — 서버가 방 멤버만 남긴다
+  noticeAt         DateTime? // 공지로 등록된 시각 (null = 일반 메시지). 가장 최근 공지가 방 상단에 보인다
+  deletedAt        DateTime? // 작성자·관리자 삭제 soft delete
+  createdAt        DateTime       @default(now())
+  reactions        ChatReaction[]
+
+  @@index([roomId, createdAt])
+  @@index([cellId, createdAt])
+}
+
+// 팀 단톡방 — 팀장·관리자가 만들고, 그 팀 팀원 중 고른 사람만 들어온다 (카카오톡 단톡방처럼).
+// 방 이름 수정, 멤버 추가·추방, 방 삭제(soft delete)는 그 팀 팀장과 관리자가 한다.
+model ChatRoom {
+  id          String           @id @default(cuid())
+  team        Team             @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId      String
+  name        String
+  createdBy   User             @relation("ChatRoomCreator", fields: [createdById], references: [id])
+  createdById String
+  members     ChatRoomMember[]
+  messages    ChatMessage[]
+  deletedAt   DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([teamId])
+}
+
+model ChatRoomMember {
+  id       String   @id @default(cuid())
+  room     ChatRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  roomId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  joinedAt DateTime @default(now())
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+// 팀 전용 게시판 — 그 팀 팀원과 관리자만 읽고 쓴다 (공개 부서활동 게시판과 별개).
+// 글에는 사진(최대 5장)·링크·파일을 붙이고, 댓글·대댓글·이모지 반응을 달 수 있다.
+model TeamBoardPost {
+  id        String              @id @default(cuid())
+  team      Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
   teamId    String
-  author    User      @relation(fields: [authorId], references: [id])
+  author    User                @relation("TeamBoardAuthor", fields: [authorId], references: [id])
   authorId  String
   content   String
-  deletedAt DateTime? // 작성자·관리자 삭제 soft delete
-  createdAt DateTime  @default(now())
+  imageUrls String[]            @default([])
+  links     String[]            @default([])
+  files     Json                @default("[]") // [{ url, name, size }]
+  noticeAt  DateTime? // 공지로 등록된 시각 (null = 일반 글) — 목록 맨 위에 고정된다
+  deletedAt DateTime?
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+  comments  TeamBoardComment[]
+  reactions TeamBoardReaction[]
+  reads     TeamBoardRead[]
 
   @@index([teamId, createdAt])
+}
+
+model TeamBoardComment {
+  id        String             @id @default(cuid())
+  post      TeamBoardPost      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  author    User               @relation("TeamBoardCommentAuthor", fields: [authorId], references: [id])
+  authorId  String
+  parent    TeamBoardComment?  @relation("TeamBoardReply", fields: [parentId], references: [id], onDelete: Cascade)
+  parentId  String? // 대댓글이면 부모 댓글 (1단계까지)
+  replies   TeamBoardComment[] @relation("TeamBoardReply")
+  content   String
+  deletedAt DateTime?
+  createdAt DateTime           @default(now())
+
+  @@index([postId, createdAt])
+}
+
+// 글을 읽은 사람 — "읽음 N" 표시용. 한 사람은 한 글에 한 번만 센다.
+model TeamBoardRead {
+  id     String        @id @default(cuid())
+  post   TeamBoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId String
+  user   User          @relation("TeamBoardReader", fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  readAt DateTime      @default(now())
+
+  @@unique([postId, userId])
+}
+
+model TeamBoardReaction {
+  id        String        @id @default(cuid())
+  post      TeamBoardPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User          @relation("TeamBoardReactor", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     String
+  createdAt DateTime      @default(now())
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
+}
+
+// 메시지 이모지 반응 — 한 사람이 한 메시지에 같은 이모지는 한 번만 (다시 누르면 취소).
+model ChatReaction {
+  id        String      @id @default(cuid())
+  message   ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  user      User        @relation("ChatReactor", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     String
+  createdAt DateTime    @default(now())
+
+  @@unique([messageId, userId, emoji])
+  @@index([messageId])
 }
 
 model TeamMembership {
@@ -245,6 +376,7 @@ model Cell {
   meetings    CellMeeting[]
   posts       Post[]
   images      Image[]
+  messages    ChatMessage[]
 }
 
 model CellMembership {
@@ -331,7 +463,7 @@ model CellMeetingAttendance {
   userId       String
   attended     Boolean     @default(true) // 행 없음 = 불참
   recordedBy   User        @relation("CellMeetingRecorder", fields: [recordedById], references: [id])
-  recordedById String // 기록한 셀장/부셀장 — 셀모임 출석은 QR 자동이 아니라 셀장이 직접 기록한다 (2026-09-03 확정)
+  recordedById String // 기록한 사람 — QR 체크인이면 본인, 셀장이 고치면 그 셀장 (2026-10-11: QR이 셀모임도 자동 출석 처리)
   recordedAt   DateTime    @default(now())
 
   @@unique([meetingId, userId])
@@ -401,6 +533,7 @@ model Post {
   hobbyGroup    HobbyGroup?
   comments      Comment[]
   likes         PostLike[]
+  reactions     PostReaction[]
   bookmarks     Bookmark[]
   images        Image[]
 
@@ -468,6 +601,21 @@ model Comment {
 
   @@index([postId, createdAt])
   @@index([authorId])
+}
+
+// 부서활동 글의 이모지 반응 — 하트 하나뿐이던 좋아요(PostLike)를 대체한다. 한 사람이 한 글에
+// 같은 이모지는 한 번만 달 수 있고, 다시 누르면 취소된다. 팀 게시판(TeamBoardReaction)과 같은 모양이다.
+model PostReaction {
+  id        String   @id @default(cuid())
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  postId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId, emoji])
+  @@index([postId])
 }
 
 model PostLike {

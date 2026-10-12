@@ -20,10 +20,12 @@ import {
 import { canWriteFollowerNote } from "./cellDetail";
 import { MonthPicker } from "./components/MonthPicker";
 import { FollowerNoteCard } from "./components/FollowerNoteCard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
 // "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
 export function FollowerNoteBoardScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteBoard">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -66,7 +68,9 @@ export function FollowerNoteBoardScreen() {
         {cell?.name ?? ""}
       </Text>
 
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-5">
+      <ScrollView contentContainerClassName="px-5 pt-5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         <Pressable
           className="flex-row items-center gap-1 self-start"
           onPress={() => setCalendarOpen((prev) => !prev)}

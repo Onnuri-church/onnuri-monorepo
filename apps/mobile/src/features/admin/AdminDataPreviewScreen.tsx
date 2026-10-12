@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminDownloadPreview } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Tab = "member" | "attendance";
 
@@ -74,6 +75,7 @@ function AttendanceList({ data }: { data: NonNullable<AdminDownloadPreview["atte
 // 데이터 다운로드 > 미리보기 — 내려받기 전에 건수와 앞쪽 10줄만 확인한다. 다운로드는 이전 화면에서.
 // 연락처·생년월일은 서버가 싣지 않는다(나이만).
 export function AdminDataPreviewScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { query } = useRoute<RouteProp<RootStackParamList, "AdminDataPreview">>().params;
   const { data, isLoading } = useAdminDownloadPreview(query);
@@ -84,7 +86,9 @@ export function AdminDataPreviewScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-4">
+      <ScrollView contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         {!data ? (
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
             {isLoading ? t("불러오고 있어요.") : t("미리보기를 불러오지 못했어요.")}

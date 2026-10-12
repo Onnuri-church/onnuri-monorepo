@@ -1,4 +1,6 @@
 import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,6 +27,7 @@ import { NoticeListScreen } from "../features/notice/NoticeListScreen";
 import { NotificationScreen } from "../features/notification/NotificationScreen";
 import { AvatarViewerScreen } from "../features/profile/AvatarViewerScreen";
 import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
+import { CellChatScreen } from "../features/cell/CellChatScreen";
 import { CellMemberAddScreen } from "../features/cell/CellMemberAddScreen";
 import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
@@ -33,6 +36,8 @@ import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScree
 import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
+import { canPostToCell } from "../features/cell/cellDetail";
+import { useMe } from "../features/profile/useMe";
 import { useTeam } from "../features/team-story/api";
 import { BulletinScreen } from "../features/bulletin/BulletinScreen";
 import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
@@ -59,7 +64,13 @@ import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
-import { TeamChatScreen } from "../features/team-story/TeamChatScreen";
+import { ChatRoomFormScreen } from "../features/team-space/ChatRoomFormScreen";
+import { ChatRoomListScreen } from "../features/team-space/ChatRoomListScreen";
+import { ChatRoomScreen } from "../features/team-space/ChatRoomScreen";
+import { TeamBoardDetailScreen } from "../features/team-space/TeamBoardDetailScreen";
+import { TeamBoardScreen } from "../features/team-space/TeamBoardScreen";
+import { TeamBoardWriteScreen } from "../features/team-space/TeamBoardWriteScreen";
+import { TeamSpaceScreen } from "../features/team-space/TeamSpaceScreen";
 import { TeamMemberAddScreen } from "../features/team-story/TeamMemberAddScreen";
 import { TeamMemberAdminScreen } from "../features/team-story/TeamMemberAdminScreen";
 import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
@@ -77,6 +88,7 @@ import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
 import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
+import { DepartmentActivityMetaScreen } from "../features/department-activity/DepartmentActivityMetaScreen";
 import {DepartmentActivityWriteScreen} from "../features/department-activity/DepartmentActivityWriteScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -86,8 +98,22 @@ const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 // (등록부의 header 콜백 안에서는 훅을 못 쓴다).
 function CellDetailHeader({ cellId }: { cellId: string }) {
   const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const cell = useCell(cellId);
-  return <Header variant="sub" title={cell?.name ?? t("셀 페이지")} rightAction="home" />;
+  // 단톡방은 그 셀 셀원과 관리자만 들어간다 — 아이콘도 그 사람들에게만 보인다.
+  const me = useMe();
+  return (
+    <Header
+      variant="sub"
+      title={cell?.name ?? t("셀 페이지")}
+      rightAction="home"
+      extraRightAction={
+        canPostToCell(cellId, me)
+          ? { icon: "chat", onPress: () => navigation.navigate("CellChat", { cellId }) }
+          : undefined
+      }
+    />
+  );
 }
 
 // 팀 상세 헤더 — 팀 이름이 서버 목록(useTeam)에서 오므로 같은 이유로 컴포넌트로 뺐다.
@@ -226,12 +252,18 @@ export function RootNavigator() {
             options={{ headerShown: true }}
           />
           <Stack.Screen
-            name="DepartmentActivityWrite"
-            component={DepartmentActivityWriteScreen}
+            name="DepartmentActivityMeta"
+            component={DepartmentActivityMetaScreen}
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("부서활동 글쓰기")} />,
             }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 입력 내용에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="DepartmentActivityWrite"
+            component={DepartmentActivityWriteScreen}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="TeamBoardManage"
@@ -331,12 +363,59 @@ export function RootNavigator() {
               header: () => <TeamStoryDetailHeader teamId={route.params.teamId} />,
             })}
           />
-          {/* 헤더는 화면이 단독 등록한다 (타이틀이 팀 이름이라 화면 데이터에 의존). */}
+          {/* 헤더는 화면이 단독 등록한다 (타이틀이 셀 이름이라 화면 데이터에 의존). */}
           <Stack.Screen
-            name="TeamChat"
-            component={TeamChatScreen}
+            name="CellChat"
+            component={CellChatScreen}
             options={{ headerShown: true }}
           />
+          {/* 소속팀 공간 — 게시판·단톡방. 헤더가 화면 데이터에 의존하는 화면은 화면이 단독 등록한다. */}
+          <Stack.Screen
+            name="TeamSpace"
+            component={TeamSpaceScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("소속팀 공간")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamBoard"
+            component={TeamBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀 게시판")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamBoardDetail"
+            component={TeamBoardDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="TeamBoardWrite"
+            component={TeamBoardWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params.postId ? t("글 수정") : t("글쓰기")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="ChatRoomList"
+            component={ChatRoomListScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="ChatRoomForm"
+            component={ChatRoomFormScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: true }} />
           <Stack.Screen
             name="TeamStoryGallery"
             component={TeamStoryGalleryScreen}
@@ -496,21 +575,25 @@ export function RootNavigator() {
               header: () => <Header variant="sub" title={t("공지사항")} />,
             }}
           />
+          {/* 헤더는 화면이 단독 등록한다 (관리자 ⋮ 메뉴가 권한에 의존) — 여기 header를 두면 이중 정의. */}
           <Stack.Screen
             name="NoticeDetail"
             component={NoticeDetailScreen}
-            options={{
-              headerShown: true,
-              header: () => <Header variant="sub" title={t("공지사항")} />,
-            }}
+            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="NoticeWrite"
             component={NoticeWriteScreen}
-            options={{
+            options={({ route }) => ({
               headerShown: true,
-              header: () => <Header variant="sub" title={t("공지 등록")} rightAction="none" />,
-            }}
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.id ? t("공지 수정") : t("공지 등록")}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           <Stack.Screen
             name="AdminBannerManage"

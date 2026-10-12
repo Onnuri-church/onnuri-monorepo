@@ -19,6 +19,7 @@ import { useMe } from "../profile/useMe";
 import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Filter = "all" | GroupMeetingStatus;
 
@@ -64,6 +65,7 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 }
 
 export function GroupMeetingScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [filter, setFilter] = useState<Filter>("all");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -159,8 +161,8 @@ export function GroupMeetingScreen() {
     <View className="flex-1 bg-background-normal">
       {filterRow}
       <ScrollView
-        contentContainerClassName="flex-row flex-wrap pb-6"
-        contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
+        contentContainerClassName="flex-row flex-wrap"
+        contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING, paddingBottom: 24 + insets.bottom }}
       >
         {visible.map((meeting) => (
           <View key={meeting.id} style={{ width: cardWidth }}>

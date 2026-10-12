@@ -3,11 +3,11 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, Text, View } from "react-native";
+import { RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
-import { PickerPill } from "../../shared/components/composed/PickerPill";
+import { YearMonthPicker } from "../../shared/components/composed/YearMonthPicker";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -24,7 +24,7 @@ export function SermonScreen() {
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const insets = useSafeAreaInsets();
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
     queryKey: ["sermons", month],
     queryFn: () => fetchSermons(month),
     // 달을 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
@@ -62,12 +62,7 @@ export function SermonScreen() {
           펼치면 5개까지 보이고 안에서 위아래로 스크롤한다. */}
       {selectedMonth !== null && (
         <View className="flex-row px-5 pb-1 pt-4">
-          <PickerPill
-            label={months.find((item) => item.value === selectedMonth)?.label ?? selectedMonth}
-            options={months}
-            selected={selectedMonth}
-            onSelect={setMonth}
-          />
+          <YearMonthPicker months={months} selected={selectedMonth} onSelect={setMonth} />
         </View>
       )}
       <ScrollView
@@ -77,6 +72,7 @@ export function SermonScreen() {
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
         {items.map((video) => (
           <SermonVideoCard

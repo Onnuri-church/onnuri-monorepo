@@ -19,6 +19,7 @@ import { useCells } from "../cell/api";
 import { fetchTeams } from "../profile/api";
 import { useAdminDownloadPreview } from "./api";
 import { RadioOption } from "./components/RadioOption";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type DataKind = "member" | "attendance" | "both";
 type Target = "all" | "cell" | "team";
@@ -33,6 +34,7 @@ function SectionLabel({ children }: { children: string }) {
 // 관리자 출석부·회원 관리 헤더의 "다운로드"로 진입. GET /admin/download가 만든 엑셀
 // (attendance-data-model.md §4 — 유저 정보 + 셀 기간별 출석부 시트)을 받아 공유 시트를 띄운다.
 export function AdminDataDownloadScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [dataKind, setDataKind] = useState<DataKind | null>(null);
@@ -125,7 +127,9 @@ export function AdminDataDownloadScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="gap-7 px-5 pb-6 pt-6">
+      <ScrollView contentContainerClassName="gap-7 px-5 pt-6"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}>
         <View className="gap-4">
           <SectionLabel>{t("어떤 데이터가 필요하세요?")}</SectionLabel>
           <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">

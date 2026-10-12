@@ -27,8 +27,10 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function QtBoardScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const route = useRoute<RouteProp<RootStackParamList, "QtBoard">>();
@@ -156,7 +158,9 @@ export function QtBoardScreen() {
         </View>
       </View>
       <ScrollView
-        contentContainerClassName="gap-4 pt-3 px-5 py-4"
+        contentContainerClassName="gap-4 pt-4 px-5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 16 + insets.bottom }}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
         }

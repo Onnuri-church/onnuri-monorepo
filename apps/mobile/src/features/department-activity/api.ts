@@ -1,8 +1,11 @@
 import type {
   CreateTeamActivityRequest,
   PostComment,
+  PostReactionSummary,
   TeamActivityDetail,
   TeamActivityListResponse,
+  TogglePostReactionRequest,
+  UpdatePostCommentRequest,
   UpdateTeamActivityRequest,
 } from "@onnuri/shared";
 
@@ -83,15 +86,25 @@ export async function deleteTeamActivity(postId: string): Promise<void> {
   await apiClient.delete(`/posts/team-activities/${postId}`);
 }
 
-// 좋아요는 토글 한 번이 아니라 켜기/끄기를 따로 보낸다 — 같은 요청이 두 번 가도(재시도 등)
-// 결과가 뒤집히지 않는다. 좋아요도 게시판과 무관해서 경로가 /posts/:id다.
-export async function toggleLike(
+// 이모지 반응 토글 — 이미 누른 이모지를 다시 보내면 취소된다. 바뀐 집계를 돌려받는다.
+export async function toggleReaction(
   postId: string,
-  likedByMe: boolean,
+  emoji: string,
+): Promise<PostReactionSummary[]> {
+  const { data } = await apiClient.put<{ reactions: PostReactionSummary[] }>(
+    `/posts/team-activities/${postId}/reactions`,
+    { emoji } satisfies TogglePostReactionRequest,
+  );
+  return data.reactions;
+}
+
+// 댓글 수정 — 작성자와 관리자만 (서버가 막는다).
+export async function updateComment(
+  postId: string,
+  commentId: string,
+  content: string,
 ): Promise<void> {
-  if (likedByMe) {
-    await apiClient.delete(`/posts/${postId}/likes`);
-    return;
-  }
-  await apiClient.post(`/posts/${postId}/likes`);
+  await apiClient.patch(`/posts/${postId}/comments/${commentId}`, {
+    content,
+  } satisfies UpdatePostCommentRequest);
 }

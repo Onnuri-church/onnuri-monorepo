@@ -10,11 +10,13 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useDeleteHomeBanner, useHomeBanners, useSetHomeBannerActive } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 마이페이지 관리자 메뉴 > 홈 배너 관리 (자체 디자인 — 시안 없음, 셀 관리 목록 결).
 // 홈에는 왼쪽 체크가 켜진 배너 1개만 표시된다 (하나를 켜면 나머지는 꺼진다). 전부 꺼져 있으면 기본
 // 배너가 보인다. 새로 등록한 배너는 등록 즉시 켜진다.
 export function AdminBannerManageScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: banners } = useHomeBanners();
@@ -65,7 +67,9 @@ export function AdminBannerManageScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="pb-10 pt-2">
+      <ScrollView contentContainerClassName="pt-2"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         <Text className="px-5 py-2 text-body-small text-text-alternative">
           {t("체크한 배너가 홈에 표시돼요. 하나를 체크하면 나머지는 꺼지고, 모두 끄면 기본 배너가 보여요.")}
         </Text>

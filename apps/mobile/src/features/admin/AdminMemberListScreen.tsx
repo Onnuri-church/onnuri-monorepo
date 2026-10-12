@@ -11,9 +11,11 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "./api";
 import { MemberBadge } from "./components/MemberBadge";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
 export function AdminMemberListScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [keyword, setKeyword] = useState("");
@@ -36,7 +38,9 @@ export function AdminMemberListScreen() {
     /* 시안 배경 #F5F5F5 — 토큰에 없어 background.page(#FBFBFB)로 근사 */
     <ScrollView
       className="bg-background-page"
-      contentContainerClassName="px-5 pb-10 pt-4"
+      contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
       refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
     >

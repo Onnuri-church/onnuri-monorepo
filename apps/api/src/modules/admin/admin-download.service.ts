@@ -170,7 +170,7 @@ export class AdminDownloadService {
         user.name,
         birthLabel,
         user.gender ? (user.gender === 'MALE' ? '남' : '여') : '',
-        user.teamMemberships[0]?.team.name ?? '',
+        user.teamMemberships.map((membership) => membership.team.name).join(', '),
       ]);
     }
   }
@@ -329,7 +329,9 @@ export class AdminDownloadService {
           name: user.name,
           gender: user.gender ? (user.gender === 'MALE' ? '남' : '여') : null,
           age: user.birthDate ? this.ageOf(user.birthDate) : null,
-          team: user.teamMemberships[0]?.team.name ?? null,
+          team: user.teamMemberships.length > 0
+            ? user.teamMemberships.map((membership) => membership.team.name).join(', ')
+            : null,
           cell: user.cellMemberships.at(-1)?.cell.name ?? null,
         })),
       };

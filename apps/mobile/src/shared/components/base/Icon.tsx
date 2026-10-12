@@ -23,12 +23,15 @@ import EyeOff from "../../assets/icons/eye-off.svg";
 import FavoriteLight from "../../assets/icons/favorite-light.svg";
 import FavoriteFill from "../../assets/icons/favorite-fill.svg";
 import Home from "../../assets/icons/home.svg";
+import Image from "../../assets/icons/image.svg";
 import Jubo from "../../assets/icons/jubo.svg";
+import Link from "../../assets/icons/link.svg";
 import Lock from "../../assets/icons/lock.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
 import Note from "../../assets/icons/note.svg";
+import Paperclip from "../../assets/icons/paperclip.svg";
 import Palette from "../../assets/icons/palette.svg";
 import Place from "../../assets/icons/place.svg";
 import Play from "../../assets/icons/play.svg";
@@ -82,12 +85,15 @@ const ICONS = {
   "favorite-light": FavoriteLight,
   "favorite-fill": FavoriteFill,
   home: Home,
+  image: Image,
   jubo: Jubo,
+  link: Link,
   lock: Lock,
   "media-strip": MediaStrip,
   more: More,
   "nav-home": NavHome,
   note: Note,
+  paperclip: Paperclip,
   palette: Palette,
   place: Place,
   play: Play,

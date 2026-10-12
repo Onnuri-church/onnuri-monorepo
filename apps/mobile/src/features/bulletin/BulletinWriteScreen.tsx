@@ -4,6 +4,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
@@ -23,6 +24,7 @@ export function BulletinWriteScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // 날짜는 오늘로 시작한다 — 비워둘 수 없어서 등록 조건에는 사진만 본다.
   const [selectDate, setSelectDate] = useState(toDateString(new Date()));
@@ -69,7 +71,9 @@ export function BulletinWriteScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView
         className="h-full flex-1"
-        contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-4"
+        contentContainerClassName="justify-start gap-8 px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 등록 버튼이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}
       >
         <DateField
           label={t("날짜")}

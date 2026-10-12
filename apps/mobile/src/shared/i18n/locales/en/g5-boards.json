@@ -100,5 +100,12 @@
   "여성": "Female",
   "지금 실시간으로 진행 중인 예배예요. 화면을 터치하면 재생돼요. 예배가 끝나면 이 영상은 말씀 게시판에 자동으로 등록돼요.": "This service is live right now. Tap the screen to play. When the service ends, this video is automatically posted to the Word board.",
   "지난 예배 다시보기예요. 언제든 편하게 시청하세요.": "This is a replay of a past service. Watch it anytime.",
-  "현재 <0>{{count}}개</0>의 기도제목이\n등록되어 있어요": "There are currently <0>{{count}}</0> prayer requests\nregistered"
+  "현재 <0>{{count}}개</0>의 기도제목이\n등록되어 있어요": "There are currently <0>{{count}}</0> prayer requests\nregistered",
+  "부서를 찾을 수 없어요": "Department not found",
+  "댓글을 수정하지 못했어요": "Couldn't update the comment",
+  "사진 {{count}}/{{max}}": "Photos {{count}}/{{max}}",
+  "날짜를 선택해주세요.": "Please select a date.",
+  "부서를 선택해주세요.": "Please select a department.",
+  "글을 쓸 수 있는 부서가 없어요. 팀에 소속돼야 해요.": "No department available. You need to belong to a team.",
+  "제목은 한 글자 이상 있어야 해요.": "The title needs at least one character."
 }

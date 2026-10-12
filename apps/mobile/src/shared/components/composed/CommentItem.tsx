@@ -10,6 +10,8 @@ interface CommentItemProps {
   avatarUrl?: string | null;
   /** 주면 "답글" 버튼이 붙는다. 대댓글을 쓰지 않는 게시판은 생략한다. */
   onReplyPress?: () => void;
+  /** 주면 "수정" 버튼이 붙는다. 작성자·관리자일 때만 넘긴다. */
+  onEditPress?: () => void;
   /** 주면 "삭제" 버튼이 붙는다. 내 댓글일 때만 넘긴다. */
   onDeletePress?: () => void;
 }
@@ -22,6 +24,7 @@ export function CommentItem({
   content,
   avatarUrl,
   onReplyPress,
+  onEditPress,
   onDeletePress,
 }: CommentItemProps) {
   const { t } = useTranslation();
@@ -35,11 +38,16 @@ export function CommentItem({
         </View>
         <Text className="mt-1 text-body-medium text-text-neutral">{content}</Text>
         {/* 답글·삭제는 콜백을 준 게시판에서만 나온다 — 시안에 버튼이 없는 화면은 그대로 유지된다. */}
-        {(onReplyPress || onDeletePress) && (
+        {(onReplyPress || onEditPress || onDeletePress) && (
           <View className="mt-1 flex-row gap-3">
             {onReplyPress && (
               <Pressable onPress={onReplyPress} hitSlop={8}>
                 <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
+              </Pressable>
+            )}
+            {onEditPress && (
+              <Pressable onPress={onEditPress} hitSlop={8}>
+                <Text className="text-body-small text-text-alternative">{t("수정")}</Text>
               </Pressable>
             )}
             {onDeletePress && (

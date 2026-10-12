@@ -65,6 +65,7 @@ export interface AdminMemberSummary {
   avatarUrl: string | null;
   /** 진행 중 소속 (없으면 null) */
   cellName: string | null;
+  /** 소속 팀 이름 — 여러 팀이면 쉼표로 이어 붙인다 */
   teamName: string | null;
   badge: AdminMemberBadge | null;
 }
@@ -89,7 +90,10 @@ export interface AdminMemberDetail {
   genderLabel: string | null;
   phone: string | null;
   cell: { id: string; name: string } | null;
+  /** 첫 번째 소속 팀 — 여러 팀이면 `teams`를 쓴다 */
   team: { id: string; name: string } | null;
+  /** 진행 중인 팀 소속 전부 (여러 팀 가능) */
+  teams: { id: string; name: string; role: TeamRole }[];
   /** 현재 등급 — 관리자 > 팀장 > 팔로워 > 일반 우선순위로 하나 */
   role: AdminMemberRole;
   /** "관리자"/"팀장"/"팔로워"/"일반" */
@@ -123,8 +127,8 @@ export interface MyStatsResponse {
   qtShareCount: number;
   /** 예배 출석 주수 — 출석 처리된 회차 수 (회차 = 주 1회) */
   attendanceWeeks: number;
-  /** 내 글이 받은 좋아요 수 (삭제 글 제외) */
-  receivedHearts: number;
+  /** 내가 쓴 기도제목 수 (삭제 글 제외) — "내 기도제목" 목록과 같은 기준 */
+  prayerCount: number;
 }
 
 /**
@@ -139,7 +143,12 @@ export interface UpdateAdminMemberRequest {
   gender?: Gender;
   phone?: string;
   cellId?: string | null;
+  /** 단일 팀 지정(이전 호환). 여러 팀이면 teamIds를 쓴다 */
   teamId?: string | null;
+  /** 소속 팀 전부 — teamId보다 우선, 빈 배열이 소속 없음 */
+  teamIds?: string[];
+  /** role이 TEAM_LEADER이고 팀이 여러 개일 때 팀장을 맡을 팀 (생략 시 첫 번째) */
+  leaderTeamId?: string;
   role?: AdminMemberRole;
 }
 

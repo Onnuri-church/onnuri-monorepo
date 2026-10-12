@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -18,6 +19,7 @@ import { CreateBannerDto } from './dto/create-banner.dto';
 import { CreateNoticeDto } from './dto/create-notice.dto';
 import { SetBannerActiveDto } from './dto/set-banner-active.dto';
 import { UpdateBannerDto } from './dto/update-banner.dto';
+import { UpdateNoticeDto } from './dto/update-notice.dto';
 import { NoticesService } from './notices.service';
 
 // 홈 배너·공지사항 — 조회는 게스트도 되고, 등록·삭제는 관리자만.
@@ -26,10 +28,10 @@ import { NoticesService } from './notices.service';
 export class NoticesController {
   constructor(private readonly noticesService: NoticesService) {}
 
-  // 공지 목록 (마이페이지 공지사항) — 게스트 열람 가능.
+  // 공지 목록 (마이페이지 공지사항) — 게스트 열람 가능. cursor=이전 쪽의 nextCursor, limit 기본 20(최대 50).
   @Get()
-  findNotices() {
-    return this.noticesService.findNotices();
+  findNotices(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
+    return this.noticesService.findNotices(cursor, limit ? Number(limit) : undefined);
   }
 
   @Get('banner')
@@ -68,10 +70,22 @@ export class NoticesController {
     return this.noticesService.removeBanner(id);
   }
 
+  // 공지 한 건 — 상세 화면·알림 링크가 쓴다. 정적 라우트 뒤에 둔다.
+  @Get(':id')
+  findNotice(@Param('id') id: string) {
+    return this.noticesService.findNotice(id);
+  }
+
   @UseGuards(JwtAuthGuard, AdminGuard)
   @Post()
   createNotice(@CurrentUser() user: JwtPayload, @Body() dto: CreateNoticeDto) {
     return this.noticesService.createNotice(user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Patch(':id')
+  updateNotice(@Param('id') id: string, @Body() dto: UpdateNoticeDto) {
+    return this.noticesService.updateNotice(id, dto);
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)

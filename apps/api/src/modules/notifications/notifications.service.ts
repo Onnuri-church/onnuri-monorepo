@@ -115,6 +115,17 @@ export class NotificationsService {
     }
   }
 
+  // 푸시만 보내고 알림센터에는 쌓지 않는다 — 단톡방 일반 메시지처럼 건수가 많아 센터를
+  // 어지럽히는 알림용. notify와 같이 절대 던지지 않는다.
+  async pushOnly(userIds: string[], input: NotifyInput): Promise<void> {
+    if (userIds.length === 0) return;
+    try {
+      await this.sendPush(userIds, input);
+    } catch (error) {
+      this.logger.warn(`push send failed: ${String(error)}`);
+    }
+  }
+
   // Expo 푸시 발송. 수신자들의 기기 토큰을 모아 100개 단위로 Expo 푸시 서버에 보낸다
   // (https://docs.expo.dev/push-notifications/sending-notifications/ — 요청당 100개 제한).
   // 앱을 지운 기기의 토큰(DeviceNotRegistered)은 그 자리에서 정리한다.

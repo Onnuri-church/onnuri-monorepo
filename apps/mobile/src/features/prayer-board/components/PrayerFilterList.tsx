@@ -12,6 +12,7 @@ import type { RootStackParamList } from "../../../shared/types/navigation";
 import { PRAYER_CATEGORIES, deletePrayer, type PrayerCategory } from "../api";
 import { useToggleBookmark } from "../useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./PrayerCard";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 interface PrayerFilterListProps {
   /** react-query 캐시 구분용 이름 (예: "bookmarked") */
@@ -36,6 +37,7 @@ export function PrayerFilterList({
   editing,
   emptyText,
 }: PrayerFilterListProps) {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const [category, setCategory] = useState<PrayerCategory>("all");
   // 삭제 확인 중인 기도제목. 시트는 하나만 두고 대상만 바꾼다.
@@ -76,7 +78,9 @@ export function PrayerFilterList({
       />
 
       <ScrollView
-        contentContainerClassName="gap-6 pb-6 pt-2.5"
+        contentContainerClassName="gap-6 pt-2.5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />

@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   UseGuards,
 } from '@nestjs/common';
@@ -19,7 +20,9 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { CreateTeamActivityDto } from './dto/create-team-activity.dto';
+import { TogglePostReactionDto } from './dto/toggle-post-reaction.dto';
 import { UpdateCellNewsDto } from './dto/update-cell-news.dto';
+import { UpdateCommentDto } from './dto/update-comment.dto';
 import { UpdateTeamActivityDto } from './dto/update-team-activity.dto';
 import { FindCellNewsDto } from './dto/find-cell-news.dto';
 import { FindQtSharesDto } from './dto/find-qt-shares.dto';
@@ -178,6 +181,29 @@ export class PostsController {
     @Body() dto: CreateCommentDto,
   ) {
     return this.postsService.addComment(id, user.sub, dto.content, dto.parentId);
+  }
+
+  // 댓글 수정 — 작성자와 관리자만 (검증은 서비스).
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/comments/:commentId')
+  updateComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: UpdateCommentDto,
+  ) {
+    return this.postsService.updateComment(id, commentId, user.sub, dto.content);
+  }
+
+  // 부서활동 글 이모지 반응 토글 — 다시 누르면 취소.
+  @UseGuards(JwtAuthGuard)
+  @Put('team-activities/:id/reactions')
+  toggleTeamActivityReaction(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: TogglePostReactionDto,
+  ) {
+    return this.postsService.toggleTeamActivityReaction(id, user.sub, dto.emoji);
   }
 
   // 댓글 삭제는 글이 아니라 댓글에 달리지만, 경로는 글 밑에 둔다 — 어떤 글의 댓글인지가

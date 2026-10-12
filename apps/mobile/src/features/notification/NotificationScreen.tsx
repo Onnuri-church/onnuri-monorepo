@@ -20,6 +20,7 @@ import {
   useRemoveAllNotifications,
   useRemoveNotification,
 } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 카드 상단 라벨 옆 로고 심볼 크기 (시안 15).
 const SYMBOL_SIZE = 15;
@@ -57,6 +58,7 @@ function SwipeableRow({ onDelete, children }: { onDelete: () => void; children: 
 // 최신 1건을 크게 보여주고 나머지는 "N건 더보기"로 펼친다.
 // 안읽음이 있는 카드는 연녹색 배경, 전부 읽었으면 흰 배경에 회색 본문.
 export function NotificationScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
@@ -125,6 +127,12 @@ export function NotificationScreen() {
       case "notice":
         navigation.navigate("NoticeDetail", { id: first });
         break;
+      case "team-room":
+        navigation.navigate("ChatRoom", { roomId: first });
+        break;
+      case "cell-chat":
+        navigation.navigate("CellChat", { cellId: first });
+        break;
       case "follower-note":
         if (second) navigation.navigate("FollowerNoteDetail", { cellId: first, noteId: second });
         break;
@@ -174,7 +182,9 @@ export function NotificationScreen() {
         </View>
       ) : (
         <ScrollView
-          contentContainerClassName="gap-5 px-5 pb-10 pt-6"
+          contentContainerClassName="gap-5 px-5 pt-6"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
           // 화면을 열어둔 채 새 알림이 오면 당겨서 받아온다.
           refreshControl={
             <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />

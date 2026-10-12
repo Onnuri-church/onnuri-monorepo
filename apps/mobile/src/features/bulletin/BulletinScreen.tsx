@@ -9,15 +9,17 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
-import { PickerPill } from "../../shared/components/composed/PickerPill";
+import { YearMonthPicker } from "../../shared/components/composed/YearMonthPicker";
 import { colors } from "../../shared/theme/tokens";
 import { useHomeBanner } from "../home/api";
 import { useMe } from "../profile/useMe";
 import { fetchBulletins } from "./api";
 import { BulletinCard } from "./components/BulletinCard";
 import { SermonSeriesBanner } from "./components/SermonSeriesBanner";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function BulletinScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   // 처음에는 달을 고르지 않고 보낸다 — 주보가 있는 가장 최근 달을 서버가 골라 준다.
   const [month, setMonth] = useState<string>();
@@ -69,15 +71,12 @@ export function BulletinScreen() {
           펼치면 5개까지 보이고 안에서 위아래로 스크롤한다. */}
       {selectedMonth !== null && (
         <View className="flex-row px-5 pb-1 pt-4">
-          <PickerPill
-            label={months.find((item) => item.value === selectedMonth)?.label ?? selectedMonth}
-            options={months}
-            selected={selectedMonth}
-            onSelect={setMonth}
-          />
+          <YearMonthPicker months={months} selected={selectedMonth} onSelect={setMonth} />
         </View>
       )}
-      <ScrollView contentContainerClassName="px-5 pb-6 pt-5">
+      <ScrollView contentContainerClassName="px-5 pt-5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}>
         {/* 시안의 배너-목록 간격 40 중 24는 BulletinCard가 자기 py로 갖고 있어서 16만 더한다. */}
         {sermonBanner && (
           <View className="mb-4">
