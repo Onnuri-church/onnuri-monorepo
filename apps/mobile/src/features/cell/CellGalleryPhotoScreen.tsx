@@ -3,16 +3,16 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../shared/components/base/Icon";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
-import { colors } from "../../shared/theme/tokens";
+import { PhotoPager } from "../../shared/components/composed/PhotoPager";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell, useCellGallery } from "./api";
 
-// 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터 + 좌우 화살표).
+// 갤러리 사진 뷰어 (시안: 검정 배경 + "N/전체" 카운터). 좌우로 밀어서 넘긴다 (화살표는 보조).
 // 배경이 어두워 공통 sub 헤더를 못 쓰고 화면이 직접 그린다 — 등록부는 headerShown: false.
 export function CellGalleryPhotoScreen() {
   const { t } = useTranslation();
@@ -46,34 +46,7 @@ export function CellGalleryPhotoScreen() {
         {index + 1}/{totalCount}
       </Text>
 
-      <View className="flex-1 justify-center">
-        {/* 시안 402x617은 콘텐츠 비율 영역이라 aspectRatio로 처리한다 (DESIGN.md 사이즈 규칙 예외). */}
-        {photos[index] ? (
-          <Image
-            source={{ uri: photos[index].url }}
-            className="w-full"
-            style={{ aspectRatio: 402 / 617 }}
-            resizeMode="contain"
-          />
-        ) : (
-          <View className="w-full bg-background-assistive" style={{ aspectRatio: 402 / 617 }} />
-        )}
-
-        <Pressable
-          className="absolute left-5 h-7 w-7 items-center justify-center"
-          disabled={index === 0}
-          onPress={() => setIndex((prev) => prev - 1)}
-        >
-          <Icon name="expand" size={28} color={colors.icon.normal} />
-        </Pressable>
-        <Pressable
-          className="absolute right-5 h-7 w-7 items-center justify-center"
-          disabled={index >= totalCount - 1}
-          onPress={() => setIndex((prev) => prev + 1)}
-        >
-          <Icon name="expand-right" size={28} color={colors.icon.normal} />
-        </Pressable>
-      </View>
+      <PhotoPager urls={photos.map((photo) => photo.url)} initialIndex={initialIndex} onIndexChange={setIndex} />
     </View>
   );
 }

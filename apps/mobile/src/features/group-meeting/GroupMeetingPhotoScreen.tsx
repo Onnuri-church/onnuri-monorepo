@@ -20,12 +20,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Icon } from "../../shared/components/base/Icon";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
-import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchGroupMeetingDetail, useRemoveGroupMeetingPhoto } from "./api";
 
 // 소그룹 활동 사진 뷰어 (셀 갤러리 뷰어와 같은 검정 배경 + "N/전체" + 좌우 이동).
-// 좌우 스와이프로 넘기고, 화살표는 제스처를 모르는 사용자용 힌트로 남긴다 (2026-10-02 결정).
+// 좌우 스와이프로 넘긴다 — 화살표 버튼은 두지 않는다 (2026-10-10 결정, 이전엔 힌트로 남겼다).
 // 소그룹장·관리자는 우상단 삭제로 현재 사진을 지운다 — 등록부는 headerShown: false.
 export function GroupMeetingPhotoScreen() {
   const { t } = useTranslation();
@@ -49,7 +48,7 @@ export function GroupMeetingPhotoScreen() {
   const { width } = useWindowDimensions();
   const listRef = useRef<FlatList<(typeof photos)[number]>>(null);
 
-  // 화살표·삭제 모두 이 함수로 이동한다. index는 여기서 즉시 갱신한다 —
+  // 삭제 후 장 이동이 이 함수를 쓴다. index는 여기서 즉시 갱신한다 —
   // Android는 프로그램 스크롤이 momentum end를 안 쏘기도 해서 이벤트만 믿으면
   // 카운터·삭제 대상이 어긋난다. 제스처 스크롤은 handleScrollEnd가 최종값으로 덮는다.
   const goTo = (next: number, animated = true) => {
@@ -146,21 +145,6 @@ export function GroupMeetingPhotoScreen() {
             </View>
           )}
         />
-
-        <Pressable
-          className="absolute left-5 h-7 w-7 items-center justify-center"
-          disabled={index === 0}
-          onPress={() => goTo(index - 1)}
-        >
-          <Icon name="expand" size={28} color={colors.icon.normal} />
-        </Pressable>
-        <Pressable
-          className="absolute right-5 h-7 w-7 items-center justify-center"
-          disabled={index >= totalCount - 1}
-          onPress={() => goTo(index + 1)}
-        >
-          <Icon name="expand-right" size={28} color={colors.icon.normal} />
-        </Pressable>
       </View>
 
       <AppDialog

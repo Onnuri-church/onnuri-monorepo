@@ -14,11 +14,13 @@ import { toCellMemberRole, useCellDetail } from "./api";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { useMe } from "../profile/useMe";
 import { type CellMember } from "./cellDetail";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 셀원 관리 (관리 탭 > 셀원 관리 — 셀장·관리자 전용 경로로만 진입한다).
 // 시안: "총 N명" 캡션 → 검색 바 → 셀원 목록. 셀장·부셀장은 라벨만 붙는다.
 // 추가·삭제는 관리자만 한다 — 셀장은 목록을 보기만 한다 (서버도 같은 규칙).
 export function CellMemberManageScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "CellMemberManage">>();
   const { cellId } = route.params;
@@ -58,7 +60,9 @@ export function CellMemberManageScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-10" keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerClassName="px-5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }} keyboardShouldPersistTaps="handled">
         <Text className="text-center text-caption-main text-text-alternative">
           {t("총 {{count}}명", { count: members.length })}
         </Text>

@@ -1,9 +1,10 @@
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
@@ -11,23 +12,42 @@ import { Field } from "../../shared/components/base/Field";
 import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUploadBoxMultiple";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { createBulletin } from "./api";
+import { createBulletin, fetchBulletin, updateBulletin } from "./api";
 
-// 주보는 앞/뒤 2장 고정, 나눔지는 최대 5장 (작업자 확정).
+// 주보는 앞/뒤 2장 고정, 나눔지는 0~5장 (나눔지 없이 주보만 올릴 수 있다).
 const BULLETIN_PHOTO_COUNT = 2;
 const MAX_SHARING_SHEET_PHOTOS = 5;
 
 // 주보/나눔지 업로드 (시안: 날짜 → 주보 → 나눔지 → 등록하기).
 // 사진 섹션 둘은 같은 컴포넌트지만 올리는 대상이 달라 상태를 따로 갖는다.
+// params.id가 있으면 수정 모드 — 날짜는 못 바꾸고 이미지만 교체한다.
 export function BulletinWriteScreen() {
   const { t } = useTranslation();
+  const { params } = useRoute<RouteProp<RootStackParamList, "BulletinWrite">>();
+  const editingId = params?.id;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   // 날짜는 오늘로 시작한다 — 비워둘 수 없어서 등록 조건에는 사진만 본다.
   const [selectDate, setSelectDate] = useState(toDateString(new Date()));
   const [bulletinUris, setBulletinUris] = useState<string[]>([]);
   const [sharingSheetUris, setSharingSheetUris] = useState<string[]>([]);
+
+  // 수정 모드 프리필 — 기존 이미지(http 주소)를 그대로 채운다 (uploadImage가 http는 그대로 통과).
+  const { data: existing } = useQuery({
+    queryKey: ["bulletin", editingId],
+    queryFn: () => fetchBulletin(editingId as string),
+    enabled: editingId !== undefined,
+  });
+  // 처음 한 번만 채운다 — 배경 재조회가 편집 중인 사진을 덮어쓰지 않게.
+  const prefilled = useRef(false);
+  useEffect(() => {
+    if (!existing || prefilled.current) return;
+    prefilled.current = true;
+    setBulletinUris(existing.bulletinImages.map((image) => image.url));
+    setSharingSheetUris(existing.handoutImages.map((image) => image.url));
+  }, [existing]);
 
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
@@ -37,6 +57,9 @@ export function BulletinWriteScreen() {
         Promise.all(bulletinUris.map(uploadImage)),
         Promise.all(sharingSheetUris.map(uploadImage)),
       ]);
+      if (editingId) {
+        return updateBulletin(editingId, { bulletinImageUrls, handoutImageUrls });
+      }
       return createBulletin({ date: selectDate, bulletinImageUrls, handoutImageUrls });
     },
 
@@ -53,15 +76,14 @@ export function BulletinWriteScreen() {
       const message = (error as { response?: { data?: { message?: string | string[] } } })
         .response?.data?.message;
       Alert.alert(
-        t("등록 실패"),
+        editingId ? t("수정 실패") : t("등록 실패"),
         (Array.isArray(message) ? message.join("\n") : message) ?? t("잠시 후 다시 시도해주세요."),
       );
     },
   });
 
-  // 주보는 앞·뒤 2장이 다 있어야 한다 (서버도 정확히 2장만 받는다).
-  const canSubmit =
-    bulletinUris.length === BULLETIN_PHOTO_COUNT && sharingSheetUris.length > 0;
+  // 주보는 앞·뒤 2장이 다 있어야 한다 (서버도 정확히 2장만 받는다). 나눔지는 없어도 된다.
+  const canSubmit = bulletinUris.length === BULLETIN_PHOTO_COUNT;
 
   const handleSubmitPress = () => submit();
 
@@ -69,14 +91,23 @@ export function BulletinWriteScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView
         className="h-full flex-1"
-        contentContainerClassName="justify-start gap-8 px-5 pb-20 pt-4"
+        contentContainerClassName="justify-start gap-8 px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 등록 버튼이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 80 + insets.bottom }}
       >
-        <DateField
-          label={t("날짜")}
-          placeholder={t("날짜를 선택하세요.")}
-          value={selectDate}
-          onChange={setSelectDate}
-        />
+        {editingId ? (
+          // 날짜는 바꿀 수 없다 — 날짜를 바꾸려면 삭제 후 다시 올린다.
+          <Field label={t("날짜")}>
+            <Text className="text-body-main text-text-alternative">{existing?.dateLabel ?? ""}</Text>
+          </Field>
+        ) : (
+          <DateField
+            label={t("날짜")}
+            placeholder={t("날짜를 선택하세요.")}
+            value={selectDate}
+            onChange={setSelectDate}
+          />
+        )}
 
         <Field label={t("주보")}>
           <ImageUploadBoxMultiple
@@ -97,7 +128,7 @@ export function BulletinWriteScreen() {
         <View className="mt-8">
           {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
           <Button
-            label={t("등록하기")}
+            label={editingId ? t("저장") : t("등록하기")}
             onPress={handleSubmitPress}
             disabled={!canSubmit}
             loading={isPending}

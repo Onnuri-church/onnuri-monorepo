@@ -38,7 +38,7 @@ export class UsersController {
     return this.usersService.findMe(user.sub);
   }
 
-  // 마이페이지 통계 카드 (큐티나눔·출석주수·받은하트).
+  // 마이페이지 통계 카드 (큐티나눔·출석주수·기도제목).
   @UseGuards(JwtAuthGuard)
   @Get('me/stats')
   myStats(@CurrentUser() user: JwtPayload) {

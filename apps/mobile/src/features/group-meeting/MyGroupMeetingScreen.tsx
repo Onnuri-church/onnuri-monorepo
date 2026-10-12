@@ -13,6 +13,7 @@ import { Chip } from "../../shared/components/base/Chip";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 카드 폭·마감일 표기·참여자 아바타는 게시판(GroupMeetingScreen)과 같은 규칙이다.
 // 그쪽 지역 헬퍼를 끌어오면 화면 파일을 화면이 import하는 모양이 돼서 작게 복제했다 —
@@ -48,6 +49,7 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 // 마이페이지 "취향 소그룹" — 내가 신청(대기중)·참여 중인 모임만 모아 보여준다.
 // 카드를 누르면 게시판과 같은 상세로 간다 (소그룹장은 거기서 수정·승인 등 관리).
 export function MyGroupMeetingScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
@@ -99,8 +101,8 @@ export function MyGroupMeetingScreen() {
   return (
     <ScrollView
       className="bg-background-normal"
-      contentContainerClassName="flex-row flex-wrap pb-6 pt-4"
-      contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
+      contentContainerClassName="flex-row flex-wrap pt-4"
+      contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING, paddingBottom: 24 + insets.bottom }}
     >
       {meetings.map((meeting: MyGroupMeeting) => (
         <View key={meeting.id} style={{ width: cardWidth }}>

@@ -10,11 +10,13 @@ import { TeamPostCard } from "./components/TeamPostCard";
 import { Skeleton } from "../../shared/components/base/Skeleton";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 팀장 "게시판 관리" (마이페이지 관리 카드) — 자기 팀 부서활동 글만 모아 보여준다.
 // 수정·삭제는 상세의 ⋮에서 한다 (팀장은 팀원 글도 가능 — 서버 canManage 기준).
 // 게시판과 같은 카드를 쓰되, 팀이 하나로 고정이라 필터 칩과 글쓰기 버튼은 없다.
 export function TeamBoardManageScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { teamId } = useRoute<RouteProp<RootStackParamList, "TeamBoardManage">>().params;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -54,7 +56,9 @@ export function TeamBoardManageScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView contentContainerClassName="justify-start pb-11 px-5 gap-3 pt-4">
+        <ScrollView contentContainerClassName="justify-start px-5 gap-3 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 44 + insets.bottom }}>
           {data.items.map((item) => (
             <TeamPostCard
               key={item.id}

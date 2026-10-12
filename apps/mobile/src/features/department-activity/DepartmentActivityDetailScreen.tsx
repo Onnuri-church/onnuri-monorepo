@@ -21,12 +21,14 @@ import {
   deleteComment,
   deleteTeamActivity,
   fetchTeamActivity,
-  toggleLike,
+  toggleReaction,
+  updateComment,
 } from "./api";
 import { CommentThread } from "./components/CommentThread";
+import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 import { PostAuthor } from "./components/PostAuthor";
+import { ReactionBar } from "./components/ReactionBar";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
-import { FavoriteButton } from "../../shared/components/base/FavoriteButton";
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { Header } from "../../shared/components/base/Header";
 import { Skeleton } from "../../shared/components/base/Skeleton";
@@ -49,11 +51,15 @@ export function DepartmentActivityDetailScreen() {
 
   const [draft, setDraft] = useState("");
   const [photoIndex, setPhotoIndex] = useState(0);
+  // 사진을 누르면 그 사진부터 전체 화면 뷰어(좌우 슬라이드)로 연다. null이면 닫힘.
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   // 사진 폭 = 화면 폭 - 좌우 여백(px-5 = 20씩)
   const { width } = useWindowDimensions();
   const photoWidth = width - 40;
   // 답글 대상. null이면 일반 댓글이고, 값이 있으면 그 댓글의 대댓글로 달린다.
   const [replyTo, setReplyTo] = useState<PostComment | null>(null);
+  // 수정 중인 댓글 — 있으면 아래 입력줄이 수정 모드가 된다 (등록 대신 저장).
+  const [editing, setEditing] = useState<PostComment | null>(null);
 
   // 입력줄 왼쪽에 내 프로필 사진이 붙는다. 게스트는 user 필드 자체가 없어서 회색 원으로 남는다.
   const myAvatarUrl = useAuthStore((state) =>
@@ -78,8 +84,8 @@ export function DepartmentActivityDetailScreen() {
     void queryClient.invalidateQueries({ queryKey: ["team-activities"] });
   };
 
-  const { mutate: like } = useMutation({
-    mutationFn: (likedByMe: boolean) => toggleLike(id, likedByMe),
+  const { mutate: react } = useMutation({
+    mutationFn: (emoji: string) => toggleReaction(id, emoji),
     onSuccess: refresh,
   });
 
@@ -109,6 +115,19 @@ export function DepartmentActivityDetailScreen() {
     },
   });
 
+  const { mutate: saveComment, isPending: isSavingComment } = useMutation({
+    mutationFn: (input: { commentId: string; content: string }) =>
+      updateComment(id, input.commentId, input.content),
+    onSuccess: () => {
+      setDraft("");
+      setEditing(null);
+      refresh();
+    },
+    onError: () => {
+      Alert.alert(t("댓글을 수정하지 못했어요"), t("잠시 후 다시 시도해주세요."));
+    },
+  });
+
   const { mutate: removeComment } = useMutation({
     mutationFn: (commentId: string) => deleteComment(id, commentId),
     onSuccess: refresh,
@@ -131,7 +150,7 @@ export function DepartmentActivityDetailScreen() {
             {
               icon: "edit",
               label: t("수정하기"),
-              onPress: () => navigation.navigate("DepartmentActivityWrite", { postId: id }),
+              onPress: () => navigation.navigate("DepartmentActivityMeta", { postId: id }),
             },
             {
               icon: "trash-can",
@@ -161,8 +180,18 @@ export function DepartmentActivityDetailScreen() {
   };
 
   const handleSubmit = () => {
-    if (draft.trim().length === 0 || isSubmitting) return;
+    if (draft.trim().length === 0 || isSubmitting || isSavingComment) return;
+    if (editing) {
+      saveComment({ commentId: editing.id, content: draft.trim() });
+      return;
+    }
     submitComment();
+  };
+
+  const handleEditPress = (comment: PostComment) => {
+    setEditing(comment);
+    setReplyTo(null);
+    setDraft(comment.content);
   };
 
   if (isPending) {
@@ -219,14 +248,15 @@ export function DepartmentActivityDetailScreen() {
                 )
               }
             >
-              {photos.map((url) => (
-                <Image
-                  key={url}
-                  source={{ uri: url }}
-                  style={{ width: photoWidth, aspectRatio: 1 }}
-                  className="bg-background-assistive"
-                  resizeMode="cover"
-                />
+              {photos.map((url, index) => (
+                <Pressable key={url} onPress={() => setViewerIndex(index)}>
+                  <Image
+                    source={{ uri: url }}
+                    style={{ width: photoWidth, aspectRatio: 1 }}
+                    className="bg-background-assistive"
+                    resizeMode="cover"
+                  />
+                </Pressable>
               ))}
             </ScrollView>
             {photos.length > 1 && (
@@ -254,12 +284,8 @@ export function DepartmentActivityDetailScreen() {
           <Text className="mt-2 text-body-medium text-text-neutral">
             {data.content}
           </Text>
-          <FavoriteButton
-            className="mt-5"
-            count={data.likeCount}
-            favorited={data.likedByMe}
-            onPress={() => like(data.likedByMe)}
-          />
+          {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
+          <ReactionBar reactions={data.reactions} onReact={(emoji) => react(emoji)} />
         </View>
         <View className="mt-5 border-t border-t-text-assistive">
           {/* 대댓글은 수에서 뺀다 — 서버가 최상위만 세서 목록 카드와 같은 값이 된다. */}
@@ -273,7 +299,11 @@ export function DepartmentActivityDetailScreen() {
               <CommentThread
                 key={comment.id}
                 comment={comment}
-                onReplyPress={setReplyTo}
+                onReplyPress={(target) => {
+                  setEditing(null);
+                  setReplyTo(target);
+                }}
+                onEditPress={handleEditPress}
                 onDeletePress={handleDeletePress}
               />
             ))
@@ -298,7 +328,21 @@ export function DepartmentActivityDetailScreen() {
         }}
       >
         {/* 답글 모드일 때만 누구에게 다는 중인지 보여주고 빠져나갈 길을 준다. */}
-        {replyTo && (
+        {editing && (
+          <View className="mb-2 flex-row items-center justify-between">
+            <Text className="text-body-small text-text-alternative">{t("댓글 수정 중")}</Text>
+            <Pressable
+              onPress={() => {
+                setEditing(null);
+                setDraft("");
+              }}
+              hitSlop={8}
+            >
+              <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
+            </Pressable>
+          </View>
+        )}
+        {replyTo && !editing && (
           <View className="mb-2 flex-row items-center justify-between">
             <Text className="text-body-small text-text-alternative">
               {t("{{name}}님에게 답글", { name: replyTo.authorName })}
@@ -316,6 +360,8 @@ export function DepartmentActivityDetailScreen() {
           placeholder={replyTo ? t("답글을 입력하세요") : t("댓글을 입력하세요")}
         />
       </View>
+
+      <ChatImageViewer urls={photos} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
 
       <AppDialog
         ref={dialogRef}

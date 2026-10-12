@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -17,6 +18,7 @@ import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
 import { AddPhotosDto } from './dto/add-photos.dto';
 import { DecideMemberDto } from './dto/decide-member.dto';
+import { FindGroupMeetingsDto } from './dto/find-group-meetings.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 import { GroupMeetingsService } from './group-meetings.service';
 
@@ -28,8 +30,8 @@ export class GroupMeetingsController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll() {
-    return this.groupMeetingsService.findAll();
+  findAll(@Query() query: FindGroupMeetingsDto) {
+    return this.groupMeetingsService.findAll(query.status ?? 'open', query.cursor);
   }
 
   // 내가 신청·참여 중인 모임 (마이페이지 "취향 소그룹"). ':id'보다 먼저 둔다 — 등록 순서 매칭.

@@ -11,10 +11,12 @@ import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDi
 import { Icon } from "../../shared/components/base/Icon";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 팀장이 팀원을 빼고 새로 넣는 화면. 목록은 팀 상세·팀원 리스트와 같은 행을 쓴다.
 // 팀장은 이 화면에서 뺄 수 없다 (팀장 교체는 팀 편집에서) — 시안도 팀장 행에만 "팀장" 문구다.
 export function TeamMemberAdminScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "TeamMemberAdmin">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -40,7 +42,9 @@ export function TeamMemberAdminScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-6">
+      <ScrollView contentContainerClassName="px-5"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}>
         {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
         <Text className="text-center text-caption-main text-text-alternative">
           {t("총 {{count}}명", { count: members.length })}

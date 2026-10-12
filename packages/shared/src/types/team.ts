@@ -27,6 +27,10 @@ export interface TeamDetailResponse {
   /** 상세의 팀 소개 본문 */
   description: string | null;
   coverImageUrl: string | null;
+  /** 이 팀의 팀원(팀장 포함)이 주보를 등록할 수 있는지 — 관리자가 팀 편집에서 켠다 */
+  canUploadBulletin: boolean;
+  /** 이 팀의 팀원(팀장 포함)이 홈 배너를 관리할 수 있는지 */
+  canManageBanner: boolean;
   members: TeamMemberInfo[];
 }
 
@@ -59,6 +63,8 @@ export interface CreateTeamRequest {
   tagline?: string | null;
   description?: string | null;
   coverImageUrl?: string | null;
+  canUploadBulletin?: boolean;
+  canManageBanner?: boolean;
 }
 
 /** PATCH /teams/:id 요청 본문 — 보낸 필드만 반영된다. */
@@ -83,23 +89,4 @@ export interface TeamMemberCandidate {
 /** POST /teams/:id/members 요청 본문 — 추가 화면에서 여러 명을 한 번에 고른다. */
 export interface AddTeamMembersRequest {
   userIds: string[];
-}
-
-/** GET /teams/:id/messages 응답 항목 — 팀 단톡 메시지 한 건 */
-export interface TeamMessageInfo {
-  id: string;
-  authorName: string;
-  authorAvatarUrl: string | null;
-  content: string;
-  /** ISO datetime */
-  createdAt: string;
-  /** 내가 쓴 메시지인지 — 말풍선 위치·삭제 노출 기준 */
-  isMine: boolean;
-  /** 삭제 버튼 노출 기준 — 내 메시지이거나 관리자 */
-  canDelete: boolean;
-}
-
-/** POST /teams/:id/messages 요청 본문 */
-export interface CreateTeamMessageRequest {
-  content: string;
 }

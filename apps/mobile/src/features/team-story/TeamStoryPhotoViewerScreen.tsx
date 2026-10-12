@@ -1,11 +1,12 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, Pressable, Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useTeam, useTeamGallery } from "./api";
 import { Icon } from "../../shared/components/base/Icon";
+import { PhotoPager } from "../../shared/components/composed/PhotoPager";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
@@ -24,15 +25,6 @@ export function TeamStoryPhotoViewerScreen() {
   const photos = (gallery ?? []).flatMap((month) => month.photos);
 
   const [index, setIndex] = useState(0);
-  // 사진 목록이 캐시에서 도착하면 눌렀던 사진으로 맞춘다.
-  useEffect(() => {
-    const found = photos.findIndex((item) => item.id === params.photoId);
-    if (found >= 0) setIndex(found);
-  }, [gallery]);
-  const photo = photos[index];
-
-  const handlePrevPress = () => setIndex((current) => Math.max(current - 1, 0));
-  const handleNextPress = () => setIndex((current) => Math.min(current + 1, photos.length - 1));
 
   return (
     <View className="flex-1 bg-background-dark" style={{ paddingTop: insets.top }}>
@@ -52,28 +44,15 @@ export function TeamStoryPhotoViewerScreen() {
         {index + 1}/{photos.length}
       </Text>
 
-      <View className="mt-4 flex-1 justify-center">
-        {photo?.url ? (
-          <Image source={{ uri: photo.url }} className="h-full w-full" resizeMode="contain" />
-        ) : (
-          <View className="h-full w-full bg-text-assistive" />
-        )}
-        <Pressable
-          className="absolute left-5 top-1/2"
-          onPress={handlePrevPress}
-          disabled={index === 0}
-          hitSlop={8}
-        >
-          <Icon name="expand" size={28} />
-        </Pressable>
-        <Pressable
-          className="absolute right-5 top-1/2"
-          onPress={handleNextPress}
-          disabled={index === photos.length - 1}
-          hitSlop={8}
-        >
-          <Icon name="expand-right" size={28} />
-        </Pressable>
+      <View className="mt-4 flex-1">
+        <PhotoPager
+          urls={photos.map((item) => item.url)}
+          initialIndex={Math.max(
+            photos.findIndex((item) => item.id === params.photoId),
+            0,
+          )}
+          onIndexChange={setIndex}
+        />
       </View>
     </View>
   );

@@ -65,7 +65,7 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) return null;
 
-    const [cellMembership, teamMemberships] = await Promise.all([
+    const [cellMembership, teamMemberships, grantedTeam] = await Promise.all([
       this.prisma.cellMembership.findFirst({
         where: { userId: id, endedAt: null, cell: { deletedAt: null } },
         select: { role: true, cell: { select: { id: true, name: true } } },
@@ -74,6 +74,15 @@ export class UsersService {
         where: { userId: id, endedAt: null, team: { deletedAt: null } },
         select: { role: true, team: { select: { id: true, name: true } } },
         orderBy: { startedAt: 'asc' },
+      }),
+      // 소속 팀 중 콘텐츠 업로드 권한이 켜진 팀 — 앱이 주보 등록·배너 관리 진입점을 띄우는 기준.
+      this.prisma.team.findMany({
+        where: {
+          deletedAt: null,
+          memberships: { some: { userId: id, endedAt: null } },
+          OR: [{ canUploadBulletin: true }, { canManageBanner: true }],
+        },
+        select: { canUploadBulletin: true, canManageBanner: true },
       }),
     ]);
     const teams = teamMemberships.map((membership) => ({
@@ -88,6 +97,10 @@ export class UsersService {
         : null,
       team: teams[0] ?? null,
       teams,
+      canUploadBulletin:
+        user.isAdmin || grantedTeam.some((team) => team.canUploadBulletin),
+      canManageBanner:
+        user.isAdmin || grantedTeam.some((team) => team.canManageBanner),
     };
   }
 
@@ -115,16 +128,20 @@ export class UsersService {
 
     return users.map((user) => {
       const cell = user.cellMemberships[0] ?? null;
-      const team = user.teamMemberships[0] ?? null;
+      const teamNames = user.teamMemberships.map((membership) => membership.team.name);
+      const isTeamLeader = user.teamMemberships.some(
+        (membership) => membership.role === 'LEADER',
+      );
       return {
         id: user.id,
         name: user.name,
         avatarUrl: user.avatarUrl,
         cellName: cell?.cell.name ?? null,
-        teamName: team?.team.name ?? null,
+        // 여러 팀이면 이름을 쉼표로 이어 보여준다 — 목록·검색이 문자열 하나만 다룬다.
+        teamName: teamNames.length > 0 ? teamNames.join(', ') : null,
         badge: user.isAdmin
           ? ('admin' as const)
-          : team?.role === 'LEADER'
+          : isTeamLeader
             ? ('teamLeader' as const)
             : cell && cell.role !== 'MEMBER'
               ? ('cellLeader' as const)
@@ -159,8 +176,12 @@ export class UsersService {
     if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
 
     const cell = user.cellMemberships[0] ?? null;
-    const team = user.teamMemberships[0] ?? null;
-    const isTeamLeader = team?.role === 'LEADER';
+    const teams = user.teamMemberships.map((membership) => ({
+      id: membership.team.id,
+      name: membership.team.name,
+      role: membership.role,
+    }));
+    const isTeamLeader = teams.some((team) => team.role === 'LEADER');
     const isCellLeader = cell !== null && cell.role !== 'MEMBER';
     // 등급 표시는 관리자 > 팀장 > 팔로워 > 일반 우선순위 (겸직 가능하지만 뱃지·권한 행은 하나).
     const role: AdminMemberRole = isTeamLeader
@@ -179,7 +200,8 @@ export class UsersService {
       genderLabel: user.gender ? (user.gender === 'MALE' ? '남성' : '여성') : null,
       phone: user.phone,
       cell: cell ? { id: cell.cell.id, name: cell.cell.name } : null,
-      team: team ? { id: team.team.id, name: team.team.name } : null,
+      team: teams[0] ? { id: teams[0].id, name: teams[0].name } : null,
+      teams,
       role,
       roleLabel: user.isAdmin
         ? '관리자'
@@ -220,12 +242,23 @@ export class UsersService {
         });
         if (!cell) throw new BadRequestException('존재하지 않는 셀입니다.');
       }
-      if (dto.teamId) {
-        const team = await tx.team.findFirst({
-          where: { id: dto.teamId, deletedAt: null },
-          select: { id: true },
+      // teamIds(여러 팀)가 teamId(하나)보다 우선한다 — 이전 앱 버전은 teamId만 보낸다.
+      const nextTeamIds =
+        dto.teamIds !== undefined
+          ? dto.teamIds
+          : dto.teamId === undefined
+            ? undefined
+            : dto.teamId === null
+              ? []
+              : null; // 단일 teamId 지정 — 아래에서 syncTeamMembership으로 처리
+      const teamIdsToCheck = dto.teamIds ?? (dto.teamId ? [dto.teamId] : []);
+      if (teamIdsToCheck.length > 0) {
+        const found = await tx.team.count({
+          where: { id: { in: teamIdsToCheck }, deletedAt: null },
         });
-        if (!team) throw new BadRequestException('존재하지 않는 팀입니다.');
+        if (found !== teamIdsToCheck.length) {
+          throw new BadRequestException('존재하지 않는 팀입니다.');
+        }
       }
 
       await tx.user.update({
@@ -243,11 +276,13 @@ export class UsersService {
       if (dto.cellId !== undefined) {
         await this.syncCellMembership(tx, id, dto.cellId);
       }
-      if (dto.teamId !== undefined) {
+      if (Array.isArray(nextTeamIds)) {
+        await this.syncTeamMemberships(tx, id, nextTeamIds);
+      } else if (dto.teamId !== undefined) {
         await this.syncTeamMembership(tx, id, dto.teamId);
       }
       if (dto.role !== undefined) {
-        await this.applyAdminRole(tx, id, dto.role);
+        await this.applyAdminRole(tx, id, dto.role, dto.leaderTeamId);
       }
     });
 
@@ -286,13 +321,14 @@ export class UsersService {
     tx: Prisma.TransactionClient,
     userId: string,
     role: AdminMemberRole,
+    leaderTeamId?: string,
   ) {
-    const [cellMembership, teamMembership] = await Promise.all([
+    const [cellMembership, teamMemberships] = await Promise.all([
       tx.cellMembership.findFirst({
         where: { userId, endedAt: null },
         select: { id: true, cellId: true, role: true },
       }),
-      tx.teamMembership.findFirst({
+      tx.teamMembership.findMany({
         where: { userId, endedAt: null },
         select: { id: true, teamId: true, role: true },
       }),
@@ -313,32 +349,48 @@ export class UsersService {
         },
       });
     };
-    const setTeamRole = async (nextRole: TeamRole) => {
-      if (!teamMembership || teamMembership.role === nextRole) return;
+    // 팀은 여러 개일 수 있다 — 대상 팀의 소속 행만 역할을 바꾼다 (이력 보존: 행 종료 후 새 행).
+    const setTeamRole = async (
+      membership: { id: string; teamId: string; role: TeamRole },
+      nextRole: TeamRole,
+    ) => {
+      if (membership.role === nextRole) return;
       await tx.teamMembership.update({
-        where: { id: teamMembership.id },
+        where: { id: membership.id },
         data: { endedAt: new Date() },
       });
       await tx.teamMembership.create({
         data: {
-          teamId: teamMembership.teamId,
+          teamId: membership.teamId,
           userId,
           role: nextRole,
           startedAt: new Date(),
         },
       });
     };
+    const demoteAllTeamRoles = async () => {
+      for (const membership of teamMemberships) {
+        await setTeamRole(membership, 'MEMBER');
+      }
+    };
 
     if (role === 'GENERAL') {
       await setCellRole('MEMBER');
-      await setTeamRole('MEMBER');
+      await demoteAllTeamRoles();
       return;
     }
     if (role === 'TEAM_LEADER') {
-      if (!teamMembership) {
+      if (teamMemberships.length === 0) {
         throw new BadRequestException('소속 팀이 있어야 팀장으로 지정할 수 있습니다.');
       }
-      await setTeamRole('LEADER');
+      // 여러 팀이면 팀장을 맡을 팀을 leaderTeamId로 받는다. 안 주면 첫 번째 팀이다.
+      const target = leaderTeamId
+        ? teamMemberships.find((membership) => membership.teamId === leaderTeamId)
+        : teamMemberships[0];
+      if (!target) {
+        throw new BadRequestException('팀장을 맡을 팀은 소속된 팀이어야 합니다.');
+      }
+      await setTeamRole(target, 'LEADER');
       await setCellRole('MEMBER');
       return;
     }
@@ -361,7 +413,7 @@ export class UsersService {
       );
     }
     await setCellRole('LEADER');
-    await setTeamRole('MEMBER');
+    await demoteAllTeamRoles();
   }
 
   // 프로필 등록·수정 (프로필 설정 화면의 등록하기). 소속 셀/팀은 User 컬럼이 아니라
@@ -426,18 +478,19 @@ export class UsersService {
   // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라
   // 회차 수 = 주수다 (WorshipService.date unique).
   async getMyStats(userId: string): Promise<MyStatsResponse> {
-    const [qtShareCount, attendanceWeeks, receivedHearts] = await Promise.all([
+    const [qtShareCount, attendanceWeeks, prayerCount] = await Promise.all([
       this.prisma.post.count({
         where: { board: 'QT_SHARE', authorId: userId, deletedAt: null },
       }),
       this.prisma.worshipAttendance.count({
         where: { userId, attended: true },
       }),
-      this.prisma.postLike.count({
-        where: { post: { authorId: userId, deletedAt: null } },
+      // "내 기도제목" 목록(PrayersService.findMine)과 같은 기준 — 숫자와 목록 건수가 어긋나지 않게.
+      this.prisma.post.count({
+        where: { board: 'PRAYER', authorId: userId, deletedAt: null },
       }),
     ]);
-    return { qtShareCount, attendanceWeeks, receivedHearts };
+    return { qtShareCount, attendanceWeeks, prayerCount };
   }
 
   // 알림 토글 3종 (설정 화면). DB 컬럼명(notify*)과 API 필드명이 달라 여기서 매핑한다.

@@ -28,23 +28,14 @@ export function BottomTabNavigator() {
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} options={{ title: t("홈") }} />
-      {/* 팀스토리만 sub 헤더를 쓴다 — 탭 화면이지만 시안이 타이틀과 홈 버튼을 요구한다.
-          하위 화면(상세·갤러리 등)도 같은 헤더라 들어갔다 나올 때 헤더가 바뀌지 않는다. */}
+      {/* 팀스토리만 sub 헤더를 쓴다. 하단 탭이 보이는 화면이라 홈 버튼은 두지 않는다 —
+          관리자용 ⋮ 메뉴는 TeamStoryScreen이 헤더를 직접 등록해서 붙인다. */}
       <Tab.Screen
         name="TeamStory"
         component={TeamStoryScreen}
         options={{
           title: t("팀 스토리"),
-          // 홈 버튼 동작을 직접 넘긴다 — 탭 안에서는 Header의 기본 동작(Main으로 이동)이
-          // 이미 Main에 있는 상태라 아무 일도 하지 않는다.
-          header: ({ navigation }) => (
-            <Header
-              variant="sub"
-              title={t("팀스토리")}
-              rightAction="home"
-              onPressHome={() => navigation.navigate("Home")}
-            />
-          ),
+          header: () => <Header variant="sub" title={t("팀스토리")} rightAction="none" />,
         }}
       />
       {/* 가운데 원형 버튼. 시안에 라벨이 없어서 title은 화면에 안 보이고 접근성 레이블로만 쓰인다. */}

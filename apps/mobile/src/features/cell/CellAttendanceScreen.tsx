@@ -20,10 +20,12 @@ import {
 import { useCell, useCellAttendance, useSaveCellAttendance } from "./api";
 import { AttendanceMemberRow } from "./components/AttendanceMemberRow";
 import { MonthPicker } from "./components/MonthPicker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 출석 관리 (관리 탭 > 출석 관리 — 셀장·관리자 전용 경로로만 진입한다).
 // 날짜 바를 누르면 주차별 보기(월 그리드 + 그 달의 일요일 목록)가 아래로 펼쳐진다 (시안).
 export function CellAttendanceScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const OFF_DAY_NOTICE = {
     WORSHIP_OFF: t("이 날은 예배가 없는 날이에요.\n예배 출석은 저장되지 않아요."),
@@ -93,7 +95,9 @@ export function CellAttendanceScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="px-5 pb-10 pt-4">
+      <ScrollView contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         {/* 날짜 선택 바 — 누르면 주차별 보기 펼침/접힘 */}
         <Pressable
           className="h-11 flex-row items-center justify-center rounded-2.5 bg-background-muted"

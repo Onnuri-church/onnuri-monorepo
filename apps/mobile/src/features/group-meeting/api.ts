@@ -1,7 +1,7 @@
 import type {
   CreateGroupMeetingRequest,
-  GroupMeeting,
   GroupMeetingDetail,
+  GroupMeetingListResponse,
   MyGroupMeeting,
   UpdateGroupMeetingRequest,
 } from "@onnuri/shared";
@@ -12,8 +12,16 @@ import { apiClient } from "../../shared/api/client";
 // 취향 소그룹 API — GET /group-meetings, /:id (HobbyGroup 실데이터).
 // 쿼리 키는 목록 ["group-meetings"], 상세 ["group-meetings", id] — 접두사 하나로 같이 무효화된다.
 
-export function fetchGroupMeetings(): Promise<GroupMeeting[]> {
-  return apiClient.get<GroupMeeting[]>("/group-meetings").then((res) => res.data);
+// 목록은 모집중/마감 중 하나를 20개씩 받아 이어 붙인다 (마감이 계속 쌓여서 한 번에 다 받지 않는다).
+export function fetchGroupMeetings(
+  status: "open" | "closed",
+  cursor?: string,
+): Promise<GroupMeetingListResponse> {
+  return apiClient
+    .get<GroupMeetingListResponse>("/group-meetings", {
+      params: { status, ...(cursor ? { cursor } : {}) },
+    })
+    .then((res) => res.data);
 }
 
 export function fetchGroupMeetingDetail(id: string): Promise<GroupMeetingDetail> {

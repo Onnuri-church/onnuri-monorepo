@@ -10,6 +10,8 @@ export interface BulletinListItem {
   dateLabel: string;
   /** 같은 날 설교 제목 — 설교영상이 아직 안 올라왔으면 null */
   title: string | null;
+  /** 나눔지가 올라와 있는지 — 없으면 목록 카드가 나눔지 링크를 그리지 않는다 */
+  hasHandout: boolean;
 }
 
 export interface BulletinMonth {
@@ -40,7 +42,7 @@ export interface BulletinDetail {
   title: string | null;
   /** 주보 앞·뒤 2장 (순서대로) */
   bulletinImages: BulletinImage[];
-  /** 나눔지 1~5장 (순서대로) */
+  /** 나눔지 0~5장 (순서대로) */
   handoutImages: BulletinImage[];
 }
 
@@ -50,6 +52,14 @@ export interface CreateBulletinRequest {
   date: string;
   /** POST /uploads가 돌려준 주소 — 정확히 2장 */
   bulletinImageUrls: string[];
-  /** POST /uploads가 돌려준 주소 — 1~5장 */
+  /** POST /uploads가 돌려준 주소 — 0~5장 */
+  handoutImageUrls: string[];
+}
+
+/** PATCH /bulletins/:id 요청 본문 — 날짜는 못 바꾸고 이미지만 통째로 교체한다 (응답은 BulletinDetail) */
+export interface UpdateBulletinRequest {
+  /** 정확히 2장 */
+  bulletinImageUrls: string[];
+  /** 0~5장 (빈 배열이면 나눔지를 모두 지운다) */
   handoutImageUrls: string[];
 }

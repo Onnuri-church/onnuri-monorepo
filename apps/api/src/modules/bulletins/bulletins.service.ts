@@ -15,8 +15,10 @@ import {
   toMonthLabel,
   toMonthValue,
 } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBulletinDto } from './dto/create-bulletin.dto';
+import { UpdateBulletinDto } from './dto/update-bulletin.dto';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -26,6 +28,12 @@ const HAS_BULLETIN = { images: { some: { kind: 'BULLETIN' as const } } };
 const SERVICE_SELECT = {
   id: true,
   date: true,
+  // 나눔지가 있는 회차인지만 알면 돼서 한 장만 본다 — 목록 카드가 나눔지 링크를 그릴지 정한다.
+  images: {
+    where: { kind: 'HANDOUT' as const },
+    select: { id: true, kind: true },
+    take: 1,
+  },
   // 카드 제목은 같은 날 설교 제목을 빌려 쓴다 — 주보 등록 화면에 제목 입력이 없어서다.
   sermon: { select: { title: true, deletedAt: true } },
 } as const;
@@ -34,6 +42,7 @@ type ServiceRow = {
   id: string;
   date: Date;
   sermon: { title: string; deletedAt: Date | null } | null;
+  images?: { id: string; kind: string }[];
 };
 
 // "2026.06.01 (일)" — date는 @db.Date라 UTC로 읽는다 (common/utils/date 주석).
@@ -44,7 +53,10 @@ function toDateWithWeekdayLabel(date: Date): string {
 // 주보·나눔지 — 별도 테이블 없이 그 주 예배 회차(WorshipService)에 붙은 Image(BULLETIN/HANDOUT)다.
 @Injectable()
 export class BulletinsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly notifications: NotificationsService,
+  ) {}
 
   private toListItem(row: ServiceRow): BulletinListItem {
     return {
@@ -52,6 +64,7 @@ export class BulletinsService {
       dateLabel: toDateWithWeekdayLabel(row.date),
       // 설교영상이 아직 안 올라왔거나 관리자가 지운 영상이면 제목이 없다.
       title: row.sermon && !row.sermon.deletedAt ? row.sermon.title : null,
+      hasHandout: (row.images ?? []).some((image) => image.kind === 'HANDOUT'),
     };
   }
 
@@ -110,7 +123,7 @@ export class BulletinsService {
 
   // 한 날짜에 한 건 — 이미 있으면 거부한다 (교체는 받지 않는다. 수정·삭제는 별도 기능).
   async createBulletin(
-    adminId: string,
+    uploaderId: string,
     dto: CreateBulletinDto,
   ): Promise<BulletinDetail> {
     const date = new Date(dto.date);
@@ -135,7 +148,7 @@ export class BulletinsService {
           url,
           kind,
           serviceId: service.id,
-          uploadedById: adminId,
+          uploadedById: uploaderId,
           takenOn: date,
           sortOrder: index,
         }));
@@ -148,7 +161,71 @@ export class BulletinsService {
       return service.id;
     });
 
-    return this.findBulletin(serviceId);
+    const detail = await this.findBulletin(serviceId);
+
+    // 전 회원 알림 + 푸시 — 올린 사람 본인은 제외, 탈퇴자에게는 쌓지 않는다.
+    const users = await this.prisma.user.findMany({
+      where: { id: { not: uploaderId }, withdrawnAt: null },
+      select: { id: true },
+    });
+    await this.notifications.notify(
+      users.map((user) => user.id),
+      {
+        type: 'BULLETIN',
+        title: '주보',
+        body: `${detail.dateLabel} 주보가 올라왔어요.`,
+        linkUrl: `bulletin/${serviceId}`,
+      },
+    );
+
+    return detail;
+  }
+
+  // 주보 수정 — 날짜는 그대로 두고 주보·나눔지 이미지를 통째로 바꾼다 (등록자는 수정한 사람으로).
+  async updateBulletin(
+    id: string,
+    editorId: string,
+    dto: UpdateBulletinDto,
+  ): Promise<BulletinDetail> {
+    const service = await this.prisma.worshipService.findFirst({
+      where: { id, ...HAS_BULLETIN },
+      select: { id: true, date: true },
+    });
+    if (!service) throw new NotFoundException('주보를 찾을 수 없습니다.');
+
+    const toImages = (urls: string[], kind: 'BULLETIN' | 'HANDOUT') =>
+      urls.map((url, index) => ({
+        url,
+        kind,
+        serviceId: service.id,
+        uploadedById: editorId,
+        takenOn: service.date,
+        sortOrder: index,
+      }));
+    await this.prisma.$transaction([
+      this.prisma.image.deleteMany({
+        where: { serviceId: id, kind: { in: ['BULLETIN', 'HANDOUT'] } },
+      }),
+      this.prisma.image.createMany({
+        data: [
+          ...toImages(dto.bulletinImageUrls, 'BULLETIN'),
+          ...toImages(dto.handoutImageUrls, 'HANDOUT'),
+        ],
+      }),
+    ]);
+    return this.findBulletin(id);
+  }
+
+  // 주보 삭제 — 그 회차의 주보·나눔지 이미지만 지운다 (회차·설교·출석 기록은 그대로).
+  async removeBulletin(id: string): Promise<void> {
+    const service = await this.prisma.worshipService.findFirst({
+      where: { id, ...HAS_BULLETIN },
+      select: { id: true },
+    });
+    if (!service) throw new NotFoundException('주보를 찾을 수 없습니다.');
+    await this.prisma.image.deleteMany({
+      where: { serviceId: id, kind: { in: ['BULLETIN', 'HANDOUT'] } },
+    });
   }
 
   private async findMonths(): Promise<BulletinMonth[]> {

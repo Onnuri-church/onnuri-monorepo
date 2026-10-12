@@ -9,6 +9,7 @@ import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { Header } from "../../shared/components/base/Header";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField } from "../../shared/components/composed/DateField";
+import { MultiSelectChips } from "../../shared/components/composed/MultiSelectChips";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
@@ -44,11 +45,20 @@ export function AdminMemberEditScreen() {
   const [gender, setGender] = useState<Gender | null>(member?.gender ?? null);
   const [phone, setPhone] = useState(member?.phone ?? "");
   const [cellName, setCellName] = useState<string | null>(member?.cell?.name ?? NO_MEMBERSHIP);
-  const [teamName, setTeamName] = useState<string | null>(member?.team?.name ?? NO_MEMBERSHIP);
+  // 여러 팀에 소속될 수 있다 — 고른 팀 이름 목록 (빈 배열 = 소속 없음).
+  const [teamNames, setTeamNames] = useState<string[]>(
+    (member?.teams ?? []).map((team) => team.name),
+  );
+  // 팀장을 맡을 팀 — 팀이 여러 개이고 권한이 팀장일 때만 고른다 (기본: 현재 팀장인 팀 또는 첫 팀).
+  const [leaderTeamName, setLeaderTeamName] = useState<string | null>(
+    member?.teams?.find((team) => team.role === "LEADER")?.name ?? member?.team?.name ?? null,
+  );
   const [roleLabel, setRoleLabel] = useState<string | null>(
     ROLE_OPTIONS.find((option) => option.value === member?.role)?.label ?? null,
   );
 
+  const isTeamLeaderRole =
+    ROLE_OPTIONS.find((option) => option.label === roleLabel)?.value === "TEAM_LEADER";
   const canSubmit = name.trim() !== "" && !updateMember.isPending;
 
   const handleSavePress = () => {
@@ -60,7 +70,14 @@ export function AdminMemberEditScreen() {
         ...(gender !== null && { gender }),
         ...(phone.trim() !== "" && { phone: phone.trim() }),
         cellId: (cells ?? []).find((cell) => cell.name === cellName)?.id ?? null,
-        teamId: (teams ?? []).find((team) => team.name === teamName)?.id ?? null,
+        teamIds: teamNames
+          .map((name) => (teams ?? []).find((team) => team.name === name)?.id)
+          .filter((id): id is string => id !== undefined),
+        ...(isTeamLeaderRole &&
+          teamNames.length > 1 && {
+            leaderTeamId: (teams ?? []).find((team) => team.name === (leaderTeamName ?? teamNames[0]))
+              ?.id,
+          }),
         ...(roleLabel !== null && {
           role: ROLE_OPTIONS.find((option) => option.label === roleLabel)?.value,
         }),
@@ -161,12 +178,16 @@ export function AdminMemberEditScreen() {
             onChange={setCellName}
           />
 
-          <SelectField
+          <MultiSelectChips
             label={t("소속 팀")}
-            placeholder={t("소속 팀을 선택하세요.")}
-            options={[NO_MEMBERSHIP, ...(teams ?? []).map((team) => team.name)]}
-            value={teamName}
-            onChange={setTeamName}
+            hint={t("여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.")}
+            options={(teams ?? []).map((team) => team.name)}
+            selected={teamNames}
+            onToggle={(name) =>
+              setTeamNames((prev) =>
+                prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name],
+              )
+            }
           />
 
           <SelectField
@@ -176,6 +197,17 @@ export function AdminMemberEditScreen() {
             value={roleLabel}
             onChange={setRoleLabel}
           />
+
+          {/* 팀이 여러 개인 팀장만 — 어느 팀의 팀장인지 고른다. 나머지 팀은 팀원으로 둔다. */}
+          {isTeamLeaderRole && teamNames.length > 1 && (
+            <SelectField
+              label={t("팀장을 맡을 팀")}
+              placeholder={t("팀을 선택하세요.")}
+              options={teamNames}
+              value={leaderTeamName && teamNames.includes(leaderTeamName) ? leaderTeamName : teamNames[0]}
+              onChange={setLeaderTeamName}
+            />
+          )}
 
           {/* 가입일 — 수정 불가 (시안) */}
           <View className="flex-row items-center justify-between py-4">

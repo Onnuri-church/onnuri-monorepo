@@ -1,15 +1,25 @@
-import type { GroupMeeting, GroupMeetingStatus } from "@onnuri/shared";
+import type { GroupMeeting } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { useLayoutEffect, useRef, useState } from "react";
-import { Pressable, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { fetchGroupMeetings, useDeleteGroupMeeting } from "./api";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Card } from "../../shared/components/base/Card";
 import { Chip } from "../../shared/components/base/Chip";
+import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { Skeleton } from "../../shared/components/base/Skeleton";
@@ -19,12 +29,13 @@ import { useMe } from "../profile/useMe";
 import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-type Filter = "all" | GroupMeetingStatus;
+type Filter = "open" | "closed";
 
-// i18n: t("전체") t("모집중") t("마감") — 렌더 시 t(label)로 번역한다.
+// i18n: t("모집중") t("마감") — 렌더 시 t(label)로 번역한다.
+// 마감이 계속 쌓이므로 "전체"는 두지 않는다. 기본은 지금 신청할 수 있는 모집중이다.
 const FILTERS: { value: Filter; label: string }[] = [
-  { value: "all", label: "전체" },
   { value: "open", label: "모집중" },
   { value: "closed", label: "마감" },
 ];
@@ -64,8 +75,9 @@ function ParticipantAvatars({ count, avatarUrls }: { count: number; avatarUrls: 
 }
 
 export function GroupMeetingScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>("open");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { width } = useWindowDimensions();
   const cardWidth = getCardWidth(width);
@@ -78,14 +90,24 @@ export function GroupMeetingScreen() {
   const [deleteTarget, setDeleteTarget] = useState<GroupMeeting | null>(null);
   const deleteMeeting = useDeleteGroupMeeting();
 
-  const {
-    data: meetings,
-    isPending,
-    isError,
-  } = useQuery({
-    queryKey: ["group-meetings"],
-    queryFn: fetchGroupMeetings,
-  });
+  // 선택한 상태(모집중/마감)의 모임을 20개씩 이어 받는다. 키가 ["group-meetings", ...]로 시작해서
+  // 등록·삭제 뒤 접두어 무효화 한 번에 갱신된다.
+  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ["group-meetings", "list", filter],
+      initialPageParam: undefined as string | undefined,
+      queryFn: ({ pageParam }) => fetchGroupMeetings(filter, pageParam),
+      getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+    });
+  const meetings = (data?.pages ?? []).flatMap((page) => page.items);
+
+  // 끝에서 400px 안쪽까지 내려오면 다음 쪽을 받는다.
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = event.nativeEvent;
+    if (contentOffset.y + layoutMeasurement.height >= contentSize.height - 400) {
+      if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
+    }
+  };
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -153,16 +175,17 @@ export function GroupMeetingScreen() {
     );
   }
 
-  const visible = filter === "all" ? meetings : meetings.filter((m) => m.status === filter);
 
   return (
     <View className="flex-1 bg-background-normal">
       {filterRow}
       <ScrollView
-        contentContainerClassName="flex-row flex-wrap pb-6"
-        contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING }}
+        onScroll={handleScroll}
+        scrollEventThrottle={64}
+        contentContainerClassName="flex-row flex-wrap"
+        contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING, paddingBottom: (isAdmin ? 120 : 24) + insets.bottom }}
       >
-        {visible.map((meeting) => (
+        {meetings.map((meeting) => (
           <View key={meeting.id} style={{ width: cardWidth }}>
             <Card
               imageSource={meeting.thumbnailUrl ? { uri: meeting.thumbnailUrl } : undefined}
@@ -204,18 +227,21 @@ export function GroupMeetingScreen() {
           </View>
         ))}
 
-        {/* 소그룹 생성 — 관리자에게만 보이는 점선 카드 (시안: 카드 목록 끝) */}
-        {isAdmin && (
-          <Pressable
-            className="items-center justify-center gap-2 rounded-2xl border border-dashed border-background-assistive"
-            style={{ width: cardWidth, minHeight: 214 }}
-            onPress={() => navigation.navigate("GroupMeetingForm", {})}
-          >
-            <Icon name="plus" size={16} color={colors.icon.normal} />
-            <Text className="text-body-regular text-text-alternative">{t("소그룹 생성")}</Text>
-          </Pressable>
+        {/* 비어 있을 때 / 다음 쪽을 받는 동안 */}
+        {meetings.length === 0 && (
+          <Text className="w-full pt-16 text-center text-body-medium text-text-alternative">
+            {filter === "open" ? t("지금 모집 중인 모임이 없어요") : t("마감된 모임이 없어요")}
+          </Text>
         )}
+        {isFetchingNextPage && <ActivityIndicator className="w-full py-4" />}
       </ScrollView>
+
+      {/* 소그룹 생성 — 다른 게시판의 글쓰기 버튼처럼 오른쪽 아래 초록 버튼 (관리자에게만 보인다) */}
+      {isAdmin && (
+        <FloatingButton onPress={() => navigation.navigate("GroupMeetingForm", {})}>
+          <Icon name="plus" size={24} color={colors.icon.disable} />
+        </FloatingButton>
+      )}
 
       {/* 삭제 확정 문구 (2026-09-21 시안) — 소그룹은 hard delete라 참여 기록까지 지워진다 */}
       <AppDialog

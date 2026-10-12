@@ -70,6 +70,11 @@ interface SubHeaderProps {
   /** 북마크가 켜져 있는지 (rightAction이 "bookmark"일 때 채워진 아이콘으로 그린다). */
   bookmarked?: boolean;
   /**
+   * rightAction이 "home"일 때 홈 아이콘 왼쪽에 붙는 보조 아이콘 버튼 (셀 페이지의 단톡방 등).
+   * 타이틀이 가운데 유지되도록 왼쪽(뒤로가기)에 같은 폭의 자리를 둔다.
+   */
+  extraRightAction?: { icon: React.ComponentProps<typeof Icon>["name"]; onPress: () => void };
+  /**
    * 홈 버튼 동작. 안 주면 메인 탭으로 돌아간다.
    * 탭 안에서 쓰는 화면(팀스토리)은 이미 Main에 있어서 기본 동작이 아무 일도 하지 않으므로,
    * 갈 탭을 아는 쪽에서 직접 넘긴다.
@@ -168,17 +173,31 @@ export function Header(props: HeaderProps) {
             </>
         ) : (
             <>
-              <Pressable onPress={props.onPressBack ?? (() => navigation.goBack())} hitSlop={8}>
-                <Icon name="back" size={28} color={colors.icon.strong} />
-              </Pressable>
+              {/* 오른쪽에 아이콘이 둘이면 왼쪽도 같은 폭(28+12+28)으로 잡아 타이틀을 가운데에 둔다. */}
+              <View style={{ width: props.rightAction === "home" && props.extraRightAction ? 68 : undefined }}>
+                <Pressable
+                    onPress={props.onPressBack ?? (() => navigation.goBack())}
+                    hitSlop={8}
+                    style={{ alignSelf: "flex-start" }}
+                >
+                  <Icon name="back" size={28} color={colors.icon.strong} />
+                </Pressable>
+              </View>
               <Text className="font-pretendard-semibold text-heading-small text-text-normal">{props.title}</Text>
               {props.rightAction === "home" ? (
-                  <Pressable
-                      onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
-                      hitSlop={8}
-                  >
-                    <Icon name="home" size={28} color={colors.icon.strong} />
-                  </Pressable>
+                  <View className="flex-row items-center gap-3">
+                    {props.extraRightAction && (
+                        <Pressable onPress={props.extraRightAction.onPress} hitSlop={8}>
+                          <Icon name={props.extraRightAction.icon} size={28} color={colors.icon.strong} />
+                        </Pressable>
+                    )}
+                    <Pressable
+                        onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
+                        hitSlop={8}
+                    >
+                      <Icon name="home" size={28} color={colors.icon.strong} />
+                    </Pressable>
+                  </View>
               ) : props.rightAction === "export" ? (
                   props.onPressShare ? (
                       <Pressable onPress={props.onPressShare} hitSlop={8}>

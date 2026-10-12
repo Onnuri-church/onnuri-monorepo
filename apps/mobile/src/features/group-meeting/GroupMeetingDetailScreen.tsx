@@ -43,6 +43,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../shared/components/composed/CommentItem";
+import { ManageLinkCard } from "../cell/components/ManageLinkCard";
 import { useMe } from "../profile/useMe";
 
 // 시안 확정값은 402pt 프레임 기준이다. 콘텐츠 폭 362 = 402 - 20*2 이므로
@@ -366,6 +367,17 @@ export function GroupMeetingDetailScreen() {
                 </View>
               ))}
             </View>
+          </View>
+        )}
+
+        {/* 소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만 보인다 (서버도 같은 규칙) */}
+        {(meeting.canManage || meeting.myStatus === "APPROVED") && (
+          <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+            <ManageLinkCard
+              title={t("소그룹 단톡방")}
+              description={t("참여자끼리 이야기를 나눠요")}
+              onPress={() => navigation.navigate("GroupChat", { meetingId: params.id })}
+            />
           </View>
         )}
 

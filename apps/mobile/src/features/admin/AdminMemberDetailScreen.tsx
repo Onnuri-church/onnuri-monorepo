@@ -42,7 +42,10 @@ export function AdminMemberDetailScreen() {
     { label: t("성별"), value: member.genderLabel ?? t("미입력") },
     { label: t("연락처"), value: member.phone ?? t("미입력") },
     { label: t("소속 셀"), value: member.cell?.name ?? t("무소속") },
-    { label: t("소속 팀"), value: member.team?.name ?? t("무소속") },
+    {
+      label: t("소속 팀"),
+      value: member.teams.length > 0 ? member.teams.map((team) => team.name).join(", ") : t("무소속"),
+    },
     { label: t("권한"), value: member.roleLabel },
     { label: t("가입일"), value: member.joinedAtLabel },
   ];

@@ -28,8 +28,17 @@ export type RootStackParamList = {
   // teamId를 주면 그 팀으로 필터된 채 열린다 (팀 상세의 "OO팀 게시판" 진입).
   DepartmentActivity: { teamId?: string } | undefined;
   DepartmentActivityDetail: { id: string };
-  // postId가 있으면 그 글 수정, 없으면 새 글 작성.
-  DepartmentActivityWrite: { postId: string } | undefined;
+  // 글쓰기 1단계(날짜·부서·제목). postId가 있으면 그 글 수정, 없으면 새 글 작성.
+  DepartmentActivityMeta: { postId: string } | undefined;
+  // 글쓰기 2단계(본문·사진) — 1단계에서 정한 값을 넘겨 받는다. postId가 있으면 수정 모드.
+  DepartmentActivityWrite: {
+    postId?: string;
+    teamId: string;
+    teamName: string;
+    title: string;
+    /** YYYY-MM-DD */
+    eventDate: string;
+  };
   // 팀장 "게시판 관리" (마이페이지 관리 카드) — 자기 팀 부서활동 글 목록.
   TeamBoardManage: { teamId: string };
   GroupMeeting: undefined;
@@ -54,9 +63,24 @@ export type RootStackParamList = {
   BulletinDetail: { id: string };
   SharingSheet: { id: string };
   // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
-  BulletinWrite: undefined;
+  /** id가 있으면 그 주보를 수정한다 */
+  BulletinWrite: { id?: string } | undefined;
   TeamStoryDetail: { teamId: string };
-  TeamChat: { teamId: string };
+  // 소속팀 공간 — 그 팀 팀원·관리자 전용. 안에 팀 게시판과 팀 단톡방이 있다.
+  TeamSpace: { teamId: string };
+  // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group)의 + 메뉴에서 연다.
+  ChatPollCreate: { kind: "room" | "cell" | "group"; id: string };
+  // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
+  GroupChat: { meetingId: string };
+  TeamBoard: { teamId: string };
+  TeamBoardDetail: { teamId: string; postId: string };
+  // postId가 있으면 수정 모드
+  TeamBoardWrite: { teamId: string; postId?: string };
+  ChatRoomList: { teamId: string };
+  // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기
+  ChatRoomForm: { teamId: string; roomId?: string };
+  ChatRoom: { roomId: string };
+  CellChat: { cellId: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;
   TeamStoryGallery: { teamId: string };
@@ -109,7 +133,8 @@ export type RootStackParamList = {
   // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
   NoticeList: undefined;
   NoticeDetail: { id: string };
-  NoticeWrite: undefined;
+  // id가 있으면 수정 모드 — 기존 공지를 채운 채 열린다.
+  NoticeWrite: { id: string } | undefined;
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —

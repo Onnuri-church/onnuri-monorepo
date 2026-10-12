@@ -3,13 +3,14 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { HomeBanner, NoticeInfo } from '@onnuri/shared';
+import type { HomeBanner, NoticeInfo, NoticeListResponse } from '@onnuri/shared';
 
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBannerDto } from './dto/create-banner.dto';
 import { CreateNoticeDto } from './dto/create-notice.dto';
 import { UpdateBannerDto } from './dto/update-banner.dto';
+import { UpdateNoticeDto } from './dto/update-notice.dto';
 
 type BannerRow = {
   id: string;
@@ -157,13 +158,39 @@ export class NoticesService {
   }
 
   // 공지 목록 — 최신순. 게스트도 볼 수 있다 (게스트 열람 범위 확정).
-  async findNotices(): Promise<NoticeInfo[]> {
+  // 최신순 커서 페이지네이션 — 같은 시각 공지가 있어도 순서가 흔들리지 않게 id를 보조 정렬로 둔다.
+  async findNotices(cursor?: string, limit?: number): Promise<NoticeListResponse> {
+    const take = Math.min(Math.max(Number.isFinite(limit) ? Math.floor(limit as number) : 20, 1), 50);
+    // 없는 커서는 Prisma가 500으로 던지므로 먼저 400으로 거른다.
+    if (cursor) {
+      const exists = await this.prisma.notice.findFirst({
+        where: { id: cursor, type: 'NOTICE' },
+        select: { id: true },
+      });
+      if (!exists) throw new BadRequestException('잘못된 cursor입니다.');
+    }
     const rows = await this.prisma.notice.findMany({
       where: { type: 'NOTICE' },
       select: BANNER_SELECT,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: take + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
-    return rows.map((row) => this.toNotice(row));
+    const hasMore = rows.length > take;
+    const page = hasMore ? rows.slice(0, take) : rows;
+    return {
+      items: page.map((row) => this.toNotice(row)),
+      nextCursor: hasMore ? page[page.length - 1].id : null,
+    };
+  }
+
+  async findNotice(id: string): Promise<NoticeInfo> {
+    const row = await this.prisma.notice.findFirst({
+      where: { id, type: 'NOTICE' },
+      select: BANNER_SELECT,
+    });
+    if (!row) throw new NotFoundException('공지를 찾을 수 없습니다.');
+    return this.toNotice(row);
   }
 
   async createNotice(adminId: string, dto: CreateNoticeDto): Promise<NoticeInfo> {
@@ -197,6 +224,26 @@ export class NoticesService {
     );
 
     return this.toNotice(row);
+  }
+
+  // 공지 수정 — 알림은 다시 보내지 않는다 (등록 때 이미 나갔다).
+  async updateNotice(id: string, dto: UpdateNoticeDto): Promise<NoticeInfo> {
+    const content = dto.content?.trim() ? dto.content.trim() : null;
+    const imageUrl = dto.imageUrl ? dto.imageUrl : null;
+    if (!content && !imageUrl) {
+      throw new BadRequestException('내용이나 이미지 중 하나는 필요합니다.');
+    }
+    const row = await this.prisma.notice.findFirst({
+      where: { id, type: 'NOTICE' },
+      select: { id: true },
+    });
+    if (!row) throw new NotFoundException('공지를 찾을 수 없습니다.');
+    const updated = await this.prisma.notice.update({
+      where: { id },
+      data: { title: dto.title.trim(), content, imageUrl },
+      select: BANNER_SELECT,
+    });
+    return this.toNotice(updated);
   }
 
   // 공지 삭제 — 배너와 같은 이유로 hard delete (기록 가치가 없는 안내문).

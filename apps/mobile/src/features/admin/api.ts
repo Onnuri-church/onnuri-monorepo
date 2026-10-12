@@ -9,11 +9,28 @@ import type {
   HomeBanner,
   UpdateHomeBannerRequest,
   OffDayKind,
+  UpdateAdminAttendanceRequest,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
+
+// 출석부 칸 수정 (관리자 전용 PUT /admin/attendance) — 날짜 제한 없이 예배·셀모임 출석을 대신 고친다.
+// 성공하면 출석부 집계(셀 출석 화면 캐시 포함)를 다시 받는다.
+export function useUpdateAdminAttendance() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: UpdateAdminAttendanceRequest) =>
+      apiClient
+        .put<{ worship: boolean; meeting: boolean }>("/admin/attendance", body)
+        .then((res) => res.data),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["admin", "attendance"] });
+      void queryClient.invalidateQueries({ queryKey: ["cell-attendance"] });
+    },
+  });
+}
 
 // 회원 목록 (관리자 전용 GET /users) — 회원 관리 목록과 셀장/부셀장 선택지가 같이 쓴다.
 export function useAdminMembers(enabled = true) {

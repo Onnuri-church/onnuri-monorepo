@@ -17,11 +17,13 @@ import { colors } from "../../shared/theme/tokens";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // "전체" 칩의 값. 서버는 teamId를 생략하면 전체를 주므로 빈 문자열을 보내지 않고 지운다.
 const ALL_TEAMS = "";
 
 export function DepartmentActivityScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   // 팀 상세의 "OO팀 게시판"으로 들어오면 그 팀으로 필터된 채 시작한다.
   // 없는 팀이어도 서버가 전체로 되돌리므로(selectedTeamId 표시 규칙) 따로 검증하지 않는다.
@@ -44,7 +46,7 @@ export function DepartmentActivityScreen() {
   };
 
   const handleWritePress = () => {
-    navigation.navigate("DepartmentActivityWrite");
+    navigation.navigate("DepartmentActivityMeta");
   };
 
   if (isPending) {
@@ -84,7 +86,9 @@ export function DepartmentActivityScreen() {
         selected={selectedTeamId ?? ALL_TEAMS}
         onSelect={setTeamId}
       />
-      <ScrollView contentContainerClassName="justify-start pb-11 px-5 gap-3">
+      <ScrollView contentContainerClassName="justify-start px-5 gap-3"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 44 + insets.bottom }}>
         {items.map((item) => (
           <TeamPostCard
             key={item.id}

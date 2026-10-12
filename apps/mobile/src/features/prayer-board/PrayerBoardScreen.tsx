@@ -27,11 +27,13 @@ import { useMe } from "../profile/useMe";
 import { useToggleBookmark } from "./useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./components/PrayerCard";
 import { PrayerMenu } from "./components/PrayerMenu";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 시안 확정값(402pt 프레임): 콘텐츠 폭 362 = 402 - 20*2.
 const CONTENT_PADDING = 20;
 
 export function PrayerBoardScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
@@ -100,7 +102,9 @@ export function PrayerBoardScreen() {
       />
 
       <ScrollView
-        contentContainerClassName="pb-6"
+        contentContainerClassName=""
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />

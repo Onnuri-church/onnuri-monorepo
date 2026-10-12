@@ -8,13 +8,13 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-nativ
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { DateField } from "../../shared/components/composed/DateField";
-import { SelectField } from "../../shared/components/composed/SelectField";
+import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
 import { uploadImage } from "../../shared/api/upload";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
+import { CELL_COVER_ASPECT } from "../cell/cellDetail";
 import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
-import { buildMemberOptions, findOptionByLabel, findOptionById } from "./memberOptions";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
@@ -27,10 +27,8 @@ export function AdminCellFormScreen() {
   // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
   const editingCell = useCell(route.params?.cellId ?? "");
 
-  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록. 동명이인 구별을 위해 "이름 (소속)" 라벨로
-  // 보여주고 상태는 id로 든다 (memberOptions.ts).
+  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록을 검색해서 고른다 (MemberPickerField).
   const { data: members } = useAdminMembers();
-  const memberOptions = buildMemberOptions(members);
 
   // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
   // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
@@ -56,7 +54,13 @@ export function AdminCellFormScreen() {
 
   const handleCoverUploadPress = async () => {
     // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 0.8 });
+    // 셀 페이지 상단 배경사진 비율에 맞춰 자른다 (프로필 사진 자르기와 같은 방식).
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: CELL_COVER_ASPECT,
+      quality: 0.8,
+    });
     if (result.canceled) return;
     setCoverUri(result.assets[0].uri);
   };
@@ -97,7 +101,10 @@ export function AdminCellFormScreen() {
           {/* 배경사진 — 시안: 362x173 점선 슬롯, 탭하면 업로드 */}
           <View className="py-3">
             <Text className="text-body-main text-text-normal">{t("배경사진")}</Text>
-            <View className="mt-4 h-43">
+            <View
+              className="mt-4"
+              style={{ aspectRatio: CELL_COVER_ASPECT[0] / CELL_COVER_ASPECT[1] }}
+            >
               <ImageSlot
                 imageUri={coverUri}
                 outline
@@ -107,12 +114,12 @@ export function AdminCellFormScreen() {
             </View>
           </View>
 
-          <SelectField
+          <MemberPickerField
             label={t("셀장")}
             placeholder={t("셀장을 선택하세요.")}
-            options={memberOptions.map((option) => option.label)}
-            value={findOptionById(memberOptions, leaderId)?.label ?? null}
-            onChange={(label) => setLeaderId(findOptionByLabel(memberOptions, label)?.id ?? null)}
+            members={members}
+            valueId={leaderId}
+            onSelect={setLeaderId}
           />
 
           {/* 부셀장 — 라벨 옆 체크박스. 해제하면 선택줄이 사라지고 부셀장 없이 생성된다 (시안). */}
@@ -132,18 +139,15 @@ export function AdminCellFormScreen() {
               </Pressable>
             </View>
             {hasViceLeader ? (
-              /* SelectField의 라벨 자리는 위의 체크박스 행이 대신하므로 비운다 */
+              /* 라벨 자리는 위의 체크박스 행이 대신하므로 비운다 */
               <View className="-mt-4">
-                <SelectField
+                <MemberPickerField
                   label=""
                   placeholder={t("부셀장을 선택하세요.")}
-                  options={memberOptions
-                    .filter((option) => option.id !== leaderId)
-                    .map((option) => option.label)}
-                  value={findOptionById(memberOptions, viceLeaderId)?.label ?? null}
-                  onChange={(label) =>
-                    setViceLeaderId(findOptionByLabel(memberOptions, label)?.id ?? null)
-                  }
+                  members={members}
+                  valueId={viceLeaderId}
+                  onSelect={setViceLeaderId}
+                  excludeIds={leaderId ? [leaderId] : []}
                 />
               </View>
             ) : (

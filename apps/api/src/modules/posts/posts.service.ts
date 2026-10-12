@@ -10,6 +10,7 @@ import type {
   CellNewsListItem,
   HomePostsResponse,
   PostComment,
+  PostReactionSummary,
   QtShareDetail,
   QtShareListItem,
   QtShareListResponse,
@@ -123,6 +124,7 @@ function toPostComment(
     content: comment.content,
     isMine: comment.authorId === userId,
     // 관리자는 남의 댓글도 지울 수 있다 (removeComment와 같은 규칙).
+    canEdit: comment.authorId === userId || isAdmin,
     canDelete: comment.authorId === userId || isAdmin,
     replies: [],
   };
@@ -561,7 +563,7 @@ export class PostsService {
         team: { select: { name: true } },
         _count: {
           select: {
-            likes: true,
+            reactions: true,
             // 카드의 댓글 수는 최상위 댓글만 센다 (시안: 댓글 3줄에 "댓글 2").
             comments: { where: { deletedAt: null, parentId: null } },
           },
@@ -583,7 +585,7 @@ export class PostsService {
       createdAt: post.createdAt.toISOString(),
       viewCount: post.viewCount,
       commentCount: post._count.comments,
-      likeCount: post._count.likes,
+      likeCount: post._count.reactions,
     }));
 
     return { teams, selectedTeamId, items };
@@ -614,8 +616,7 @@ export class PostsService {
           select: { url: true },
           orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         },
-        _count: { select: { likes: true } },
-        likes: { where: myLikeFilter(userId), select: { id: true } },
+        reactions: { select: { userId: true, emoji: true } },
         // 최상위 댓글만 받고 대댓글은 그 안에 담는다 — 깊이가 1단계뿐이라 평탄화해서
         // 앱이 다시 묶는 것보다 이 모양이 화면과 그대로 맞는다.
         comments: {
@@ -673,8 +674,8 @@ export class PostsService {
       authorAvatarUrl: post.author.avatarUrl,
       coverImageUrl: post.coverImageUrl,
       imageUrls: post.images.map((image) => image.url),
-      likeCount: post._count.likes,
-      likedByMe: post.likes.length > 0,
+      likeCount: post.reactions.length,
+      reactions: this.summarizeReactions(post.reactions, userId),
       isMine: post.authorId === userId,
       canManage,
       comments: post.comments.map((comment) => ({
@@ -684,6 +685,82 @@ export class PostsService {
         ),
       })),
     };
+  }
+
+  // 이모지별 집계 — 먼저 달린 이모지 순서를 유지한다.
+  private summarizeReactions(
+    rows: { userId: string; emoji: string }[],
+    userId: string | undefined,
+  ): PostReactionSummary[] {
+    const counts = new Map<string, { count: number; reactedByMe: boolean }>();
+    for (const row of rows) {
+      const current = counts.get(row.emoji) ?? { count: 0, reactedByMe: false };
+      counts.set(row.emoji, {
+        count: current.count + 1,
+        reactedByMe: current.reactedByMe || row.userId === userId,
+      });
+    }
+    return [...counts.entries()].map(([emoji, value]) => ({ emoji, ...value }));
+  }
+
+  // 부서활동 글 이모지 반응 토글 — 이미 눌렀으면 취소, 아니면 추가. 로그인한 누구나 달 수 있다
+  // (댓글·좋아요와 같은 기준). 바뀐 집계를 돌려줘서 앱이 다시 받지 않아도 된다.
+  async toggleTeamActivityReaction(
+    postId: string,
+    userId: string,
+    emoji: string,
+  ): Promise<{ reactions: PostReactionSummary[] }> {
+    const post = await this.prisma.post.findFirst({
+      where: { id: postId, board: 'TEAM_ACTIVITY', deletedAt: null },
+      select: { id: true },
+    });
+    if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+
+    const existing = await this.prisma.postReaction.findUnique({
+      where: { postId_userId_emoji: { postId, userId, emoji } },
+      select: { id: true },
+    });
+    if (existing) {
+      await this.prisma.postReaction.delete({ where: { id: existing.id } });
+    } else {
+      await this.prisma.postReaction.create({ data: { postId, userId, emoji } });
+    }
+    const rows = await this.prisma.postReaction.findMany({
+      where: { postId },
+      select: { userId: true, emoji: true },
+      orderBy: { createdAt: 'asc' },
+    });
+    return { reactions: this.summarizeReactions(rows, userId) };
+  }
+
+  // 댓글 수정 — 작성자와 관리자만. 다른 글의 댓글 id를 보내도 안 걸리도록 postId를 같이 본다.
+  async updateComment(
+    postId: string,
+    commentId: string,
+    userId: string,
+    content: string,
+  ): Promise<PostComment> {
+    const comment = await this.prisma.comment.findFirst({
+      where: { id: commentId, postId, deletedAt: null },
+      select: { authorId: true },
+    });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    const isAdmin = await this.isAdminUser(userId);
+    if (comment.authorId !== userId && !isAdmin) {
+      throw new ForbiddenException('내가 쓴 댓글만 수정할 수 있습니다.');
+    }
+    const updated = await this.prisma.comment.update({
+      where: { id: commentId },
+      data: { content: content.trim() },
+      select: {
+        id: true,
+        content: true,
+        createdAt: true,
+        authorId: true,
+        author: { select: { name: true, avatarUrl: true } },
+      },
+    });
+    return toPostComment(updated, userId, isAdmin);
   }
 
   // 그 팀의 팀장이거나 관리자인지 — 상세의 canManage와 수정·삭제 권한 검증이 같이 쓴다.

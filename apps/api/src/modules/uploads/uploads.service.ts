@@ -11,14 +11,48 @@ import { ConfigService } from '@nestjs/config';
 
 import { type AppConfig } from '../../config/configuration';
 
-// mimetype → 확장자. 목록에 없는 형식은 받지 않는다 (이미지 전용 업로드).
-const EXTENSIONS: Record<string, string> = {
-  'image/jpeg': 'jpg',
-  'image/png': 'png',
-  'image/webp': 'webp',
-  'image/gif': 'gif',
-  'image/heic': 'heic',
+// 업로드 종류별 허용 형식·크기. 목록에 없는 형식은 받지 않는다.
+// 사진은 폰 카메라 원본도 들어오게 10MB, 동영상은 50MB, 문서·악보 파일은 10MB.
+const MB = 1024 * 1024;
+type UploadKind = 'images' | 'videos' | 'files';
+const ALLOWED: Record<string, { kind: UploadKind; extension: string }> = {
+  'image/jpeg': { kind: 'images', extension: 'jpg' },
+  'image/png': { kind: 'images', extension: 'png' },
+  'image/webp': { kind: 'images', extension: 'webp' },
+  'image/gif': { kind: 'images', extension: 'gif' },
+  'image/heic': { kind: 'images', extension: 'heic' },
+  'video/mp4': { kind: 'videos', extension: 'mp4' },
+  'video/quicktime': { kind: 'videos', extension: 'mov' },
+  'video/3gpp': { kind: 'videos', extension: '3gp' },
+  'video/webm': { kind: 'videos', extension: 'webm' },
+  'application/pdf': { kind: 'files', extension: 'pdf' },
+  'application/msword': { kind: 'files', extension: 'doc' },
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
+    kind: 'files',
+    extension: 'docx',
+  },
+  'application/vnd.ms-excel': { kind: 'files', extension: 'xls' },
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {
+    kind: 'files',
+    extension: 'xlsx',
+  },
+  'application/vnd.ms-powerpoint': { kind: 'files', extension: 'ppt' },
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation': {
+    kind: 'files',
+    extension: 'pptx',
+  },
+  'application/x-hwp': { kind: 'files', extension: 'hwp' },
+  'application/haansofthwp': { kind: 'files', extension: 'hwp' },
+  'application/vnd.hancom.hwp': { kind: 'files', extension: 'hwp' },
+  'text/plain': { kind: 'files', extension: 'txt' },
 };
+const MAX_BYTES: Record<UploadKind, number> = {
+  images: 10 * MB,
+  videos: 50 * MB,
+  files: 10 * MB,
+};
+// 컨트롤러의 multer 한도 — 종류별 한도 중 가장 큰 값. 종류별 상세 검사는 서비스가 한다.
+export const MAX_UPLOAD_BYTES = 50 * MB;
 
 // 이미지 업로드 — 공용 Supabase의 Storage에 넣고 공개 URL을 돌려준다.
 // 파일은 서버를 경유시킨다: 인증·형식·크기 제한을 한 곳에서 걸기 위해서다 (앱이
@@ -40,13 +74,20 @@ export class UploadsService {
       );
     }
 
-    const extension = EXTENSIONS[file.mimetype];
-    if (!extension) {
-      throw new BadRequestException('이미지 파일(jpg/png/webp/gif/heic)만 올릴 수 있어요.');
+    const allowed = ALLOWED[file.mimetype];
+    if (!allowed) {
+      throw new BadRequestException(
+        '사진(jpg/png/webp/gif/heic), 동영상(mp4/mov), 문서(pdf/doc/docx/xls/xlsx/ppt/pptx/hwp/txt) 파일만 올릴 수 있어요.',
+      );
     }
+    if (file.size > MAX_BYTES[allowed.kind]) {
+      const limit = MAX_BYTES[allowed.kind] / MB;
+      throw new BadRequestException(`이 종류의 파일은 ${limit}MB까지 올릴 수 있어요.`);
+    }
+    const extension = allowed.extension;
 
     const now = new Date();
-    const path = `images/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${randomUUID()}.${extension}`;
+    const path = `${allowed.kind}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${randomUUID()}.${extension}`;
 
     let response = await this.putObject(path, file);
     // 첫 업로드에서 버킷이 없으면 만들고 한 번 더 시도한다 — 팀원마다 버킷을 손으로

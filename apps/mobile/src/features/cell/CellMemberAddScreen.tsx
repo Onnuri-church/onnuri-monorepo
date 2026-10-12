@@ -9,10 +9,12 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAddCellMembers, useAdminMembers } from "../admin/api";
 import { MemberPickRow } from "../team-story/components/MemberPickRow";
 import { useCellDetail } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 셀에 넣을 사람을 검색해서 여러 명 고르는 화면 (관리자 전용). 헤더 "완료"가 고른 사람을 반영하고
 // 돌아간다. 이미 이 셀인 사람은 목록에서 뺀다 — 다른 셀 사람을 고르면 그 셀에서 이 셀로 옮겨진다.
 export function CellMemberAddScreen() {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "CellMemberAdd">>();
   const navigation = useNavigation();
@@ -53,7 +55,9 @@ export function CellMemberAddScreen() {
   return (
     <ScrollView
       className="flex-1 bg-background-normal"
-      contentContainerClassName="px-5 pb-6 pt-4"
+      contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
     >
       <SearchBar value={query} onChangeText={setQuery} placeholder={t("이름으로 검색")} />

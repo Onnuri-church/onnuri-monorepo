@@ -54,9 +54,25 @@ export interface NoticeInfo {
   createdAt: string;
 }
 
+/**
+ * GET /notices 응답 — 20개씩 끊어 내려주는 공지 목록(최신순).
+ * 다음 쪽은 `?cursor=<nextCursor>`로 받고, nextCursor가 null이면 마지막이다.
+ */
+export interface NoticeListResponse {
+  items: NoticeInfo[];
+  nextCursor: string | null;
+}
+
 /** POST /notices 요청 본문 (관리자 전용, 응답은 NoticeInfo) — 내용이나 이미지 중 하나는 필요 */
 export interface CreateNoticeRequest {
   title: string;
   content?: string;
   imageUrl?: string;
+}
+
+/** PATCH /notices/:id 요청 본문 (관리자 전용, 응답은 NoticeInfo) — 전체 교체. 내용·이미지가 둘 다 비면 거부 */
+export interface UpdateNoticeRequest {
+  title: string;
+  content: string | null;
+  imageUrl: string | null;
 }

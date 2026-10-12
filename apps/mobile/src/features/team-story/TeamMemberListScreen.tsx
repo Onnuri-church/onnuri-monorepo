@@ -19,7 +19,8 @@ export function TeamMemberListScreen() {
     <ScrollView
       className="flex-1 bg-background-normal"
       contentContainerClassName="px-5"
-      contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+      // 팀원이 많아져도 마지막 줄이 안드로이드 내비 바에 가리지 않게 넉넉히 둔다.
+      contentContainerStyle={{ paddingBottom: 64 + insets.bottom }}
     >
       {/* 헤더 바로 아래 가운데 정렬 (시안 확정값) */}
       <Text className="text-center text-caption-main text-text-alternative">

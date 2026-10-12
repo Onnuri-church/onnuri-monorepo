@@ -7,6 +7,7 @@ import { toTimeAgo } from "../../../shared/utils/date";
 interface CommentThreadProps {
   comment: PostComment;
   onReplyPress: (comment: PostComment) => void;
+  onEditPress: (comment: PostComment) => void;
   onDeletePress: (comment: PostComment) => void;
 }
 
@@ -15,6 +16,7 @@ interface CommentThreadProps {
 export function CommentThread({
   comment,
   onReplyPress,
+  onEditPress,
   onDeletePress,
 }: CommentThreadProps) {
   return (
@@ -25,6 +27,7 @@ export function CommentThread({
         timeAgo={toTimeAgo(comment.createdAt)}
         content={comment.content}
         onReplyPress={() => onReplyPress(comment)}
+        onEditPress={comment.canEdit ? () => onEditPress(comment) : undefined}
         onDeletePress={comment.canDelete ? () => onDeletePress(comment) : undefined}
       />
       {comment.replies.map((reply) => (
@@ -38,6 +41,7 @@ export function CommentThread({
             avatarUrl={reply.authorAvatarUrl}
             timeAgo={toTimeAgo(reply.createdAt)}
             content={reply.content}
+            onEditPress={reply.canEdit ? () => onEditPress(reply) : undefined}
             onDeletePress={reply.canDelete ? () => onDeletePress(reply) : undefined}
           />
         </View>

@@ -12,7 +12,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { PHONE_NUMBER_REGEX, type Gender } from "@onnuri/shared";
 
@@ -20,6 +19,7 @@ import { signOut } from "../../shared/api/session";
 import { Button } from "../../shared/components/base/Button";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
+import { MultiSelectChips } from "../../shared/components/composed/MultiSelectChips";
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
 import { AvatarEditor } from "./components/AvatarEditor";
@@ -71,7 +71,6 @@ export function ProfileSetupScreen() {
   const session = useAuthStore((state) => state.session);
   const setSession = useAuthStore((state) => state.setSession);
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
 
   // onboarding/authenticated 밖에서는 이 화면이 마운트되지 않는다 (RootNavigator 분기).
   const sessionUser =
@@ -172,7 +171,7 @@ export function ProfileSetupScreen() {
   };
 
   return (
-    <View className="flex-1 bg-background-normal" style={{ paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-background-normal">
       {/* 배경이 흰색이라 상태바 글자·아이콘은 어둡게 */}
       <StatusBar style="dark" />
 
@@ -261,44 +260,18 @@ export function ProfileSetupScreen() {
           />
 
           {/* 팀은 여러 개를 고를 수 있어 시트 대신 토글 칩으로 둔다 — 하나도 안 고르면 소속 없음. */}
-          <View className="py-4">
-            <Text className="text-body-main text-text-normal">{t("소속 팀")}</Text>
-            <Text className="mt-1 text-caption-main text-text-alternative">
-              {t("여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.")}
-            </Text>
-            <View className="mt-4 flex-row flex-wrap gap-2">
-              {(teams ?? []).map((item) => {
-                const selected = selectedTeams.includes(item.name);
-                return (
-                  <Pressable
-                    key={item.id}
-                    onPress={() => {
-                      teamsTouched.current = true;
-                      setSelectedTeams((prev) =>
-                        selected ? prev.filter((name) => name !== item.name) : [...prev, item.name],
-                      );
-                    }}
-                    style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-                    className={
-                      selected
-                        ? "h-10 items-center justify-center rounded-2xl border border-primary-normal bg-background-alternative px-4"
-                        : "h-10 items-center justify-center rounded-2xl border border-text-alternative bg-background-muted px-4"
-                    }
-                  >
-                    <Text
-                      className={
-                        selected
-                          ? "text-body-main text-primary-normal"
-                          : "text-body-main text-text-alternative"
-                      }
-                    >
-                      {item.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </View>
+          <MultiSelectChips
+            label={t("소속 팀")}
+            hint={t("여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.")}
+            options={(teams ?? []).map((item) => item.name)}
+            selected={selectedTeams}
+            onToggle={(name) => {
+              teamsTouched.current = true;
+              setSelectedTeams((prev) =>
+                prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name],
+              );
+            }}
+          />
         </ScrollView>
 
         <View className="px-5 pb-12">

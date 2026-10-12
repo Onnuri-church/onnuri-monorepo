@@ -34,3 +34,25 @@ export async function uploadImage(uri: string): Promise<string> {
   });
   return response.data.url;
 }
+
+/**
+ * 사진 말고 동영상·문서 파일을 올린다 (단톡방 첨부). mimeType은 피커가 준 값을 그대로 보내고,
+ * 없으면 확장자로 추정한다. 서버가 종류별 형식·크기를 검사해 400으로 돌려준다.
+ */
+export async function uploadAttachment(
+  uri: string,
+  options: { name?: string | null; mimeType?: string | null },
+): Promise<string> {
+  const name = options.name ?? uri.split("/").pop() ?? "file";
+  const form = new FormData();
+  form.append("file", {
+    uri,
+    name,
+    type: options.mimeType ?? "application/octet-stream",
+  } as unknown as Blob);
+
+  const response = await apiClient.post<{ url: string }>("/uploads", form, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+  return response.data.url;
+}

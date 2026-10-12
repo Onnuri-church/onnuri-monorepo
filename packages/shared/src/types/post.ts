@@ -94,6 +94,24 @@ export interface CellNewsListItem {
   createdAt: string;
 }
 
+/** 부서활동 글의 이모지 반응 집계 한 종류 */
+export interface PostReactionSummary {
+  emoji: string;
+  count: number;
+  /** 내가 이 이모지를 눌렀는지 — 다시 누르면 취소된다 */
+  reactedByMe: boolean;
+}
+
+/** PUT /posts/team-activities/:id/reactions 요청 본문 — 허용 이모지는 BOARD_EMOJIS */
+export interface TogglePostReactionRequest {
+  emoji: string;
+}
+
+/** PATCH /posts/:id/comments/:commentId 요청 본문 — 작성자·관리자만 */
+export interface UpdatePostCommentRequest {
+  content: string;
+}
+
 /** 게시글 댓글 — Comment 테이블은 게시판 공용이라 셀 소식 전용이 아니다. */
 export interface PostComment {
   id: string;
@@ -101,8 +119,10 @@ export interface PostComment {
   authorAvatarUrl: string | null;
   createdAt: string;
   content: string;
-  /** 내가 쓴 댓글인지 — 삭제 버튼 노출 기준. 게스트로 보면 항상 false */
+  /** 내가 쓴 댓글인지. 게스트로 보면 항상 false */
   isMine: boolean;
+  /** 수정 버튼 노출 기준 — 내 댓글이거나 관리자일 때 true */
+  canEdit: boolean;
   /** 삭제 버튼 노출 기준 — 내 댓글이거나 관리자일 때 true */
   canDelete: boolean;
   /** 대댓글. 깊이는 1단계까지라 여기 담긴 댓글의 replies는 항상 빈 배열이다 */
@@ -213,8 +233,10 @@ export interface TeamActivityDetail {
   coverImageUrl: string | null;
   /** 작성 화면에서 올린 사진(최대 5장). 상세는 이걸 캐러셀로 그린다 */
   imageUrls: string[];
+  /** 받은 이모지 반응 총 개수 */
   likeCount: number;
-  likedByMe: boolean;
+  /** 이모지별 집계 — 이모지를 단 사람 수와 내가 눌렀는지. 아무도 안 눌렀으면 빈 배열 */
+  reactions: PostReactionSummary[];
   isMine: boolean;
   /** ⋮(수정·삭제) 노출 기준 — 작성자 본인, 그 팀의 팀장, 관리자 (서버 권한과 동일) */
   canManage: boolean;

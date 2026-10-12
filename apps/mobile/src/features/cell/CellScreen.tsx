@@ -1,11 +1,12 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useState } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FlatList, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
+import { Header } from "../../shared/components/base/Header";
 import { SearchBar } from "../../shared/components/base/SearchBar";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -25,23 +26,53 @@ export function CellScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [query, setQuery] = useState("");
+  // 셀이 적어 목록이 화면보다 짧아도 살짝 스크롤돼 탭바가 숨겨지게 최소 높이를 잡는다.
+  const [listHeight, setListHeight] = useState(0);
 
   const { data: cells, isLoading, refetch, isRefetching } = useCells();
   // "나의 셀" 뱃지 기준은 /users/me의 현재 소속 — 게스트는 me가 없어 뱃지가 안 붙는다.
   const me = useMe();
 
+  // 관리자는 헤더 ⋮ > 편집하기로 행마다 수정·삭제 아이콘을 켠다.
+  const isAdmin = me?.isAdmin === true;
+  const [editing, setEditing] = useState(false);
+  useLayoutEffect(() => {
+    if (!isAdmin) {
+      navigation.setOptions({ headerShown: false });
+      return;
+    }
+    navigation.setOptions({
+      headerShown: true,
+      header: () =>
+        editing ? (
+          <Header
+            variant="sub"
+            title={t("셀 관리")}
+            rightAction="text"
+            rightLabel={t("완료")}
+            onPressRightLabel={() => setEditing(false)}
+          />
+        ) : (
+          <Header
+            variant="sub"
+            title={t("셀 관리")}
+            rightAction="more"
+            menuItems={[{ icon: "edit", label: t("편집하기"), onPress: () => setEditing(true) }]}
+          />
+        ),
+    });
+  }, [navigation, isAdmin, editing, t]);
+
   const visibleCells = query.trim()
     ? (cells ?? []).filter((cell) => cell.name.includes(query.trim()))
     : (cells ?? []);
 
-  if (me?.isAdmin) {
+  if (isAdmin) {
     return (
-      <View className="flex-1 bg-background-normal" style={{ paddingTop: insets.top }}>
-        {/* 탭 화면이라 뒤로가기 없이 가운데 타이틀만 — 생성은 목록 끝의 점선 "셀 생성" 행 (2026-09-21 시안) */}
-        <View className="h-14 items-center justify-center">
-          <Text className="text-heading-small text-text-normal">{t("셀 관리")}</Text>
-        </View>
+      <View className="flex-1 bg-background-normal">
+        {/* 헤더는 위 useLayoutEffect가 등록한다 — 생성은 목록 끝의 점선 "셀 생성" 행 (2026-09-21 시안) */}
         <CellManageList
+          editing={editing}
           bottomInset={TAB_BAR_HEIGHT + insets.bottom}
           onScroll={handleHideTabBarScroll}
         />
@@ -67,7 +98,11 @@ export function CellScreen() {
         contentContainerClassName="px-5 pt-3"
         // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
         // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-10 포함).
-        contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
+        contentContainerStyle={{
+          paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom,
+          minHeight: listHeight > 0 ? listHeight + 80 : undefined,
+        }}
+        onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}

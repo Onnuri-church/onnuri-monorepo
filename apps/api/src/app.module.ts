@@ -19,6 +19,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
 import { SermonsModule } from './modules/sermons/sermons.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { TeamBoardModule } from './modules/team-board/team-board.module';
 import { TeamsModule } from './modules/teams/teams.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
@@ -38,6 +40,8 @@ import { UsersModule } from './modules/users/users.module';
     AuthModule,
     CellsModule,
     TeamsModule,
+    ChatModule,
+    TeamBoardModule,
     GroupMeetingsModule,
     PostsModule,
     UploadsModule,

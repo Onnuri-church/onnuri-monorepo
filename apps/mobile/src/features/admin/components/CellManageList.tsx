@@ -5,7 +5,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
-import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { SearchBar } from "../../../shared/components/base/SearchBar";
@@ -15,16 +14,18 @@ import { useCells } from "../../cell/api";
 import { useDeleteCell } from "../api";
 
 interface CellManageListProps {
+  /** 편집 모드 — 켜면 행마다 수정·삭제 아이콘이 나온다 (헤더 ⋮ > 편집하기로 부모가 켠다). */
+  editing?: boolean;
   /** 탭 안에서 쓸 때 목록 끝이 탭바에 가리지 않게 주는 바닥 여백 (스택 화면은 0). */
   bottomInset?: number;
   /** 탭 안에서 쓸 때 탭바 숨김 핸들러(useHideTabBarOnScroll)를 꽂는 자리 (스택 화면은 불필요). */
   onScroll?: (event: NativeSyntheticEvent<NativeScrollEvent>) => void;
 }
 
-// 셀 관리 목록 — 검색바 + 행 스와이프로 편집(연필)·삭제(휴지통), 행 탭은 그 셀 페이지로,
+// 셀 관리 목록 — 검색바 + 편집 모드에서 행마다 편집(연필)·삭제(휴지통), 행 탭은 그 셀 페이지로,
 // 생성은 목록 끝의 점선 "+ 셀 생성" 행 (2026-09-21 A안 시안 — 헤더 생성 버튼에서 이동).
 // 관리자 마이페이지의 셀 관리 화면과, 관리자용 하단 탭 "셀 페이지"가 같이 쓴다.
-export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProps) {
+export function CellManageList({ editing = false, bottomInset = 0, onScroll }: CellManageListProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
@@ -35,6 +36,9 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
     query.trim() ? cell.name.includes(query.trim()) : true,
   );
   const [deleteTarget, setDeleteTarget] = useState<CellSummary | null>(null);
+  // 셀이 적어 목록이 화면보다 짧으면 스크롤이 안 돼 탭바가 안 숨겨진다 —
+  // 콘텐츠 최소 높이를 화면 높이 + 여유분으로 잡아 항상 살짝 스크롤되게 한다.
+  const [viewportHeight, setViewportHeight] = useState(0);
   const deleteCell = useDeleteCell();
 
   const handleEditPress = (cellId: string) => {
@@ -53,7 +57,11 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
       className="bg-background-normal"
       contentContainerClassName="pt-2"
       // 기본 바닥 여백 40(pb-10) + 탭 안에서는 탭바만큼 추가
-      contentContainerStyle={{ paddingBottom: 40 + bottomInset }}
+      contentContainerStyle={{
+        paddingBottom: 40 + bottomInset,
+        minHeight: viewportHeight > 0 ? viewportHeight + 80 : undefined,
+      }}
+      onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
       scrollEventThrottle={16}
@@ -66,9 +74,20 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
       {cells.map((cell, index) => (
         <View key={cell.id}>
           {index > 0 && <View className="mx-5 h-px bg-background-muted" />}
-          <ReanimatedSwipeable
-            renderRightActions={() => (
-              <View className="flex-row items-center gap-6 px-6">
+          <Pressable
+            className="flex-row items-center bg-background-normal px-5 py-4"
+            onPress={() => navigation.navigate("CellDetail", { cellId: cell.id })}
+            style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+          >
+            <View className="flex-1">
+              <Text className="text-body-main text-text-normal">{cell.name}</Text>
+              <Text className="mt-1 text-caption-main text-text-alternative">
+                {t("셀장 {{name}}", { name: cell.leaderName ?? t("미지정") })}
+                {cell.viceLeaderName ? ` · ${t("부셀장 {{name}}", { name: cell.viceLeaderName })}` : ""}
+              </Text>
+            </View>
+            {editing && (
+              <View className="flex-row items-center gap-5 pl-3">
                 <Pressable onPress={() => handleEditPress(cell.id)} hitSlop={8}>
                   <Icon name="edit" size={20} color={colors.icon.normal} />
                 </Pressable>
@@ -77,19 +96,7 @@ export function CellManageList({ bottomInset = 0, onScroll }: CellManageListProp
                 </Pressable>
               </View>
             )}
-          >
-            <Pressable
-              className="bg-background-normal px-5 py-4"
-              onPress={() => navigation.navigate("CellDetail", { cellId: cell.id })}
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-            >
-              <Text className="text-body-main text-text-normal">{cell.name}</Text>
-              <Text className="mt-1 text-caption-main text-text-alternative">
-                {t("셀장 {{name}}", { name: cell.leaderName ?? t("미지정") })}
-                {cell.viceLeaderName ? ` · ${t("부셀장 {{name}}", { name: cell.viceLeaderName })}` : ""}
-              </Text>
-            </Pressable>
-          </ReanimatedSwipeable>
+          </Pressable>
         </View>
       ))}
 

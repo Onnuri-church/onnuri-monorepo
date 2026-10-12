@@ -11,7 +11,9 @@ export type NotificationType =
   | "COMMENT"
   | "LIKE"
   | "NOTICE"
-  | "GROUP_MEETING";
+  | "GROUP_MEETING"
+  | "CHAT"
+  | "BULLETIN";
 
 /** GET /notifications 응답 항목 — 최신순 */
 /** PATCH·DELETE /users/me/push-token 요청 본문 — 기기의 Expo 푸시 토큰 */

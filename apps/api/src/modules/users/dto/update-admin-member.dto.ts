@@ -1,4 +1,11 @@
-import { IsIn, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import {
+  ArrayUnique,
+  IsArray,
+  IsIn,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /users/:id 요청 본문 (관리자 전용) — 회원 편집 시안의 필드들. 보낸 것만 반영한다.
@@ -28,6 +35,18 @@ export class UpdateAdminMemberDto {
   @IsOptional()
   @IsString()
   teamId?: string | null;
+
+  // 여러 팀 소속 — 있으면 teamId보다 우선한다 (빈 배열 = 소속 없음).
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsString({ each: true })
+  teamIds?: string[];
+
+  // role이 TEAM_LEADER이고 팀이 여러 개일 때 팀장을 맡을 팀. 생략하면 첫 번째 팀.
+  @IsOptional()
+  @IsString()
+  leaderTeamId?: string;
 
   // 관리자(isAdmin) 지정은 앱에서 제외 (2026-09-21 확정) — 선택지에 없다.
   @IsOptional()

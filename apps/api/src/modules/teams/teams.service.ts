@@ -45,6 +45,8 @@ export class TeamsService {
         tagline: true,
         description: true,
         coverImageUrl: true,
+        canUploadBulletin: true,
+        canManageBanner: true,
         memberships: {
           where: { endedAt: null },
           select: {
@@ -76,6 +78,8 @@ export class TeamsService {
       tagline: team.tagline,
       description: team.description,
       coverImageUrl: team.coverImageUrl,
+      canUploadBulletin: team.canUploadBulletin,
+      canManageBanner: team.canManageBanner,
       members,
     };
   }
@@ -98,6 +102,8 @@ export class TeamsService {
           tagline: dto.tagline ?? null,
           description: dto.description ?? null,
           coverImageUrl: dto.coverImageUrl ?? null,
+          canUploadBulletin: dto.canUploadBulletin ?? false,
+          canManageBanner: dto.canManageBanner ?? false,
         },
         select: { id: true },
       });
@@ -121,6 +127,12 @@ export class TeamsService {
           ...(dto.tagline !== undefined && { tagline: dto.tagline }),
           ...(dto.description !== undefined && { description: dto.description }),
           ...(dto.coverImageUrl !== undefined && { coverImageUrl: dto.coverImageUrl }),
+          ...(dto.canUploadBulletin !== undefined && {
+            canUploadBulletin: dto.canUploadBulletin,
+          }),
+          ...(dto.canManageBanner !== undefined && {
+            canManageBanner: dto.canManageBanner,
+          }),
         },
       });
       if (dto.leaderId) await this.setLeader(tx, id, dto.leaderId);
@@ -154,16 +166,14 @@ export class TeamsService {
       data: { role: 'MEMBER' },
     });
 
+    // 여러 팀에 소속될 수 있어 다른 팀 소속은 건드리지 않는다 — 이 팀 소속만 팀장으로 올린다.
     const mine = await tx.teamMembership.findFirst({
-      where: { userId: leaderId, endedAt: null },
-      select: { id: true, teamId: true },
+      where: { userId: leaderId, teamId, endedAt: null },
+      select: { id: true },
     });
-    if (mine?.teamId === teamId) {
+    if (mine) {
       await tx.teamMembership.update({ where: { id: mine.id }, data: { role: 'LEADER' } });
       return;
-    }
-    if (mine) {
-      await tx.teamMembership.update({ where: { id: mine.id }, data: { endedAt: new Date() } });
     }
     await tx.teamMembership.create({
       data: { teamId, userId: leaderId, role: 'LEADER', startedAt: new Date() },
