@@ -633,6 +633,8 @@ model QtShare {
   post    Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
   postId  String  @id
   passage String? // 말씀 구절 (룻기 2:16-23). 나눔 날짜 = Post.eventDate
+  // 일반 유저에겐 "익명", 관리자·작성자 본인에겐 "익명(실명)" — 기도제목과 같은 규칙.
+  isAnonymous Boolean @default(false)
 }
 
 model PrayerRequest {

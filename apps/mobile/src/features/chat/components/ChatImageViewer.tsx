@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { PhotoPager } from "../../../shared/components/composed/PhotoPager";
-import { colors } from "../../../shared/theme/tokens";
 
 interface ChatImageViewerProps {
   urls: string[];
@@ -29,7 +28,8 @@ export function ChatImageViewer({ urls, startIndex, onClose }: ChatImageViewerPr
           onPress={onClose}
           hitSlop={8}
         >
-          <Icon name="back" size={28} color={colors.icon.strong} />
+          {/* 뷰어는 테마와 상관없이 검정 배경이라 아이콘은 항상 흰색 — 어두운 아이콘은 사진의 검은 여백 위에서 안 보인다. */}
+          <Icon name="back" size={28} color="#FFFFFF" />
         </Pressable>
       </GestureHandlerRootView>
     </Modal>

@@ -1,4 +1,4 @@
-import {Alert, ScrollView, View} from "react-native";
+import {Alert, ScrollView, Text, View} from "react-native";
 import {useEffect, useState} from "react";
 import {useTranslation} from "react-i18next";
 import {useNavigation, useRoute, type RouteProp} from "@react-navigation/native";
@@ -9,6 +9,7 @@ import {Field} from "../../shared/components/base/Field";
 import {TextAreaField} from "../../shared/components/base/TextAreaField";
 import {TextField} from "../../shared/components/base/TextField";
 import {Button} from "../../shared/components/base/Button";
+import {Toggle} from "../../shared/components/base/Toggle";
 import {ImageUploadBoxSingle} from "../../shared/components/base/ImageUploadBoxSingle";
 import {ImageUploadBoxMultiple} from "../../shared/components/base/ImageUploadBoxMultiple";
 import {uploadImage} from "../../shared/api/upload";
@@ -30,6 +31,8 @@ export function QtBoardWriteScreen () {
     const [content, setContent] = useState("")
     const [backgroundPhotoUri, setBackgroundPhotoUri] = useState<string | null>(null)
     const [bodyPhotoUris, setBodyPhotoUris] = useState<string[]>([])
+    // 익명으로 쓰기 — 일반 회원에겐 "익명", 관리자·작성자 본인에겐 "익명(실명)"으로 보인다 (기도제목과 같은 규칙).
+    const [anonymous, setAnonymous] = useState(false)
 
     // 상세 화면과 같은 캐시 키라, 상세에서 들어오면 이미 받아둔 글로 바로 채워진다.
     const {data: editingPost} = useQuery({
@@ -46,6 +49,7 @@ export function QtBoardWriteScreen () {
         setContent(editingPost.content)
         setBackgroundPhotoUri(editingPost.coverImageUrl)
         setBodyPhotoUris(editingPost.imageUrls)
+        setAnonymous(editingPost.isAnonymous)
     }, [editingPost])
 
     const {mutate: submit, isPending} = useMutation({
@@ -64,6 +68,7 @@ export function QtBoardWriteScreen () {
                 passage: verse.trim() || null,
                 coverImageUrl,
                 imageUrls,
+                isAnonymous: anonymous,
             }
             return editingId ? updateQtShare(editingId, body) : createQtShare(body)
         },
@@ -102,6 +107,11 @@ export function QtBoardWriteScreen () {
                     contentContainerClassName="justify-start pt-8 pb-20 px-5 gap-8"
                     keyboardShouldPersistTaps="handled"
                 >
+                    <View className="flex-row items-center justify-between">
+                        <Text className="text-body-main text-text-normal">{t("익명으로 작성")}</Text>
+                        <Toggle value={anonymous} onValueChange={setAnonymous}/>
+                    </View>
+
                     <DateField label={t("날짜")} placeholder={t("날짜를 입력해주세요")} value={selectDate} onChange={setSelectDate}/>
 
                     <Field label={t("배경사진")}>

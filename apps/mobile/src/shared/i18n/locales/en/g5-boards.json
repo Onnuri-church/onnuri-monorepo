@@ -133,5 +133,10 @@
   "소속 없음": "No affiliation",
   "검색 결과가 없어요.": "No results.",
   "한 명 이상": "At least one",
-  "팀장 추가": "Add team leader"
+  "팀장 추가": "Add team leader",
+  "로그인 · 회원 가입하기": "Log in / Sign up",
+  "셀 페이지는 로그인 후 이용할 수 있어요.": "The cell page is available after logging in.",
+  "로그인하기": "Log in",
+  "로그인 후 볼 수 있어요.": "Available after logging in.",
+  "로그인 후 볼 수 있어요": "Available after logging in"
 }

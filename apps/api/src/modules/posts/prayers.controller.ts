@@ -21,20 +21,18 @@ import { FindPrayersDto } from './dto/find-prayers.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
 import { PrayersService } from './prayers.service';
 
-// 기도제목 게시판 — 열람은 게스트도 된다 (게스트 열람 범위 확정: 팔로워 노트·출석·셀원 관리 빼고 전부).
+// 기도제목 게시판 — 열람도 로그인한 회원만 (2026-10-13 확정: 개인적인 기도 내용이라 게스트에게 공개하지 않음).
+// 이전에는 게스트 열람이 됐다.
 // 익명 글 실명 노출·남의 글 삭제는 서비스가 관리자 여부를 DB에서 확인해 가른다.
 // 'mine'/'bookmarked'가 ':id'보다 먼저 와야 한다 — Express는 등록 순서로 매칭한다.
 @Controller('posts/prayers')
 export class PrayersController {
   constructor(private readonly prayersService: PrayersService) {}
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get()
-  findAll(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Query() query: FindPrayersDto,
-  ) {
-    return this.prayersService.findAll(user?.sub, query);
+  findAll(@CurrentUser() user: JwtPayload, @Query() query: FindPrayersDto) {
+    return this.prayersService.findAll(user.sub, query);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -52,13 +50,10 @@ export class PrayersController {
     return this.prayersService.findBookmarked(user.sub, query);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  findOne(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Param('id') id: string,
-  ) {
-    return this.prayersService.findOne(id, user?.sub);
+  findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.prayersService.findOne(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)

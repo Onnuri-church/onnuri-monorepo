@@ -90,6 +90,13 @@ export function SettingsScreen() {
     );
   };
 
+  const isGuest = useAuthStore((state) => state.session.status === "guest");
+
+  // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
+  const handleGuestLoginPress = () => {
+    useAuthStore.getState().clearSession();
+  };
+
   const handleLogoutPress = () => {
     // 화면 전환 + 토큰·푸시·계정별 캐시 정리까지 — clearSession만 부르면 저장된 토큰이
     // 남아 앱 재시작 시 도로 로그인되고, 이 기기로 푸시도 계속 온다.
@@ -183,18 +190,34 @@ export function SettingsScreen() {
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
             {/* 회원가입용 프로필 설정 화면을 수정 진입점으로 재사용한다 — 저장 API가 생기면
                 기존 값 채우기/수정 전용 화면 분리를 다시 판단한다. */}
-            <SettingRow
-              title={t("회원 정보 수정")}
-              onPress={() => requireLogin() && navigation.navigate("ProfileEdit")}
-              right={<Icon name="expand-right" color={colors.primary.normal} />}
-            />
-            <SettingRow title={t("로그아웃")} onPress={handleLogoutPress} />
-            <SettingRow
-              title={t("회원탈퇴")}
-              onPress={() => requireLogin() && withdrawDialogRef.current?.open()}
-              // 탈퇴는 서버 왕복을 기다렸다가 전환된다 — 그동안 진행 중임을 보여준다.
-              right={withdrawing ? <ActivityIndicator size="small" color={themeColors.primary.normal} /> : undefined}
-            />
+            {isGuest ? (
+              // 게스트는 정보 수정·로그아웃·탈퇴할 계정이 없다 — 로그인 화면으로 가는 행만 둔다.
+              // 로그인과 회원가입은 같은 소셜 로그인 화면이다 (처음이면 가입 + 프로필 설정이 이어진다).
+              <SettingRow
+                title={t("로그인 · 회원 가입하기")}
+                onPress={handleGuestLoginPress}
+                right={<Icon name="expand-right" color={colors.primary.normal} />}
+              />
+            ) : (
+              <>
+                <SettingRow
+                  title={t("회원 정보 수정")}
+                  onPress={() => requireLogin() && navigation.navigate("ProfileEdit")}
+                  right={<Icon name="expand-right" color={colors.primary.normal} />}
+                />
+                <SettingRow title={t("로그아웃")} onPress={handleLogoutPress} />
+                <SettingRow
+                  title={t("회원탈퇴")}
+                  onPress={() => requireLogin() && withdrawDialogRef.current?.open()}
+                  // 탈퇴는 서버 왕복을 기다렸다가 전환된다 — 그동안 진행 중임을 보여준다.
+                  right={
+                    withdrawing ? (
+                      <ActivityIndicator size="small" color={themeColors.primary.normal} />
+                    ) : undefined
+                  }
+                />
+              </>
+            )}
           </View>
         </View>
       </View>

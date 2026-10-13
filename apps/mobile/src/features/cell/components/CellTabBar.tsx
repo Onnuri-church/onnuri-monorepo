@@ -49,7 +49,8 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
             onPress={() => onChange(key)}
             disabled={disabled}
           >
-            {isManage && (
+            {/* 자물쇠는 못 들어가는 사람(manageLocked)에게만 — 셀장·부셀장·관리자는 열려 있어서 안 보인다. */}
+            {isManage && manageLocked && (
               <Icon
                 name="lock"
                 size={12}

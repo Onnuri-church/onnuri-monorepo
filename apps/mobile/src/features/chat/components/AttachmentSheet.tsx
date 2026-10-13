@@ -37,7 +37,7 @@ export function AttachmentSheet({
 
   const groups: AttachmentRow[][] = [
     [{ icon: "image", color: "#3FA55B", label: t("사진·동영상"), onPress: onPickMedia }],
-    [{ icon: "note", color: "#8A93A6", label: t("파일"), onPress: onPickFile }],
+    [{ icon: "paperclip", color: "#8A93A6", label: t("파일"), onPress: onPickFile }],
     [{ icon: "poll", color: "#F2A33A", label: t("투표"), onPress: onPickPoll }],
   ];
 

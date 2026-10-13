@@ -80,7 +80,8 @@ export function WeeklySermonBanner({
       {/* 시안은 라벨 → 본문 → 제목을 각각 23씩 벌리는데, 그 23은 텍스트 높이가 0으로 잡힌
           Figma export 기준이라 그대로 쓸 수 없다. 실제 행간(13px의 140% = 18.2)을 빼고 남는
           만큼만 여백으로 준다 — 라벨 아래 24, 본문 아래 4. */}
-      <View className="absolute bottom-5 left-6">
+      {/* 오른쪽은 바로가기 버튼 자리를 비운다 — 본문·제목이 길어도 버튼 밑으로 깔리지 않고 줄바꿈된다. */}
+      <View className="absolute bottom-5 left-6" style={{ right: 140 }}>
         <Text className="text-body-small text-text-onImage">{seriesLabel}</Text>
         <Text className="mt-6 text-body-small-bold text-text-onImage">{passage}</Text>
         <Text className="mt-1 text-body-small-bold text-text-onImage">{title}</Text>

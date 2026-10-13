@@ -96,6 +96,13 @@ const DEPARTMENT_KEY_BY_TEAM_NAME: Record<string, string> = {
 
 // 홈 섹션별 장수 — 큐티나눔은 시안대로 3건, 부서활동은 가로 스크롤이라 5건.
 const HOME_QT_SHARE_COUNT = 3;
+
+// 큐티나눔 익명 글의 작성자 표기 — 일반 회원에겐 "익명", 관리자·작성자 본인에겐 "익명(실명)"
+// (기도제목과 같은 규칙: 본인은 자기 글을 알아볼 수 있어야 한다).
+function qtAuthorName(realName: string, isAnonymous: boolean, canSeeRealName: boolean): string {
+  if (!isAnonymous) return realName;
+  return canSeeRealName ? `익명(${realName})` : '익명';
+}
 const HOME_TEAM_ACTIVITY_COUNT = 5;
 
 // 목록 카드의 본문 미리보기. 카드가 한 줄만 보여주므로 줄바꿈 이후는 버린다.
@@ -139,15 +146,20 @@ export class PostsService {
 
   // 홈의 큐티나눔·부서활동 섹션 — 각 게시판 최신 글을 홈 카드에 필요한 필드만 담아 준다.
   // 게시판 목록과 달리 월·팀 필터 없이 전체에서 고르고, 좋아요 같은 내 상태도 없다.
-  async findHomePosts(): Promise<HomePostsResponse> {
+  async findHomePosts(userId?: string): Promise<HomePostsResponse> {
+    // 큐티나눔은 회원 전용 — 게스트(토큰 없음)에게는 목록을 비운다.
+    const admin = userId ? await this.isAdminUser(userId) : false;
     const [qtShares, teamActivities] = await Promise.all([
-      this.prisma.post.findMany({
+      !userId
+        ? Promise.resolve([])
+        : this.prisma.post.findMany({
         where: { board: 'QT_SHARE', deletedAt: null },
         select: {
           id: true,
           title: true,
+          authorId: true,
           author: { select: { name: true } },
-          qtShare: { select: { passage: true } },
+          qtShare: { select: { passage: true, isAnonymous: true } },
         },
         // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
         orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
@@ -176,7 +188,11 @@ export class PostsService {
     return {
       qtShares: qtShares.map((post) => ({
         id: post.id,
-        authorName: post.author.name,
+        authorName: qtAuthorName(
+          post.author.name,
+          post.qtShare?.isAnonymous === true,
+          admin || post.authorId === userId,
+        ),
         passage: post.qtShare?.passage ?? null,
         title: post.title ?? '',
       })),
@@ -207,6 +223,7 @@ export class PostsService {
       eventDate: { not: null },
       ...(query.mine && { authorId: userId }),
     };
+    const admin = userId ? await this.isAdminUser(userId) : false;
 
     // 연도 선택지의 시작점은 "전체" 기준 첫 글 — 전체/내 글을 오가도 선택지가 흔들리지 않게.
     const hasPick = query.year !== undefined && query.month !== undefined;
@@ -257,7 +274,9 @@ export class PostsService {
         title: true,
         content: true,
         eventDate: true,
+        authorId: true,
         author: { select: { name: true } },
+        qtShare: { select: { isAnonymous: true } },
         _count: { select: { likes: true } },
         // 내 좋아요만 한 건 집어온다 — 행이 있으면 내가 누른 것 (전체를 받아서 세지 않는다).
         likes: { where: myLikeFilter(userId), select: { id: true } },
@@ -267,7 +286,11 @@ export class PostsService {
 
     const items: QtShareListItem[] = posts.map((post) => ({
       id: post.id,
-      authorName: post.author.name,
+      authorName: qtAuthorName(
+        post.author.name,
+        post.qtShare?.isAnonymous === true,
+        admin || post.authorId === userId,
+      ),
       // eventDate는 큐티나눔 작성 시 항상 채운다(글쓰기 API도 같은 계약).
       dateLabel: post.eventDate ? toDateLabel(post.eventDate) : '',
       title: post.title ?? '',
@@ -296,7 +319,7 @@ export class PostsService {
         createdAt: true,
         authorId: true,
         author: { select: { name: true, avatarUrl: true } },
-        qtShare: { select: { passage: true } },
+        qtShare: { select: { passage: true, isAnonymous: true } },
         // 본문사진. 배경사진(coverImageUrl)과 달리 Image 테이블에 쌓이고 순서가 있다.
         images: {
           where: { kind: 'POST_CONTENT' },
@@ -311,10 +334,14 @@ export class PostsService {
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
     const isAdmin = userId ? await this.isAdminUser(userId) : false;
 
+    const isAnonymous = post.qtShare?.isAnonymous === true;
+    const canSeeRealName = isAdmin || post.authorId === userId;
     return {
       id: post.id,
-      authorName: post.author.name,
-      authorAvatarUrl: post.author.avatarUrl,
+      authorName: qtAuthorName(post.author.name, isAnonymous, canSeeRealName),
+      // 익명 글은 프로필 사진도 숨긴다 — 이름보다 식별력이 세다 (관리자에게도 숨김, 기도제목과 같음).
+      authorAvatarUrl: isAnonymous ? null : post.author.avatarUrl,
+      isAnonymous,
       dateLabel: post.eventDate ? toDayLabel(post.eventDate) : '',
       // 수정 화면 프리필용 원본 날짜 (YYYY-MM-DD)
       eventDate: post.eventDate ? toDateValue(post.eventDate) : null,
@@ -354,7 +381,9 @@ export class PostsService {
         content: dto.content,
         eventDate: toEventDate(dto.eventDate),
         coverImageUrl: dto.coverImageUrl,
-        qtShare: { create: { passage: dto.passage } },
+        qtShare: {
+          create: { passage: dto.passage, isAnonymous: dto.isAnonymous === true },
+        },
         images: { create: toImageRows(dto.imageUrls, userId) },
       },
       select: { id: true },
@@ -371,7 +400,7 @@ export class PostsService {
       {
         type: 'QT_NEW',
         title: '큐티나눔',
-        body: `새 큐티나눔이 올라왔어요: ${dto.title}`,
+        body: `새 큐티나눔이 올라왔어요: ${dto.title}`, // 제목만 — 작성자 이름은 싣지 않아 익명 글도 안전하다
         linkUrl: `qt/${post.id}`,
       },
     );
@@ -396,12 +425,18 @@ export class PostsService {
         coverImageUrl: dto.coverImageUrl,
         // 큐티 글에는 QtShare 행이 항상 있지만, 없더라도 말씀만 조용히 사라지지 않게 upsert한다.
         qtShare:
-          dto.passage === undefined
+          dto.passage === undefined && dto.isAnonymous === undefined
             ? undefined
             : {
                 upsert: {
-                  create: { passage: dto.passage },
-                  update: { passage: dto.passage },
+                  create: {
+                    passage: dto.passage ?? null,
+                    isAnonymous: dto.isAnonymous === true,
+                  },
+                  update: {
+                    passage: dto.passage,
+                    isAnonymous: dto.isAnonymous,
+                  },
                 },
               },
         // 사진은 통째로 교체한다 — 앱이 남은 목록 전체를 보내므로 어떤 장이 빠졌는지

@@ -82,6 +82,8 @@ export interface QtShareDetail {
   isMine: boolean;
   /** 수정·삭제 메뉴를 띄울지 — 내 글이거나 관리자. 권한 판단은 서버가 한다 */
   canManage: boolean;
+  /** 익명으로 쓴 글인지 — 수정 화면 프리필용. 이름은 authorName이 이미 "익명"/"익명(실명)"으로 내려온다 */
+  isAnonymous: boolean;
 }
 
 /** 셀 소식 목록 항목 (GET /posts/cell-news?cellId=). */
@@ -298,6 +300,8 @@ export interface CreateQtShareRequest {
   coverImageUrl: string | null;
   /** 본문사진 (최대 5장). 보낸 순서가 그대로 표시 순서가 된다 */
   imageUrls: string[];
+  /** 익명으로 쓰기 — 생략하면 기명. 일반 회원에겐 "익명", 관리자·작성자에겐 "익명(실명)"으로 보인다 */
+  isAnonymous?: boolean;
 }
 
 /**
