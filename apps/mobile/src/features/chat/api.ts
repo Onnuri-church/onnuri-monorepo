@@ -22,6 +22,33 @@ function roomPath(kind: ChatKind, id: string): string {
   return `/cells/${id}/messages`;
 }
 
+function readPath(kind: ChatKind, id: string): string {
+  if (kind === "room") return `/chat-rooms/${id}/read`;
+  if (kind === "group") return `/group-meetings/${id}/read`;
+  return `/cells/${id}/read`;
+}
+
+// 방을 읽었다고 서버에 알린다 — 방을 열었을 때와, 열어 둔 채 새 메시지가 왔을 때.
+export function markChatRead(kind: ChatKind, id: string): Promise<unknown> {
+  return apiClient.put(readPath(kind, id));
+}
+
+// 셀·소그룹 방의 안 읽은 메시지 수 — 셀 페이지 헤더 아이콘의 빨간 점이 쓴다.
+// 푸시를 받아도 앱이 바로 알 수 없어서 짧은 주기로 다시 확인한다.
+export function useChatUnread(kind: "cell" | "group", id: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["chat-unread", kind, id],
+    queryFn: () =>
+      apiClient
+        .get<{ count: number }>(
+          kind === "cell" ? `/cells/${id}/unread` : `/group-meetings/${id}/unread`,
+        )
+        .then((res) => res.data.count),
+    enabled: enabled && id !== "",
+    refetchInterval: 15000,
+  });
+}
+
 // 실시간 연결 없이 화면이 열려 있는 동안 몇 초마다 새로 받는다 (푸시 알림은 따로 간다).
 export function useChatRoom(kind: ChatKind, id: string, polling: boolean) {
   return useQuery({

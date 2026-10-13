@@ -144,6 +144,36 @@ export class TeamBoardService {
     };
   }
 
+  // 안 읽은(내가 아직 안 연) 새 글 수. 처음 확인하는 팀은 지금 시점을 기준선으로 잡고 0을 돌려준다
+  // (이미 쌓인 글 전부가 새 글로 뜨지 않게). 기준선 이후에 다른 사람이 쓴 글 중 내가 상세를 안 연 글만 센다.
+  // 기준선은 채팅 읽음 위치와 같은 테이블(ChatReadState)의 `board:<teamId>` 항목으로 둔다.
+  async unreadCount(userId: string, teamId: string): Promise<{ count: number }> {
+    await this.assertAccess(userId, teamId);
+    const scope = `board:${teamId}`;
+    const state = await this.prisma.chatReadState.findUnique({
+      where: { userId_scope: { userId, scope } },
+      select: { lastReadAt: true },
+    });
+    if (!state) {
+      await this.prisma.chatReadState.upsert({
+        where: { userId_scope: { userId, scope } },
+        update: {},
+        create: { userId, scope, lastReadAt: new Date() },
+      });
+      return { count: 0 };
+    }
+    const count = await this.prisma.teamBoardPost.count({
+      where: {
+        teamId,
+        deletedAt: null,
+        authorId: { not: userId },
+        createdAt: { gt: state.lastReadAt },
+        reads: { none: { userId } },
+      },
+    });
+    return { count };
+  }
+
   async findPost(
     userId: string,
     teamId: string,

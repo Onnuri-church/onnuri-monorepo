@@ -120,6 +120,19 @@ export function useChatRooms(teamId: string) {
     queryFn: () =>
       apiClient.get<ChatRoomSummary[]>(`/teams/${teamId}/chat-rooms`).then((res) => res.data),
     enabled: teamId !== "",
+    // 새 메시지가 오면 안 읽은 표시가 따라오도록 짧은 주기로 다시 확인한다.
+    refetchInterval: 15000,
+  });
+}
+
+// 팀 게시판에 내가 아직 안 연 새 글 수 — 팀 공간·팀 상세 입구의 표시가 쓴다. 글 상세를 열면 읽음 처리된다.
+export function useTeamBoardUnread(teamId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["team-board-unread", teamId],
+    queryFn: () =>
+      apiClient.get<{ count: number }>(`/teams/${teamId}/board/unread`).then((res) => res.data.count),
+    enabled: enabled && teamId !== "",
+    refetchInterval: 15000,
   });
 }
 

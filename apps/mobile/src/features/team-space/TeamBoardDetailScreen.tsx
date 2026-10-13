@@ -1,7 +1,8 @@
 import { BOARD_EMOJIS, type TeamBoardCommentInfo } from "@onnuri/shared";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -57,6 +58,14 @@ export function TeamBoardDetailScreen() {
   const { teamId, postId } = params;
 
   const { data: post } = useTeamBoardPost(teamId, postId);
+
+  // 상세를 열면 서버가 읽음으로 세므로, 팀 공간·팀 상세 입구의 "새 글" 표시를 바로 다시 받는다.
+  const queryClient = useQueryClient();
+  const loadedPostId = post?.id;
+  useEffect(() => {
+    if (!loadedPostId) return;
+    void queryClient.invalidateQueries({ queryKey: ["team-board-unread"] });
+  }, [loadedPostId, queryClient]);
   const addComment = useAddBoardComment(teamId, postId);
   const deleteComment = useDeleteBoardComment(teamId, postId);
   const updateComment = useUpdateBoardComment(teamId, postId);

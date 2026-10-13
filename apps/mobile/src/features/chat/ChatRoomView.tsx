@@ -2,7 +2,8 @@ import type { ChatMessageInfo } from "@onnuri/shared";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { useMemo, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -22,6 +23,7 @@ import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import {
+  markChatRead,
   useChatRoom,
   useDeleteChatMessage,
   useSendChatMessage,
@@ -91,6 +93,20 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lastCount = useRef(0);
   const messages = room?.messages ?? [];
+
+  // 읽음 표시 — 방이 열려 있는 동안 가장 최근 메시지가 바뀔 때마다 서버에 알린다. 알린 뒤 목록·아이콘의
+  // 안 읽은 표시를 다시 받아 빨간 점이 사라지게 한다.
+  const queryClient = useQueryClient();
+  const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
+  useEffect(() => {
+    if (!focused || !latestMessageId) return;
+    markChatRead(kind, id)
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: ["chat-unread"] });
+        void queryClient.invalidateQueries({ queryKey: ["chat-rooms"] });
+      })
+      .catch(() => undefined);
+  }, [focused, latestMessageId, kind, id, queryClient]);
 
   // "@" 뒤에 이름 일부를 치는 중이면 방 멤버 후보를 보여준다.
   const mentionQuery = useMemo(() => {

@@ -6,6 +6,7 @@ import { FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Header } from "../../shared/components/base/Header";
+import { UnreadBadge } from "../../shared/components/base/UnreadBadge";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useMe } from "../profile/useMe";
@@ -55,6 +56,7 @@ export function ChatRoomListScreen() {
               <Text className="flex-1 text-body-main text-text-normal" numberOfLines={1}>
                 {room.name}
               </Text>
+              <UnreadBadge count={room.unreadCount} className="ml-2" />
               <Text className="ml-2 text-caption-main text-text-alternative">
                 {toTimeAgo(room.lastActivityAt)}
               </Text>

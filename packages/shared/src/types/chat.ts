@@ -166,6 +166,8 @@ export interface ChatRoomSummary {
   teamId: string;
   name: string;
   memberCount: number;
+  /** 안 읽은 메시지 수 — 내가 마지막으로 읽은 뒤 다른 사람이 쓴 메시지 */
+  unreadCount: number;
   /** 마지막 메시지 미리보기 (없으면 null) */
   lastMessage: string | null;
   /** ISO datetime — 마지막 메시지 시각, 없으면 방 만든 시각 */

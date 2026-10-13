@@ -73,7 +73,12 @@ interface SubHeaderProps {
    * rightAction이 "home"일 때 홈 아이콘 왼쪽에 붙는 보조 아이콘 버튼 (셀 페이지의 단톡방 등).
    * 타이틀이 가운데 유지되도록 왼쪽(뒤로가기)에 같은 폭의 자리를 둔다.
    */
-  extraRightAction?: { icon: React.ComponentProps<typeof Icon>["name"]; onPress: () => void };
+  extraRightAction?: {
+    icon: React.ComponentProps<typeof Icon>["name"];
+    onPress: () => void;
+    /** 아이콘 오른쪽 위에 빨간 점을 붙인다 (안 읽은 단톡 메시지 등) */
+    badge?: boolean;
+  };
   /**
    * 홈 버튼 동작. 안 주면 메인 탭으로 돌아간다.
    * 탭 안에서 쓰는 화면(팀스토리)은 이미 Main에 있어서 기본 동작이 아무 일도 하지 않으므로,
@@ -198,6 +203,12 @@ export function Header(props: HeaderProps) {
                     {props.extraRightAction && (
                         <Pressable onPress={props.extraRightAction.onPress} hitSlop={8}>
                           <Icon name={props.extraRightAction.icon} size={28} color={colors.icon.strong} />
+                          {props.extraRightAction.badge && (
+                            <View
+                              className="absolute h-2.5 w-2.5 rounded-full bg-semantic-danger"
+                              style={{ top: -1, right: -1 }}
+                            />
+                          )}
                         </Pressable>
                     )}
                     <Pressable

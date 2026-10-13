@@ -19,6 +19,7 @@ import { AdminOffDaysScreen } from "../features/admin/AdminOffDaysScreen";
 import { LoginScreen } from "../features/auth/LoginScreen";
 import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
 import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
+import { useChatUnread } from "../features/chat/api";
 import { CellDetailScreen } from "../features/cell/CellDetailScreen";
 import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
 import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingPhotoScreen";
@@ -104,14 +105,21 @@ function CellDetailHeader({ cellId }: { cellId: string }) {
   const cell = useCell(cellId);
   // 단톡방은 그 셀 셀원과 관리자만 들어간다 — 아이콘도 그 사람들에게만 보인다.
   const me = useMe();
+  const canChat = canPostToCell(cellId, me);
+  // 안 읽은 셀 단톡 메시지가 있으면 아이콘에 빨간 점 — 방에 들어가 읽으면 사라진다.
+  const { data: unread } = useChatUnread("cell", cellId, canChat);
   return (
     <Header
       variant="sub"
       title={cell?.name ?? t("셀 페이지")}
       rightAction="home"
       extraRightAction={
-        canPostToCell(cellId, me)
-          ? { icon: "chat", onPress: () => navigation.navigate("CellChat", { cellId }) }
+        canChat
+          ? {
+              icon: "chat",
+              onPress: () => navigation.navigate("CellChat", { cellId }),
+              badge: (unread ?? 0) > 0,
+            }
           : undefined
       }
     />

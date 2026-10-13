@@ -73,6 +73,36 @@ export class ChatController {
     return this.chatService.remove(user.sub, { roomId }, messageId);
   }
 
+  // 읽음 표시 — 방을 열었을 때·열어 둔 채 새 메시지가 왔을 때 앱이 부른다.
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('chat-rooms/:roomId/read')
+  readTeam(@CurrentUser() user: JwtPayload, @Param('roomId') roomId: string) {
+    return this.chatService.markRead(user.sub, { roomId });
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('cells/:cellId/read')
+  readCell(@CurrentUser() user: JwtPayload, @Param('cellId') cellId: string) {
+    return this.chatService.markRead(user.sub, { cellId });
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('group-meetings/:groupId/read')
+  readGroup(@CurrentUser() user: JwtPayload, @Param('groupId') groupId: string) {
+    return this.chatService.markRead(user.sub, { groupId });
+  }
+
+  // 안 읽은 메시지 수 — 셀 페이지 헤더 아이콘·소그룹 입구의 빨간 점이 쓴다 (팀 방은 목록 응답에 같이 온다).
+  @Get('cells/:cellId/unread')
+  unreadCell(@CurrentUser() user: JwtPayload, @Param('cellId') cellId: string) {
+    return this.chatService.unreadCount(user.sub, { cellId });
+  }
+
+  @Get('group-meetings/:groupId/unread')
+  unreadGroup(@CurrentUser() user: JwtPayload, @Param('groupId') groupId: string) {
+    return this.chatService.unreadCount(user.sub, { groupId });
+  }
+
   // ---- 셀 단톡방 ----
   @Get('cells/:cellId/messages')
   findCell(@CurrentUser() user: JwtPayload, @Param('cellId') cellId: string) {

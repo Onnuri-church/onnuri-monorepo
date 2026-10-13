@@ -129,6 +129,51 @@ export class ChatService {
     private readonly notifications: NotificationsService,
   ) {}
 
+  private readScope(room: ChatRoom): string {
+    if ('roomId' in room) return `room:${room.roomId}`;
+    if ('cellId' in room) return `cell:${room.cellId}`;
+    return `group:${room.groupId}`;
+  }
+
+  // 방을 읽었다고 표시 — 방을 열어 두고 있는 동안 새 메시지가 오면 앱이 다시 부른다.
+  async markRead(userId: string, room: ChatRoom): Promise<void> {
+    await this.assertAccess(userId, room);
+    const now = new Date();
+    await this.prisma.chatReadState.upsert({
+      where: { userId_scope: { userId, scope: this.readScope(room) } },
+      update: { lastReadAt: now },
+      create: { userId, scope: this.readScope(room), lastReadAt: now },
+    });
+  }
+
+  // 안 읽은 메시지 수 — 읽음 위치 이후 다른 사람이 쓴 메시지. 읽음 기록이 아직 없는 방은
+  // 지금까지의 대화를 전부 안 읽은 것으로 세지 않도록 "지금"을 읽음 위치로 잡고 0을 돌려준다.
+  async unreadCount(userId: string, room: ChatRoom): Promise<{ count: number }> {
+    await this.assertAccess(userId, room);
+    const scope = this.readScope(room);
+    const state = await this.prisma.chatReadState.findUnique({
+      where: { userId_scope: { userId, scope } },
+      select: { lastReadAt: true },
+    });
+    if (!state) {
+      await this.prisma.chatReadState.upsert({
+        where: { userId_scope: { userId, scope } },
+        update: {},
+        create: { userId, scope, lastReadAt: new Date() },
+      });
+      return { count: 0 };
+    }
+    const count = await this.prisma.chatMessage.count({
+      where: {
+        ...this.roomWhere(room),
+        deletedAt: null,
+        authorId: { not: userId },
+        createdAt: { gt: state.lastReadAt },
+      },
+    });
+    return { count };
+  }
+
   async find(userId: string, room: ChatRoom): Promise<ChatRoomResponse> {
     const access = await this.assertAccess(userId, room);
 
