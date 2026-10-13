@@ -19,6 +19,7 @@ import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDi
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
+import { YearMonthPicker } from "../../shared/components/composed/YearMonthPicker";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
@@ -30,9 +31,13 @@ import { toNoticeDateLabel, useDeleteNotice, useNoticeList } from "./api";
 export function NoticeListScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // 처음엔 달을 고르지 않고 보낸다 — 공지가 있는 가장 최근 달을 서버가 골라 준다.
+  const [month, setMonth] = useState<string>();
   const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useNoticeList();
+    useNoticeList(month);
   const notices = (data?.pages ?? []).flatMap((page) => page.items);
+  const months = data?.pages[0]?.months ?? [];
+  const selectedMonth = data?.pages[0]?.selectedMonth ?? null;
   const isAdmin = useMe()?.isAdmin === true;
   const deleteNotice = useDeleteNotice();
   const { width: windowWidth } = useWindowDimensions();
@@ -83,6 +88,12 @@ export function NoticeListScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
+      {/* 연·월 토글 — 공지가 있는 달만 고를 수 있고, 고른 달 안에서 20개씩 이어서 불러온다. */}
+      {months.length > 0 && selectedMonth && (
+        <View className="flex-row px-5 pb-1 pt-4">
+          <YearMonthPicker months={months} selected={selectedMonth} onSelect={setMonth} />
+        </View>
+      )}
       <FlatList
         data={notices}
         keyExtractor={(notice) => notice.id}

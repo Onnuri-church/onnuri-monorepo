@@ -23,7 +23,7 @@ import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { useLatestNotice } from "../notice/api";
+import { useHomeNotices } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
@@ -77,7 +77,8 @@ export function HomeScreen() {
   const { data: homePosts, refetch: refetchHomePosts } = useHomePosts();
 
   // 가장 최근 공지(서버가 최신순으로 준다) — 홈 맨 위 한 줄에 제목만 보여준다.
-  const { data: latestNotice, refetch: refetchNotices } = useLatestNotice();
+  const { data: homeNotices, refetch: refetchNotices } = useHomeNotices();
+  const hasNotices = (homeNotices ?? []).length > 0;
 
   // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
   // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
@@ -130,17 +131,17 @@ export function HomeScreen() {
       scrollEventThrottle={16}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
     >
-      {latestNotice && (
+      {hasNotices && (
         <View className="px-5 pt-4">
           <NoticeBar
-            title={latestNotice.title}
+            notices={homeNotices ?? []}
             onListPress={() => navigation.navigate("NoticeList")}
-            onTitlePress={() => navigation.navigate("NoticeDetail", { id: latestNotice.id })}
+            onNoticePress={(id) => navigation.navigate("NoticeDetail", { id })}
           />
         </View>
       )}
 
-      <View className={latestNotice ? "px-5 pt-4" : "px-5 pt-8"}>
+      <View className={hasNotices ? "px-5 pt-4" : "px-5 pt-8"}>
         <WeeklySermonBanner
           seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
           passage={banner?.passage ?? DEFAULT_SERMON.passage}

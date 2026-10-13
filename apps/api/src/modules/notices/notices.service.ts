@@ -159,7 +159,11 @@ export class NoticesService {
 
   // 공지 목록 — 최신순. 게스트도 볼 수 있다 (게스트 열람 범위 확정).
   // 최신순 커서 페이지네이션 — 같은 시각 공지가 있어도 순서가 흔들리지 않게 id를 보조 정렬로 둔다.
-  async findNotices(cursor?: string, limit?: number): Promise<NoticeListResponse> {
+  async findNotices(
+    cursor?: string,
+    limit?: number,
+    monthly?: { month?: string; grouped?: boolean },
+  ): Promise<NoticeListResponse> {
     const take = Math.min(Math.max(Number.isFinite(limit) ? Math.floor(limit as number) : 20, 1), 50);
     // 없는 커서는 Prisma가 500으로 던지므로 먼저 400으로 거른다.
     if (cursor) {
@@ -169,8 +173,46 @@ export class NoticesService {
       });
       if (!exists) throw new BadRequestException('잘못된 cursor입니다.');
     }
+    // 월별 보기 — 공지가 있는 달 목록을 만들고, 고른 달(없으면 가장 최근 달)의 공지만 페이지네이션한다.
+    // 달 경계는 KST 기준이다 (서버 UTC로 자르면 월초 새벽 공지가 전달로 밀린다).
+    let monthFilter: { gte: Date; lt: Date } | undefined;
+    let months: { value: string; label: string }[] | undefined;
+    let selectedMonth: string | null | undefined;
+    if (monthly?.grouped || monthly?.month) {
+      if (monthly.month && !/^\d{4}\.(0[1-9]|1[0-2])$/.test(monthly.month)) {
+        throw new BadRequestException('month는 YYYY.MM 형식이어야 합니다.');
+      }
+      const dates = await this.prisma.notice.findMany({
+        where: { type: 'NOTICE' },
+        select: { createdAt: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+      const values = [
+        ...new Set(
+          dates.map((row) => {
+            const kst = new Date(row.createdAt.getTime() + KST_OFFSET_MS);
+            return `${kst.getUTCFullYear()}.${String(kst.getUTCMonth() + 1).padStart(2, '0')}`;
+          }),
+        ),
+      ];
+      months = values.map((value) => ({
+        value,
+        label: `${value.slice(2, 4)}년 ${Number(value.slice(5, 7))}월`,
+      }));
+      selectedMonth =
+        monthly.month && values.includes(monthly.month) ? monthly.month : (values[0] ?? null);
+      if (selectedMonth) {
+        const [year, monthOfYear] = selectedMonth.split('.').map(Number);
+        monthFilter = {
+          gte: new Date(Date.UTC(year, monthOfYear - 1, 1) - KST_OFFSET_MS),
+          lt: new Date(Date.UTC(year, monthOfYear, 1) - KST_OFFSET_MS),
+        };
+      }
+    }
+
     const rows = await this.prisma.notice.findMany({
-      where: { type: 'NOTICE' },
+      where: { type: 'NOTICE', ...(monthFilter && { createdAt: monthFilter }) },
       select: BANNER_SELECT,
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: take + 1,
@@ -181,6 +223,7 @@ export class NoticesService {
     return {
       items: page.map((row) => this.toNotice(row)),
       nextCursor: hasMore ? page[page.length - 1].id : null,
+      ...(months && { months, selectedMonth }),
     };
   }
 
