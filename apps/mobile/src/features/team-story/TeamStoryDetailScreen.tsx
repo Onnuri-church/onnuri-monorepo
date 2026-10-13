@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useChatRooms, useTeamBoardUnread } from "../team-space/api";
 import { useTeamDetail, useTeamGallery } from "./api";
 import { ActivityPhotos } from "./components/ActivityPhotos";
 import { TeamBoardLink } from "./components/TeamBoardLink";
@@ -28,6 +29,13 @@ export function TeamStoryDetailScreen() {
   const me = useMe();
   const canChat =
     me?.isAdmin === true || (me?.teams ?? []).some((item) => item.id === params.teamId);
+
+  // 소속팀 공간 입구의 빨간 점 — 그 팀 단톡방 중 안 읽은 메시지가 있는 방이 하나라도 있으면.
+  const { data: chatRooms } = useChatRooms(canChat ? params.teamId : "");
+  const { data: boardUnread } = useTeamBoardUnread(params.teamId, canChat);
+  // 안 읽은 단톡 메시지나 안 연 팀 게시판 새 글이 하나라도 있으면 점을 띄운다.
+  const hasUnread =
+    (chatRooms ?? []).some((room) => room.unreadCount > 0) || (boardUnread ?? 0) > 0;
 
   const members = team?.members ?? [];
 
@@ -83,6 +91,7 @@ export function TeamStoryDetailScreen() {
           <TeamBoardLink
             title={t("{{name}} 소속팀 공간", { name: team?.name ?? t("팀") })}
             description={t("팀원만 볼 수 있는 게시판과 단톡방")}
+            badge={hasUnread}
             onPress={() => navigation.navigate("TeamSpace", { teamId: params.teamId })}
           />
         </View>

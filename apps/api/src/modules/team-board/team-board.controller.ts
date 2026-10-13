@@ -47,6 +47,12 @@ export class TeamBoardController {
     );
   }
 
+  // 새 글 수 — 내가 아직 안 연 글. 팀 공간·팀 상세 입구의 빨간 표시가 쓴다 (':postId'보다 먼저 선언).
+  @Get('unread')
+  unread(@CurrentUser() user: JwtPayload, @Param('teamId') teamId: string) {
+    return this.teamBoardService.unreadCount(user.sub, teamId);
+  }
+
   @Post()
   create(
     @CurrentUser() user: JwtPayload,

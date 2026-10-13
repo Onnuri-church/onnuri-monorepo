@@ -39,6 +39,41 @@ export class ChatRoomsService {
       },
     });
 
+    // 방마다 읽음 위치 이후 다른 사람이 쓴 메시지 수. 읽음 기록이 없는 방은 지금을 읽음 위치로 잡고 0으로 본다
+    // (예전 대화가 전부 안 읽은 것으로 뜨지 않게).
+    const scopes = rooms.map((room) => `room:${room.id}`);
+    const states = await this.prisma.chatReadState.findMany({
+      where: { userId, scope: { in: scopes } },
+      select: { scope: true, lastReadAt: true },
+    });
+    const readAtByScope = new Map(states.map((state) => [state.scope, state.lastReadAt]));
+    const missing = scopes.filter((scope) => !readAtByScope.has(scope));
+    if (missing.length > 0) {
+      await this.prisma.chatReadState.createMany({
+        data: missing.map((scope) => ({ userId, scope, lastReadAt: new Date() })),
+        skipDuplicates: true,
+      });
+    }
+    const unreadByRoom = new Map<string, number>();
+    await Promise.all(
+      rooms.map(async (room) => {
+        const readAt = readAtByScope.get(`room:${room.id}`);
+        if (!readAt) {
+          unreadByRoom.set(room.id, 0);
+          return;
+        }
+        const count = await this.prisma.chatMessage.count({
+          where: {
+            roomId: room.id,
+            deletedAt: null,
+            authorId: { not: userId },
+            createdAt: { gt: readAt },
+          },
+        });
+        unreadByRoom.set(room.id, count);
+      }),
+    );
+
     return rooms
       .map((room) => {
         const last = room.messages[0];
@@ -47,6 +82,7 @@ export class ChatRoomsService {
           teamId: room.teamId,
           name: room.name,
           memberCount: room._count.members,
+          unreadCount: unreadByRoom.get(room.id) ?? 0,
           lastMessage: last
             ? last.content ||
               (last.videoUrls.length > 0

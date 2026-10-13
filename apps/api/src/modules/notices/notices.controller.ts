@@ -35,8 +35,17 @@ export class NoticesController {
 
   // 공지 목록 (마이페이지 공지사항) — 게스트 열람 가능. cursor=이전 쪽의 nextCursor, limit 기본 20(최대 50).
   @Get()
-  findNotices(@Query('cursor') cursor?: string, @Query('limit') limit?: string) {
-    return this.noticesService.findNotices(cursor, limit ? Number(limit) : undefined);
+  findNotices(
+    @Query('cursor') cursor?: string,
+    @Query('limit') limit?: string,
+    @Query('month') month?: string,
+    @Query('grouped') grouped?: string,
+  ) {
+    return this.noticesService.findNotices(
+      cursor,
+      limit ? Number(limit) : undefined,
+      { month, grouped: grouped === 'true' },
+    );
   }
 
   @Get('banner')

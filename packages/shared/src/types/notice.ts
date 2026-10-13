@@ -61,6 +61,12 @@ export interface NoticeInfo {
 export interface NoticeListResponse {
   items: NoticeInfo[];
   nextCursor: string | null;
+  /**
+   * 월별 보기(`?grouped=true`)일 때만 내려온다 — 공지가 있는 달 목록(최신순, value "2026.10")과
+   * 지금 보여 주는 달. items는 이 달의 공지만 담기고 cursor 페이지네이션은 그 안에서 이어진다.
+   */
+  months?: { value: string; label: string }[];
+  selectedMonth?: string | null;
 }
 
 /** POST /notices 요청 본문 (관리자 전용, 응답은 NoticeInfo) — 내용이나 이미지 중 하나는 필요 */

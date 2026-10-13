@@ -155,6 +155,7 @@ model User {
   recordedMeetingChecks  CellMeetingAttendance[] @relation("CellMeetingRecorder")
   attendanceEditsReceived AttendanceEditLog[]    @relation("AttendanceEditTarget")
   attendanceEditsMade     AttendanceEditLog[]    @relation("AttendanceEditor")
+  chatReadStates          ChatReadState[]
   createdCells           Cell[]                  @relation("CellCreator")
   createdCellMeetings    CellMeeting[]           @relation("CellMeetingCreator")
   followerNotes          FollowerNote[]
@@ -222,6 +223,19 @@ model Team {
 
 // 단톡방 메시지 — 팀 단톡방(roomId)과 셀 단톡방(cellId)이 같은 구조를 쓴다 (둘 중 하나만 채운다).
 // 그 방의 소속 멤버·관리자만 읽고 쓴다. 실시간 연결 없이 앱이 주기적으로 받아온다.
+// 단톡방 읽음 위치 — 사람마다 방마다 "여기까지 읽었다"는 시각. 이 시각 이후 다른 사람이 쓴 메시지 수가
+// 안 읽은 메시지 수다 (목록의 뱃지·셀 페이지 아이콘의 빨간 점). 방은 종류가 셋(팀 방·셀·소그룹)이라
+// 외래키 대신 scope 문자열("room:<id>" | "cell:<id>" | "group:<id>")로 구분한다.
+model ChatReadState {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId     String
+  scope      String
+  lastReadAt DateTime
+
+  @@unique([userId, scope])
+}
+
 model ChatMessage {
   id               String         @id @default(cuid())
   room             ChatRoom?      @relation(fields: [roomId], references: [id], onDelete: Cascade)
