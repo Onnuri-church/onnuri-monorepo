@@ -1,6 +1,7 @@
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import { useEffect, useRef, useState } from "react";
 import {
+  Alert,
   Animated,
   Pressable,
   StyleSheet,
@@ -12,10 +13,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 
+import { useAuthStore } from "../../store/useAuthStore";
 import { useTabBarStore } from "../../store/useTabBarStore";
 import { colors } from "../../theme/tokens";
 import { useThemeColors } from "../../theme/useThemeColors";
 import type { RootTabParamList } from "../../types/navigation";
+import { i18n } from "../../i18n";
 import { Icon } from "./Icon";
 
 // 탭 하나가 쓰는 아이콘. 라벨은 여기 적지 않고 BottomTabNavigator의 options.title에서 읽는다 —
@@ -94,6 +97,18 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
   };
 
   const handleTabPress = (route: (typeof state.routes)[number], isFocused: boolean) => {
+    // 셀 페이지는 로그인한 회원만 — 게스트가 누르면 이동하지 않고 로그인 안내를 띄운다.
+    if (route.name === "Cell" && useAuthStore.getState().session.status === "guest") {
+      Alert.alert(i18n.t("로그인이 필요해요"), i18n.t("셀 페이지는 로그인 후 이용할 수 있어요."), [
+        { text: i18n.t("취소"), style: "cancel" },
+        {
+          text: i18n.t("로그인하기"),
+          // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
+          onPress: () => useAuthStore.getState().clearSession(),
+        },
+      ]);
+      return;
+    }
     const event = navigation.emit({
       type: "tabPress",
       target: route.key,
@@ -174,11 +189,15 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
               >
                 {/* 활성/비활성은 색만 바꾼다. 탭별 활성 전용 아이콘은 없다 — 홈이 채워 보이는 건
                     nav-home 원본이 원래 채운 그림이기 때문이지 활성 상태 표현이 아니다. */}
-                <Icon
-                  name={icon.name}
-                  size={icon.size}
-                  color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
-                />
+                {/* 아이콘 크기가 24/28로 달라서 그대로 두면 라벨 높이가 탭마다 어긋난다 —
+                    가장 큰 아이콘 높이(28)의 칸에 가운데로 넣어 라벨 줄을 맞춘다. */}
+                <View className="h-7 items-center justify-center">
+                  <Icon
+                    name={icon.name}
+                    size={icon.size}
+                    color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
+                  />
+                </View>
                 <Text
                   // 번역으로 라벨이 길어져도 한 줄로 줄여 맞춘다 (두 줄이 되면 아이콘 위치가 탭마다 어긋난다).
                   numberOfLines={1}

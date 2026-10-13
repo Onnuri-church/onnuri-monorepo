@@ -85,6 +85,11 @@ interface SubHeaderProps {
    * 뒤로가기의 의미를 직접 정해야 하는 화면(온보딩의 프로필 설정 등)에서 넘긴다.
    */
   onPressBack?: () => void;
+  /**
+   * 뒤로가기 버튼을 그리지 않는다. 하단 탭의 첫 화면(팀스토리)처럼 돌아갈 곳이 없는 화면에서 쓴다.
+   * 타이틀이 가운데 유지되도록 같은 폭의 빈 자리는 남긴다.
+   */
+  hideBack?: boolean;
 }
 
 interface OverlayHeaderProps {
@@ -175,13 +180,17 @@ export function Header(props: HeaderProps) {
             <>
               {/* 오른쪽에 아이콘이 둘이면 왼쪽도 같은 폭(28+12+28)으로 잡아 타이틀을 가운데에 둔다. */}
               <View style={{ width: props.rightAction === "home" && props.extraRightAction ? 68 : undefined }}>
-                <Pressable
-                    onPress={props.onPressBack ?? (() => navigation.goBack())}
-                    hitSlop={8}
-                    style={{ alignSelf: "flex-start" }}
-                >
-                  <Icon name="back" size={28} color={colors.icon.strong} />
-                </Pressable>
+                {props.hideBack ? (
+                  <View style={{ width: 28, height: 28 }} />
+                ) : (
+                  <Pressable
+                      onPress={props.onPressBack ?? (() => navigation.goBack())}
+                      hitSlop={8}
+                      style={{ alignSelf: "flex-start" }}
+                  >
+                    <Icon name="back" size={28} color={colors.icon.strong} />
+                  </Pressable>
+                )}
               </View>
               <Text className="font-pretendard-semibold text-heading-small text-text-normal">{props.title}</Text>
               {props.rightAction === "home" ? (

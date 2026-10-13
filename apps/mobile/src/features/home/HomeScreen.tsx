@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  Alert,
   Image,
   Pressable,
   RefreshControl,
@@ -24,6 +25,7 @@ import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useLatestNotice } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
 import { useHomeBanner, useHomePosts } from "./api";
 import { DepartmentActivityCard } from "./components/DepartmentActivityCard";
@@ -58,6 +60,15 @@ export function HomeScreen() {
   const insets = useSafeAreaInsets();
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const [prayerPage, setPrayerPage] = useState(0);
+  // 기도제목·큐티나눔은 로그인한 회원만 본다 (2026-10-13) — 게스트에겐 목록 대신 로그인 안내를 보여준다.
+  const isGuest = useAuthStore((state) => state.session.status !== "authenticated");
+  const handleLoginRequiredPress = () => {
+    Alert.alert(t("로그인이 필요해요"), t("로그인 후 볼 수 있어요."), [
+      { text: t("취소"), style: "cancel" },
+      // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
+      { text: t("로그인하기"), onPress: () => useAuthStore.getState().clearSession() },
+    ]);
+  };
 
   // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (사진 위에 시리즈·구절·제목이 올라가는 말씀 배너).
   const { data: banner, refetch: refetchBanner } = useHomeBanner();
@@ -73,6 +84,7 @@ export function HomeScreen() {
   // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
   const { data: prayers, refetch: refetchPrayers } = useQuery({
     queryKey: ["prayers", "home"],
+    enabled: !isGuest,
     queryFn: async () => {
       const { items } = await fetchPrayers("all");
       return items
@@ -139,8 +151,46 @@ export function HomeScreen() {
       </View>
 
       <View className="mt-8 px-5">
-        <SectionHeader title={t("기도제목")} onPress={() => navigation.navigate("PrayerBoard")} />
-        {(prayers ?? []).length === 0 ? (
+        <SectionHeader
+          title={t("큐티나눔")}
+          onPress={() => (isGuest ? handleLoginRequiredPress() : navigation.navigate("QtBoard"))}
+        />
+        {/* 큐티나눔에만 헤더 아래·목록 아래 구분선이 있다 (기도제목 섹션은 시안에서 꺼져 있음). */}
+        <View className="mt-3.5 h-px bg-background-assistive" />
+        {/* 목록만 좌우로 8 더 들어간다 (시안). 행 간격 10은 행 높이를 48로 맞추고도
+            목록 전체 높이(164 = 48*3 + 10*2)를 지키기 위한 값이다. */}
+        {isGuest && (
+          <Pressable className="mt-4 items-center py-6 active:opacity-70" onPress={handleLoginRequiredPress}>
+            <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
+          </Pressable>
+        )}
+        <View className="mt-4 gap-2.5 px-2">
+          {(isGuest ? [] : (homePosts?.qtShares ?? [])).map((qt) => (
+            <QtShareRow
+              key={qt.id}
+              author={qt.authorName}
+              passage={qt.passage}
+              title={qt.title}
+              onPress={() => navigation.navigate("QtBoardDetail", { id: qt.id })}
+            />
+          ))}
+        </View>
+        <View className="mt-4 h-px bg-background-assistive" />
+      </View>
+
+      <View className="mt-9 px-5">
+        <SectionHeader
+          title={t("기도제목")}
+          onPress={() => (isGuest ? handleLoginRequiredPress() : navigation.navigate("PrayerBoard"))}
+        />
+        {isGuest ? (
+          <Pressable
+            className="mt-4 items-center rounded-5 border border-background-assistive py-8 active:opacity-70"
+            onPress={handleLoginRequiredPress}
+          >
+            <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
+          </Pressable>
+        ) : (prayers ?? []).length === 0 ? (
           <View className="mt-4 items-center py-8">
             <Text className="text-body-medium text-text-alternative">
               {t("등록된 기도제목이 없어요")}
@@ -173,44 +223,6 @@ export function HomeScreen() {
         )}
       </View>
 
-      <View className="mt-9 px-5">
-        <SectionHeader title={t("큐티나눔")} onPress={() => navigation.navigate("QtBoard")} />
-        {/* 큐티나눔에만 헤더 아래·목록 아래 구분선이 있다 (기도제목 섹션은 시안에서 꺼져 있음). */}
-        <View className="mt-3.5 h-px bg-background-assistive" />
-        {/* 목록만 좌우로 8 더 들어간다 (시안). 행 간격 10은 행 높이를 48로 맞추고도
-            목록 전체 높이(164 = 48*3 + 10*2)를 지키기 위한 값이다. */}
-        <View className="mt-4 gap-2.5 px-2">
-          {(homePosts?.qtShares ?? []).map((qt) => (
-            <QtShareRow
-              key={qt.id}
-              author={qt.authorName}
-              passage={qt.passage}
-              title={qt.title}
-              onPress={() => navigation.navigate("QtBoardDetail", { id: qt.id })}
-            />
-          ))}
-        </View>
-        <View className="mt-4 h-px bg-background-assistive" />
-      </View>
-
-      {/* 취향 소그룹 띠배너. 그림 자체가 배너라서 Thumbnail 같은 공용 컴포넌트를 안 끼우고 바로 그린다. */}
-      <View className="mt-11.5 px-5">
-        <Pressable
-          className="overflow-hidden rounded-5 active:opacity-80"
-          style={{ aspectRatio: GROUP_BANNER_ASPECT_RATIO }}
-          onPress={() => navigation.navigate("GroupMeeting")}
-        >
-          {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다.
-              웹 Image는 원본 픽셀 크기(362x104)를 폭·높이로 박으므로 절대 채움만으로는 안 늘어난다 —
-              폭·높이를 100%로 덮어써 상자에 맞춘다. */}
-          <Image
-            source={require("../../shared/assets/banners/group-meeting-banner.png")}
-            style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
-            resizeMode="cover"
-          />
-        </Pressable>
-      </View>
-
       {/* 가로 스크롤이라 스크롤뷰는 화면 폭을 다 쓰고 좌우 여백은 콘텐츠가 갖는다 —
           그래야 카드가 오른쪽 화면 끝까지 이어진다. */}
       <View className="mt-9">
@@ -240,6 +252,24 @@ export function HomeScreen() {
           ))}
         </ScrollView>
       </View>
+      {/* 취향 소그룹 띠배너. 그림 자체가 배너라서 Thumbnail 같은 공용 컴포넌트를 안 끼우고 바로 그린다. */}
+      <View className="mt-9 px-5">
+        <Pressable
+          className="overflow-hidden rounded-5 active:opacity-80"
+          style={{ aspectRatio: GROUP_BANNER_ASPECT_RATIO }}
+          onPress={() => navigation.navigate("GroupMeeting")}
+        >
+          {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다.
+              웹 Image는 원본 픽셀 크기(362x104)를 폭·높이로 박으므로 절대 채움만으로는 안 늘어난다 —
+              폭·높이를 100%로 덮어써 상자에 맞춘다. */}
+          <Image
+            source={require("../../shared/assets/banners/group-meeting-banner.png")}
+            style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+            resizeMode="cover"
+          />
+        </Pressable>
+      </View>
+
     </ScrollView>
     </>
   );

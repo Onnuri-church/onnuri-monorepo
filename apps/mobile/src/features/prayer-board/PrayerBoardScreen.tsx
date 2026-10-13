@@ -178,11 +178,10 @@ export function PrayerBoardScreen() {
         </View>
       </ScrollView>
 
-      {!isAdmin && (
-        <FloatingButton onPress={handleWritePress}>
-          <Icon name="write" size={24} color={colors.icon.disable} />
-        </FloatingButton>
-      )}
+      {/* 관리자도 기도제목을 쓸 수 있다 (2026-10-13 지환님) — 관리자는 목록에서 익명 글의 실명도 같이 본다. */}
+      <FloatingButton onPress={handleWritePress}>
+        <Icon name="write" size={24} color={colors.icon.disable} />
+      </FloatingButton>
 
       <PrayerMenu title={t("기도제목 게시판")} />
 

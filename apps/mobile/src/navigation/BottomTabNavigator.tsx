@@ -35,7 +35,7 @@ export function BottomTabNavigator() {
         component={TeamStoryScreen}
         options={{
           title: t("팀 스토리"),
-          header: () => <Header variant="sub" title={t("팀스토리")} rightAction="none" />,
+          header: () => <Header variant="sub" title={t("팀스토리")} rightAction="none" hideBack />,
         }}
       />
       {/* 가운데 원형 버튼. 시안에 라벨이 없어서 title은 화면에 안 보이고 접근성 레이블로만 쓰인다. */}

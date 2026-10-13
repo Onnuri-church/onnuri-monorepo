@@ -75,14 +75,16 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
     [],
   );
 
-  // bottomInset은 푸터를 홈 인디케이터 위로 띄운다 — 내용 쪽 여백과 별개로 푸터가 직접 받아야 한다.
+  // 푸터는 시트 맨 아래에 붙이고, 홈 인디케이터 영역은 같은 배경의 빈 칸으로 채운다.
+  // 푸터를 inset만큼 띄우기만 하면 그 아래 틈으로 스크롤되는 목록이 비쳐 보인다 (항목이 많은 시트).
   const renderFooter = useCallback(
     (props: BottomSheetFooterProps) => (
-      <BottomSheetFooter {...props} bottomInset={insets.bottom}>
+      <BottomSheetFooter {...props} bottomInset={0}>
         {footer}
+        <View style={{ height: insets.bottom, backgroundColor: themeColors.background.normal }} />
       </BottomSheetFooter>
     ),
-    [footer, insets.bottom],
+    [footer, insets.bottom, themeColors.background.normal],
   );
 
   return (

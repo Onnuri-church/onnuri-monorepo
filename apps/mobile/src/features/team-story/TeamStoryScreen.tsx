@@ -44,6 +44,7 @@ export function TeamStoryScreen() {
           <Header
             variant="sub"
             title={t("팀스토리")}
+            hideBack
             rightAction="text"
             rightLabel={t("완료")}
             onPressRightLabel={() => setEditing(false)}
@@ -52,6 +53,7 @@ export function TeamStoryScreen() {
           <Header
             variant="sub"
             title={t("팀스토리")}
+            hideBack
             rightAction="more"
             menuItems={[{ icon: "edit", label: t("편집하기"), onPress: () => setEditing(true) }]}
           />

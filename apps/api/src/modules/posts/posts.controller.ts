@@ -37,16 +37,16 @@ import { PostsService } from './posts.service';
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
-  // 홈의 큐티나눔(최신 3건)·부서활동(최신 5건) 섹션. 홈은 게스트도 보고, 내 상태(좋아요 등)가
-  // 없어서 토큰을 읽지 않는다.
+  // 홈의 큐티나눔(최신 3건)·부서활동(최신 5건) 섹션. 홈은 게스트도 보지만 큐티나눔은 회원
+  // 전용이라, 토큰이 없으면 큐티나눔 목록을 비워서 내려준다 (부서활동은 그대로).
+  @UseGuards(OptionalJwtAuthGuard)
   @Get('home')
-  findHomePosts() {
-    return this.postsService.findHomePosts();
+  findHomePosts(@CurrentUser() user: JwtPayload | undefined) {
+    return this.postsService.findHomePosts(user?.sub);
   }
 
-  // 열람은 게스트도 된다 (README 기능 범위: "큐티나눔 게시판 — 열람 + 로그인 후 작성").
-  // 좋아요처럼 로그인이 필요한 건 아래 동작 단위로 막는다.
-  @UseGuards(OptionalJwtAuthGuard)
+  // 큐티나눔은 로그인한 회원만 열람한다 (2026-10-13 확정: 개인적인 나눔이라 게스트에게 공개하지 않음).
+  @UseGuards(JwtAuthGuard)
   @Get('qt-shares')
   findQtShares(
     @CurrentUser() user: JwtPayload | undefined,
@@ -55,13 +55,10 @@ export class PostsController {
     return this.postsService.findQtShares(user?.sub, query);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('qt-shares/:id')
-  findQtShare(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Param('id') id: string,
-  ) {
-    return this.postsService.findQtShare(id, user?.sub);
+  findQtShare(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.postsService.findQtShare(id, user.sub);
   }
 
   // 셀 소식 — 열람은 게스트도, 작성은 그 셀 셀원·관리자만, 삭제는 작성자·셀장·관리자만

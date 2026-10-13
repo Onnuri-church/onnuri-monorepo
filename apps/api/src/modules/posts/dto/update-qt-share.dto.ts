@@ -1,6 +1,7 @@
 import {
   ArrayMaxSize,
   IsArray,
+  IsBoolean,
   IsISO8601,
   IsNotEmpty,
   IsOptional,
@@ -45,4 +46,9 @@ export class UpdateQtShareDto {
   @ArrayMaxSize(QT_SHARE_MAX_IMAGES)
   @IsUrl({}, { each: true })
   imageUrls?: string[];
+
+  // 익명 여부 바꾸기 — 생략하면 그대로 둔다.
+  @IsOptional()
+  @IsBoolean()
+  isAnonymous?: boolean;
 }

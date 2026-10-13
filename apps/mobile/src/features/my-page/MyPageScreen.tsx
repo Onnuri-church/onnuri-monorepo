@@ -7,6 +7,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
+import { Button } from "../../shared/components/base/Button";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { NotificationBell } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
@@ -167,6 +168,11 @@ export function MyPageScreen() {
     }
   }
 
+  // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다 (저장된 토큰이 없어 signOut은 불필요).
+  const handleGuestLoginPress = () => {
+    useAuthStore.getState().clearSession();
+  };
+
   const handleLogoutPress = () => {
     // 토큰·푸시·계정별 캐시까지 정리한다 (설정 로그아웃과 동일).
     void signOut();
@@ -260,9 +266,17 @@ export function MyPageScreen() {
           />
         </View>
 
-        <Pressable className="mt-5 self-start pl-4.5" onPress={handleLogoutPress}>
-          <Text className="text-caption-main text-text-alternative">{t("로그아웃")}</Text>
-        </Pressable>
+        {session.status === "guest" ? (
+          // 게스트는 로그아웃할 계정이 없다 — 로그인 화면으로 가는 버튼을 둔다.
+          // 로그인과 회원가입은 같은 소셜 로그인 화면이다 (처음이면 가입 + 프로필 설정이 이어진다).
+          <View className="mt-5">
+            <Button label={t("로그인 · 회원 가입하기")} onPress={handleGuestLoginPress} />
+          </View>
+        ) : (
+          <Pressable className="mt-5 self-start pl-4.5" onPress={handleLogoutPress}>
+            <Text className="text-caption-main text-text-alternative">{t("로그아웃")}</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
     </View>
