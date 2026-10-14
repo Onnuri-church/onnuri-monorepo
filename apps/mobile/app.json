@@ -34,7 +34,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "owner": "onnuri-church-app",
+    "owner": "onnuri-youth-church",
     "extra": {
       "eas": {
         "projectId": "f187ceb9-84e9-454e-afb9-cfd7f961721b"
