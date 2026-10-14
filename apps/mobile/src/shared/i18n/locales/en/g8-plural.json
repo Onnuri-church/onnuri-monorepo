@@ -1,0 +1,12 @@
+{
+  "{{count}}명_one": "{{count}} member",
+  "회원 {{count}}명_one": "{{count}} member",
+  "전체 {{count}}명_one": "{{count}} member",
+  "총 {{count}}명_one": "{{count}} member",
+  "외 {{count}}줄_one": "+{{count}} more row",
+  "출석부 {{count}}줄_one": "Attendance: {{count}} row",
+  "{{count}}일 전_one": "{{count}} day ago",
+  "전체 {{count}}장_one": "{{count}} photo",
+  "사진 {{count}}장 모두 보기_one": "View photo",
+  "예배 {{worship}}명 출석 · 셀모임 {{meeting}}명 참석 · {{cell}} {{count}}명 기준_one": "Worship {{worship}} present · Cell meeting {{meeting}} attended · {{cell}} {{count}} member"
+}

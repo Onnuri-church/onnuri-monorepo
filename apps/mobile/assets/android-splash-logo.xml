@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android 12+ 스플래시는 아이콘 슬롯을 비워둘 수 없다. 비워두면 시스템이 런처 아이콘을
+     대신 채우므로, 배경색만 보이게 하려면 이렇게 투명한 드로어블을 명시적으로 넣어야 한다.
+     app.config.js의 expo-splash-screen android.drawable.icon이 이 파일을 가리킨다. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="@android:color/transparent" />
+</shape>

@@ -1,0 +1,87 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+
+import { Avatar } from "../../shared/components/base/Avatar";
+import { Icon } from "../../shared/components/base/Icon";
+import { SearchBar } from "../../shared/components/base/SearchBar";
+import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { useAdminMembers } from "./api";
+import { MemberBadge } from "./components/MemberBadge";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
+export function AdminMemberListScreen() {
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const [keyword, setKeyword] = useState("");
+  const { data, refetch, isRefetching } = useAdminMembers();
+
+  // 시안 검색바 플레이스홀더가 "이름 · 셀 · 팀으로 검색" — 세 필드 모두에 부분 일치.
+  const members = (data ?? []).filter((member) =>
+    keyword === ""
+      ? true
+      : [member.name, member.cellName, member.teamName].some((field) =>
+          field?.includes(keyword.trim()),
+        ),
+  );
+
+  const handleMemberPress = (memberId: string) => {
+    navigation.navigate("AdminMemberDetail", { memberId });
+  };
+
+  return (
+    /* 시안 배경 #F5F5F5 — 토큰에 없어 background.page(#FBFBFB)로 근사 */
+    <ScrollView
+      className="bg-background-page"
+      contentContainerClassName="px-5 pt-4"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+      keyboardShouldPersistTaps="handled"
+      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+    >
+      <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("이름 · 셀 · 팀으로 검색")} />
+
+      <Text className="mt-3 pl-1 text-caption-main text-text-alternative">
+        {t("전체 {{count}}명", { count: members.length })}
+      </Text>
+
+      <View className="mt-2 rounded-5 bg-background-normal px-4 py-2 shadow-card">
+        {members.map((member, index) => (
+          <View key={member.id}>
+            {index > 0 && <View className="h-px bg-background-assistive" />}
+            <Pressable
+              className="flex-row items-center gap-3 py-2"
+              onPress={() => handleMemberPress(member.id)}
+              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+            >
+              <Avatar imageUrl={member.avatarUrl} size={40} />
+              <View className="flex-1">
+                <View className="min-w-0 flex-row items-center gap-1.5">
+                  <Text className="shrink text-body-main text-text-normal" numberOfLines={1}>
+                    {member.name}
+                  </Text>
+                  {member.badge && <MemberBadge badge={member.badge} />}
+                </View>
+                <Text className="mt-0.5 text-caption-main text-text-alternative">
+                  {member.cellName ?? t("무소속")} · {member.teamName ?? t("무소속")}
+                </Text>
+              </View>
+              <Icon name="expand-right" size={16} color={colors.icon.normal} />
+            </Pressable>
+          </View>
+        ))}
+        {members.length === 0 && (
+          <Text className="py-6 text-center text-body-regular text-text-alternative">
+            {t("검색 결과가 없어요.")}
+          </Text>
+        )}
+      </View>
+    </ScrollView>
+  );
+}
+

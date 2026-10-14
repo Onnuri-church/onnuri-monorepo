@@ -1,21 +1,277 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { Pressable, Text, View } from "react-native";
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Alert,
+  Image,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
+import { PageIndicator } from "../../shared/components/base/PageIndicator";
+import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
+import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useHomeNotices } from "../notice/api";
+import { fetchPrayers } from "../prayer-board/api";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { PrayerCard } from "../prayer-board/components/PrayerCard";
+import { useHomeBanner, useHomePosts } from "./api";
+import { DepartmentActivityCard } from "./components/DepartmentActivityCard";
+import { NoticeBar } from "./components/NoticeBar";
+import { QtShareRow } from "./components/QtShareRow";
+import { SectionHeader } from "./components/SectionHeader";
+import { WeeklySermonBanner } from "./components/WeeklySermonBanner";
 
-export default function HomeScreen() {
+// 화면 좌우 여백 (시안 확정값 20). 기도제목 캐러셀은 한 장 폭을 이 값에서 계산한다.
+const SCREEN_PADDING = 20;
+// 취향 소그룹 띠배너 시안 확정값 362x104. 폭은 좌우 여백이 정하므로 비율로만 고정한다.
+const GROUP_BANNER_ASPECT_RATIO = 362 / 104;
+
+// 관리자가 등록한 배너가 하나도 없을 때의 기본 문구 (홈 배너 관리에서 등록하면 교체된다).
+const DEFAULT_SERMON = {
+  seriesLabel: "8월 설교 시리즈",
+  passage: "마태복음 6:5-8",
+  title: "나를 따르라",
+};
+
+// 홈 캐러셀에 보여줄 장수 — 시안이 3장 기준이다.
+const PRAYER_CAROUSEL_SIZE = 3;
+
+// 하단 탭 "홈". 상단 헤더(로고·QR·알림·설정)와 하단 탭바는 네비게이터가 그리므로 여기서는 본문만 그린다.
+//
+// 여백은 시안 값이 4px 스케일에서 1px 벗어난 경우(31·33·35·15·17·23) 스케일 값으로 맞췄고,
+// 양쪽에서 2px 떨어져 정할 수 없는 46만 tokens.js의 spacing에 등록했다 (mt-11.5).
+export function HomeScreen() {
+  const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const handleHideTabBarScroll = useHideTabBarOnScroll();
+  const [prayerPage, setPrayerPage] = useState(0);
+  // 기도제목·큐티나눔은 로그인한 회원만 본다 (2026-10-13) — 게스트에겐 목록 대신 로그인 안내를 보여준다.
+  const isGuest = useAuthStore((state) => state.session.status !== "authenticated");
+  const handleLoginRequiredPress = () => {
+    Alert.alert(t("로그인이 필요해요"), t("로그인 후 볼 수 있어요."), [
+      { text: t("취소"), style: "cancel" },
+      // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
+      { text: t("로그인하기"), onPress: () => useAuthStore.getState().clearSession() },
+    ]);
+  };
+
+  // 홈 배너 — 관리자가 홈 배너 관리에서 등록한 최신 1건 (사진 위에 시리즈·구절·제목이 올라가는 말씀 배너).
+  const { data: banner, refetch: refetchBanner } = useHomeBanner();
+
+  // 큐티나눔 최신 3건·부서활동 최신 5건 — 홈 전용 API 한 번으로 받는다.
+  const { data: homePosts, refetch: refetchHomePosts } = useHomePosts();
+
+  // 가장 최근 공지(서버가 최신순으로 준다) — 홈 맨 위 한 줄에 제목만 보여준다.
+  const { data: homeNotices, refetch: refetchNotices } = useHomeNotices();
+  const hasNotices = (homeNotices ?? []).length > 0;
+
+  // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
+  // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
+  // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
+  const { data: prayers, refetch: refetchPrayers } = useQuery({
+    queryKey: ["prayers", "home"],
+    enabled: !isGuest,
+    queryFn: async () => {
+      const { items } = await fetchPrayers("all");
+      return items
+        .slice(0, PRAYER_CAROUSEL_SIZE)
+        .map((prayer) => ({ ...prayer, createdDate: undefined, ddayLabel: undefined }));
+    },
+  });
+
+  // 당겨서 새로고침 — 세 요청을 같이 다시 받는다. isRefetching은 백그라운드 갱신에도 켜져서
+  // 스피너가 멋대로 돌므로 쓰지 않고, 당긴 동안만 직접 true로 둔다.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await Promise.allSettled([
+      refetchBanner(),
+      refetchHomePosts(),
+      refetchPrayers(),
+      refetchNotices(),
+    ]);
+    setRefreshing(false);
+  };
+
+  // 캐러셀 한 장의 폭. pagingEnabled가 스크롤뷰 폭 단위로 멈추므로 카드도 같은 폭이어야 한다.
+  const prayerPageWidth = width - SCREEN_PADDING * 2;
+
+  // onMomentumScrollEnd는 플랫폼에 따라 안 오는 경우가 있어 onScroll로 매 프레임 계산한다.
+  // 같은 값으로 setState하면 React가 리렌더를 건너뛰므로 페이지가 바뀔 때만 다시 그려진다.
+  const handlePrayerScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+    setPrayerPage(Math.round(event.nativeEvent.contentOffset.x / prayerPageWidth));
+  };
 
   return (
-    <View className="flex-1 items-center justify-center gap-4">
-      <Text className="text-title font-pretendard-bold">홈</Text>
-      <Pressable onPress={() => navigation.navigate("QtBoard")}>
-        <Text className="text-body-main font-pretendard-semibold">큐티나눔 보기</Text>
-      </Pressable>
-      <Pressable onPress={() => navigation.navigate("Live")}>
-        <Text className="text-body-main font-pretendard-semibold">실시간 예배 보기</Text>
-      </Pressable>
-    </View>
+    <>
+      {/* 로그인 직후 처음 보는 화면이 홈이라 푸시 등록 게이트를 여기 마운트한다 —
+          화면에는 권한 안내 다이얼로그만 그린다. */}
+      <PushNotificationGate />
+    <ScrollView
+      className="flex-1 bg-background-normal"
+      // 탭바가 오버레이라 스크롤 콘텐츠가 그 뒤로 지나간다 — 목록 끝이 탭바에
+      // 가리지 않게 탭바 높이 + 홈 인디케이터만큼 바닥 여백을 준다 (기존 pb-10 포함).
+      contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
+      onScroll={handleHideTabBarScroll}
+      scrollEventThrottle={16}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+    >
+      {hasNotices && (
+        <View className="px-5 pt-4">
+          <NoticeBar
+            notices={homeNotices ?? []}
+            onListPress={() => navigation.navigate("NoticeList")}
+            onNoticePress={(id) => navigation.navigate("NoticeDetail", { id })}
+          />
+        </View>
+      )}
+
+      <View className={hasNotices ? "px-5 pt-4" : "px-5 pt-8"}>
+        <WeeklySermonBanner
+          seriesLabel={banner?.seriesLabel ?? DEFAULT_SERMON.seriesLabel}
+          passage={banner?.passage ?? DEFAULT_SERMON.passage}
+          title={banner?.title ?? DEFAULT_SERMON.title}
+          imageUrl={banner?.imageUrl ?? undefined}
+          onPressShortcut={() => navigation.navigate("Bulletin")}
+        />
+      </View>
+
+      <View className="mt-8 px-5">
+        <SectionHeader
+          title={t("큐티나눔")}
+          onPress={() => (isGuest ? handleLoginRequiredPress() : navigation.navigate("QtBoard"))}
+        />
+        {/* 큐티나눔에만 헤더 아래·목록 아래 구분선이 있다 (기도제목 섹션은 시안에서 꺼져 있음). */}
+        <View className="mt-3.5 h-px bg-background-assistive" />
+        {/* 목록만 좌우로 8 더 들어간다 (시안). 행 간격 10은 행 높이를 48로 맞추고도
+            목록 전체 높이(164 = 48*3 + 10*2)를 지키기 위한 값이다. */}
+        {isGuest && (
+          <Pressable className="mt-4 items-center py-6 active:opacity-70" onPress={handleLoginRequiredPress}>
+            <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
+          </Pressable>
+        )}
+        <View className="mt-4 gap-2.5 px-2">
+          {(isGuest ? [] : (homePosts?.qtShares ?? [])).map((qt) => (
+            <QtShareRow
+              key={qt.id}
+              author={qt.authorName}
+              passage={qt.passage}
+              title={qt.title}
+              onPress={() => navigation.navigate("QtBoardDetail", { id: qt.id })}
+            />
+          ))}
+        </View>
+        <View className="mt-4 h-px bg-background-assistive" />
+      </View>
+
+      <View className="mt-9 px-5">
+        <SectionHeader
+          title={t("기도제목")}
+          onPress={() => (isGuest ? handleLoginRequiredPress() : navigation.navigate("PrayerBoard"))}
+        />
+        {isGuest ? (
+          <Pressable
+            className="mt-4 items-center rounded-5 border border-background-assistive py-8 active:opacity-70"
+            onPress={handleLoginRequiredPress}
+          >
+            <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
+          </Pressable>
+        ) : (prayers ?? []).length === 0 ? (
+          <View className="mt-4 items-center py-8">
+            <Text className="text-body-medium text-text-alternative">
+              {t("등록된 기도제목이 없어요")}
+            </Text>
+          </View>
+        ) : (
+          <View className="mt-4">
+            <ScrollView
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              onScroll={handlePrayerScroll}
+              scrollEventThrottle={16}
+            >
+              {(prayers ?? []).map((prayer) => (
+                <View key={prayer.id} style={{ width: prayerPageWidth }}>
+                  <PrayerCard
+                    prayer={prayer}
+                    onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+            {/* 인디케이터는 카드 위에 얹는다 — 카드 안에 두면 스와이프할 때 카드와 같이 밀린다.
+                터치는 아래 카드로 통과시킨다. */}
+            <View className="absolute bottom-4 left-0 right-0" pointerEvents="none">
+              <PageIndicator count={(prayers ?? []).length} current={prayerPage} />
+            </View>
+          </View>
+        )}
+      </View>
+
+      {/* 가로 스크롤이라 스크롤뷰는 화면 폭을 다 쓰고 좌우 여백은 콘텐츠가 갖는다 —
+          그래야 카드가 오른쪽 화면 끝까지 이어진다. */}
+      <View className="mt-9">
+        <View className="px-5">
+          <SectionHeader
+            title={t("부서활동")}
+            onPress={() => navigation.navigate("DepartmentActivity")}
+          />
+        </View>
+        <ScrollView
+          className="mt-4"
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2 px-5"
+        >
+          {(homePosts?.teamActivities ?? []).map((activity) => (
+            <DepartmentActivityCard
+              key={activity.id}
+              department={activity.department}
+              departmentName={activity.teamName}
+              title={activity.title}
+              imageUrl={activity.thumbnailUrl ?? undefined}
+              onPress={() =>
+                navigation.navigate("DepartmentActivityDetail", { id: activity.id })
+              }
+            />
+          ))}
+        </ScrollView>
+      </View>
+      {/* 취향 소그룹 띠배너. 그림 자체가 배너라서 Thumbnail 같은 공용 컴포넌트를 안 끼우고 바로 그린다. */}
+      <View className="mt-9 px-5">
+        <Pressable
+          className="overflow-hidden rounded-5 active:opacity-80"
+          style={{ aspectRatio: GROUP_BANNER_ASPECT_RATIO }}
+          onPress={() => navigation.navigate("GroupMeeting")}
+        >
+          {/* 퍼센트 사이즈는 부모 높이가 aspectRatio로 정해질 때 웹에서 어긋나 절대 채움으로 고정한다.
+              웹 Image는 원본 픽셀 크기(362x104)를 폭·높이로 박으므로 절대 채움만으로는 안 늘어난다 —
+              폭·높이를 100%로 덮어써 상자에 맞춘다. */}
+          <Image
+            source={require("../../shared/assets/banners/group-meeting-banner.png")}
+            style={[StyleSheet.absoluteFill, { width: "100%", height: "100%" }]}
+            resizeMode="cover"
+          />
+        </Pressable>
+      </View>
+
+    </ScrollView>
+    </>
   );
 }

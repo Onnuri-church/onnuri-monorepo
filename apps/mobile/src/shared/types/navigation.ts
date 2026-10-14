@@ -1,20 +1,151 @@
+import type { QrCheckInResponse } from "@onnuri/shared";
+
 export type RootTabParamList = {
   Home: undefined;
   TeamStory: undefined;
   Sermon: undefined;
-  Bulletin: undefined;
+  Cell: undefined;
   MyPage: undefined;
 };
 
 // 메인 탭(BottomTabNavigator)을 하나의 스크린으로 품는 루트 스택. 로그인 상태일 때만 마운트된다.
-// 큐티나눔·실시간예배는 하단 탭이 아니라 홈에서 진입하는 서브 화면이라 여기서 push한다.
+// 큐티나눔·실시간예배·오늘 주보는 하단 탭이 아니라 홈에서 진입하는 서브 화면이라 여기서 push한다.
+// QR도 탭이 아니라 메인 헤더의 QR 버튼에서 push한다 — 하단 탭 가운데 자리는 말씀이 쓴다.
 export type RootStackParamList = {
   Main: undefined;
-  QtBoard: undefined;
-  Live: undefined;
+  // mine: true면 "내 글" 상태로 열린다 (마이페이지 큐티나눔 통계 탭).
+  QtBoard: { mine?: boolean } | undefined;
+  QtBoardDetail: { id: string };
+  // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (상세의 ⋮ > 수정하기에서 진입).
+  QtBoardWrite: { id: string } | undefined;
+  Qr: undefined;
+  // QR을 찍은 뒤 보는 결과. duplicate면 "이미 출석했다" 안내로 바뀐다 —
+  // 두 화면이 배치가 같고 아이콘·문구·카드 행만 달라서 라우트를 나누지 않는다.
+  QrResult: { result: QrCheckInResponse };
+  // 말씀 탭에서 카드를 눌러 들어가는 설교영상 상세. 탭 밖으로 push된다.
+  SermonDetail: { id: string };
+  Bulletin: undefined;
+  // teamId를 주면 그 팀으로 필터된 채 열린다 (팀 상세의 "OO팀 게시판" 진입).
+  DepartmentActivity: { teamId?: string } | undefined;
+  DepartmentActivityDetail: { id: string };
+  // 글쓰기 1단계(날짜·부서·제목). postId가 있으면 그 글 수정, 없으면 새 글 작성.
+  DepartmentActivityMeta: { postId: string } | undefined;
+  // 글쓰기 2단계(본문·사진) — 1단계에서 정한 값을 넘겨 받는다. postId가 있으면 수정 모드.
+  DepartmentActivityWrite: {
+    postId?: string;
+    teamId: string;
+    teamName: string;
+    title: string;
+    /** YYYY-MM-DD */
+    eventDate: string;
+  };
+  // 팀장 "게시판 관리" (마이페이지 관리 카드) — 자기 팀 부서활동 글 목록.
+  TeamBoardManage: { teamId: string };
+  GroupMeeting: undefined;
+  // 마이페이지 "취향 소그룹" — 내가 신청·참여 중인 모임 목록.
+  MyGroupMeetings: undefined;
+  GroupMeetingDetail: { id: string };
+  // 상세 "사진 N장 모두 보기" — 월 묶음 그리드 (편집은 소그룹장·관리자).
+  GroupMeetingGallery: { meetingId: string };
+  // 상세 "참여 멤버" 행 — 승인된 멤버 전체 명단.
+  GroupMeetingMembers: { meetingId: string };
+  GroupMeetingForm: { meetingId?: string };
+  PrayerBoard: undefined;
+  // 게시판 ⋮ 메뉴에서 들어가는 내 북마크 목록. 게시판과 화면이 비슷하지만 라우트를 나눈다 —
+  // 무엇을 여는지 이름으로 드러나야 딥링크·화면 로그가 둘을 구분한다.
+  PrayerBookmarks: undefined;
+  PrayerMine: undefined;
+  PrayerBoardDetail: { id: string };
+  // id가 있으면 수정 모드 — 기존 글 내용을 채운 채 열린다 (내 기도제목의 수정 버튼에서 진입).
+  PrayerWrite: { id: string } | undefined;
+  // 주보와 나눔지는 화면이 같지만 라우트는 나눈다 — 이름이 무엇을 여는지 그대로 말해야
+  // 딥링크·화면 로그가 둘을 구분할 수 있다. 같은 부분은 shared의 ImagePager가 갖고 있다.
+  BulletinDetail: { id: string };
+  SharingSheet: { id: string };
+  // 주보 목록의 + 버튼에서 진입한다. 한 화면에서 그 주차의 주보와 나눔지를 같이 올린다.
+  /** id가 있으면 그 주보를 수정한다 */
+  BulletinWrite: { id?: string } | undefined;
+  TeamStoryDetail: { teamId: string };
+  // 소속팀 공간 — 그 팀 팀원·관리자 전용. 안에 팀 게시판과 팀 단톡방이 있다.
+  TeamSpace: { teamId: string };
+  // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group)의 + 메뉴에서 연다.
+  ChatPollCreate: { kind: "room" | "cell" | "group"; id: string };
+  // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
+  GroupChat: { meetingId: string };
+  TeamBoard: { teamId: string };
+  TeamBoardDetail: { teamId: string; postId: string };
+  // postId가 있으면 수정 모드
+  TeamBoardWrite: { teamId: string; postId?: string };
+  ChatRoomList: { teamId: string };
+  // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기
+  ChatRoomForm: { teamId: string; roomId?: string };
+  ChatRoom: { roomId: string };
+  CellChat: { cellId: string };
+  // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
+  TeamForm: { teamId: string } | undefined;
+  TeamStoryGallery: { teamId: string };
+  TeamStoryPhotoViewer: { teamId: string; photoId: string };
+  // 팀 상세에서 "외 N명 더 보기"로 진입한다.
+  TeamMemberList: { teamId: string };
+  // 마이페이지(팀장)에서 진입하는 팀원 관리·추가. 조회 전용인 TeamMemberList와 라우트를 나눈다 —
+  // 무엇을 여는지 이름으로 드러나야 딥링크·화면 로그가 둘을 구분한다.
+  TeamMemberAdmin: { teamId: string };
+  TeamMemberAdd: { teamId: string };
+  // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
+  // 셀은 관리자가 만들고 종료하는 유동 데이터라 화면 하나가 cellId로 어떤 셀이든 그린다.
+  CellDetail: { cellId: string };
+  CellNewsDetail: { cellId: string; newsId: string };
+  CellNewsWrite: { cellId: string; newsId?: string };
+  // 갤러리 사진 뷰어. index는 월 섹션을 이어붙인 평탄화 순번이다.
+  CellGalleryPhoto: { cellId: string; index: number };
+  // 관리 탭에서 진입하는 셀장·관리자 전용 화면들.
+  CellMemberManage: { cellId: string };
+  CellMemberAdd: { cellId: string };
+  CellAttendance: { cellId: string };
+  FollowerNoteBoard: { cellId: string };
+  FollowerNoteWrite: { cellId: string; noteId?: string };
+  FollowerNoteDetail: { cellId: string; noteId: string };
+  // 마이페이지 관리자 메뉴에서 진입하는 관리자 전용 화면들 (2026-09-09 시안).
+  // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라
+  // cellId가 있으면 편집 모드다.
+  AdminCellManage: undefined;
+  AdminCellForm: { cellId?: string } | undefined;
+  AdminMemberList: undefined;
+  AdminMemberDetail: { memberId: string };
+  AdminMemberEdit: { memberId: string };
+  AdminAttendance: undefined;
+  // 출석부의 "모임 없는 날 지정"에서 진입한다.
+  AdminOffDays: undefined;
+  // 출석부·회원 관리 헤더의 "다운로드" 버튼에서 진입한다.
+  AdminDataDownload: undefined;
+  // 다운로드 화면에서 고른 조건(쿼리 문자열 키 그대로)으로 건수·앞쪽 몇 줄을 미리 본다.
+  AdminDataPreview: { query: Record<string, string> };
+  // 홈 배너 관리 — 목록에서 등록·삭제. 홈에는 최신 1건이 표시된다.
+  AdminBannerManage: undefined;
+  // bannerId가 있으면 수정 모드다 (유형은 못 바꾼다).
+  AdminBannerForm: { bannerId?: string } | undefined;
+  // 소그룹 활동 사진 뷰어. index는 상세 photos(최신순) 기준 순번이다.
+  GroupMeetingPhoto: { meetingId: string; index: number };
+  // 메인 헤더 종 아이콘에서 진입하는 알림센터.
+  Notifications: undefined;
+  // 프로필 사진 확대 보기 — null이면 기본 이미지를 크게 보여준다.
+  AvatarViewer: { imageUrl: string | null };
+  // 마이페이지 > 공지사항. 상세는 목록 캐시에서 찾는다.
+  NoticeList: undefined;
+  NoticeDetail: { id: string };
+  // id가 있으면 수정 모드 — 기존 공지를 채운 채 열린다.
+  NoticeWrite: { id: string } | undefined;
+  // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
+  Settings: undefined;
+  // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —
+  // 라우트를 나누는 이유는 딥링크·화면 로그가 가입과 수정을 구분하기 위해서다.
+  ProfileEdit: undefined;
 };
 
-// 비로그인 상태일 때 마운트되는 스택. 모든 화면이 로그인을 요구하므로 Login만 있다.
+// 로그인 전(unauthenticated)·신규 가입 직후(onboarding)에 마운트되는 스택.
+// 세션 상태에 따라 화면이 하나만 등록된다 — unauthenticated면 Login, onboarding이면
+// ProfileSetup (RootNavigator 참고).
 export type AuthStackParamList = {
   Login: undefined;
+  ProfileSetup: undefined;
 };

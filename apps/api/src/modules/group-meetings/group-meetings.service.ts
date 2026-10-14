@@ -1,0 +1,598 @@
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type {
+  GroupMeeting,
+  GroupMeetingDetail,
+  GroupMeetingListResponse,
+  MyGroupMeeting,
+} from '@onnuri/shared';
+
+import { pad } from '../../common/utils/date';
+import { NotificationsService } from '../notifications/notifications.service';
+import { PrismaService } from '../prisma/prisma.service';
+import { UploadsService } from '../uploads/uploads.service';
+import { AddPhotosDto } from './dto/add-photos.dto';
+import { CreateGroupMeetingDto } from './dto/create-group-meeting.dto';
+import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
+
+// 한 번에 내려주는 목록 개수
+const LIST_PAGE_SIZE = 20;
+
+// "7/1 ~ 7/28" — 모집 기간 표시 (시안 카드·상세). @db.Date라 UTC 기준으로 읽는다.
+// 갤러리 월 묶음 라벨 — "2026년 7월". takenOn이 없으면 묶을 수 없어 null.
+function toPhotoMonthLabel(takenOn: Date | null): string | null {
+  if (!takenOn) return null;
+  return `${takenOn.getUTCFullYear()}년 ${takenOn.getUTCMonth() + 1}월`;
+}
+
+function toPeriodLabel(start: Date | null, end: Date | null): string {
+  const part = (date: Date) => `${date.getUTCMonth() + 1}/${date.getUTCDate()}`;
+  if (!start && !end) return '';
+  return `${start ? part(start) : ''} ~ ${end ? part(end) : ''}`.trim();
+}
+
+// 취향 소그룹 (HobbyGroup = Post 1:1 확장). 참여는 승인제 — 신청(PENDING)을 소그룹장/관리자가
+// 승인·거절한다 (2026-09-08 확정). 소그룹장은 생성 폼에서 한 명 이상 지정 (2026-09-21 확정).
+@Injectable()
+export class GroupMeetingsService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly uploadsService: UploadsService,
+    private readonly notifications: NotificationsService,
+  ) {}
+
+  // 목록 — 모집중/마감 중 하나를 20개씩 끊어 준다 (마감이 계속 쌓이므로 한 번에 다 주지 않는다).
+  // "마감"은 toStatus와 같은 기준이다: 상태가 CLOSED이거나 모집 종료일이 지난 모임.
+  async findAll(
+    status: 'open' | 'closed',
+    cursor?: string,
+    limit = LIST_PAGE_SIZE,
+  ): Promise<GroupMeetingListResponse> {
+    const take = Math.min(Math.max(Math.floor(limit), 1), 50);
+    const today = new Date();
+    const todayDate = new Date(
+      `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
+    );
+    const openWhere = {
+      status: 'RECRUITING' as const,
+      OR: [{ recruitEnd: null }, { recruitEnd: { gte: todayDate } }],
+    };
+    const closedWhere = {
+      OR: [{ status: 'CLOSED' as const }, { recruitEnd: { lt: todayDate } }],
+    };
+
+    if (cursor) {
+      const exists = await this.prisma.hobbyGroup.findFirst({
+        where: { postId: cursor, post: { deletedAt: null } },
+        select: { postId: true },
+      });
+      if (!exists) throw new BadRequestException('잘못된 cursor입니다.');
+    }
+
+    const rows = await this.prisma.hobbyGroup.findMany({
+      where: {
+        post: { deletedAt: null },
+        ...(status === 'open' ? openWhere : closedWhere),
+      },
+      select: {
+        postId: true,
+        status: true,
+        recruitEnd: true,
+        post: { select: { title: true, coverImageUrl: true, createdAt: true } },
+        members: {
+          where: { status: 'APPROVED' },
+          select: { user: { select: { avatarUrl: true } } },
+        },
+      },
+      orderBy: [{ post: { createdAt: 'desc' } }, { postId: 'desc' }],
+      take: take + 1,
+      ...(cursor ? { cursor: { postId: cursor }, skip: 1 } : {}),
+    });
+    const hasMore = rows.length > take;
+    const page = hasMore ? rows.slice(0, take) : rows;
+    return {
+      items: page.map((group) => this.toSummary(group)),
+      nextCursor: hasMore ? page[page.length - 1].postId : null,
+    };
+  }
+
+  // 마이페이지 "취향 소그룹" — 내가 신청(PENDING)·참여(APPROVED) 중인 모임. 거절은 뺀다.
+  async findMine(userId: string): Promise<MyGroupMeeting[]> {
+    const memberships = await this.prisma.hobbyGroupMember.findMany({
+      where: {
+        userId,
+        status: { in: ['APPROVED', 'PENDING'] },
+        group: { post: { deletedAt: null } },
+      },
+      select: {
+        role: true,
+        status: true,
+        group: {
+          select: {
+            postId: true,
+            status: true,
+            recruitEnd: true,
+            post: { select: { title: true, coverImageUrl: true, createdAt: true } },
+            members: {
+              where: { status: 'APPROVED' },
+              select: { user: { select: { avatarUrl: true } } },
+            },
+          },
+        },
+      },
+      orderBy: { group: { post: { createdAt: 'desc' } } },
+    });
+
+    return memberships.map((membership) => ({
+      ...this.toSummary(membership.group),
+      myStatus: membership.status === 'APPROVED' ? 'APPROVED' : 'PENDING',
+      isLeader: membership.role === 'LEADER',
+    }));
+  }
+
+  // 목록 카드 공통 모양 (findAll·findMine이 같이 쓴다).
+  private toSummary(group: {
+    postId: string;
+    status: 'RECRUITING' | 'CLOSED';
+    recruitEnd: Date | null;
+    post: { title: string | null; coverImageUrl: string | null };
+    members: { user: { avatarUrl: string | null } }[];
+  }): GroupMeeting {
+    const status = this.toStatus(group);
+    return {
+      id: group.postId,
+      title: group.post.title ?? '',
+      deadline: group.recruitEnd?.toISOString().slice(0, 10) ?? null,
+      status,
+      // 사용자에게 보이는 상태 문구는 프론트가 아니라 여기서 계산한다 (ARCHITECTURE.md App Responsibilities).
+      statusLabel: status === 'open' ? '모집중' : '마감',
+      thumbnailUrl: group.post.coverImageUrl,
+      participantCount: group.members.length,
+      participantAvatarUrls: group.members
+        .map((member) => member.user.avatarUrl)
+        .filter((url): url is string => url !== null)
+        .slice(0, 3),
+    };
+  }
+
+  async findOne(
+    id: string,
+    userId: string | undefined,
+  ): Promise<GroupMeetingDetail> {
+    const group = await this.prisma.hobbyGroup.findFirst({
+      where: { postId: id, post: { deletedAt: null } },
+      select: {
+        postId: true,
+        status: true,
+        recruitStart: true,
+        recruitEnd: true,
+        meetingSchedule: true,
+        place: true,
+        cost: true,
+        post: {
+          select: {
+            title: true,
+            content: true,
+            coverImageUrl: true,
+            images: {
+              // 활동 사진 = 직접 업로드(GALLERY). POST_CONTENT는 옛 계약 호환으로 남긴다.
+              where: { kind: { in: ['GALLERY', 'POST_CONTENT'] } },
+              select: { id: true, url: true, takenOn: true },
+              // 갤러리 월 묶음이 takenOn 기준이라 정렬도 takenOn — createdAt 순이면
+              // 글 사진(takenOn=활동일)이 끼어들 때 같은 달이 여러 묶음으로 쪼개진다.
+              orderBy: [
+                { takenOn: { sort: 'desc', nulls: 'last' } },
+                { createdAt: 'desc' },
+              ],
+            },
+            comments: {
+              where: { deletedAt: null },
+              select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                authorId: true,
+                author: { select: { name: true, avatarUrl: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
+          },
+        },
+        members: {
+          select: {
+            userId: true,
+            role: true,
+            status: true,
+            user: { select: { name: true, avatarUrl: true } },
+          },
+          orderBy: { joinedAt: 'asc' },
+        },
+      },
+    });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+
+    const approved = group.members.filter((m) => m.status === 'APPROVED');
+    const leaders = group.members.filter((m) => m.role === 'LEADER');
+    const mine = userId
+      ? (group.members.find((m) => m.userId === userId) ?? null)
+      : null;
+    const isAdmin = userId
+      ? ((
+          await this.prisma.user.findUnique({
+            where: { id: userId },
+            select: { isAdmin: true },
+          })
+        )?.isAdmin ?? false)
+      : false;
+    const canManage = isAdmin || mine?.role === 'LEADER';
+    const status = this.toStatus(group);
+
+    return {
+      id: group.postId,
+      title: group.post.title ?? '',
+      deadline: group.recruitEnd?.toISOString().slice(0, 10) ?? null,
+      status,
+      statusLabel: status === 'open' ? '모집중' : '마감',
+      thumbnailUrl: group.post.coverImageUrl,
+      participantCount: approved.length,
+      participantAvatarUrls: approved
+        .map((member) => member.user.avatarUrl)
+        .filter((url): url is string => url !== null)
+        .slice(0, 3),
+      description: group.post.content,
+      recruitStart: group.recruitStart?.toISOString().slice(0, 10) ?? null,
+      periodLabel: toPeriodLabel(group.recruitStart, group.recruitEnd),
+      heroImageUrl: group.post.coverImageUrl,
+      schedule: group.meetingSchedule ?? '미정',
+      place: group.place ?? '미정',
+      cost: group.cost ?? '미정',
+      leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
+      // 참여멤버 보기 화면용 전체 명단 — 소그룹장 먼저(시안 첫 행), 그 안에서는 가입순.
+      members: [...approved]
+        .sort((a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'))
+        .map((m) => ({
+          id: m.userId,
+          name: m.user.name,
+          avatarUrl: m.user.avatarUrl,
+          isLeader: m.role === 'LEADER',
+        })),
+      // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
+      photos: group.post.images.map((image) => ({
+        id: image.id,
+        url: image.url,
+        caption: null,
+        monthLabel: toPhotoMonthLabel(image.takenOn),
+      })),
+      photoCount: group.post.images.length,
+      comments: group.post.comments.map((comment) => ({
+        id: comment.id,
+        authorName: comment.author.name,
+        authorAvatarUrl: comment.author.avatarUrl,
+        createdAt: comment.createdAt.toISOString(),
+        content: comment.content,
+        isMine: userId !== undefined && comment.authorId === userId,
+      })),
+      myStatus: mine?.status ?? null,
+      canManage,
+      pendingMembers: canManage
+        ? group.members
+            .filter((m) => m.status === 'PENDING')
+            .map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl }))
+        : [],
+    };
+  }
+
+  // 생성 (관리자 전용 — 2026-09-21 관리자 시안의 생성 폼). 소그룹장들은 자동 승인 상태다.
+  async create(
+    adminId: string,
+    dto: CreateGroupMeetingDto,
+  ): Promise<GroupMeetingDetail> {
+    const leaderIds = [...new Set(dto.leaderIds)];
+    const leaders = await this.prisma.user.findMany({
+      where: { id: { in: leaderIds }, withdrawnAt: null },
+      select: { id: true },
+    });
+    if (leaders.length !== leaderIds.length) {
+      throw new BadRequestException('존재하지 않는 회원이 소그룹장에 있습니다.');
+    }
+
+    const post = await this.prisma.post.create({
+      data: {
+        board: 'HOBBY_GROUP',
+        authorId: adminId,
+        title: dto.title,
+        content: dto.description,
+        coverImageUrl: dto.coverImageUrl ?? null,
+        hobbyGroup: {
+          create: {
+            recruitStart: new Date(dto.recruitStart),
+            recruitEnd: new Date(dto.recruitEnd),
+            place: dto.place,
+            cost: dto.cost,
+            members: {
+              create: leaderIds.map((userId) => ({
+                userId,
+                role: 'LEADER' as const,
+                status: 'APPROVED' as const,
+              })),
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+    return this.findOne(post.id, adminId);
+  }
+
+  // 수정 — 관리자 또는 이 소그룹의 소그룹장. leaderIds는 전체 교체이며 빠진 기존
+  // 소그룹장은 일반 참여자(MEMBER·APPROVED 유지)로 남는다.
+  async update(
+    requesterId: string,
+    id: string,
+    dto: UpdateGroupMeetingDto,
+  ): Promise<GroupMeetingDetail> {
+    await this.assertCanManage(requesterId, id);
+
+    await this.prisma.$transaction(async (tx) => {
+      if (
+        dto.title !== undefined ||
+        dto.description !== undefined ||
+        dto.coverImageUrl !== undefined
+      ) {
+        await tx.post.update({
+          where: { id },
+          data: {
+            ...(dto.title !== undefined && { title: dto.title }),
+            ...(dto.description !== undefined && { content: dto.description }),
+            ...(dto.coverImageUrl !== undefined && {
+              coverImageUrl: dto.coverImageUrl,
+            }),
+          },
+        });
+      }
+      await tx.hobbyGroup.update({
+        where: { postId: id },
+        data: {
+          ...(dto.recruitStart !== undefined && {
+            recruitStart: new Date(dto.recruitStart),
+          }),
+          ...(dto.recruitEnd !== undefined && {
+            recruitEnd: new Date(dto.recruitEnd),
+          }),
+          ...(dto.place !== undefined && { place: dto.place }),
+          ...(dto.cost !== undefined && { cost: dto.cost }),
+          ...(dto.status !== undefined && {
+            status: dto.status === 'open' ? 'RECRUITING' : 'CLOSED',
+          }),
+        },
+      });
+
+      if (dto.leaderIds !== undefined) {
+        const leaderIds = [...new Set(dto.leaderIds)];
+        await tx.hobbyGroupMember.updateMany({
+          where: { postId: id, role: 'LEADER', userId: { notIn: leaderIds } },
+          data: { role: 'MEMBER' },
+        });
+        for (const userId of leaderIds) {
+          await tx.hobbyGroupMember.upsert({
+            where: { postId_userId: { postId: id, userId } },
+            update: { role: 'LEADER', status: 'APPROVED' },
+            create: { postId: id, userId, role: 'LEADER', status: 'APPROVED' },
+          });
+        }
+      }
+    });
+
+    return this.findOne(id, requesterId);
+  }
+
+  // 삭제 — 관리자 또는 소그룹장. 시안 확정 문구("게시글과 참여 기록이 모두 삭제되며 복구할 수
+  // 없습니다")대로 hard delete: Post를 지우면 HobbyGroup·참여·댓글·좋아요가 cascade로 지워진다.
+  async remove(requesterId: string, id: string): Promise<{ id: string }> {
+    await this.assertCanManage(requesterId, id);
+    await this.prisma.post.delete({ where: { id } });
+    return { id };
+  }
+
+  // 참여 신청 — 모집중일 때만. 거절됐던 사람은 다시 신청하면 PENDING으로 돌아간다.
+  async join(userId: string, id: string): Promise<GroupMeetingDetail> {
+    const group = await this.prisma.hobbyGroup.findFirst({
+      where: { postId: id, post: { deletedAt: null } },
+      select: { status: true, recruitEnd: true, post: { select: { title: true } } },
+    });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+    if (this.toStatus(group) === 'closed') {
+      throw new BadRequestException('모집이 마감된 소그룹이에요.');
+    }
+
+    const existing = await this.prisma.hobbyGroupMember.findUnique({
+      where: { postId_userId: { postId: id, userId } },
+      select: { status: true },
+    });
+    if (existing && existing.status !== 'REJECTED') {
+      throw new BadRequestException(
+        existing.status === 'PENDING' ? '이미 신청한 소그룹이에요.' : '이미 참여 중인 소그룹이에요.',
+      );
+    }
+
+    await this.prisma.hobbyGroupMember.upsert({
+      where: { postId_userId: { postId: id, userId } },
+      update: { status: 'PENDING' },
+      create: { postId: id, userId },
+    });
+
+    // 승인할 사람(소그룹장)에게 알림 — 안 보내면 상세에 들어가 볼 때까지 신청이 묵는다.
+    // 관리자 전체에게는 보내지 않는다 (승인은 소그룹장 몫, 관리자는 보조 권한).
+    const [leaders, applicant] = await Promise.all([
+      this.prisma.hobbyGroupMember.findMany({
+        where: { postId: id, role: 'LEADER' },
+        select: { userId: true },
+      }),
+      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+    ]);
+    await this.notifications.notify(
+      leaders.map((leader) => leader.userId).filter((leaderId) => leaderId !== userId),
+      {
+        type: 'GROUP_MEETING',
+        title: '취향 소그룹',
+        body: `${applicant?.name ?? '회원'}님이 "${group.post.title}" 참여를 신청했어요`,
+        linkUrl: `group-meeting/${id}`,
+      },
+    );
+
+    return this.findOne(id, userId);
+  }
+
+  // 신청 취소(PENDING) / 탈퇴(APPROVED) — 행 삭제. 소그룹장은 이 경로로 못 나간다 (편집에서 교체).
+  async cancelJoin(userId: string, id: string): Promise<GroupMeetingDetail> {
+    const membership = await this.prisma.hobbyGroupMember.findUnique({
+      where: { postId_userId: { postId: id, userId } },
+      select: { role: true },
+    });
+    if (!membership) throw new NotFoundException('신청 내역이 없어요.');
+    if (membership.role === 'LEADER') {
+      throw new BadRequestException('소그룹장은 소그룹 편집에서 교체해주세요.');
+    }
+    await this.prisma.hobbyGroupMember.delete({
+      where: { postId_userId: { postId: id, userId } },
+    });
+    return this.findOne(id, userId);
+  }
+
+  // 신청 승인/거절 — 관리자 또는 소그룹장. 대기(PENDING) 상태만 결정할 수 있다.
+  async decideMember(
+    requesterId: string,
+    id: string,
+    targetUserId: string,
+    status: 'APPROVED' | 'REJECTED',
+  ): Promise<GroupMeetingDetail> {
+    await this.assertCanManage(requesterId, id);
+    const membership = await this.prisma.hobbyGroupMember.findUnique({
+      where: { postId_userId: { postId: id, userId: targetUserId } },
+      select: { status: true },
+    });
+    if (!membership) throw new NotFoundException('신청 내역이 없어요.');
+    if (membership.status !== 'PENDING') {
+      throw new BadRequestException('대기 중인 신청만 처리할 수 있어요.');
+    }
+    await this.prisma.hobbyGroupMember.update({
+      where: { postId_userId: { postId: id, userId: targetUserId } },
+      data: { status },
+    });
+
+    // 결과를 신청자에게 알림 — 안 보내면 앱을 다시 열어볼 때까지 결과를 모른다.
+    // (거절은 상세의 거절 안내 배너와 짝을 이룬다 — 탭하면 그 화면으로 간다.)
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { title: true },
+    });
+    await this.notifications.notify([targetUserId], {
+      type: 'GROUP_MEETING',
+      title: '취향 소그룹',
+      body:
+        status === 'APPROVED'
+          ? `"${post?.title ?? '소그룹'}" 참여가 승인됐어요`
+          : `"${post?.title ?? '소그룹'}" 신청이 이번에는 승인되지 않았어요`,
+      linkUrl: `group-meeting/${id}`,
+    });
+
+    return this.findOne(id, requesterId);
+  }
+
+  // 모집 상태 — CLOSED로 마감했거나 모집 마감일이 지났으면 닫힘 (DB는 건드리지 않는다).
+  private toStatus(group: {
+    status: 'RECRUITING' | 'CLOSED';
+    recruitEnd: Date | null;
+  }): 'open' | 'closed' {
+    if (group.status === 'CLOSED') return 'closed';
+    if (group.recruitEnd) {
+      const today = new Date();
+      const todayDate = new Date(
+        `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`,
+      );
+      if (group.recruitEnd < todayDate) return 'closed';
+    }
+    return 'open';
+  }
+
+  // 활동 사진 추가 — 승인된 참여자·소그룹장·관리자 (셀 갤러리의 "그 셀 유저만"과 같은 결).
+  async addPhotos(
+    requesterId: string,
+    id: string,
+    dto: AddPhotosDto,
+  ): Promise<GroupMeetingDetail> {
+    const group = await this.prisma.hobbyGroup.findFirst({
+      where: { postId: id, post: { deletedAt: null } },
+      select: {
+        members: {
+          where: { userId: requesterId, status: 'APPROVED' },
+          select: { id: true },
+        },
+      },
+    });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+    if (group.members.length === 0) {
+      const requester = await this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { isAdmin: true },
+      });
+      if (!requester?.isAdmin) {
+        throw new ForbiddenException('참여 중인 멤버만 사진을 올릴 수 있습니다.');
+      }
+    }
+
+    await this.prisma.image.createMany({
+      data: dto.imageUrls.map((url) => ({
+        url,
+        kind: 'GALLERY' as const,
+        postId: id,
+        uploadedById: requesterId,
+        takenOn: new Date(),
+      })),
+    });
+    return this.findOne(id, requesterId);
+  }
+
+  // 활동 사진 삭제 — 소그룹장·관리자만. 창고의 파일도 그 자리에서 지운다 (아바타와 동일).
+  async removePhoto(
+    requesterId: string,
+    id: string,
+    imageId: string,
+  ): Promise<GroupMeetingDetail> {
+    await this.assertCanManage(requesterId, id);
+    const image = await this.prisma.image.findFirst({
+      where: { id: imageId, postId: id },
+      select: { id: true, url: true },
+    });
+    if (!image) throw new NotFoundException('사진을 찾을 수 없습니다.');
+    await this.prisma.image.delete({ where: { id: image.id } });
+    await this.uploadsService.deleteByUrl(image.url);
+    return this.findOne(id, requesterId);
+  }
+
+  private async assertCanManage(requesterId: string, postId: string) {
+    const group = await this.prisma.hobbyGroup.findFirst({
+      where: { postId, post: { deletedAt: null } },
+      select: {
+        members: {
+          where: { userId: requesterId, role: 'LEADER' },
+          select: { id: true },
+        },
+      },
+    });
+    if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
+    if (group.members.length > 0) return;
+
+    const requester = await this.prisma.user.findUnique({
+      where: { id: requesterId },
+      select: { isAdmin: true },
+    });
+    if (!requester?.isAdmin) {
+      throw new ForbiddenException('소그룹장 또는 관리자만 관리할 수 있습니다.');
+    }
+  }
+}

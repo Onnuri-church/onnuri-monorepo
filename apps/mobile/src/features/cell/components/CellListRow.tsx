@@ -1,0 +1,48 @@
+import type { CellSummary } from "@onnuri/shared";
+import { useTranslation } from "react-i18next";
+import { Pressable, Text, View } from "react-native";
+
+import { Avatar } from "../../../shared/components/base/Avatar";
+import { Icon } from "../../../shared/components/base/Icon";
+
+interface CellListRowProps {
+  cell: CellSummary;
+  /** 내가 속한 셀이면 "나의 셀" 뱃지를 단다. */
+  isMyCell: boolean;
+  onPress?: () => void;
+}
+
+// 전체 셀 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
+export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
+  const { t } = useTranslation();
+  // 셀장 멤버십이 아직 없는 셀(시드 직후 등)은 "미지정"으로 표시한다.
+  const leaderLine = cell.viceLeaderName
+    ? t("셀장 {{leader}} / 부셀장 {{vice}}", {
+        leader: cell.leaderName ?? t("미지정"),
+        vice: cell.viceLeaderName,
+      })
+    : t("셀장 {{leader}}", { leader: cell.leaderName ?? t("미지정") });
+
+  return (
+    <Pressable
+      className="flex-row items-center border-b border-background-assistive py-2.5"
+      onPress={onPress}
+    >
+      {/* 셀 대표 사진 = 셀 커버 (관리자가 셀 편집에서 올린 단체 사진) */}
+      <Avatar imageUrl={cell.coverImageUrl} size={40} />
+      {/* 이름-셀장 정보 간격은 시안 5px인데 스케일에 없어 4px(gap-1)로 근사 */}
+      <View className="ml-2.5 flex-1 flex-row items-center gap-1">
+        <Text className="text-body-main text-text-normal">{cell.name}</Text>
+        <Text className="text-body-small text-text-alternative" numberOfLines={1}>
+          {leaderLine}
+        </Text>
+      </View>
+      {isMyCell && (
+        <View className="rounded-2xl bg-background-alternative px-2.5 py-1">
+          <Text className="text-caption-main text-primary-normal">{t("나의 셀")}</Text>
+        </View>
+      )}
+      <Icon name="expand-right" size={28} />
+    </Pressable>
+  );
+}

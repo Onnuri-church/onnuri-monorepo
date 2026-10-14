@@ -1,0 +1,189 @@
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as ImagePicker from "expo-image-picker";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+
+import { Button } from "../../shared/components/base/Button";
+import { ImageSlot } from "../../shared/components/base/ImageSlot";
+import { DateField } from "../../shared/components/composed/DateField";
+import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
+import { uploadImage } from "../../shared/api/upload";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { useCell } from "../cell/api";
+import { CELL_COVER_ASPECT } from "../cell/cellDetail";
+import { useAdminMembers, useCreateCell, useUpdateCell } from "./api";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+
+// 셀 관리의 셀 생성(목록 끝 점선 행)·셀 편집(행 스와이프 연필) 겸용 폼 — 2026-09-10 셀 생성 시안.
+// cellId가 있으면 편집 모드로 기존 값을 채워서 연다.
+export function AdminCellFormScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const route = useRoute<RouteProp<RootStackParamList, "AdminCellForm">>();
+  // 편집 모드 프리필 — 셀 관리 목록을 거쳐 들어오므로 목록 캐시가 이미 있어 첫 렌더에 값이 잡힌다.
+  const editingCell = useCell(route.params?.cellId ?? "");
+
+  // 셀장/부셀장 선택지 — 관리자 전용 회원 목록을 검색해서 고른다 (MemberPickerField).
+  const { data: members } = useAdminMembers();
+
+  // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
+  // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
+  const [coverUri, setCoverUri] = useState<string | null>(editingCell?.coverImageUrl ?? null);
+  const [name, setName] = useState(editingCell?.name ?? "");
+  const [leaderId, setLeaderId] = useState<string | null>(editingCell?.leaderId ?? null);
+  const [hasViceLeader, setHasViceLeader] = useState(editingCell ? editingCell.viceLeaderId !== null : true);
+  const [viceLeaderId, setViceLeaderId] = useState<string | null>(editingCell?.viceLeaderId ?? null);
+
+  // 시안의 비활성 등록하기 — 필수(셀이름·셀장·활동기간)를 채워야 활성. 부셀장은 체크 시에만 필수.
+  // 활동기간 = 셀 턴 종료일 하나 (2026-09-21 A안 시안: "셀 턴 종료일을 선택하세요"로 확정).
+  const [period, setPeriod] = useState<string | null>(editingCell?.expiresAt ?? null);
+
+  const createCell = useCreateCell();
+  const updateCell = useUpdateCell(route.params?.cellId ?? "");
+  const saving = createCell.isPending || updateCell.isPending;
+  const canSubmit =
+    !saving &&
+    name.trim() !== "" &&
+    leaderId !== null &&
+    period !== null &&
+    (!hasViceLeader || viceLeaderId !== null);
+
+  const handleCoverUploadPress = async () => {
+    // 시스템 포토 피커라 별도 권한 요청이 필요 없다 (팀스토리 갤러리와 동일).
+    // 셀 페이지 상단 배경사진 비율에 맞춰 자른다 (프로필 사진 자르기와 같은 방식).
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: CELL_COVER_ASPECT,
+      quality: 0.8,
+    });
+    if (result.canceled) return;
+    setCoverUri(result.assets[0].uri);
+  };
+
+  const handleSubmitPress = async () => {
+    if (!leaderId || !period) return;
+
+    let coverImageUrl: string | null = null;
+    try {
+      coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
+    } catch {
+      Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
+      return;
+    }
+
+    const payload = {
+      name: name.trim(),
+      leaderId,
+      viceLeaderId: hasViceLeader ? viceLeaderId : null,
+      expiresAt: period,
+      coverImageUrl,
+    };
+
+    const mutation = editingCell ? updateCell : createCell;
+    mutation.mutate(payload, {
+      onSuccess: () => navigation.goBack(),
+      onError: () => Alert.alert(t("저장 실패"), t("잠시 후 다시 시도해주세요.")),
+    });
+  };
+
+  return (
+    <View className="flex-1 bg-background-normal">
+      <KeyboardAvoidingContainer>
+        <ScrollView
+          contentContainerClassName="gap-4 px-5 pb-6 pt-4"
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 배경사진 — 시안: 362x173 점선 슬롯, 탭하면 업로드 */}
+          <View className="py-3">
+            <Text className="text-body-main text-text-normal">{t("배경사진")}</Text>
+            <View
+              className="mt-4"
+              style={{ aspectRatio: CELL_COVER_ASPECT[0] / CELL_COVER_ASPECT[1] }}
+            >
+              <ImageSlot
+                imageUri={coverUri}
+                outline
+                onUploadPress={handleCoverUploadPress}
+                onDeletePress={() => setCoverUri(null)}
+              />
+            </View>
+          </View>
+
+          <MemberPickerField
+            label={t("셀장")}
+            placeholder={t("셀장을 선택하세요.")}
+            members={members}
+            valueId={leaderId}
+            onSelect={setLeaderId}
+          />
+
+          {/* 부셀장 — 라벨 옆 체크박스. 해제하면 선택줄이 사라지고 부셀장 없이 생성된다 (시안). */}
+          <View className="py-3">
+            <View className="flex-row items-center gap-2.5">
+              <Text className="text-body-main text-text-normal">{t("부셀장")}</Text>
+              <Pressable
+                onPress={() => setHasViceLeader((prev) => !prev)}
+                hitSlop={8}
+                className={
+                  hasViceLeader
+                    ? "h-4.5 w-4.5 items-center justify-center rounded bg-primary-normal"
+                    : "h-4.5 w-4.5 rounded border border-background-assistive bg-background-normal"
+                }
+              >
+                {hasViceLeader && <Text className="text-caption-small text-text-disable">✓</Text>}
+              </Pressable>
+            </View>
+            {hasViceLeader ? (
+              /* 라벨 자리는 위의 체크박스 행이 대신하므로 비운다 */
+              <View className="-mt-4">
+                <MemberPickerField
+                  label=""
+                  placeholder={t("부셀장을 선택하세요.")}
+                  members={members}
+                  valueId={viceLeaderId}
+                  onSelect={setViceLeaderId}
+                  excludeIds={leaderId ? [leaderId] : []}
+                />
+              </View>
+            ) : (
+              <Text className="mt-2 text-center text-body-small text-text-alternative">
+                {t("체크 해제 시 부셀장 없이 생성돼요")}
+              </Text>
+            )}
+          </View>
+
+          <View className="py-3">
+            <Text className="text-body-main text-text-normal">{t("셀이름")}</Text>
+            <TextInput
+              className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+              value={name}
+              onChangeText={setName}
+              placeholder={t("셀 이름을 입력하세요.")}
+              placeholderTextColor={themeColors.text.assistive}
+            />
+          </View>
+
+          <DateField
+            label={t("활동기간")}
+            placeholder={t("셀 턴 종료일을 선택하세요.")}
+            value={period}
+            onChange={setPeriod}
+          />
+        </ScrollView>
+
+        <View className="px-5 pb-12">
+          <Button
+            label={editingCell ? t("저장하기") : t("등록하기")}
+            disabled={!canSubmit}
+            onPress={handleSubmitPress}
+          />
+        </View>
+      </KeyboardAvoidingContainer>
+    </View>
+  );
+}

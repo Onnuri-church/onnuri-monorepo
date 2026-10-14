@@ -1,0 +1,221 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { Trans, useTranslation } from "react-i18next";
+import {
+  Alert,
+  RefreshControl,
+  ScrollView,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
+
+import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { ContextMenu } from "../../shared/components/base/ContextMenu";
+import { FilterBar } from "../../shared/components/base/FilterBar";
+import { FloatingButton } from "../../shared/components/base/FloatingButton";
+import { Icon } from "../../shared/components/base/Icon";
+import { SearchBar } from "../../shared/components/base/SearchBar";
+import { Skeleton } from "../../shared/components/base/Skeleton";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { PRAYER_CATEGORIES, deletePrayer, fetchPrayers, type PrayerCategory } from "./api";
+import { useMe } from "../profile/useMe";
+import { useToggleBookmark } from "./useToggleBookmark";
+import { PrayerCard, type PrayerRequest } from "./components/PrayerCard";
+import { PrayerMenu } from "./components/PrayerMenu";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// 시안 확정값(402pt 프레임): 콘텐츠 폭 362 = 402 - 20*2.
+const CONTENT_PADDING = 20;
+
+export function PrayerBoardScreen() {
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const toggleBookmark = useToggleBookmark();
+  const queryClient = useQueryClient();
+  const [category, setCategory] = useState<PrayerCategory>("all");
+  const [keyword, setKeyword] = useState("");
+  // 삭제 확인 중인 기도제목 (관리자용). 다이얼로그는 하나만 두고 대상만 바꾼다 — PrayerFilterList와 같다.
+  const [pendingDelete, setPendingDelete] = useState<PrayerRequest | null>(null);
+  const dialogRef = useRef<AppDialogRef>(null);
+  // 관리자 카드의 ⋮ 메뉴 위치 (큐티나눔 관리와 같은 방식). 메뉴는 삭제 하나뿐이다.
+  const { width: windowWidth } = useWindowDimensions();
+  const [menu, setMenu] = useState<{ prayer: PrayerRequest; top: number; right: number } | null>(
+    null,
+  );
+
+  // 관리자용 게시판(시안: 기도제목 게시판-관리자용)은 별도 화면이 아니라 같은 게시판의 role 분기다.
+  // 등록 개수 문구 대신 경고 문구, 북마크·글쓰기 FAB 없음, 카드마다 삭제 줄이 항상 붙는다.
+  // 익명 글의 실명 노출은 서버가 요청자 기준으로 판단한다 — 여기서는 화면 분기만 한다.
+  const isAdmin = useMe()?.isAdmin === true;
+
+  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+    // isAdmin이 로그인 정보 로딩 후 뒤늦게 true가 되면 실명 붙은 목록으로 다시 받는다.
+    queryKey: ["prayers", "board", category, isAdmin],
+    queryFn: () => fetchPrayers(category),
+  });
+
+  // 검색은 받아온 목록을 제목으로 거른다 — 목록이 전체 응답이라 서버 왕복이 필요 없고,
+  // 익명 글이 있어 작성자 이름은 검색 대상에 넣지 않는다.
+  const query = keyword.trim();
+  const visibleItems = (data?.items ?? []).filter(
+    (prayer) => query === "" || prayer.title.includes(query),
+  );
+
+  // 게스트는 작성까지 다 한 뒤 등록 실패(401)를 만나게 된다 — 들어가기 전에 안내한다 (큐티나눔과 같다).
+  const handleWritePress = () => {
+    if (useAuthStore.getState().session.status !== "authenticated") {
+      Alert.alert(t("로그인이 필요해요"), t("글쓰기는 로그인 후 할 수 있어요."));
+      return;
+    }
+    navigation.navigate("PrayerWrite");
+  };
+
+  const handleDeletePress = (prayer: PrayerRequest) => {
+    setPendingDelete(prayer);
+    dialogRef.current?.open();
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      if (pendingDelete) await deletePrayer(pendingDelete.id);
+    } catch {
+      Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
+    }
+    dialogRef.current?.close();
+    setPendingDelete(null);
+    // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
+    await queryClient.invalidateQueries({ queryKey: ["prayers"] });
+  };
+
+  return (
+    <View className="flex-1 bg-background-normal">
+      <FilterBar
+        items={PRAYER_CATEGORIES.map((item) => ({ ...item, label: t(item.label) }))}
+        selected={category}
+        onSelect={setCategory}
+      />
+
+      <ScrollView
+        contentContainerClassName=""
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+        style={{ paddingHorizontal: CONTENT_PADDING }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+        }
+      >
+        {isAdmin ? (
+          // 시안: Body/Small 13px, Semantic/Warning, 자물쇠 12·간격 3(기본 스케일에 없어 4로 넣었다).
+          <View className="mt-2 flex-row items-center justify-center gap-1">
+            <Icon name="lock" size={12} color={colors.semantic.warning} />
+            <Text className="text-body-small text-semantic-warning">
+              {t("관리자만 실제 작성자를 확인할 수 있어요")}
+            </Text>
+          </View>
+        ) : (
+          // 시안: Title/Main 22px Bold, 행간 26(2줄 = 52). 등록 개수만 브랜드 색으로 강조한다.
+          // 공용 TEXT_STYLE은 행간이 140%라 여기서만 시안 값을 지정한다 (PrayerCard와 같은 이유).
+          <Text className="mt-2 text-center text-title text-text-normal" style={{ lineHeight: 26 }}>
+            <Trans
+              i18nKey={"현재 <0>{{count}}개</0>의 기도제목이\n등록되어 있어요"}
+              values={{ count: data?.totalCount ?? 0 }}
+              components={{ 0: <Text className="text-primary-normal" /> }}
+            />
+          </Text>
+        )}
+
+        <View className="mt-6">
+          <SearchBar value={keyword} onChangeText={setKeyword} placeholder={t("기도제목 검색")} />
+        </View>
+
+        <View className="mt-6 gap-6">
+          {isPending && (
+            <>
+              <Skeleton className="h-24 w-full rounded-5" />
+              <Skeleton className="h-24 w-full rounded-5" />
+            </>
+          )}
+
+          {isError && (
+            <Text className="text-center text-body-medium text-text-alternative">
+              {t("기도제목을 불러오지 못했어요")}
+            </Text>
+          )}
+
+          {!isPending && !isError && query !== "" && visibleItems.length === 0 && (
+            <Text className="text-center text-body-medium text-text-alternative">
+              {t("검색 결과가 없어요")}
+            </Text>
+          )}
+
+          {visibleItems.map((prayer) => (
+            <PrayerCard
+              key={prayer.id}
+              prayer={prayer}
+              // ⋮와 북마크는 같은 자리라, 내 글이면 ⋮(수정·삭제)를 쓰고 북마크는 뺀다.
+              showBookmark={!isAdmin && !prayer.isMine}
+              onPress={() => navigation.navigate("PrayerBoardDetail", { id: prayer.id })}
+              onToggleBookmark={() => toggleBookmark(prayer.id, prayer.bookmarked ?? false)}
+              // 내 글이면 수정·삭제, 관리자는 남의 글 삭제 (서버도 같은 규칙).
+              onMenuPress={
+                isAdmin || prayer.isMine
+                  ? (anchor) =>
+                      setMenu({
+                        prayer,
+                        top: anchor.y + anchor.height + 4,
+                        right: windowWidth - (anchor.x + anchor.width),
+                      })
+                  : undefined
+              }
+            />
+          ))}
+        </View>
+      </ScrollView>
+
+      {/* 관리자도 기도제목을 쓸 수 있다 (2026-10-13 지환님) — 관리자는 목록에서 익명 글의 실명도 같이 본다. */}
+      <FloatingButton onPress={handleWritePress}>
+        <Icon name="write" size={24} color={colors.icon.disable} />
+      </FloatingButton>
+
+      <PrayerMenu title={t("기도제목 게시판")} />
+
+      {/* 수정은 작성자만 — 관리자는 남의 글을 고치지 않고 삭제만 한다 (서버도 같은 규칙). */}
+      <ContextMenu
+        visible={menu !== null}
+        onClose={() => setMenu(null)}
+        style={menu ? { top: menu.top, right: menu.right } : undefined}
+        items={[
+          ...(menu?.prayer.isMine === true
+            ? [
+                {
+                  icon: "edit" as const,
+                  label: t("수정하기"),
+                  onPress: () => menu && navigation.navigate("PrayerWrite", { id: menu.prayer.id }),
+                },
+              ]
+            : []),
+          {
+            icon: "trash-can",
+            label: t("삭제하기"),
+            onPress: () => menu && handleDeletePress(menu.prayer),
+          },
+        ]}
+      />
+
+      <AppDialog
+        ref={dialogRef}
+        title={t("정말 삭제하시겠습니까?")}
+        description={t("삭제된 데이터는 복구할 수 없습니다.")}
+        confirmLabel={t("확인")}
+        cancelLabel={t("취소")}
+        onConfirm={handleDeleteConfirm}
+      />
+    </View>
+  );
+}

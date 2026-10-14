@@ -1,46 +1,49 @@
-import type { BottomTabBarButtonProps } from "@react-navigation/bottom-tabs";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
-import { Pressable, Text } from "react-native";
+import { useTranslation } from "react-i18next";
 
-import BulletinScreen from "../features/bulletin/BulletinScreen";
-import HomeScreen from "../features/home/HomeScreen";
-import MyPageScreen from "../features/my-page/MyPageScreen";
-import SermonScreen from "../features/sermon/SermonScreen";
-import TeamStoryScreen from "../features/team-story/TeamStoryScreen";
-import { Header } from "../shared/components/Header";
+import { CellScreen } from "../features/cell/CellScreen";
+import { HomeScreen } from "../features/home/HomeScreen";
+import { MyPageScreen } from "../features/my-page/MyPageScreen";
+import { SermonScreen } from "../features/sermon/SermonScreen";
+import { TeamStoryScreen } from "../features/team-story/TeamStoryScreen";
+import { BottomNav } from "../shared/components/base/BottomNav";
+import { Header } from "../shared/components/base/Header";
 import type { RootTabParamList } from "../shared/types/navigation";
 
 const Tab = createBottomTabNavigator<RootTabParamList>();
 
-// 가운데 "말씀" 탭만 탭바 위로 튀어나온 원형 버튼으로 렌더링한다 (Figma 시안 기준).
-function SermonTabButton({ onPress, accessibilityState }: BottomTabBarButtonProps) {
-  const focused = accessibilityState?.selected;
-
+// 기본 탭바 대신 BottomNav를 쓴다 — 가운데 말씀 버튼이 탭바 위로 튀어나오고 배경/그림자도
+// 시안 값이라 기본 탭바 옵션으로는 맞출 수 없다. 라벨은 BottomNav가 여기 title에서 읽는다.
+//
+// 탭바가 오버레이(absolute)라 화면 콘텐츠는 탭바 뒤까지 이어진다 — 하단 여백은 sceneStyle
+// 공통 패딩이 아니라 각 화면이 스크롤 콘텐츠 패딩(TAB_BAR_HEIGHT + inset)으로 확보한다.
+// 그래야 탭바가 스크롤로 숨었을 때 빈 띠 대신 콘텐츠가 보인다.
+export function BottomTabNavigator() {
+  const { t } = useTranslation();
   return (
-    <Pressable
-      onPress={onPress}
-      className="-top-6 h-16 w-16 items-center justify-center rounded-full bg-primary-normal"
-      style={{ opacity: focused ? 0.85 : 1 }}
+    <Tab.Navigator
+      tabBar={(props) => <BottomNav {...props} />}
+      screenOptions={{
+        header: () => <Header variant="main" />,
+      }}
     >
-      <Text className="font-pretendard-semibold text-background-normal text-body-small">
-        말씀
-      </Text>
-    </Pressable>
-  );
-}
-
-export default function BottomTabNavigator() {
-  return (
-    <Tab.Navigator screenOptions={{ header: () => <Header variant="main" /> }}>
-      <Tab.Screen name="Home" component={HomeScreen} options={{ title: "홈" }} />
-      <Tab.Screen name="TeamStory" component={TeamStoryScreen} options={{ title: "팀 스토리" }} />
+      <Tab.Screen name="Home" component={HomeScreen} options={{ title: t("홈") }} />
+      {/* 팀스토리만 sub 헤더를 쓴다. 하단 탭이 보이는 화면이라 홈 버튼은 두지 않는다 —
+          관리자용 ⋮ 메뉴는 TeamStoryScreen이 헤더를 직접 등록해서 붙인다. */}
       <Tab.Screen
-        name="Sermon"
-        component={SermonScreen}
-        options={{ title: "말씀", tabBarButton: (props) => <SermonTabButton {...props} /> }}
+        name="TeamStory"
+        component={TeamStoryScreen}
+        options={{
+          title: t("팀 스토리"),
+          header: () => <Header variant="sub" title={t("팀스토리")} rightAction="none" hideBack />,
+        }}
       />
-      <Tab.Screen name="Bulletin" component={BulletinScreen} options={{ title: "오늘 주보" }} />
-      <Tab.Screen name="MyPage" component={MyPageScreen} options={{ title: "마이페이지" }} />
+      {/* 가운데 원형 버튼. 시안에 라벨이 없어서 title은 화면에 안 보이고 접근성 레이블로만 쓰인다. */}
+      <Tab.Screen name="Sermon" component={SermonScreen} options={{ title: t("말씀") }} />
+      {/* 전체 셀 목록도 main 헤더 대신 화면이 직접 그리는 가운데 타이틀을 쓴다 (시안). */}
+      <Tab.Screen name="Cell" component={CellScreen} options={{ title: t("셀 페이지"), headerShown: false }} />
+      {/* 마이페이지는 main 헤더 없이 화면 안의 알림·설정 액션 바만 쓴다 (시안). */}
+      <Tab.Screen name="MyPage" component={MyPageScreen} options={{ title: t("MY"), headerShown: false }} />
     </Tab.Navigator>
   );
 }

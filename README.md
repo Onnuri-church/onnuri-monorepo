@@ -94,7 +94,7 @@ onnuri/
 - **프레임워크**: React Native (Expo) — iOS/Android 동시 개발, 빠른 초기 세팅, OTA 업데이트
 - **네비게이션**: React Navigation (Stack + Bottom Tab)
 - **상태관리**: Zustand (또는 Redux Toolkit — Zustand로 확정)
-- **영상 재생**: expo-av / react-native-video (expo-av로 확정)
+- **영상 재생**: expo-video (expo-av는 SDK 57에서 제거돼 후보에서 탈락 — 영상 기능 착수 시 설치)
 - **이미지 뷰어**: react-native-image-zoom-viewer (주보 핀치 줌)
 - **스토리 UI**: react-native-snap-carousel 또는 커스텀 FlatList
 - **라이브 스트림**: react-native-webview + 유튜브/외부 스트림 임베드

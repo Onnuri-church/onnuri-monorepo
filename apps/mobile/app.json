@@ -1,26 +1,44 @@
 {
   "expo": {
-    "name": "mobile",
-    "slug": "mobile",
+    "name": "온누리 청년부",
+    "slug": "onnuri-app",
     "version": "1.0.0",
+    "scheme": "onnurichurch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-secure-store",
+      "@react-native-google-signin/google-signin",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+          }
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "package": "com.onnuri.mobile",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundColor": "#FFFFFF",
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "owner": "onnuri-church-app",
+    "extra": {
+      "eas": {
+        "projectId": "f187ceb9-84e9-454e-afb9-cfd7f961721b"
+      }
     }
   }
 }

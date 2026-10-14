@@ -1,0 +1,17 @@
+# 로컬 개발용 Postgres. .env.example의 DATABASE_URL과 계정/DB명이 맞춰져 있다.
+# 실행: docker compose up -d (apps/api에서)
+services:
+  db:
+    image: postgres:16
+    container_name: onnuri-db
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: onnuri
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+volumes:
+  pgdata:

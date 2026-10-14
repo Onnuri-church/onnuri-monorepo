@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "659342885137",
+    "project_id": "onnuri-app",
+    "storage_bucket": "onnuri-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:659342885137:android:fe4b9b0b8523e766338cb0",
+        "android_client_info": {
+          "package_name": "com.onnuri.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCQl0Lhf244nCjAMO94cjriZvlK4Xckdgw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

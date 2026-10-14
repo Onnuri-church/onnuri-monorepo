@@ -1,0 +1,201 @@
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { HomeBanner } from "@onnuri/shared";
+import { useLayoutEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
+
+import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { FloatingButton } from "../../shared/components/base/FloatingButton";
+import { Header } from "../../shared/components/base/Header";
+import { Icon } from "../../shared/components/base/Icon";
+import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
+import { useDeleteHomeBanner, useHomeBanners, useSetHomeBannerActive } from "./api";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+// 마이페이지 관리자 메뉴 > 홈 배너 관리 (자체 디자인 — 시안 없음, 셀 관리 목록 결).
+// 홈에는 왼쪽 체크가 켜진 배너 1개만 표시된다 (하나를 켜면 나머지는 꺼진다). 전부 꺼져 있으면 기본
+// 배너가 보인다. 새로 등록한 배너는 등록 즉시 켜진다.
+export function AdminBannerManageScreen() {
+  const insets = useSafeAreaInsets();
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { data: banners } = useHomeBanners();
+  const deleteBanner = useDeleteHomeBanner();
+  const setActive = useSetHomeBannerActive();
+
+  // 헤더 ⋮ > 편집하기로 수정·삭제 버튼을 켠다 — 평소에는 목록만 깔끔하게 보인다.
+  const [editing, setEditing] = useState(false);
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      header: () =>
+        editing ? (
+          <Header
+            variant="sub"
+            title={t("홈 배너 관리")}
+            rightAction="text"
+            rightLabel={t("완료")}
+            onPressRightLabel={() => setEditing(false)}
+          />
+        ) : (
+          <Header
+            variant="sub"
+            title={t("홈 배너 관리")}
+            rightAction="more"
+            menuItems={[
+              { icon: "edit", label: t("편집하기"), onPress: () => setEditing(true) },
+            ]}
+          />
+        ),
+    });
+  }, [navigation, editing, t]);
+
+  const [pendingDelete, setPendingDelete] = useState<HomeBanner | null>(null);
+  const dialogRef = useRef<AppDialogRef>(null);
+
+  const handleDeletePress = (banner: HomeBanner) => {
+    setPendingDelete(banner);
+    dialogRef.current?.open();
+  };
+
+  // 켜기는 홈에 바로 노출되므로 한 번 확인받는다. 끄기(내리기)는 바로 처리한다.
+  const [pendingPublish, setPendingPublish] = useState<HomeBanner | null>(null);
+  const publishDialogRef = useRef<AppDialogRef>(null);
+
+  const changeActive = (bannerId: string, active: boolean) =>
+    setActive.mutate(
+      { bannerId, active },
+      { onError: () => Alert.alert(t("변경 실패"), t("잠시 후 다시 시도해주세요.")) },
+    );
+
+  const handleTogglePress = (banner: HomeBanner) => {
+    if (banner.isActive) {
+      changeActive(banner.id, false);
+      return;
+    }
+    setPendingPublish(banner);
+    publishDialogRef.current?.open();
+  };
+
+  const confirmPublish = () => {
+    publishDialogRef.current?.close();
+    if (pendingPublish) changeActive(pendingPublish.id, true);
+    setPendingPublish(null);
+  };
+
+  const confirmDelete = () => {
+    dialogRef.current?.close();
+    if (!pendingDelete) return;
+    deleteBanner.mutate(pendingDelete.id, {
+      onError: () => Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요.")),
+    });
+    setPendingDelete(null);
+  };
+
+  return (
+    <View className="flex-1 bg-background-normal">
+      <ScrollView contentContainerClassName="pt-2"
+        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+        contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}>
+        <Text className="px-5 py-2 text-body-small text-text-alternative">
+          {t("체크한 배너가 홈에 표시돼요. 하나를 체크하면 나머지는 꺼지고, 모두 끄면 기본 배너가 보여요.")}
+        </Text>
+
+        {(banners ?? []).map((banner) => (
+          <View
+            key={banner.id}
+            className="mx-5 flex-row items-center justify-between rounded-xl border-b border-background-assistive px-3 py-3"
+            // 홈에 표시 중인 배너는 아주 연한 초록으로 칠한다 (primary.normal 8%).
+            style={banner.isActive ? { backgroundColor: "rgba(39, 110, 76, 0.08)" } : undefined}
+          >
+            <View className="min-w-0 flex-1 flex-row items-center gap-3">
+              {/* 홈 표시 체크 — 시안의 라디오 체크와 같은 모양 (켜짐: 초록 원 + 흰 체크) */}
+              <Pressable
+                onPress={() => handleTogglePress(banner)}
+                hitSlop={8}
+                disabled={setActive.isPending}
+              >
+                {banner.isActive ? (
+                  <View className="h-5.5 w-5.5 items-center justify-center rounded-full bg-primary-normal">
+                    <Text className="text-caption-small text-text-disable">✓</Text>
+                  </View>
+                ) : (
+                  <View className="h-5 w-5 rounded-full border border-background-assistive bg-background-normal" />
+                )}
+              </Pressable>
+              {/* 배경사진이 있으면 썸네일, 없으면 회색 자리에 책 아이콘 */}
+              {banner.imageUrl !== null ? (
+                <Image source={{ uri: banner.imageUrl }} className="h-12 w-12 rounded-lg" />
+              ) : (
+                <View className="h-12 w-12 items-center justify-center rounded-lg bg-background-muted">
+                  <Icon name="book-open-alt-light" size={20} color={colors.icon.normal} />
+                </View>
+              )}
+              <View className="min-w-0 flex-1">
+                <Text className="text-body-main text-text-normal" numberOfLines={1}>
+                  {banner.title}
+                </Text>
+                {/* 번역으로 길어져도 수정·삭제 버튼과 겹치지 않게 제목 아래 줄에 따로 둔다 */}
+                {banner.isActive && (
+                  <Text className="text-caption-main text-primary-normal" numberOfLines={1}>
+                    {t("홈에 표시 중")}
+                  </Text>
+                )}
+                <Text className="text-body-small text-text-alternative" numberOfLines={1}>
+                  {banner.passage ?? t("성경 구절 없음 — 수정에서 입력해주세요")}
+                </Text>
+              </View>
+            </View>
+            {editing && (
+            <View className="shrink-0 flex-row items-center gap-4 pl-3">
+              <Pressable
+                onPress={() => navigation.navigate("AdminBannerForm", { bannerId: banner.id })}
+                hitSlop={10}
+              >
+                <Text className="text-body-small text-primary-normal">{t("수정")}</Text>
+              </Pressable>
+              <Pressable onPress={() => handleDeletePress(banner)} hitSlop={10}>
+                <Text className="text-body-small text-semantic-danger">{t("삭제")}</Text>
+              </Pressable>
+            </View>
+            )}
+          </View>
+        ))}
+
+        {(banners ?? []).length === 0 && (
+          <Text className="mt-8 text-center text-body-medium text-text-alternative">
+            {t("등록된 배너가 없어요\n지금은 기본 말씀 배너가 표시되고 있어요")}
+          </Text>
+        )}
+
+      </ScrollView>
+
+      {/* 등록 — 다른 게시판과 같은 오른쪽 아래 초록 + 버튼 */}
+      <FloatingButton onPress={() => navigation.navigate("AdminBannerForm")}>
+        <Icon name="plus" color={colors.icon.disable} />
+      </FloatingButton>
+
+      <AppDialog
+        ref={publishDialogRef}
+        title={t('"{{title}}" 배너를 게시하시겠습니까?', { title: pendingPublish?.title ?? "" })}
+        description={t("홈에 바로 표시되고, 지금 표시 중인 배너는 내려가요.")}
+        confirmLabel={t("예")}
+        cancelLabel={t("아니오")}
+        onConfirm={confirmPublish}
+      />
+      <AppDialog
+        ref={dialogRef}
+        title={t('"{{title}}" 배너를 내리시겠습니까?', { title: pendingDelete?.title ?? "" })}
+        description={
+          pendingDelete?.isActive
+            ? t("삭제하면 홈에는 기본 배너가 표시됩니다.")
+            : t("삭제한 배너는 되돌릴 수 없습니다.")
+        }
+        confirmLabel={t("삭제")}
+        cancelLabel={t("취소")}
+        onConfirm={confirmDelete}
+      />
+    </View>
+  );
+}

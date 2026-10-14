@@ -1,0 +1,433 @@
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import type {
+  AdminAttendanceGroup,
+  AdminAttendanceMark,
+  AdminAttendanceResponse,
+  AdminAttendanceRow,
+  CellRole,
+} from '@onnuri/shared';
+
+import { pad } from '../../common/utils/date';
+import { PrismaService } from '../prisma/prisma.service';
+import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
+import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
+
+const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER: 2 };
+
+// 그 달의 일요일들 — @db.Date가 UTC 자정으로 저장되므로 UTC 기준으로 만든다
+// (조회 조건과 표 머리가 저장 값과 같은 기준이어야 하루씩 안 밀린다).
+export function sundaysOfMonth(year: number, month: number): Date[] {
+  const sundays: Date[] = [];
+  const date = new Date(Date.UTC(year, month - 1, 1));
+  while (date.getUTCMonth() === month - 1) {
+    if (date.getUTCDay() === 0) sundays.push(new Date(date));
+    date.setUTCDate(date.getUTCDate() + 1);
+  }
+  return sundays;
+}
+
+interface MemberInfo {
+  id: string;
+  name: string;
+  role: 'leader' | 'viceLeader' | null;
+  roleLabel: string | null;
+  /** 셀모임 표기를 계산할 소속 셀 (없으면 셀모임 칸이 전부 '-') */
+  cellId: string | null;
+}
+
+// 관리자 출석부 — 셀 출석 관리(cell-attendance)가 기록한 값을 주차 × 회원 표로 집계한다.
+// 표기 규칙(docs/attendance-data-model.md): 예배 O/X(행 없음=결석), 셀모임도 O/X다.
+// 지정 없는 일요일은 모임이 있는 날이라 체크 안 한 사람은 X, '-'는 관리자가 지정한 모임 없는 날
+// (OffDay)과 셀 없는 회원의 셀모임 칸뿐이다.
+@Injectable()
+export class AdminAttendanceService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  async find(dto: FindAdminAttendanceDto): Promise<AdminAttendanceResponse> {
+    const now = new Date();
+    const month = dto.month ?? `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+    const [year, monthOfYear] = month.split('-').map(Number);
+    const sundays = sundaysOfMonth(year, monthOfYear);
+
+    const groups = await this.findGroups(dto.scope ?? 'all', dto.groupId);
+    const memberIds = groups.flatMap((group) => group.members.map((m) => m.id));
+    const cellIds = [
+      ...new Set(
+        groups
+          .flatMap((group) => group.members.map((m) => m.cellId))
+          .filter((id): id is string => id !== null),
+      ),
+    ];
+
+    // 그 달 예배 회차·예배 출석·셀모임(+출석)을 한 번에 긁어 맵으로 만든다.
+    const services = await this.prisma.worshipService.findMany({
+      where: { date: { in: sundays } },
+      select: {
+        id: true,
+        date: true,
+        attendances: {
+          where: { userId: { in: memberIds } },
+          select: { userId: true, attended: true },
+        },
+        cellMeetings: {
+          where: { cellId: { in: cellIds } },
+          select: {
+            cellId: true,
+            attendances: {
+              where: { userId: { in: memberIds } },
+              select: { userId: true, attended: true },
+            },
+          },
+        },
+      },
+    });
+
+    // 키: "시간값" / "시간값:userId" / "시간값:cellId" — 주차별 조회를 O(1)로.
+    const worshipByKey = new Map<string, boolean>();
+    const meetingByKey = new Map<string, boolean>();
+    for (const service of services) {
+      const week = String(service.date.getTime());
+      for (const row of service.attendances) {
+        worshipByKey.set(`${week}:${row.userId}`, row.attended);
+      }
+      for (const meeting of service.cellMeetings) {
+        for (const row of meeting.attendances) {
+          meetingByKey.set(`${week}:${row.userId}`, row.attended);
+        }
+      }
+    }
+
+    // 관리자가 지정한 모임 없는 날 — 해당 칸은 기록과 상관없이 '-'.
+    const offDays = await this.prisma.offDay.findMany({
+      where: { date: { in: sundays } },
+      select: { date: true, kind: true },
+    });
+    const offKindByWeek = new Map(
+      offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]),
+    );
+
+    const toWeeks = (member: MemberInfo): [AdminAttendanceMark, AdminAttendanceMark][] =>
+      sundays.map((sunday) => {
+        const week = String(sunday.getTime());
+        const offKind = offKindByWeek.get(week);
+        const worship: AdminAttendanceMark =
+          offKind === 'WORSHIP_OFF' || offKind === 'BOTH_OFF'
+            ? '-'
+            : worshipByKey.get(`${week}:${member.id}`)
+              ? 'O'
+              : 'X';
+        const meeting: AdminAttendanceMark =
+          offKind === 'CELL_MEETING_OFF' || offKind === 'BOTH_OFF'
+            ? '-'
+            : member.cellId
+              ? meetingByKey.get(`${week}:${member.id}`)
+                ? 'O'
+                : 'X'
+              : '-'; // 셀이 없으면 셀모임 칸도 없다
+        return [worship, meeting];
+      });
+
+    return {
+      month,
+      monthLabel: `${year}년 ${monthOfYear}월`,
+      dates: sundays.map(
+        (sunday) => `${sunday.getUTCMonth() + 1}/${sunday.getUTCDate()}`,
+      ),
+      // 칸을 눌러 고칠 때 서버에 보내는 날짜 — dates와 같은 순서.
+      dateKeys: sundays.map((sunday) => sunday.toISOString().slice(0, 10)),
+      groups: groups.map(
+        (group): AdminAttendanceGroup => ({
+          id: group.id,
+          name: group.name,
+          rows: group.members.map(
+            (member): AdminAttendanceRow => ({
+              id: member.id,
+              name: member.name,
+              role: member.role,
+              roleLabel: member.roleLabel,
+              weeks: toWeeks(member),
+            }),
+          ),
+        }),
+      ),
+    };
+  }
+
+  // 출석부 칸 수정 — 날짜 제한 없이 관리자가 한 회원의 예배·셀모임 출석을 대신 고친다.
+  // 모임 없는 날로 지정된 쪽은 고칠 수 없다 (모임 없는 날 지정을 먼저 바꿔야 한다).
+  // 알림은 보내지 않고, 실제로 값이 바뀐 것만 AttendanceEditLog에 남긴다.
+  async updateMark(
+    editorId: string,
+    dto: UpdateAdminAttendanceDto,
+  ): Promise<{ worship: boolean; meeting: boolean }> {
+    if (dto.worship === undefined && dto.meeting === undefined) {
+      throw new BadRequestException('worship 또는 meeting 중 하나는 필요합니다.');
+    }
+    const date = new Date(dto.date);
+
+    const user = await this.prisma.user.findFirst({
+      where: { id: dto.userId, withdrawnAt: null },
+      select: {
+        id: true,
+        cellMemberships: {
+          where: { endedAt: null, cell: { deletedAt: null } },
+          select: { cellId: true },
+        },
+      },
+    });
+    if (!user) throw new NotFoundException('존재하지 않는 회원입니다.');
+    const cellId = user.cellMemberships[0]?.cellId ?? null;
+
+    const offDay = await this.prisma.offDay.findUnique({
+      where: { date },
+      select: { kind: true },
+    });
+    const worshipOff = offDay?.kind === 'WORSHIP_OFF' || offDay?.kind === 'BOTH_OFF';
+    const meetingOff =
+      offDay?.kind === 'CELL_MEETING_OFF' || offDay?.kind === 'BOTH_OFF';
+    if (dto.worship !== undefined && worshipOff) {
+      throw new BadRequestException(
+        '예배가 없는 날로 지정돼 있어요. 모임 없는 날 지정에서 먼저 바꿔주세요.',
+      );
+    }
+    if (dto.meeting !== undefined) {
+      if (meetingOff) {
+        throw new BadRequestException(
+          '셀모임이 없는 날로 지정돼 있어요. 모임 없는 날 지정에서 먼저 바꿔주세요.',
+        );
+      }
+      if (!cellId) {
+        throw new BadRequestException('소속 셀이 없는 회원은 셀모임 출석을 고칠 수 없어요.');
+      }
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      // 예배 회차가 없으면 만든다 — 회차 관리 기능 전 임시 처리 (셀 출석 관리와 동일).
+      const service = await tx.worshipService.upsert({
+        where: { date },
+        update: {},
+        create: { date, name: '주일예배' },
+      });
+      const log = (kind: 'WORSHIP' | 'CELL_MEETING', before: boolean, after: boolean) =>
+        before === after
+          ? undefined
+          : tx.attendanceEditLog.create({
+              data: { userId: user.id, editorId, date, kind, before, after },
+            });
+
+      let worship = false;
+      const worshipRow = await tx.worshipAttendance.findUnique({
+        where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+        select: { attended: true },
+      });
+      worship = worshipRow?.attended ?? false;
+      if (dto.worship !== undefined) {
+        const before = worship;
+        if (dto.worship) {
+          await tx.worshipAttendance.upsert({
+            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+            update: { attended: true, method: 'MANUAL', recordedById: editorId },
+            create: {
+              serviceId: service.id,
+              userId: user.id,
+              attended: true,
+              method: 'MANUAL',
+              recordedById: editorId,
+            },
+          });
+        } else if (worshipRow) {
+          // 행이 있을 때만 명시적 결석으로 정정한다 (행 없음 = 이미 결석).
+          await tx.worshipAttendance.update({
+            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+            data: { attended: false, method: 'MANUAL', recordedById: editorId },
+          });
+        }
+        worship = dto.worship;
+        await log('WORSHIP', before, worship);
+      }
+
+      let meeting = false;
+      if (cellId) {
+        const meetingRow = await tx.cellMeeting.findUnique({
+          where: { cellId_serviceId: { cellId, serviceId: service.id } },
+          select: {
+            id: true,
+            attendances: {
+              where: { userId: user.id },
+              select: { attended: true },
+            },
+          },
+        });
+        meeting = meetingRow?.attendances[0]?.attended ?? false;
+        if (dto.meeting !== undefined) {
+          const before = meeting;
+          const meetingId =
+            meetingRow?.id ??
+            (
+              await tx.cellMeeting.create({
+                data: { cellId, serviceId: service.id, createdById: editorId },
+                select: { id: true },
+              })
+            ).id;
+          if (dto.meeting) {
+            await tx.cellMeetingAttendance.upsert({
+              where: { meetingId_userId: { meetingId, userId: user.id } },
+              update: { attended: true, recordedById: editorId },
+              create: {
+                meetingId,
+                userId: user.id,
+                attended: true,
+                recordedById: editorId,
+              },
+            });
+          } else {
+            await tx.cellMeetingAttendance.deleteMany({
+              where: { meetingId, userId: user.id },
+            });
+          }
+          meeting = dto.meeting;
+          await log('CELL_MEETING', before, meeting);
+        }
+      }
+      return { worship, meeting };
+    });
+  }
+
+  // 스코프별 그룹·구성원. 전체/특정 셀은 셀 단위(셀장→부셀장→이름순), 특정 팀은 팀원들
+  // (각자 자기 소속 셀 기준으로 셀모임 칸을 계산한다).
+  private async findGroups(
+    scope: 'all' | 'cell' | 'team',
+    groupId?: string,
+  ): Promise<{ id: string; name: string; members: MemberInfo[] }[]> {
+    if (scope !== 'all' && !groupId) {
+      throw new BadRequestException('scope가 cell/team이면 groupId가 필요합니다.');
+    }
+
+    if (scope === 'team') {
+      const team = await this.prisma.team.findFirst({
+        where: { id: groupId, deletedAt: null },
+        select: {
+          id: true,
+          name: true,
+          memberships: {
+            where: { endedAt: null },
+            select: {
+              role: true,
+              user: {
+                select: {
+                  id: true,
+                  name: true,
+                  cellMemberships: {
+                    where: { endedAt: null, cell: { deletedAt: null } },
+                    select: { cellId: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!team) throw new NotFoundException('존재하지 않는 팀입니다.');
+
+      const members = team.memberships
+        .map(
+          (m): MemberInfo => ({
+            id: m.user.id,
+            name: m.user.name,
+            role: m.role === 'LEADER' ? 'leader' : null,
+            roleLabel: m.role === 'LEADER' ? '팀장' : null,
+            cellId: m.user.cellMemberships[0]?.cellId ?? null,
+          }),
+        )
+        .sort(
+          (a, b) =>
+            Number(b.role === 'leader') - Number(a.role === 'leader') ||
+            a.name.localeCompare(b.name, 'ko'),
+        );
+      return [{ id: team.id, name: team.name, members }];
+    }
+
+    const cells = await this.prisma.cell.findMany({
+      where: { deletedAt: null, ...(scope === 'cell' && { id: groupId }) },
+      select: {
+        id: true,
+        name: true,
+        memberships: {
+          where: { endedAt: null },
+          select: { role: true, user: { select: { id: true, name: true } } },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+    if (scope === 'cell' && cells.length === 0) {
+      throw new NotFoundException('존재하지 않는 셀입니다.');
+    }
+
+    // 전체 보기에서는 어느 셀에도 속하지 않은 회원을 마지막 "셀 없음" 그룹으로 붙인다.
+    const noCellUsers =
+      scope === 'all'
+        ? await this.prisma.user.findMany({
+            where: {
+              withdrawnAt: null,
+              cellMemberships: { none: { endedAt: null, cell: { deletedAt: null } } },
+            },
+            select: { id: true, name: true },
+          })
+        : [];
+    const noCellGroup = noCellUsers.length
+      ? [
+          {
+            id: 'no-cell',
+            name: '셀 없음',
+            members: noCellUsers
+              .map((user): MemberInfo => ({
+                id: user.id,
+                name: user.name,
+                role: null,
+                roleLabel: null,
+                cellId: null,
+              }))
+              .sort((a, b) => a.name.localeCompare(b.name, 'ko')),
+          },
+        ]
+      : [];
+
+    const cellGroups = cells.map((cell) => ({
+      id: cell.id,
+      name: cell.name,
+      members: cell.memberships
+        .map(
+          (m): MemberInfo => ({
+            id: m.user.id,
+            name: m.user.name,
+            role:
+              m.role === 'LEADER'
+                ? 'leader'
+                : m.role === 'SUB_LEADER'
+                  ? 'viceLeader'
+                  : null,
+            roleLabel:
+              m.role === 'LEADER' ? '셀장' : m.role === 'SUB_LEADER' ? '부셀장' : null,
+            cellId: cell.id,
+          }),
+        )
+        .sort((a, b) => {
+          const order = (member: MemberInfo) =>
+            ROLE_ORDER[
+              member.role === 'leader'
+                ? 'LEADER'
+                : member.role === 'viceLeader'
+                  ? 'SUB_LEADER'
+                  : 'MEMBER'
+            ];
+          return order(a) - order(b) || a.name.localeCompare(b.name, 'ko');
+        }),
+    }));
+
+    return [...cellGroups, ...noCellGroup];
+  }
+}

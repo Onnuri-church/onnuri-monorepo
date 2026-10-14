@@ -1,0 +1,283 @@
+import { useNavigation } from "@react-navigation/native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import {
+  Alert,
+  BackHandler,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+
+import { PHONE_NUMBER_REGEX, type Gender } from "@onnuri/shared";
+
+import { signOut } from "../../shared/api/session";
+import { Button } from "../../shared/components/base/Button";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
+import { MultiSelectChips } from "../../shared/components/composed/MultiSelectChips";
+import { SelectField } from "../../shared/components/composed/SelectField";
+import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
+import { AvatarEditor } from "./components/AvatarEditor";
+import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+
+// 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
+const NONE_OPTION = "없음";
+
+const GENDER_OPTIONS: { value: Gender; label: string }[] = [
+  { value: "MALE", label: "남성" },
+  { value: "FEMALE", label: "여성" },
+];
+
+// "000310" → "2000-03-10". 잘못된 입력(자릿수 부족, 2월 31일 등)은 null.
+// 두 자리 연도는 올해의 아래 두 자리 이하면 2000년대, 크면 1900년대로 본다.
+function parseBirthday(input: string): string | null {
+  if (!/^\d{6}$/.test(input)) return null;
+  const yy = Number(input.slice(0, 2));
+  const mm = Number(input.slice(2, 4));
+  const dd = Number(input.slice(4, 6));
+  const year = yy <= new Date().getFullYear() % 100 ? 2000 + yy : 1900 + yy;
+  // Date는 없는 날짜를 다음 달로 넘겨버리므로(2월 31일 → 3월 2일) 되짚어 확인한다.
+  const date = new Date(year, mm - 1, dd);
+  if (date.getMonth() !== mm - 1 || date.getDate() !== dd) return null;
+  return `${year}-${input.slice(2, 4)}-${input.slice(4, 6)}`;
+}
+
+// "2000-03-10" → "000310". 회원 정보 수정(ProfileEdit)에서 저장된 값을 입력칸에 되채울 때 쓴다.
+function toBirthdayInput(birthDate: string | null): string {
+  return birthDate?.slice(2).replace(/-/g, "") ?? "";
+}
+
+// 선택지는 이름 문자열이라(SelectField 계약) 제출할 때 목록에서 id를 되찾는다.
+// 셀 이름은 스키마상 유니크가 아니지만 드롭다운 자체가 이름으로만 구분되므로 첫 일치로 충분하다.
+function findIdByName(
+  list: { id: string; name: string }[] | undefined,
+  name: string | null,
+): string | null {
+  if (!name || name === NONE_OPTION) return null;
+  return list?.find((item) => item.name === name)?.id ?? null;
+}
+
+// 회원가입 직후(onboarding)의 프로필 설정과 설정 > 회원 정보 수정(ProfileEdit)이 같이 쓴다.
+// 저장은 둘 다 PATCH /users/me — 끝나면 onboarding은 setSession으로 메인 트리 전환을 트리거하고,
+// 수정 모드는 스토어의 유저만 갈아끼우고 뒤로 돌아간다.
+export function ProfileSetupScreen() {
+  const { t } = useTranslation();
+  const themeColors = useThemeColors();
+  const session = useAuthStore((state) => state.session);
+  const setSession = useAuthStore((state) => state.setSession);
+  const navigation = useNavigation();
+
+  // onboarding/authenticated 밖에서는 이 화면이 마운트되지 않는다 (RootNavigator 분기).
+  const sessionUser =
+    session.status === "onboarding" || session.status === "authenticated" ? session.user : null;
+
+  // 프로필 사진 — 가입 직후엔 소셜 프로필 사진이 기본으로 들어 있다 (서버가 가입 때 저장).
+  // AvatarEditor가 저장까지 끝내고 알려주므로 여기는 보여줄 값만 든다.
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(sessionUser?.avatarUrl ?? null);
+  const [birthday, setBirthday] = useState(() => toBirthdayInput(sessionUser?.birthDate ?? null));
+  const [phone, setPhone] = useState(sessionUser?.phone ?? "");
+  const [gender, setGender] = useState<Gender | null>(sessionUser?.gender ?? null);
+  const [cell, setCell] = useState<string | null>(null);
+  // 여러 팀에 소속될 수 있다 — 고른 팀 이름 목록(빈 배열 = 소속 없음). 수정 모드는 me로 채운다.
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+  const teamsTouched = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  // 수정 모드 프리필 — 소속은 세션 유저에 없어서 /users/me로 받아 채운다 (소속 없음 = "없음").
+  // 사용자가 먼저 고른 값(null 아님)은 덮지 않는다. 온보딩은 직접 고르게 비워둔다.
+  // 사진도 me로 보정한다 — 세션 유저는 로그인 시점 값이라 마이페이지에서 바꾼 사진을 모른다.
+  // 단 이 화면에서 이미 바꿨으면(ref) 덮지 않는다. null이 "사진 없음"이라 prev ?? 로는 못 거른다.
+  const isEditing = session.status === "authenticated";
+  const avatarTouched = useRef(false);
+  const queryClient = useQueryClient();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: fetchMe, enabled: isEditing });
+  useEffect(() => {
+    if (!isEditing || !me) return;
+    setCell((prev) => prev ?? me.cell?.name ?? NONE_OPTION);
+    if (!teamsTouched.current) setSelectedTeams(me.teams.map((item) => item.name));
+    if (!avatarTouched.current) setAvatarUrl(me.avatarUrl ?? null);
+  }, [isEditing, me]);
+
+  // 안드로이드 하드웨어(제스처) 뒤로가기. 온보딩에서는 이 화면이 스택의 유일한 화면이라
+  // 기본 동작이 앱을 내려버린다 — 헤더 뒤로가기(RootNavigator 등록부)와 같은 의미로,
+  // 온보딩을 중단(signOut)하고 로그인 화면으로 돌아간다. 수정 모드(ProfileEdit)는 기본 pop 유지.
+  useEffect(() => {
+    if (session.status !== "onboarding") return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      void signOut();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [session.status]);
+
+  const { data: cells } = useQuery({ queryKey: ["cells"], queryFn: fetchCells });
+  const { data: teams } = useQuery({ queryKey: ["teams"], queryFn: fetchTeams });
+  // NONE_OPTION은 상태·id 조회용 원문 키로 두고, 선택지에 보이는 문구만 번역한다.
+  const noneLabel = t("없음");
+  const toLabel = (value: string | null) => (value === NONE_OPTION ? noneLabel : value);
+  const toValue = (label: string) => (label === noneLabel ? NONE_OPTION : label);
+  const cellOptions = [noneLabel, ...(cells ?? []).map((item) => item.name)];
+
+  // 모든 항목을 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
+  const canSubmit =
+    parseBirthday(birthday) !== null &&
+    PHONE_NUMBER_REGEX.test(phone) &&
+    gender !== null &&
+    cell !== null &&
+    !submitting;
+
+  const handleSubmitPress = async () => {
+    const birthDate = parseBirthday(birthday);
+    if (!birthDate || !gender) return;
+
+    setSubmitting(true);
+    try {
+      const user = await patchMyProfile({
+        birthDate,
+        gender,
+        phone,
+        cellId: findIdByName(cells, cell),
+        teamIds: selectedTeams
+          .map((name) => findIdByName(teams, name))
+          .filter((id): id is string => id !== null),
+      });
+
+      // 마이페이지 등이 보는 /users/me 캐시를 비운다 — 안 비우면 바뀐 소속이 이전 값으로 보인다.
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+
+      // 저장 중에 세션이 사라졌으면(401 → clearSession) 화면도 곧 로그인으로 바뀐다 — 손대지 않는다.
+      const current = useAuthStore.getState().session;
+      if (current.status === "onboarding" || current.status === "authenticated") {
+        const wasOnboarding = current.status === "onboarding";
+        setSession(user, {
+          accessToken: current.accessToken,
+          refreshToken: current.refreshToken,
+        });
+        // onboarding이면 setSession이 RootNavigator를 메인 트리로 전환하므로 네비게이션이 필요 없다.
+        if (!wasOnboarding) {
+          navigation.goBack();
+        }
+      }
+    } catch {
+      Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View className="flex-1 bg-background-normal">
+      {/* 배경이 흰색이라 상태바 글자·아이콘은 어둡게 */}
+      <StatusBar style="dark" />
+
+      <KeyboardAvoidingContainer>
+        {/* 시안은 402x874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 입력 목록이 스크롤되고
+            등록하기는 아래에 붙는 구조로 옮겼다 (LoginScreen과 같은 방식). */}
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="gap-7.5 px-5 pb-6"
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* 소셜 사진이 이미 채워져 있어 "입력란"이 아니라 "원하면 바꾸는 자리"다 —
+              온보딩 이탈을 늘리지 않으면서 기본 이미지/앨범 선택을 가입 시점에 연다. */}
+          <View className="pt-4">
+            <AvatarEditor
+              avatarUrl={avatarUrl}
+              onChange={(url) => {
+                avatarTouched.current = true;
+                setAvatarUrl(url);
+              }}
+            />
+          </View>
+
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">{t("생년월일")}</Text>
+            <TextInput
+              className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+              value={birthday}
+              onChangeText={setBirthday}
+              placeholder={t("예) 000310 (2000년 3월 10일)")}
+              placeholderTextColor={themeColors.text.assistive}
+              keyboardType="number-pad"
+              maxLength={6}
+            />
+          </View>
+
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">{t("전화번호")}</Text>
+            <TextInput
+              className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+              value={phone}
+              onChangeText={setPhone}
+              placeholder={t("예) 01012345678")}
+              placeholderTextColor={themeColors.text.assistive}
+              keyboardType="number-pad"
+              maxLength={11}
+            />
+          </View>
+
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">{t("성별")}</Text>
+            {/* 시안에 둘 다 안 고른 상태가 없어서, 처음에는 둘 다 미선택(회색) 스타일이다.
+                테두리는 시안이 0.5px이지만 기본 스케일에 없어서 1px(border)로 넣었다. */}
+            <View className="mt-5 flex-row gap-2">
+              {GENDER_OPTIONS.map((option) => (
+                <Pressable
+                  key={option.value}
+                  onPress={() => setGender(option.value)}
+                  style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+                  className={
+                    gender === option.value
+                      ? "h-11 flex-1 items-center justify-center rounded-2xl border border-primary-normal bg-background-alternative"
+                      : "h-11 flex-1 items-center justify-center rounded-2xl border border-text-alternative bg-background-muted"
+                  }
+                >
+                  <Text
+                    className={
+                      gender === option.value
+                        ? "text-body-main text-primary-normal"
+                        : "text-body-main text-text-alternative"
+                    }
+                  >
+                    {t(option.label)}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+          </View>
+
+          <SelectField
+            label={t("소속 셀")}
+            placeholder={t("나의 셀을 선택하세요.")}
+            options={cellOptions}
+            value={toLabel(cell)}
+            onChange={(picked) => setCell(toValue(picked))}
+          />
+
+          {/* 팀은 여러 개를 고를 수 있어 시트 대신 토글 칩으로 둔다 — 하나도 안 고르면 소속 없음. */}
+          <MultiSelectChips
+            label={t("소속 팀")}
+            hint={t("여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.")}
+            options={(teams ?? []).map((item) => item.name)}
+            selected={selectedTeams}
+            onToggle={(name) => {
+              teamsTouched.current = true;
+              setSelectedTeams((prev) =>
+                prev.includes(name) ? prev.filter((item) => item !== name) : [...prev, name],
+              );
+            }}
+          />
+        </ScrollView>
+
+        <View className="px-5 pb-12">
+          <Button label={t("등록하기")} disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
+        </View>
+      </KeyboardAvoidingContainer>
+    </View>
+  );
+}

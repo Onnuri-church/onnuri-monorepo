@@ -1,41 +1,779 @@
-import { NavigationContainer } from "@react-navigation/native";
+import { DefaultTheme, NavigationContainer } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
-import LoginScreen from "../features/auth/LoginScreen";
-import LiveScreen from "../features/live/LiveScreen";
-import QtBoardScreen from "../features/qt-board/QtBoardScreen";
-import { Header } from "../shared/components/Header";
+import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
+import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
+import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
+import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
+import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
+import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
+import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
+import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
+import { AdminMemberEditScreen } from "../features/admin/AdminMemberEditScreen";
+import { AdminMemberListScreen } from "../features/admin/AdminMemberListScreen";
+import { AdminOffDaysScreen } from "../features/admin/AdminOffDaysScreen";
+import { LoginScreen } from "../features/auth/LoginScreen";
+import { BulletinDetailScreen } from "../features/bulletin/BulletinDetailScreen";
+import { CellAttendanceScreen } from "../features/cell/CellAttendanceScreen";
+import { useChatUnread } from "../features/chat/api";
+import { CellDetailScreen } from "../features/cell/CellDetailScreen";
+import { CellGalleryPhotoScreen } from "../features/cell/CellGalleryPhotoScreen";
+import { GroupMeetingPhotoScreen } from "../features/group-meeting/GroupMeetingPhotoScreen";
+import { NoticeDetailScreen } from "../features/notice/NoticeDetailScreen";
+import { NoticeListScreen } from "../features/notice/NoticeListScreen";
+import { NotificationScreen } from "../features/notification/NotificationScreen";
+import { AvatarViewerScreen } from "../features/profile/AvatarViewerScreen";
+import { NoticeWriteScreen } from "../features/notice/NoticeWriteScreen";
+import { CellChatScreen } from "../features/cell/CellChatScreen";
+import { CellMemberAddScreen } from "../features/cell/CellMemberAddScreen";
+import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen";
+import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
+import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
+import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
+import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
+import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
+import { useCell } from "../features/cell/api";
+import { canPostToCell } from "../features/cell/cellDetail";
+import { useMe } from "../features/profile/useMe";
+import { useTeam } from "../features/team-story/api";
+import { BulletinScreen } from "../features/bulletin/BulletinScreen";
+import { BulletinWriteScreen } from "../features/bulletin/BulletinWriteScreen";
+import { SharingSheetScreen } from "../features/bulletin/SharingSheetScreen";
+import { DepartmentActivityDetailScreen } from "../features/department-activity/DepartmentActivityDetailScreen";
+import { DepartmentActivityScreen } from "../features/department-activity/DepartmentActivityScreen";
+import { TeamBoardManageScreen } from "../features/department-activity/TeamBoardManageScreen";
+import { GroupMeetingDetailScreen } from "../features/group-meeting/GroupMeetingDetailScreen";
+import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFormScreen";
+import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
+import { GroupMeetingGalleryScreen } from "../features/group-meeting/GroupMeetingGalleryScreen";
+import { GroupMeetingMemberListScreen } from "../features/group-meeting/GroupMeetingMemberListScreen";
+import { MyGroupMeetingScreen } from "../features/group-meeting/MyGroupMeetingScreen";
+import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
+import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
+import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
+import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
+import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
+import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
+import { QrResultScreen } from "../features/qr/QrResultScreen";
+import { QrScreen } from "../features/qr/QrScreen";
+import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
+import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
+import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
+import { SettingsScreen } from "../features/settings/SettingsScreen";
+import { SplashScreen } from "../features/splash/SplashScreen";
+import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
+import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
+import { ChatRoomFormScreen } from "../features/team-space/ChatRoomFormScreen";
+import { ChatRoomListScreen } from "../features/team-space/ChatRoomListScreen";
+import { ChatRoomScreen } from "../features/team-space/ChatRoomScreen";
+import { TeamBoardDetailScreen } from "../features/team-space/TeamBoardDetailScreen";
+import { TeamBoardScreen } from "../features/team-space/TeamBoardScreen";
+import { TeamBoardWriteScreen } from "../features/team-space/TeamBoardWriteScreen";
+import { TeamSpaceScreen } from "../features/team-space/TeamSpaceScreen";
+import { TeamMemberAddScreen } from "../features/team-story/TeamMemberAddScreen";
+import { TeamMemberAdminScreen } from "../features/team-story/TeamMemberAdminScreen";
+import { TeamMemberListScreen } from "../features/team-story/TeamMemberListScreen";
+import { TeamFormScreen } from "../features/team-story/TeamFormScreen";
+import { TeamStoryDetailScreen } from "../features/team-story/TeamStoryDetailScreen";
+import { TeamStoryGalleryScreen } from "../features/team-story/TeamStoryGalleryScreen";
+import { TeamStoryPhotoViewerScreen } from "../features/team-story/TeamStoryPhotoViewerScreen";
+import { fetchMe } from "../features/profile/api";
+import { queryClient } from "../shared/api/queryClient";
+import { signOut } from "../shared/api/session";
+import { Header } from "../shared/components/base/Header";
+import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
+import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
-import BottomTabNavigator from "./BottomTabNavigator";
+import { BottomTabNavigator } from "./BottomTabNavigator";
+import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
+import { DepartmentActivityMetaScreen } from "../features/department-activity/DepartmentActivityMetaScreen";
+import {DepartmentActivityWriteScreen} from "../features/department-activity/DepartmentActivityWriteScreen";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
 
-// 모든 화면이 로그인을 요구하므로, 세션 유무로 트리 전체를 분기한다.
-// 세션이 없어지면(로그아웃, 401로 인한 clearSession) 자동으로 로그인 화면으로 전환된다.
-export default function RootNavigator() {
-  const isAuthenticated = useAuthStore((state) => state.accessToken !== null);
+// 셀 페이지 헤더 — 셀 이름이 서버 목록(useCell)에서 오므로 훅을 쓸 수 있게 컴포넌트로 뺐다
+// (등록부의 header 콜백 안에서는 훅을 못 쓴다).
+function CellDetailHeader({ cellId }: { cellId: string }) {
+  const { t } = useTranslation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const cell = useCell(cellId);
+  // 단톡방은 그 셀 셀원과 관리자만 들어간다 — 아이콘도 그 사람들에게만 보인다.
+  const me = useMe();
+  const canChat = canPostToCell(cellId, me);
+  // 안 읽은 셀 단톡 메시지가 있으면 아이콘에 빨간 점 — 방에 들어가 읽으면 사라진다.
+  const { data: unread } = useChatUnread("cell", cellId, canChat);
+  return (
+    <Header
+      variant="sub"
+      title={cell?.name ?? t("셀 페이지")}
+      rightAction="home"
+      extraRightAction={
+        canChat
+          ? {
+              icon: "chat",
+              onPress: () => navigation.navigate("CellChat", { cellId }),
+              badge: (unread ?? 0) > 0,
+            }
+          : undefined
+      }
+    />
+  );
+}
+
+// 팀 상세 헤더 — 팀 이름이 서버 목록(useTeam)에서 오므로 같은 이유로 컴포넌트로 뺐다.
+function TeamStoryDetailHeader({ teamId }: { teamId: string }) {
+  const { t } = useTranslation();
+  const team = useTeam(teamId);
+  return <Header variant="sub" title={team?.name ?? t("팀")} rightAction="home" />;
+}
+
+// 세션 상태로 트리 전체를 분기한다. 세션이 없어지면(로그아웃, 401로 인한 clearSession)
+// 자동으로 로그인 화면으로 전환된다.
+// 게스트(로그인 없이 둘러보기)는 로그인한 유저와 같은 스택을 본다 — 화면 단위로 트리를 나누지 않고,
+// 게스트가 못 하는 동작(작성·마이페이지 등)은 각 화면이 자기 자리에서 막는다. 자세한 건
+// ARCHITECTURE.md의 Access Model 참고.
+//
+// 준비가 끝나기 전(status: loading)에는 스플래시를 NavigationContainer 바깥에서 그린다 —
+// 스플래시는 뒤로가기로 돌아갈 수 있으면 안 되고 네비게이션도 쓰지 않아서, 스크린으로 등록하는 대신
+// 트리를 통째로 대신한다. 온보딩처럼 여러 화면이 붙는 날이 오면 그때 별도 Stack으로 올린다.
+export function RootNavigator() {
+  const { t } = useTranslation();
+  const session = useAuthStore((state) => state.session);
+  // 화면 전환 중 비는 바탕(카드 배경)이 흰색으로 번쩍이지 않게 네비게이션 테마도 현재 테마 색을 쓴다.
+  const themeColors = useThemeColors();
+  const navigationTheme = {
+    ...DefaultTheme,
+    colors: {
+      ...DefaultTheme.colors,
+      primary: themeColors.primary.normal,
+      background: themeColors.background.normal,
+      card: themeColors.background.normal,
+      text: themeColors.text.normal,
+      border: themeColors.background.assistive,
+    },
+  };
+
+  useAppBootstrap();
+
+  // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
+  // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
+  useEffect(() => {
+    if (session.status === "authenticated") {
+      queryClient.prefetchQuery({ queryKey: ["me"], queryFn: fetchMe });
+    }
+  }, [session.status]);
+
+  if (session.status === "loading") {
+    return <SplashScreen />;
+  }
 
   return (
-    <NavigationContainer>
-      {isAuthenticated ? (
+    <NavigationContainer theme={navigationTheme}>
+      {session.status === "authenticated" || session.status === "guest" ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
           <Stack.Screen
             name="QtBoard"
             component={QtBoardScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="큐티나눔" /> }}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("큐티나눔")} rightAction="home" />,
+            }}
           />
           <Stack.Screen
-            name="Live"
-            component={LiveScreen}
-            options={{ headerShown: true, header: () => <Header variant="sub" title="실시간 예배" /> }}
+              name="QtBoardWrite"
+              component={QtBoardWriteScreen}
+              options={{ headerShown: true, header: () => <Header variant="sub" title={t("큐티나눔 글쓰기")} /> }}
+          />
+          <Stack.Screen
+            name="QtBoardDetail"
+            component={QtBoardDetailScreen}
+            // 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 글 작성자에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="BulletinDetail"
+            component={BulletinDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("주보")} rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
+            name="SharingSheet"
+            component={SharingSheetScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("나눔지")} rightAction="export" />,
+            }}
+          />
+          <Stack.Screen
+            name="SermonDetail"
+            component={SermonDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title="" rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="BulletinWrite"
+            component={BulletinWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("주보/나눔지 업로드")} rightAction="none" />,
+            }}
+          />
+          {/* QR은 하단 탭이 아니라 메인 헤더의 QR 버튼에서 들어온다 (시안의 탭 구성 변경). */}
+          <Stack.Screen
+            name="Qr"
+            component={QrScreen}
+            // 검은 배경에 흰 타이틀이라 화면이 헤더까지 직접 그린다 (사진 뷰어와 같은 처리).
+            options={{ headerShown: false }}
+          />
+          {/* 시안에 헤더가 없다 — "확인" 버튼으로만 빠져나간다. */}
+          <Stack.Screen name="QrResult" component={QrResultScreen} options={{ headerShown: false }} />
+          {/* 오늘 주보는 하단 탭에서 빠지고 홈 바로가기로 들어온다 (시안의 탭 구성 변경). */}
+          <Stack.Screen
+            name="Bulletin"
+            component={BulletinScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("주보")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="DepartmentActivity"
+            component={DepartmentActivityScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("부서활동 게시판")} />,
+            }}
+          />
+          <Stack.Screen
+            name="DepartmentActivityDetail"
+            component={DepartmentActivityDetailScreen}
+            // 헤더는 화면이 단독 등록한다 (⋮ 노출이 글 작성자에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="DepartmentActivityMeta"
+            component={DepartmentActivityMetaScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("부서활동 글쓰기")} />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 입력 내용에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="DepartmentActivityWrite"
+            component={DepartmentActivityWriteScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="TeamBoardManage"
+            component={TeamBoardManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("게시판 관리")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="GroupMeeting"
+            component={GroupMeetingScreen}
+            /* 관리자에게만 우측 "편집"이 붙어 화면이 헤더를 단독 등록한다 (2026-09-21 관리자 시안) */
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="MyGroupMeetings"
+            component={MyGroupMeetingScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("취향 소그룹")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="GroupMeetingForm"
+            component={GroupMeetingFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.meetingId ? t("취향소그룹 편집") : t("취향소그룹 생성")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          {/* 기도 목록 3개 화면은 PrayerMenu가 헤더를 단독 등록한다 (⋮ 메뉴 포함) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="PrayerBoard"
+            component={PrayerBoardScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerBookmarks"
+            component={PrayerBookmarkScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerMine"
+            component={MyPrayerScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="PrayerBoardDetail"
+            component={PrayerDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("기도제목")} rightAction="bookmark" />,
+            }}
+          />
+          <Stack.Screen
+            name="PrayerWrite"
+            component={PrayerWriteScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("기도제목 작성하기")} rightAction="none" />,
+            }}
+          />
+
+          <Stack.Screen
+            name="GroupMeetingDetail"
+            component={GroupMeetingDetailScreen}
+            options={{ headerShown: true, header: () => <Header variant="overlay" /> }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (우측 편집/완료가 선택 모드에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="GroupMeetingGallery"
+            component={GroupMeetingGalleryScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="GroupMeetingMembers"
+            component={GroupMeetingMemberListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("참여멤버")} rightAction="home" />,
+            }}
+          />
+          {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서
+              navigation.setOptions로 넘기는 쪽이 맞다. */}
+          <Stack.Screen
+            name="TeamStoryDetail"
+            component={TeamStoryDetailScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => <TeamStoryDetailHeader teamId={route.params.teamId} />,
+            })}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (타이틀이 셀 이름이라 화면 데이터에 의존). */}
+          <Stack.Screen
+            name="CellChat"
+            component={CellChatScreen}
+            options={{ headerShown: true }}
+          />
+          {/* 소속팀 공간 — 게시판·단톡방. 헤더가 화면 데이터에 의존하는 화면은 화면이 단독 등록한다. */}
+          <Stack.Screen
+            name="TeamSpace"
+            component={TeamSpaceScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("소속팀 공간")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamBoard"
+            component={TeamBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀 게시판")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamBoardDetail"
+            component={TeamBoardDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="TeamBoardWrite"
+            component={TeamBoardWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params.postId ? t("글 수정") : t("글쓰기")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="ChatRoomList"
+            component={ChatRoomListScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="ChatRoomForm"
+            component={ChatRoomFormScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: true }} />
+          <Stack.Screen
+            name="ChatPollCreate"
+            component={ChatPollCreateScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("투표 만들기")} rightAction="none" />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (타이틀이 소그룹 제목이라 화면 데이터에 의존). */}
+          <Stack.Screen name="GroupChat" component={GroupChatScreen} options={{ headerShown: true }} />
+          <Stack.Screen
+            name="TeamStoryGallery"
+            component={TeamStoryGalleryScreen}
+            // 헤더는 화면이 단독 등록한다 (우측 버튼 문구가 선택 모드에 의존) — 여기 header를 두면 이중 정의.
+            options={{ headerShown: true }}
+          />
+          {/* 헤더를 화면이 직접 그린다 (어두운 배경 + 타이틀). Header 컴포넌트는 이 조합이 없다. */}
+          <Stack.Screen name="TeamStoryPhotoViewer" component={TeamStoryPhotoViewerScreen} />
+          <Stack.Screen
+            name="TeamForm"
+            component={TeamFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.teamId ? t("팀 편집") : t("팀 생성")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="TeamMemberAdmin"
+            component={TeamMemberAdminScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀원 관리")} rightAction="home" />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="TeamMemberAdd"
+            component={TeamMemberAddScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="TeamMemberList"
+            component={TeamMemberListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀원")} rightAction="none" />,
+            }}
+          />
+          {/* 헤더 타이틀이 셀 이름이라 목업에서 찾아 쓴다 (TeamStoryDetail과 같은 패턴).
+              셀 API가 생기면 화면에서 navigation.setOptions로 넘기는 쪽이 맞다. */}
+          <Stack.Screen
+            name="CellDetail"
+            component={CellDetailScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => <CellDetailHeader cellId={route.params.cellId} />,
+            })}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (⋮ 노출·항목이 권한에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="CellNewsDetail"
+            component={CellNewsDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="CellNewsWrite"
+            component={CellNewsWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.newsId ? t("소식 수정") : t("소식 글쓰기")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          {/* 검정 배경 뷰어라 공통 헤더를 안 쓰고 화면이 직접 그린다. */}
+          <Stack.Screen name="CellGalleryPhoto" component={CellGalleryPhotoScreen} />
+          <Stack.Screen name="GroupMeetingPhoto" component={GroupMeetingPhotoScreen} />
+          {/* 헤더는 화면이 단독 등록한다 ("완료"가 고른 사람 목록에 의존). */}
+          <Stack.Screen
+            name="CellMemberAdd"
+            component={CellMemberAddScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="CellMemberManage"
+            component={CellMemberManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("셀원 관리")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="CellAttendance"
+            component={CellAttendanceScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("출석 관리")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="FollowerNoteBoard"
+            component={FollowerNoteBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팔로워 노트")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="FollowerNoteWrite"
+            component={FollowerNoteWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.noteId ? t("팔로워 노트 수정") : t("팔로워 노트 작성")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (⋮ 항목이 내 글 여부에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="FollowerNoteDetail"
+            component={FollowerNoteDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("설정")} rightAction="home" />,
+            }}
+          />
+          {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리
+              헤더의 "다운로드"는 데이터 다운로드 화면으로 간다. */}
+          {/* 생성 진입은 목록 끝의 점선 "셀 생성" 행(CellManageList) — 2026-09-21 시안으로 헤더 버튼에서 이동 */}
+          {/* 알림센터 — 헤더는 뒤로가기만 두고 큰 제목("알림")은 화면이 그린다 (시안). */}
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationScreen}
+            // 헤더는 화면이 setOptions로 그린다 — "모두 지우기"가 화면 데이터(알림 유무)에 달려서.
+            options={{ headerShown: true }}
+          />
+          {/* 프로필 사진 확대 보기 — 뒤 화면이 비치는 투명 모달. 헤더 없이 탭으로 닫는다. */}
+          <Stack.Screen
+            name="AvatarViewer"
+            component={AvatarViewerScreen}
+            options={{ presentation: "transparentModal", animation: "fade" }}
+          />
+          <Stack.Screen
+            name="NoticeList"
+            component={NoticeListScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("공지사항")} />,
+            }}
+          />
+          {/* 헤더는 화면이 단독 등록한다 (관리자 ⋮ 메뉴가 권한에 의존) — 여기 header를 두면 이중 정의. */}
+          <Stack.Screen
+            name="NoticeDetail"
+            component={NoticeDetailScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="NoticeWrite"
+            component={NoticeWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.id ? t("공지 수정") : t("공지 등록")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminBannerManage"
+            component={AdminBannerManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("홈 배너 관리")} />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminBannerForm"
+            component={AdminBannerFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.bannerId ? t("배너 수정") : t("배너 등록")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminCellManage"
+            component={AdminCellManageScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("셀 관리")} />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminCellForm"
+            component={AdminCellFormScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.cellId ? t("셀 편집") : t("셀 생성")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminMemberList"
+            component={AdminMemberListScreen}
+            options={({ navigation: nav }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={t("회원 관리")}
+                  rightAction="text"
+                  rightLabel={t("다운로드")}
+                  onPressRightLabel={() => nav.navigate("AdminDataDownload")}
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminMemberDetail"
+            component={AdminMemberDetailScreen}
+            options={({ navigation: nav, route: detailRoute }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={t("회원 관리")}
+                  rightAction="text"
+                  rightLabel={t("편집")}
+                  onPressRightLabel={() =>
+                    nav.navigate("AdminMemberEdit", { memberId: detailRoute.params.memberId })
+                  }
+                />
+              ),
+            })}
+          />
+          {/* 저장 버튼이 화면 상태에 의존해 헤더는 화면이 등록한다 (QtBoardDetail 패턴) */}
+          <Stack.Screen
+            name="AdminMemberEdit"
+            component={AdminMemberEditScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="AdminAttendance"
+            component={AdminAttendanceScreen}
+            options={({ navigation: nav }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={t("출석부")}
+                  rightAction="text"
+                  rightLabel={t("다운로드")}
+                  onPressRightLabel={() => nav.navigate("AdminDataDownload")}
+                />
+              ),
+            })}
+          />
+          <Stack.Screen
+            name="AdminOffDays"
+            component={AdminOffDaysScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("모임 없는 날 지정")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminDataDownload"
+            component={AdminDataDownloadScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("데이터 다운로드")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="AdminDataPreview"
+            component={AdminDataPreviewScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("미리보기")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="ProfileEdit"
+            component={ProfileSetupScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("회원 정보 수정")} rightAction="none" />,
+            }}
           />
         </Stack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-          <AuthStack.Screen name="Login" component={LoginScreen} />
+          {/* 세션 상태에 따라 화면을 하나만 등록한다 — onboarding(프로필 미완, 토큰은 이미 있음)이면
+              프로필 설정만 남고, 등록을 마치면 setSession이 메인 트리로 전환한다. 뒤로가기는
+              온보딩 중단이므로 signOut으로 세션을 정리해 로그인 화면으로 돌아간다 — 세션이
+              남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
+              ProfileSetupScreen이 같은 동작으로 처리한다.) */}
+          {session.status === "onboarding" ? (
+            <AuthStack.Screen
+              name="ProfileSetup"
+              component={ProfileSetupScreen}
+              options={{
+                headerShown: true,
+                header: () => (
+                  <Header
+                    variant="sub"
+                    title={t("프로필 설정")}
+                    rightAction="none"
+                    onPressBack={() => void signOut()}
+                  />
+                ),
+              }}
+            />
+          ) : (
+            <AuthStack.Screen name="Login" component={LoginScreen} />
+          )}
         </AuthStack.Navigator>
       )}
     </NavigationContainer>

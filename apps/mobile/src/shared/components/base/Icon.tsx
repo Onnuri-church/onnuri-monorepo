@@ -1,0 +1,141 @@
+import AddRoundLight from "../../assets/icons/add-round-light.svg";
+import Announcement from "../../assets/icons/announcement.svg";
+import ArrowDropDown from "../../assets/icons/arrow-drop-down.svg";
+import Back from "../../assets/icons/back.svg";
+import Bell from "../../assets/icons/bell.svg";
+import BookOpenAltLight from "../../assets/icons/book-open-alt-light.svg";
+import Bookmark from "../../assets/icons/bookmark.svg";
+import BookmarkActive from "../../assets/icons/bookmark-active.svg";
+import BoxFill from "../../assets/icons/box-fill.svg";
+import Calendar from "../../assets/icons/calendar.svg";
+import Card from "../../assets/icons/card.svg";
+import Chat from "../../assets/icons/chat.svg";
+import Check from "../../assets/icons/check.svg";
+import CloseSquare from "../../assets/icons/close-square.svg";
+import CommentLight from "../../assets/icons/comment-light.svg";
+import Crosshair from "../../assets/icons/crosshair.svg";
+import Edit from "../../assets/icons/edit.svg";
+import Error from "../../assets/icons/error.svg";
+import Expand from "../../assets/icons/expand.svg";
+import ExpandRight from "../../assets/icons/expand-right.svg";
+import Export from "../../assets/icons/export.svg";
+import EyeOff from "../../assets/icons/eye-off.svg";
+import FavoriteLight from "../../assets/icons/favorite-light.svg";
+import FavoriteFill from "../../assets/icons/favorite-fill.svg";
+import Home from "../../assets/icons/home.svg";
+import Image from "../../assets/icons/image.svg";
+import Jubo from "../../assets/icons/jubo.svg";
+import Link from "../../assets/icons/link.svg";
+import Lock from "../../assets/icons/lock.svg";
+import MediaStrip from "../../assets/icons/media-strip.svg";
+import More from "../../assets/icons/more.svg";
+import NavHome from "../../assets/icons/nav-home.svg";
+import Note from "../../assets/icons/note.svg";
+import Paperclip from "../../assets/icons/paperclip.svg";
+import Palette from "../../assets/icons/palette.svg";
+import Place from "../../assets/icons/place.svg";
+import Poll from "../../assets/icons/poll.svg";
+import Play from "../../assets/icons/play.svg";
+import Plus from "../../assets/icons/plus.svg";
+import Pray from "../../assets/icons/pray.svg";
+import Qr from "../../assets/icons/qr.svg";
+import Search from "../../assets/icons/search.svg";
+import SendFill from "../../assets/icons/send-fill.svg";
+import Setting from "../../assets/icons/setting.svg";
+import Soccer from "../../assets/icons/soccer.svg";
+import ThumbUp from "../../assets/icons/thumb-up.svg";
+import TrashCan from "../../assets/icons/trash-can.svg";
+import User from "../../assets/icons/user.svg";
+import Video from "../../assets/icons/video.svg";
+import VideoOn from "../../assets/icons/video-on.svg";
+import ViewLight from "../../assets/icons/view-light.svg";
+import Warning from "../../assets/icons/warning.svg";
+import Write from "../../assets/icons/write.svg";
+import { useThemeStore } from "../../store/useThemeStore";
+import { colors } from "../../theme/tokens";
+import { themedColor } from "../../theme/useThemeColors";
+
+// 아이콘은 여러 곳에서 가져온 SVG를 직접 모아서 쓴다 (팩 미설치).
+// 화면 코드는 파일 경로를 모르고 name만 알면 되도록 여기서만 매핑한다 — 아이콘을 교체하거나
+// 나중에 팩으로 갈아타도 사용처는 안 건드린다. 새 SVG는 assets/icons/에 넣고 여기 한 줄 추가.
+const ICONS = {
+  "add-round-light": AddRoundLight,
+  announcement: Announcement,
+  "arrow-drop-down": ArrowDropDown,
+  back: Back,
+  bell: Bell,
+  bookmark: Bookmark,
+  "bookmark-active": BookmarkActive,
+  "book-open-alt-light": BookOpenAltLight,
+  "box-fill": BoxFill,
+  calendar: Calendar,
+  card: Card,
+  chat: Chat,
+  check: Check,
+  "close-square": CloseSquare,
+  "comment-light": CommentLight,
+  // QR 스캔 화면의 사각 조준 프레임. 아이콘치고 크지만(266) 벡터라 여기서 같이 관리한다.
+  crosshair: Crosshair,
+  edit: Edit,
+  error: Error,
+  expand: Expand,
+  // expand의 좌우 반전. 원본이 같은 벡터라 Figma도 scaleX(-1)로 쓰고 있다.
+  "expand-right": ExpandRight,
+  export: Export,
+  "eye-off": EyeOff,
+  "favorite-light": FavoriteLight,
+  "favorite-fill": FavoriteFill,
+  home: Home,
+  image: Image,
+  jubo: Jubo,
+  link: Link,
+  lock: Lock,
+  "media-strip": MediaStrip,
+  more: More,
+  "nav-home": NavHome,
+  note: Note,
+  paperclip: Paperclip,
+  palette: Palette,
+  place: Place,
+  poll: Poll,
+  play: Play,
+  plus: Plus,
+  pray: Pray,
+  qr: Qr,
+  search: Search,
+  "send-fill": SendFill,
+  setting: Setting,
+  soccer: Soccer,
+  "thumb-up": ThumbUp,
+  "trash-can": TrashCan,
+  user: User,
+  video: Video,
+  "video-on": VideoOn,
+  "view-light": ViewLight,
+  warning: Warning,
+  write: Write,
+} as const;
+
+export type IconName = keyof typeof ICONS;
+
+// 서버가 내려준 문자열을 아이콘 이름으로 좁힌다 (팀 아이콘처럼 이름을 DB에 저장하는 경우).
+// 등록되지 않은 이름이면 false — 호출부가 아이콘을 안 그리면 된다.
+export function isIconName(value: string | null | undefined): value is IconName {
+  return value != null && value in ICONS;
+}
+
+interface IconProps {
+  name: IconName;
+  /** 정사각형 기준 한 변 길이(px). 원본 viewBox가 달라도 이 값으로 스케일된다. */
+  size?: number;
+  /** SVG 안의 색이 전부 currentColor로 치환돼 있어서(svgr.config.js) 여기서 결정된다. */
+  color?: string;
+}
+
+export function Icon({ name, size = 24, color = colors.icon.normal }: IconProps) {
+  const Source = ICONS[name];
+  // 호출부는 `colors.icon.x`(라이트 값)를 넘기므로, 다크 테마면 여기서 대응하는 다크 값으로 바꾼다.
+  const mode = useThemeStore((state) => state.mode);
+
+  return <Source width={size} height={size} color={themedColor(color, mode)} />;
+}

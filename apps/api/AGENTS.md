@@ -2,6 +2,14 @@
 
 백엔드(NestJS) 작업 전용 규칙. 공통 규칙은 루트 [AGENTS.md](../../AGENTS.md), 시스템 구조는 [ARCHITECTURE.md](../../ARCHITECTURE.md)를 먼저 본다.
 
+## 로컬 세팅
+
+1. `apps/api/.env.example`을 복사해 `apps/api/.env` 생성 후 값 채우기 — `JWT_ACCESS_SECRET`/`JWT_REFRESH_SECRET`은 **32자 이상**이어야 부팅 시 환경변수 검증을 통과한다 (`openssl rand -hex 32`로 생성)
+2. DB 준비 — 둘 중 하나 (차이는 ARCHITECTURE.md "Deployment"의 DB 항목)
+   - **공용 개발 Supabase**: `DATABASE_URL`만 채우면 된다. 스키마가 이미 최신이라 마이그레이션을 돌릴 필요가 없다
+   - **로컬 격리**: `apps/api`에서 `docker compose up -d` (Docker Desktop 필요). 계정·DB명이 `.env.example`의 `DATABASE_URL`과 맞춰져 있어 `.env`의 해당 값은 그대로 쓰면 된다
+3. `prisma:migrate`(Docker를 쓸 때만) → `prisma:generate` → (선택) `prisma:seed`(프로필 설정의 셀/팀 선택지 + 큐티나눔 목록 데이터) → `start:dev` 순으로 실행
+
 ## 도메인 모듈 만들 때
 
 ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Service` + `dto/`만 쓰고 `Repository`/`Domain` 레이어를 새로 만들지 않는다 (Clean/Hexagonal을 기각한 결정과 일관되게 유지). Service가 `PrismaService`를 직접 쓴다.
@@ -10,15 +18,19 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 
 `prisma/schema.prisma`를 바꾸면 반드시 `pnpm --filter @onnuri/api run prisma:generate`를 다시 돌린다 — 안 돌리면 타입이 스키마와 안 맞는다.
 
+마이그레이션은 **Docker Postgres(로컬)에서 `prisma:migrate`로 만들고, 공용 Supabase에는 `prisma migrate deploy`로 적용한다.** 공용 DB에 `prisma migrate dev`를 돌리지 않는다 — 리셋 제안을 승인하면 팀 전체 개발 데이터가 사라진다 (ARCHITECTURE.md "Known Issues").
+
 ## 지켜야 하는 기존 동작
 
 - `PrismaService.onModuleInit`은 DB 연결 실패를 삼키고 경고만 로그한다 (서버 부팅이 막히지 않게 하려는 의도적 처리). 이 catch를 제거하지 않는다.
 - `JwtAuthGuard`는 `common/guards`에 있다 — `auth`/`users` 모듈이 서로를 순환 참조하지 않게 하려는 배치다. 다른 모듈 안으로 옮기지 않는다.
+- DI로 주입받는 생성자 파라미터에는 타입 별칭을 쓰지 않는다. `jwt.strategy.ts`처럼 `ConfigService<AppConfig, true>`로 클래스를 직접 쓴다.
 
 ## 응답 포맷
 
 - 컨트롤러는 서비스 반환값을 가공 없이 그대로 반환한다 (`{success, data}` 같은 공통 envelope로 감싸지 않는다). `packages/shared`에 그런 envelope 타입을 새로 만들지 않는다 — 이전에 있던 미사용 `ApiResponse`/`ApiError` 타입도 이 이유로 제거함.
 - 에러는 NestJS 기본 예외 처리를 그대로 쓴다: 입력 검증 실패는 `class-validator` + `ValidationPipe`가 자동으로 400을 반환하고, 그 외 실패는 `UnauthorizedException` 등 Nest 내장 `HttpException` 계열을 던진다. 커스텀 전역 `ExceptionFilter`로 에러 모양을 새로 정의하지 않는다.
+  - `app.module.ts`에 등록된 `SentryGlobalFilter`는 이 규칙의 예외가 아니다 — 에러를 Sentry로 보내기만 하고 `super.catch()`로 Nest 기본 처리에 위임해서 응답 모양을 건드리지 않는다. **제거하면 에러가 Sentry에 안 잡히므로 지우지 않는다** (자세한 내용은 ARCHITECTURE.md "Observability").
 - 응답 모양을 바꿔야 할 필요가 생기면(예: 페이지네이션에 `packages/shared`의 `PaginatedResult` 사용) 이 문서와 함께 갱신한다.
 
 ## 테스트
@@ -27,4 +39,4 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 
 - 인증/인가: 토큰 없이 또는 잘못된 토큰으로 보호된 엔드포인트 접근 시 401
 - 소유권 검증: 본인 소유가 아닌 리소스(예: 남의 글) 수정/삭제 시도 시 거부
-- 로그인/회원가입의 실패 케이스 (잘못된 비밀번호, 중복 이메일 등)
+- 로그인의 실패 케이스 (무효한 소셜 토큰·인가 코드, 회전된 리프레시 토큰 재사용, 이메일 미제공 시 임시 이메일 가입 등 — `test/auth.e2e-spec.ts`가 커버 중)

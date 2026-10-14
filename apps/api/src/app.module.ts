@@ -1,11 +1,28 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_FILTER } from '@nestjs/core';
+import { ScheduleModule } from '@nestjs/schedule';
+import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { validate } from './config/env.validation';
 import configuration from './config/configuration';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BulletinsModule } from './modules/bulletins/bulletins.module';
+import { CellsModule } from './modules/cells/cells.module';
+import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
+import { AttendanceModule } from './modules/attendance/attendance.module';
+import { NoticesModule } from './modules/notices/notices.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { PostsModule } from './modules/posts/posts.module';
 import { PrismaModule } from './modules/prisma/prisma.module';
+import { SermonsModule } from './modules/sermons/sermons.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { TeamBoardModule } from './modules/team-board/team-board.module';
+import { TeamsModule } from './modules/teams/teams.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 
 @Module({
@@ -13,12 +30,33 @@ import { UsersModule } from './modules/users/users.module';
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
+      validate,
     }),
+    SentryModule.forRoot(),
+    // 설교영상 유튜브 동기화(SermonSyncService) 주기 실행용
+    ScheduleModule.forRoot(),
     PrismaModule,
     UsersModule,
     AuthModule,
+    CellsModule,
+    TeamsModule,
+    ChatModule,
+    TeamBoardModule,
+    GroupMeetingsModule,
+    PostsModule,
+    UploadsModule,
+    AdminModule,
+    NoticesModule,
+    NotificationsModule,
+    AttendanceModule,
+    SermonsModule,
+    BulletinsModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    // 예외를 Sentry로 보낸 뒤 Nest 기본 예외 처리에 그대로 위임한다 (응답 모양 불변).
+    { provide: APP_FILTER, useClass: SentryGlobalFilter },
+  ],
 })
 export class AppModule {}

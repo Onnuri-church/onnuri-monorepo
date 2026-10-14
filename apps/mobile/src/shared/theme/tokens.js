@@ -1,5 +1,6 @@
 // 디자인 토큰의 단일 소스. tailwind.config.js가 이 파일을 참조하고,
 // className을 못 쓰는 곳(React Navigation 옵션, StatusBar 등)에서도 여기서 직접 import해서 쓴다.
+// 네이티브 스플래시 배경색이 필요한 app.config.js도 여기서 가져간다.
 // 값을 두 군데(여기 + 어딘가의 컴포넌트)에 따로 적지 않는다.
 
 // DESIGN.md 컬러 규칙: semantic 토큰만 사용 (primitive 원시 스케일 없음 — 앞으로도 안 씀, 확인됨).
@@ -11,22 +12,247 @@ const colors = {
   primary: {
     normal: "#276E4C",
   },
+  // assistive(#D9D9D9)·muted(#ECECEC)는 각각 text.assistive · chip.bg와 값이 같다.
+  // 용도가 다른 별개 토큰이라 그대로 두고, 한쪽 값이 바뀌면 다른 쪽은 따라가지 않는다.
   background: {
     normal: "#FFFFFF",
+    page: "#FBFBFB",
     alternative: "#EFF7F3",
+    assistive: "#D9D9D9",
+    muted: "#ECECEC",
+    dark: "#000000",
+    gold: "#F3EAD8",
+    red: "#FBEAE8",
+    // 사진 위에 올라가는 알약 버튼 배경 — 배너 사진은 테마와 무관하게 같아서 라이트에선 흰색이다.
+    onImage: "#FFFFFF",
   },
   text: {
-    normal: "#000000",
+    normal: "#111111",
     neutral: "#444444",
     alternative: "#888888",
     assistive: "#D9D9D9",
     disable: "#FFFFFF",
+    brown: "#5C4A2A",
+    // 사진 위 글자 — background/text.normal은 테마에 따라 뒤집히지만 사진 위 글자는 항상 밝아야 한다.
+    onImage: "#FFFFFF",
   },
+  // accent는 아이콘 원본 SVG에만 있던 색을 토큰으로 올린 것으로, 컬러차트에 대응 항목이 없다.
+  // 로고(assets/logo/)에 시안 확정값으로 박힌 색과 같아서, 아이콘용 토큰으로 남길지
+  // 로고 전용으로 접을지 미확인 — DESIGN.md 오픈 이슈 참고.
   icon: {
     normal: "#888888",
     strong: "#444444",
+    strongest: "#040509",
+    accent: "#436E5D",
     disable: "#FFFFFF",
   },
+  // chip. 구분용 팔레트(purple~indigo)는 배경(bg)이 공통이고 글자색만 다르고,
+  // 모집 상태(open/closed)는 반대로 글자가 흰색이고 배경이 상태별로 다르다.
+  chip: {
+    bg: "#ECECEC",
+    // 필터 칩이 선택됐을 때의 배경 (시안 확정값). icon.accent와 값이 같지만 용도가 다른
+    // 별개 토큰이라 그대로 둔다 — 위 background.assistive / text.assistive와 같은 취급이다.
+    selected: "#436E5D",
+    open: "#444444",
+    closed: "#888888",
+    purple: "#8C00BF",
+    blue: "#0086BF",
+    red: "#BF0000",
+    yellow: "#BFA200",
+    green: "#33BF00",
+    orange: "#D16900",
+    indigo: "#3400D1",
+  },
+  // warning / danger는 진한 전경색이지만 info만 아주 밝은 틴트다 — 셋을 같은 감각으로 쓰면 안 된다.
+  // info를 글자색으로 쓰면 흰 배경에서 사실상 안 보인다 (배경 전용).
+  semantic: {
+    warning: "#A87836",
+    danger: "#EF4444",
+    info: "#E9E9F2",
+  },
+};
+
+// 다크 팔레트 (2026-10-07 제안, 지환님 확인). 라이트와 같은 키 구조를 유지해야 한다 — 키가 하나라도
+// 어긋나면 CSS 변수가 비어 그 색만 사라진다 (아래 themeVars가 라이트 기준으로 변수를 만든다).
+// 설계 기준: 순수 검정 대신 녹회색 3단계 바탕, 초록은 밝게(#276E4C → #4C9873), 초록 채움 위 글자는
+// 흰색 대신 어두운 색(text.disable — 밝은 초록 위 흰 글자는 대비 3.5라 읽기 부족), 글자는 순백 대신 #ECEEED.
+const darkColors = {
+  transparent: "transparent",
+  current: "currentColor",
+  primary: {
+    normal: "#4C9873",
+  },
+  background: {
+    normal: "#121614",
+    page: "#0D100E",
+    alternative: "#1B2822",
+    assistive: "#3A423E",
+    muted: "#232A26",
+    dark: "#000000",
+    gold: "#3A2F1C",
+    red: "#3A211D",
+    onImage: "#ECEEED",
+  },
+  text: {
+    normal: "#ECEEED",
+    neutral: "#C4C9C6",
+    alternative: "#8F9893",
+    assistive: "#3A423E",
+    disable: "#0B0F0D",
+    brown: "#E0C28A",
+    onImage: "#F2F4F3",
+  },
+  icon: {
+    normal: "#8F9893",
+    strong: "#C4C9C6",
+    strongest: "#F2F4F3",
+    accent: "#5FAA86",
+    disable: "#0B0F0D",
+  },
+  chip: {
+    bg: "#232A26",
+    selected: "#4C9873",
+    open: "#C4C9C6",
+    closed: "#8F9893",
+    purple: "#C77DE8",
+    blue: "#5BB8E6",
+    red: "#E86F6F",
+    yellow: "#D9C24A",
+    green: "#6FD04A",
+    orange: "#F0953C",
+    indigo: "#8F7BE8",
+  },
+  semantic: {
+    warning: "#D9A45C",
+    danger: "#E0685C",
+    info: "#262735",
+  },
+};
+
+// Tailwind에는 hex 대신 CSS 변수 참조를 등록한다 — 값은 앱 루트가 vars()로 테마별로 공급한다.
+// `<alpha-value>` 덕분에 bg-…/85 같은 투명도 수식어가 그대로 동작한다.
+function mapLeaves(tree, fn, path = []) {
+  const out = {};
+  for (const [key, value] of Object.entries(tree)) {
+    out[key] =
+      typeof value === "string" ? fn(value, [...path, key]) : mapLeaves(value, fn, [...path, key]);
+  }
+  return out;
+}
+
+const NON_HEX = new Set(["transparent", "currentColor"]);
+
+const colorVarRefs = mapLeaves(colors, (value, path) =>
+  NON_HEX.has(value) ? value : `rgb(var(--c-${path.join("-")}) / <alpha-value>)`,
+);
+
+function hexToChannels(hex) {
+  const h = hex.replace("#", "");
+  return `${parseInt(h.slice(0, 2), 16)} ${parseInt(h.slice(2, 4), 16)} ${parseInt(h.slice(4, 6), 16)}`;
+}
+
+function buildThemeVars(palette) {
+  const vars = {};
+  const walk = (tree, path) => {
+    for (const [key, value] of Object.entries(tree)) {
+      if (typeof value === "string") {
+        if (!NON_HEX.has(value)) vars[`--c-${[...path, key].join("-")}`] = hexToChannels(value);
+      } else {
+        walk(value, [...path, key]);
+      }
+    }
+  };
+  walk(palette, []);
+  return vars;
+}
+
+const themeVars = { light: buildThemeVars(colors), dark: buildThemeVars(darkColors) };
+
+// 그림자. NativeWind는 shadow-*를 RN의 shadowColor/shadowOffset/shadowRadius로 변환하면서
+// shadowOpacity를 1로 고정하므로, 투명도는 색의 알파(#RRGGBBAA)에 넣어야 한다.
+// spread(4번째 값)는 RN에 대응이 없어 무시된다 — 0이 아닌 값이 필요하면 시안을 다시 확인한다.
+// card = primary.normal(#276E4C) 10%, nav = 검정 3%(시안의 drop-shadow).
+const boxShadow = {
+  card: "0px 1px 20px 0px #276E4C1A",
+  nav: "0px -5px 52px 0px #00000008",
+  // 셀 갤러리 월 선택 드롭다운 (시안의 drop-shadow: 0 8 24, 검정 20%).
+  dropdown: "0px 8px 24px 0px #00000033",
+};
+
+// 안드로이드 전용 그림자 깊이. 키 이름을 boxShadow와 맞춰야 짝이 맞는다.
+// 지정하지 않으면 NativeWind가 blur(20)를 그대로 elevation으로 쓰는데 카드에는 과하다.
+// nav가 0인 건 값을 안 정해서가 아니다 — 안드로이드 elevation은 항상 아래로 그려져서
+// 위로 뜨는 탭바 그림자를 표현할 수 없다. 그렇다고 비워두면 NativeWind가 blur(52)를
+// 그대로 elevation으로 써서 iOS엔 거의 안 보이는 3% 그림자가 안드로이드에서만 시커멓게 나온다.
+const elevation = {
+  card: 2,
+  nav: 0,
+  dropdown: 8,
+};
+
+// 사이즈 스케일 예외. DESIGN.md 사이즈 규칙은 Tailwind 기본 스케일만 쓰도록 하고 있는데,
+// 기본 스케일에 18이 없어서(...12, 14, 16, 20...) 시안의 72px을 표현할 방법이 없다.
+// 시안 확정값이라 예외로 추가한다. rem이 아니라 px로 적는다 — metro.config.js에서
+// inlineRem: 16으로 맞춰뒀으므로 키 × 4 = px이 되어 기본 스케일과 규칙이 일치한다(17 → 68px).
+const spacing = {
+  // 이미지 페이저 인디케이터의 점 크기, 기도제목 카드의 번호·카테고리 줄과 제목 사이 간격 (시안 확정값).
+  // 기본 스케일이 1.5(6px) → 2(8px)로 건너뛰어 7px이 없다. 점이 작아서 1px 차이가 비율로는 14%라 눈에 띈다.
+  1.75: "7px",
+  // 기도제목 카드의 북마크 (시안 확정값). 절대 위치 기준이 테두리 1px 안쪽이라,
+  // 카드 끝에서 상 10·우 14가 되려면 9·13을 준다.
+  2.25: "9px",
+  3.25: "13px",
+  // 주보 목록 행의 위아래 여백 (시안 확정값): 구분선 간격 83 = 내용 47 + 18*2.
+  // 기본 스케일이 4(16px) → 5(20px)로 건너뛰어 18px이 없다.
+  4.5: "18px",
+  // 설정 화면 iOS 토글 (시안 확정값 35×22). 기본 스케일 반 칸(0.5)은 3.5까지만 있어 5.5가 없고,
+  // 8(32px) → 9(36px) 사이도 비어 있다.
+  5.5: "22px",
+  8.75: "35px",
+  // 취향 소그룹 상세 InfoBox (시안 확정값): 라벨-값 간격 30, 라벨 열 폭 42, 행 높이 49.
+  // 4의 배수가 아니라 키가 소수로 떨어진다 — 기본 스케일도 0.5/1.5/2.5를 쓰므로 규칙은 유지된다.
+  7.5: "30px",
+  10.5: "42px",
+  12.25: "49px",
+  // 홈 화면 큐티나눔 → 취향 소그룹 띠배너 사이 간격 (시안 확정값 46px).
+  // 기본 스케일이 11(44px) → 12(48px)로 건너뛰어 46px이 없다. 시안의 다른 여백은 기본 스케일과
+  // 1px 차이라 스케일 값으로 맞췄고, 이것만 양쪽에서 2px 떨어져 어느 쪽으로도 정할 수 없다.
+  11.5: "46px",
+  // 월 선택 그리드의 원형 알약 지름 (시안 확정값 52×52 — 출석 관리 주차별 보기·팔로워 노트 달력).
+  // 기본 스케일이 12(48px) → 14(56px)로 건너뛰어 52px이 없다.
+  13: "52px",
+  // 셀 페이지 구성원 그리드 (시안 확정값): 아바타 지름 60, 아바타 사이 가로 간격 60.
+  // 기본 스케일이 14(56px) → 16(64px)로 건너뛰어 60px이 없다.
+  15: "60px",
+  // 스플래시 로고를 화면 정중앙에서 34px 위로 올리기 위한 값. justify-center 컨테이너에서
+  // padding/margin은 중심을 그 절반만큼만 옮기므로 34가 아니라 2배인 68이다. 34로 고치지 말 것.
+  // 하단 탭 가운데 원형 버튼의 지름(68)도 같은 값을 쓴다 — 우연히 같은 숫자라 한쪽 시안이
+  // 바뀌면 여기서 갈라내야 한다.
+  17: "68px",
+  18: "72px",
+  // 마이페이지 프로필 아바타 지름 (시안 확정값 100×100). 기본 스케일이 24(96px) → 28(112px)로
+  // 건너뛰어 100px이 없다.
+  25: "100px",
+  // 홈 화면 부서활동 가로 스크롤 카드 폭 (시안 확정값 150px). 기본 스케일이 36(144px) →
+  // 40(160px)으로 건너뛰는데, 반올림하면 가로 스크롤에서 카드가 잘리는 위치가 달라진다.
+  37.5: "150px",
+  // 셀 갤러리 월 선택 드롭다운 폭 (시안 확정값 170). 아래 43(172px)과 2px 차이지만
+  // 용도가 다른 별개 값이라 합치지 않는다.
+  42.5: "170px",
+  // 이미지 ui (시안 확정값)
+  43: "172px",
+  // 부서활동 상세 (시안 확정값). 기본 스케일이 80(320px) → 96(384px)으로 건너뛰어 360px이 없다.
+  90: "360px",
+  // 큐티나눔 상세 (시안 확정값). 기본 스케일이 96(384px)에서 끝나 400px이 없다.
+  100: "400px",
+};
+
+// 라운드 예외. Tailwind 기본 borderRadius 스케일은 rounded-2xl(16px)에서 rounded-3xl(24px)로 건너뛰어서
+// 시안의 20px(로그인 버튼)을 표현할 방법이 없다. 시안 확정값이라 예외로 추가한다 —
+// 키 번호는 spacing과 같은 규칙(키 × 4 = px)을 따른다.
+const borderRadius = {
+  5: "20px",
+  2.5: "10px",
 };
 
 // 폰트 패밀리(1-1): 한글/영문·숫자 모두 Pretendard.
@@ -37,26 +263,52 @@ const fontFamily = {
   "pretendard-bold": ["Pretendard-Bold"],
 };
 
-// 타입 스케일(1-2). lh(line-height)는 전부 140%(=폰트 크기의 1.4배, unitless),
-// ls(letter-spacing)는 label-medium/label-small만 -3%고 나머지는 전부 -1% (%→em 변환).
-// 굵기는 각 사이즈 클래스와 아래 폰트 유틸리티를 페어로 사용:
-//   title → font-pretendard-bold, heading-main → font-pretendard-bold
-//   heading-medium → font-pretendard-semibold, heading-small → font-pretendard-semibold
-//   body-main → font-pretendard-semibold, body-medium → font-pretendard-medium, body-small → font-pretendard(regular)
-//   label-medium → font-pretendard-medium, label-small → font-pretendard(regular)
-//   caption-main → font-pretendard-medium, caption-small → font-pretendard-medium
-const fontSize = {
-  title: ["22px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-main": ["20px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-medium": ["20px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "heading-small": ["18px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-main": ["15px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-medium": ["15px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "body-small": ["13px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "label-medium": ["13px", { lineHeight: "1.4", letterSpacing: "-0.03em" }],
-  "label-small": ["12px", { lineHeight: "1.4", letterSpacing: "-0.03em" }],
-  "caption-main": ["13px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
-  "caption-small": ["10px", { lineHeight: "1.4", letterSpacing: "-0.01em" }],
+// 타입 스케일(1-2). 사이즈 / 행간 / 자간 / 굵기를 한 클래스로 묶는다 —
+// `text-title` 하나만 쓰면 22px·Bold까지 전부 정해진다. lh(line-height)는 label-nav만 빼고
+// 전부 140%(unitless), ls(letter-spacing)는 label-medium/label-small/label-nav를 뺀 나머지가
+// 전부 -1% (%→em 변환).
+// [사이즈, 자간, 폰트 파일, (선택)행간] 순서 — 행간은 안 적으면 140%다.
+const TEXT_STYLE = {
+  title: ["22px", "-0.01em", "Pretendard-Bold"],
+  "heading-main": ["20px", "-0.01em", "Pretendard-Bold"],
+  "heading-medium": ["20px", "-0.01em", "Pretendard-SemiBold"],
+  "heading-small": ["18px", "-0.01em", "Pretendard-SemiBold"],
+  // 홈 큐티나눔 목록 행 제목 (시안 확정값 16px SemiBold). heading-small(18)과 body-main(15)
+  // 사이 값이라 어느 쪽으로도 대체되지 않는다.
+  "body-large": ["16px", "-0.01em", "Pretendard-SemiBold"],
+  "body-main": ["15px", "-0.01em", "Pretendard-SemiBold"],
+  "body-medium": ["15px", "-0.01em", "Pretendard-Medium"],
+  "body-regular": ["15px", "-0.01em", "Pretendard-Regular"],
+  "body-small": ["13px", "-0.01em", "Pretendard-Regular"],
+  "body-small-bold": ["13px", "-0.01em", "Pretendard-ExtraBold"],
+  "label-medium": ["13px", "-0.03em", "Pretendard-Medium"],
+  "caption-main": ["13px", "-0.01em", "Pretendard-Medium"],
+  "label-small": ["12px", "-0.03em", "Pretendard-Regular"],
+  // 하단 탭 라벨 전용. Figma 레이어 이름은 label-small과 같은 "Label/Small"이지만 값이 셋 다 다르다
+  // (굵기 SemiBold, 자간 +1%, 행간 14px 고정). 같은 토큰의 변형이 아니라 별개 스타일이라 따로 등록한다 —
+  // label-small인 줄 알고 가져다 쓰면 자간·행간이 조용히 어긋난다.
+  "label-nav": ["12px", "0.01em", "Pretendard-SemiBold", "14px"],
+  "caption-small": ["10px", "-0.01em", "Pretendard-Medium"],
 };
 
-module.exports = { colors, fontFamily, fontSize };
+// tailwind.config.js가 components 레이어에 등록한다. utilities 레이어인 font-pretendard-*가
+// 항상 뒤에 오므로, 굵기만 다르게 써야 하는 곳은 클래스를 덧붙여 덮어쓸 수 있다.
+const textStyles = Object.fromEntries(
+  Object.entries(TEXT_STYLE).map(([name, [fontSize, letterSpacing, family, lineHeight = "1.4"]]) => [
+    `.text-${name}`,
+    { fontSize, lineHeight, letterSpacing, fontFamily: family },
+  ]),
+);
+
+module.exports = {
+  colors,
+  darkColors,
+  colorVarRefs,
+  themeVars,
+  fontFamily,
+  textStyles,
+  boxShadow,
+  elevation,
+  spacing,
+  borderRadius,
+};

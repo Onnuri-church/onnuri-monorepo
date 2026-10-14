@@ -1,0 +1,263 @@
+import { useNavigation } from "@react-navigation/native";
+import { useRef, useState } from "react";
+import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useUnreadNotificationCount } from "../../api/notifications";
+import { useAuthStore } from "../../store/useAuthStore";
+import { colors } from "../../theme/tokens";
+import { useThemeColors } from "../../theme/useThemeColors";
+import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
+import { Icon } from "./Icon";
+import { Logo } from "./Logo";
+
+// 벨 아이콘 + 안읽음 빨간 점. 메인 헤더와 마이페이지 액션 바가 같이 쓴다.
+// 게스트는 알림이 없으므로(401) 로그인일 때만 개수를 묻는다.
+export function NotificationBell({ size = 28 }: { size?: number }) {
+  const signedIn = useAuthStore((state) => state.session.status === "authenticated");
+  const { data } = useUnreadNotificationCount(signedIn);
+  return (
+    <View>
+      <Icon name="bell" size={size} color={colors.icon.strong} />
+      {(data?.count ?? 0) > 0 && (
+        <View
+          className="absolute rounded-full border border-background-normal bg-semantic-danger"
+          style={{ top: 1, right: 1, width: 9, height: 9 }}
+        />
+      )}
+    </View>
+  );
+}
+
+// 헤더 콘텐츠 행 높이 (안전영역 제외).
+const HEADER_ROW_HEIGHT = 61;
+// ⋮ 메뉴는 버튼을 실측해서 그 바로 아래에 붙인다. 여기 상수는 버튼과의 간격뿐이다.
+const MENU_GAP_BELOW_BUTTON = 4;
+
+interface MainHeaderProps {
+  variant: "main";
+  onPressQr?: () => void;
+  onPressNotification?: () => void;
+  onPressSettings?: () => void;
+}
+
+interface SubHeaderProps {
+  variant: "sub";
+  title: string;
+  /**
+   * 우측 버튼. "home"이면 메인 탭으로 돌아간다. "export"면 공유 버튼(주보 상세 등),
+   * "bookmark"면 저장 버튼(기도제목 상세), "text"면 아이콘 대신 문구 버튼(팀원 추가의 "완료" 등).
+   * "none"이면 버튼 없이 자리만 비운다 (타이틀이 가운데 유지되도록 아이콘과 같은 폭).
+   * 기본값은 더보기(⋮) — 단, 누를 수 없는 아이콘은 그리지 않는다: ⋮는 menuItems가,
+   * 공유는 onPressShare가 있을 때만 나온다 (안 넘기고 등록한 화면에 죽은 버튼이 떠 있었다).
+   */
+  rightAction?: "more" | "home" | "export" | "bookmark" | "text" | "none";
+  /** rightAction이 "text"일 때 그릴 문구 (예: "완료", "편집"). */
+  rightLabel?: string;
+  /** 우측 문구 버튼 동작 (rightAction이 "text"일 때). */
+  onPressRightLabel?: () => void;
+  /**
+   * ⋮ 드롭다운 항목. ⋮를 누르면 헤더가 내장 ContextMenu를 연다.
+   * 항목이 고정이면 RootNavigator 등록부에서 넘기고, 화면 데이터에 의존하면
+   * 화면이 setOptions로 헤더를 단독 등록하며 넘긴다 — 그 화면은 등록부에 header를 두지 않는다
+   * (헤더 정의는 화면당 정확히 한 곳).
+   */
+  menuItems?: ContextMenuItem[];
+  /** 공유 버튼 동작 (rightAction이 "export"일 때). */
+  onPressShare?: () => void;
+  /** 북마크 버튼 동작 (rightAction이 "bookmark"일 때). */
+  onPressBookmark?: () => void;
+  /** 북마크가 켜져 있는지 (rightAction이 "bookmark"일 때 채워진 아이콘으로 그린다). */
+  bookmarked?: boolean;
+  /**
+   * rightAction이 "home"일 때 홈 아이콘 왼쪽에 붙는 보조 아이콘 버튼 (셀 페이지의 단톡방 등).
+   * 타이틀이 가운데 유지되도록 왼쪽(뒤로가기)에 같은 폭의 자리를 둔다.
+   */
+  extraRightAction?: {
+    icon: React.ComponentProps<typeof Icon>["name"];
+    onPress: () => void;
+    /** 아이콘 오른쪽 위에 빨간 점을 붙인다 (안 읽은 단톡 메시지 등) */
+    badge?: boolean;
+  };
+  /**
+   * 홈 버튼 동작. 안 주면 메인 탭으로 돌아간다.
+   * 탭 안에서 쓰는 화면(팀스토리)은 이미 Main에 있어서 기본 동작이 아무 일도 하지 않으므로,
+   * 갈 탭을 아는 쪽에서 직접 넘긴다.
+   */
+  onPressHome?: () => void;
+  /**
+   * 뒤로가기 버튼 동작. 안 주면 navigation.goBack(). 스택에 이전 화면이 없어서
+   * 뒤로가기의 의미를 직접 정해야 하는 화면(온보딩의 프로필 설정 등)에서 넘긴다.
+   */
+  onPressBack?: () => void;
+  /**
+   * 뒤로가기 버튼을 그리지 않는다. 하단 탭의 첫 화면(팀스토리)처럼 돌아갈 곳이 없는 화면에서 쓴다.
+   * 타이틀이 가운데 유지되도록 같은 폭의 빈 자리는 남긴다.
+   */
+  hideBack?: boolean;
+}
+
+interface OverlayHeaderProps {
+  variant: "overlay";
+  onPressShare?: () => void;
+}
+
+type HeaderProps = MainHeaderProps | SubHeaderProps | OverlayHeaderProps;
+
+export function Header(props: HeaderProps) {
+  const themeColors = useThemeColors();
+  const insets = useSafeAreaInsets();
+  const navigation = useNavigation();
+  const { width: windowWidth } = useWindowDimensions();
+  const moreButtonRef = useRef<View>(null);
+  // ⋮ 메뉴를 붙일 화면 좌표. null이면 닫힘 — 버튼을 실측한 뒤에 열리므로 위치와 열림 상태가 같이 간다.
+  const [menuAnchor, setMenuAnchor] = useState<{ top: number; right: number } | null>(null);
+
+  // 헤더 높이를 상수로 가정하지 않고 ⋮ 버튼의 실제 위치를 재서 그 아래에 붙인다.
+  const openMenu = () => {
+    moreButtonRef.current?.measureInWindow((x, y, width, height) => {
+      setMenuAnchor({
+        top: y + height + MENU_GAP_BELOW_BUTTON,
+        right: windowWidth - (x + width),
+      });
+    });
+  };
+
+  // 상세 페이지용. 타이틀·배경·구분선이 없고 히어로 이미지 위에 겹쳐 놓는다.
+  if (props.variant === "overlay") {
+    return (
+      <View
+        className="absolute left-0 right-0 top-0 z-10 flex-row items-center justify-between px-4"
+        style={{ paddingTop: insets.top, height: insets.top + 56 }}
+      >
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+          <Icon name="back" size={28} color={colors.icon.strong} />
+        </Pressable>
+        {props.onPressShare && (
+          <Pressable onPress={props.onPressShare} hitSlop={8}>
+            <Icon name="export" size={28} color={colors.icon.strong} />
+          </Pressable>
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View className="px-4 bg-background-normal" style={{ paddingTop: insets.top }}>
+      {/* 안전영역은 바깥 View가 처리한다 — 여기에 insets를 또 더하면 헤더가 상태바만큼 밀린다. */}
+      <View className={`${props.variant === "main" ? 'border-b border-background-alternative' : 'pt-4'} flex-row items-center justify-between bg-background-normal`}
+            style={{ height: HEADER_ROW_HEIGHT }}
+      >
+        {props.variant === "main" ? (
+            <>
+              <Logo variant="horizontal-green" />
+              <View className="flex-row items-center gap-4">
+                {/* QR은 하단 탭이 아니라 여기서 연다. 갈 곳이 정해져 있어 기본 동작을 준다. */}
+                <Pressable
+                  onPress={props.onPressQr ?? (() => navigation.navigate("Qr" as never))}
+                  hitSlop={8}
+                >
+                  <Icon name="qr" size={23} color={colors.icon.strong} />
+                </Pressable>
+                {/* 알림센터도 QR처럼 갈 곳이 정해져 있어 기본 동작을 준다. */}
+                <Pressable
+                  onPress={
+                    props.onPressNotification ??
+                    (() => navigation.navigate("Notifications" as never))
+                  }
+                  hitSlop={8}
+                >
+                  <NotificationBell />
+                </Pressable>
+                {/* 설정도 갈 곳이 정해져 있어 기본 동작을 준다 (마이페이지 액션 바와 같은 화면). */}
+                <Pressable
+                  onPress={
+                    props.onPressSettings ??
+                    (() => navigation.navigate("Settings" as never))
+                  }
+                  hitSlop={8}
+                >
+                  <Icon name="setting" size={28} color={colors.icon.strong} />
+                </Pressable>
+              </View>
+            </>
+        ) : (
+            <>
+              {/* 오른쪽에 아이콘이 둘이면 왼쪽도 같은 폭(28+12+28)으로 잡아 타이틀을 가운데에 둔다. */}
+              <View style={{ width: props.rightAction === "home" && props.extraRightAction ? 68 : undefined }}>
+                {props.hideBack ? (
+                  <View style={{ width: 28, height: 28 }} />
+                ) : (
+                  <Pressable
+                      onPress={props.onPressBack ?? (() => navigation.goBack())}
+                      hitSlop={8}
+                      style={{ alignSelf: "flex-start" }}
+                  >
+                    <Icon name="back" size={28} color={colors.icon.strong} />
+                  </Pressable>
+                )}
+              </View>
+              <Text className="font-pretendard-semibold text-heading-small text-text-normal">{props.title}</Text>
+              {props.rightAction === "home" ? (
+                  <View className="flex-row items-center gap-3">
+                    {props.extraRightAction && (
+                        <Pressable onPress={props.extraRightAction.onPress} hitSlop={8}>
+                          <Icon name={props.extraRightAction.icon} size={28} color={colors.icon.strong} />
+                          {props.extraRightAction.badge && (
+                            <View
+                              className="absolute h-2.5 w-2.5 rounded-full bg-semantic-danger"
+                              style={{ top: -1, right: -1 }}
+                            />
+                          )}
+                        </Pressable>
+                    )}
+                    <Pressable
+                        onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
+                        hitSlop={8}
+                    >
+                      <Icon name="home" size={28} color={colors.icon.strong} />
+                    </Pressable>
+                  </View>
+              ) : props.rightAction === "export" ? (
+                  props.onPressShare ? (
+                      <Pressable onPress={props.onPressShare} hitSlop={8}>
+                        <Icon name="export" size={28} color={colors.icon.strong} />
+                      </Pressable>
+                  ) : (
+                      <View className="w-7" />
+                  )
+              ) : props.rightAction === "bookmark" ? (
+                  <Pressable onPress={props.onPressBookmark} hitSlop={8}>
+                    <Icon
+                        name={props.bookmarked ? "bookmark-active" : "bookmark"}
+                        size={28}
+                        color={props.bookmarked ? themeColors.primary.normal : themeColors.icon.strong}
+                    />
+                  </Pressable>
+              ) : props.rightAction === "text" ? (
+                  <Pressable onPress={props.onPressRightLabel} hitSlop={8}>
+                    <Text className="text-body-main text-primary-normal">{props.rightLabel}</Text>
+                  </Pressable>
+              ) : props.rightAction === "none" ? (
+                  <View className="w-7" />
+              ) : props.menuItems?.length ? (
+                  <Pressable ref={moreButtonRef} onPress={openMenu} hitSlop={8}>
+                    <Icon name="more" size={28} color={colors.icon.strong} />
+                  </Pressable>
+              ) : (
+                  <View className="w-7" />
+              )}
+              {props.menuItems && (
+                  <ContextMenu
+                      visible={menuAnchor !== null}
+                      onClose={() => setMenuAnchor(null)}
+                      items={props.menuItems}
+                      style={menuAnchor ?? undefined}
+                  />
+              )}
+            </>
+        )}
+      </View>
+    </View>
+  );
+}

@@ -1,0 +1,59 @@
+import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { Pressable, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { useTeam, useTeamGallery } from "./api";
+import { Icon } from "../../shared/components/base/Icon";
+import { PhotoPager } from "../../shared/components/composed/PhotoPager";
+import { colors } from "../../shared/theme/tokens";
+import type { RootStackParamList } from "../../shared/types/navigation";
+
+// 사진 한 장을 꽉 채워 보는 화면. 헤더를 Header 컴포넌트로 그리지 않고 여기서 직접 그린다 —
+// 시안이 배경 없는 어두운 헤더에 타이틀까지 요구하는데 sub(흰 배경)·overlay(타이틀 없음) 어느 쪽도 맞지 않고,
+// 이 모양을 쓰는 화면이 아직 여기뿐이다. 다른 뷰어가 같은 헤더를 쓰게 되면 그때 공용으로 올린다.
+export function TeamStoryPhotoViewerScreen() {
+  const { t } = useTranslation();
+  const { params } = useRoute<RouteProp<RootStackParamList, "TeamStoryPhotoViewer">>();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+
+  const team = useTeam(params.teamId);
+  // 갤러리를 거쳐 들어오므로 캐시에 있다 — 갤러리와 같은 순서로 평탄화한다.
+  const { data: gallery } = useTeamGallery(params.teamId);
+  const photos = (gallery ?? []).flatMap((month) => month.photos);
+
+  const [index, setIndex] = useState(0);
+
+  return (
+    <View className="flex-1 bg-background-dark" style={{ paddingTop: insets.top }}>
+      {/* 헤더 — 배경 없이 사진 위에 얹힌다. 뒤로가기 아이콘 색은 시안 값(icon.strong) 그대로다. */}
+      <View className="h-14 flex-row items-center justify-between px-5">
+        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+          <Icon name="back" size={28} color={colors.icon.strong} />
+        </Pressable>
+        <Text className="text-heading-main text-text-onImage">
+          {t("{{name}} 사진", { name: team?.name ?? t("팀") })}
+        </Text>
+        {/* 자리를 남겨야 타이틀이 가운데 온다 */}
+        <View className="w-7" />
+      </View>
+
+      <Text className="text-center text-caption-main text-text-alternative">
+        {index + 1}/{photos.length}
+      </Text>
+
+      <View className="mt-4 flex-1">
+        <PhotoPager
+          urls={photos.map((item) => item.url)}
+          initialIndex={Math.max(
+            photos.findIndex((item) => item.id === params.photoId),
+            0,
+          )}
+          onIndexChange={setIndex}
+        />
+      </View>
+    </View>
+  );
+}
