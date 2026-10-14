@@ -5,14 +5,29 @@
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://localhost:3000",
+        "EXPO_PUBLIC_AUTH_DEV_LOGIN": "true"
       }
     },
     "preview": {
       "distribution": "internal",
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://onnuri-api.onrender.com",
+        "EXPO_PUBLIC_AUTH_DEV_LOGIN": "false",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
       }
     },
-    "production": {}
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://onnuri-api.onrender.com",
+        "EXPO_PUBLIC_AUTH_DEV_LOGIN": "false",
+        "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
+      }
+    }
   }
 }
