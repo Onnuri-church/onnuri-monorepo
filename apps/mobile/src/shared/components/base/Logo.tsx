@@ -9,8 +9,8 @@ import WordmarkTitle from "../../assets/logo/wordmark-title.svg";
 // 밖에서는 width만 넘긴다 — height는 비율로 계산해서 자산이 찌그러지지 않게 한다.
 // symbol만 PNG(1024×1024)라 Image로 그린다. SVG 버전을 받으면 여기만 바꾸면 된다.
 const VARIANTS = {
-  horizontal: { ratio: 222 / 46, width: 222 },
-  "horizontal-green": { ratio: 144 / 30, width: 144 },
+  horizontal: { ratio: 145 / 31, width: 222 },
+  "horizontal-green": { ratio: 145 / 31, width: 145 },
   symbol: { ratio: 1, width: 205 },
   wordmark: { ratio: 150 / 104, width: 150 },
 } as const;
