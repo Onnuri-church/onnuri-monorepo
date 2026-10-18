@@ -3,6 +3,7 @@ import { Pressable, Text, View } from "react-native";
 
 import GoogleMark from "../../../shared/assets/logo/google.svg";
 import KakaoMark from "../../../shared/assets/logo/kakao.svg";
+import { LastLoginTooltip } from "./LastLoginTooltip";
 
 // 카카오·구글 버튼의 색·마크·문구는 각 사 브랜딩 가이드가 고정한 값이라 semantic 토큰으로 만들지 않는다
 // (로고와 같은 브랜드 자산 예외 — DESIGN.md 컬러 규칙 참고). 그래서 토큰 클래스가 아니라 style로 직접 준다.
@@ -25,9 +26,15 @@ const PROVIDERS = {
 interface SocialLoginButtonProps {
   provider: keyof typeof PROVIDERS;
   onPress: () => void;
+  /** 마지막에 쓴 로그인 수단이면 버튼 위에 "최근 로그인" 말풍선을 얹는다. */
+  isLastUsed?: boolean;
 }
 
-export function SocialLoginButton({ provider, onPress }: SocialLoginButtonProps) {
+export function SocialLoginButton({
+  provider,
+  onPress,
+  isLastUsed = false,
+}: SocialLoginButtonProps) {
   const { t } = useTranslation();
   const { Mark, markHeight, box, labelColor } = PROVIDERS[provider];
   const label = provider === "kakao" ? t("카카오 로그인") : t("구글 로그인");
@@ -35,16 +42,19 @@ export function SocialLoginButton({ provider, onPress }: SocialLoginButtonProps)
   // 눌림 상태는 Pressable의 style 콜백으로만 처리한다(DESIGN.md props 규칙).
   // 시안에 pressed 색이 없어서 우선 투명도로 두고, 확정 규칙이 나오면 이 줄만 바꾼다.
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}>
-      <View className="h-12 flex-row items-center justify-center rounded-5" style={box}>
-        {/* 마크는 버튼 왼쪽에 고정하고 문구는 버튼 전체 기준으로 가운데 — 시안과 같은 배치 */}
-        <View className="absolute left-6">
-          <Mark width={24} height={markHeight} />
+    <View>
+      <Pressable onPress={onPress} style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}>
+        <View className="h-12 flex-row items-center justify-center rounded-5" style={box}>
+          {/* 마크는 버튼 왼쪽에 고정하고 문구는 버튼 전체 기준으로 가운데 — 시안과 같은 배치 */}
+          <View className="absolute left-6">
+            <Mark width={24} height={markHeight} />
+          </View>
+          <Text className="text-heading-small" style={{ color: labelColor }}>
+            {label}
+          </Text>
         </View>
-        <Text className="text-heading-small" style={{ color: labelColor }}>
-          {label}
-        </Text>
-      </View>
-    </Pressable>
+      </Pressable>
+      {isLastUsed && <LastLoginTooltip />}
+    </View>
   );
 }

@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -8,6 +8,11 @@ import { signInWithDev } from "../../shared/api/session";
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { SocialLoginButton } from "./components/SocialLoginButton";
+import {
+  type LastLoginProvider,
+  loadLastLoginProvider,
+  saveLastLoginProvider,
+} from "./lastLogin";
 import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
 
 // 개발용 로그인이 만드는 역할별 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을
@@ -32,17 +37,24 @@ export function LoginScreen() {
   const startGuestSession = useAuthStore((state) => state.startGuestSession);
   const insets = useSafeAreaInsets();
   const [submitting, setSubmitting] = useState(false);
+  // 마지막으로 성공한 소셜 로그인 수단 — 그 버튼 위에 "최근 로그인" 말풍선을 띄운다.
+  const [lastProvider, setLastProvider] = useState<LastLoginProvider | null>(null);
+  useEffect(() => {
+    void loadLastLoginProvider().then(setLastProvider);
+  }, []);
 
   // 성공하면 signInWithSocial이 세션을 만들고, RootNavigator가 session.status를 보고 전환한다 —
   // 프로필 설정을 마치지 않은 유저(신규 가입 포함)는 onboarding 세션이 되어 프로필 설정으로,
   // 나머지는 홈으로 간다.
   const runSocialLogin = async (
     login: () => Promise<{ isNewUser: boolean } | null>,
+    provider?: LastLoginProvider, // 개발용 로그인은 기록하지 않는다
   ) => {
     if (submitting) return; // 연타로 로그인 창이 겹치지 않게
     setSubmitting(true);
     try {
-      await login(); // null이면 사용자가 취소한 것 — 아무것도 하지 않는다
+      const result = await login(); // null이면 사용자가 취소한 것 — 아무것도 하지 않는다
+      if (result && provider) saveLastLoginProvider(provider);
     } catch (error) {
       // 흔한 원인: dev build가 아님(네이티브 모듈 없음), .env 키 미설정, 빌드 키(SHA-1/키 해시) 미등록.
       Alert.alert(
@@ -54,8 +66,8 @@ export function LoginScreen() {
     }
   };
 
-  const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk);
-  const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk);
+  const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk, "kakao");
+  const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk, "google");
   const handleDevPress = (account: (typeof DEV_ACCOUNTS)[number]) =>
     void runSocialLogin(() => signInWithDev(account.email, account.role));
 
@@ -71,7 +83,7 @@ export function LoginScreen() {
       <View className="flex-1 px-11 pb-12">
         <View className="flex-1 items-center justify-center">
           <Logo variant="symbol" />
-          <Text className="text-body-medium text-text-neutral">{t("2026 온누리교회 청년부")}</Text>
+          <Text className="text-body-medium text-text-neutral">{t("2026 부산온누리교회")}</Text>
           {/* 타이틀 SVG가 글자에 딱 맞게 잘려 있어서 시안의 행간 여백이 없다 — 8px로 대신한다 */}
           <View className="mt-2">
             <Logo variant="wordmark" />
@@ -79,8 +91,16 @@ export function LoginScreen() {
         </View>
 
         <View className="gap-4">
-          <SocialLoginButton provider="kakao" onPress={handleKakaoPress} />
-          <SocialLoginButton provider="google" onPress={handleGooglePress} />
+          <SocialLoginButton
+            provider="kakao"
+            onPress={handleKakaoPress}
+            isLastUsed={lastProvider === "kakao"}
+          />
+          <SocialLoginButton
+            provider="google"
+            onPress={handleGooglePress}
+            isLastUsed={lastProvider === "google"}
+          />
         </View>
 
         <Pressable
