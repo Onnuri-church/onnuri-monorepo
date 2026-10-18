@@ -68,8 +68,8 @@ export type RootStackParamList = {
   TeamStoryDetail: { teamId: string };
   // 소속팀 공간 — 그 팀 팀원·관리자 전용. 안에 팀 게시판과 팀 단톡방이 있다.
   TeamSpace: { teamId: string };
-  // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group)의 + 메뉴에서 연다.
-  ChatPollCreate: { kind: "room" | "cell" | "group"; id: string };
+  // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group / 리더 방 leader)의 + 메뉴에서 연다.
+  ChatPollCreate: { kind: "room" | "cell" | "group" | "leader"; id: string };
   // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
   GroupChat: { meetingId: string };
   TeamBoard: { teamId: string };
@@ -80,6 +80,11 @@ export type RootStackParamList = {
   // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기
   ChatRoomForm: { teamId: string; roomId?: string };
   ChatRoom: { roomId: string };
+  // 전체 리더 방 — 팀장·팔로워(셀장·부셀장)·관리자만. 마이페이지 "전체 리더 방"에서 들어온다.
+  LeaderRoomList: undefined;
+  // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기 — 관리자만
+  LeaderRoomForm: { roomId?: string };
+  LeaderRoom: { roomId: string };
   CellChat: { cellId: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;

@@ -200,3 +200,43 @@ export interface UpdateChatRoomRequest {
 export interface AddChatRoomMembersRequest {
   userIds: string[];
 }
+
+// ── 전체 리더 방 ─────────────────────────────────────────────────────────
+// 팀장·팔로워(셀장·부셀장)·관리자만 들어오는 단톡방들. 관리자가 방을 만들고 멤버를 직접 고른다.
+// 방 만들기·이름 수정·멤버 추가/추방 요청은 팀 단톡방과 같은 모양(CreateChatRoomRequest 등)을 쓴다.
+
+/** GET /leader-rooms 응답 항목 */
+export interface LeaderRoomSummary {
+  id: string;
+  name: string;
+  memberCount: number;
+  /** 안 읽은 메시지 수 — 내가 마지막으로 읽은 뒤 다른 사람이 쓴 메시지 */
+  unreadCount: number;
+  /** 마지막 메시지 미리보기 (없으면 null) */
+  lastMessage: string | null;
+  /** ISO datetime — 마지막 메시지 시각, 없으면 방 만든 시각 */
+  lastActivityAt: string;
+}
+
+/** GET /leader-rooms/:roomId 응답 */
+export interface LeaderRoomDetail {
+  id: string;
+  name: string;
+  members: ChatMember[];
+  /** 방 이름 수정·멤버 추가/추방·방 삭제 가능 여부 — 관리자 */
+  canManage: boolean;
+}
+
+/** 리더 방에 넣을 수 있는 사람의 등급 */
+export type LeaderGrade = "admin" | "teamLeader" | "cellLeader" | "viceLeader";
+
+/** GET /leader-rooms/candidates 응답 항목 (관리자 전용) — 방 만들기·멤버 추가의 선택지 */
+export interface LeaderRoomCandidate {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+  /** 가장 높은 등급 하나 — 관리자 > 팀장 > 셀장 > 부셀장 */
+  grade: LeaderGrade;
+  /** 소속 설명 — 팀장이면 팀 이름, 셀장·부셀장이면 셀 이름 (없으면 null) */
+  affiliation: string | null;
+}

@@ -15,6 +15,7 @@ import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
+import { CellAccessService } from './cell-access.service';
 import { CellsService } from './cells.service';
 import { AddCellMembersDto } from './dto/add-cell-members.dto';
 import { CreateCellDto } from './dto/create-cell.dto';
@@ -25,7 +26,10 @@ import { UpdateCellDto } from './dto/update-cell.dto';
 // 생성/수정/삭제와 셀원 추가·제거는 모두 관리자 전용이다 (셀장은 목록만 본다).
 @Controller('cells')
 export class CellsController {
-  constructor(private readonly cellsService: CellsService) {}
+  constructor(
+    private readonly cellsService: CellsService,
+    private readonly cellAccess: CellAccessService,
+  ) {}
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
@@ -33,9 +37,11 @@ export class CellsController {
     return this.cellsService.findAll();
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  // 셀 상세(구성원 포함)는 그 셀 셀원·관리자만 — 목록(GET /cells)은 프로필 설정 선택지라 그대로 둔다.
+  @UseGuards(JwtAuthGuard)
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    await this.cellAccess.assertCanView(user.sub, id);
     const cell = await this.cellsService.findOne(id);
     if (!cell) throw new NotFoundException('존재하지 않는 셀입니다.');
     return cell;

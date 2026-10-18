@@ -11,20 +11,22 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
 
-// 팀 단톡방(room)과 셀 단톡방(cell)은 주소만 다르고 요청·응답이 같다.
-export type ChatKind = "room" | "cell" | "group";
+// 팀 단톡방(room)·셀 단톡방(cell)·소그룹(group)·전체 리더 방(leader)은 주소만 다르고 요청·응답이 같다.
+export type ChatKind = "room" | "cell" | "group" | "leader";
 
 const CHAT_POLL_MS = 4000;
 
 function roomPath(kind: ChatKind, id: string): string {
   if (kind === "room") return `/chat-rooms/${id}/messages`;
   if (kind === "group") return `/group-meetings/${id}/messages`;
+  if (kind === "leader") return `/leader-rooms/${id}/messages`;
   return `/cells/${id}/messages`;
 }
 
 function readPath(kind: ChatKind, id: string): string {
   if (kind === "room") return `/chat-rooms/${id}/read`;
   if (kind === "group") return `/group-meetings/${id}/read`;
+  if (kind === "leader") return `/leader-rooms/${id}/read`;
   return `/cells/${id}/read`;
 }
 

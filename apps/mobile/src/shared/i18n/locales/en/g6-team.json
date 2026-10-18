@@ -210,5 +210,17 @@
   "정한 시각이 되면 자동으로 마감돼요": "The poll closes automatically at the set time",
   "변경": "Change",
   "마감 시각을 확인해주세요": "Check the closing time",
-  "마감 시각은 지금보다 뒤여야 해요.": "The closing time must be in the future."
+  "마감 시각은 지금보다 뒤여야 해요.": "The closing time must be in the future.",
+  "전체 리더 방": "All-leaders rooms",
+  "리더 방": "Leaders room",
+  "리더 방 만들기": "Create leaders room",
+  "리더 방 관리": "Manage leaders room",
+  "리더 방 삭제": "Delete leaders room",
+  "이 리더 방을 삭제하시겠습니까?": "Delete this leaders room?",
+  "예: 팀장 회의방": "e.g. Team leaders meeting",
+  "들어갈 리더 선택": "Choose leaders to add",
+  "리더 추가": "Add leaders",
+  "추가할 리더가 없어요.": "No leaders left to add.",
+  "아직 리더 방이 없어요. 오른쪽 위 \"만들기\"로 만들어보세요.": "No leaders rooms yet. Tap \"Create\" at the top right to make one.",
+  "들어가 있는 리더 방이 없어요. 관리자가 초대하면 여기에 나타나요.": "You're not in any leaders room yet. Rooms you're invited to by an admin will show up here."
 }

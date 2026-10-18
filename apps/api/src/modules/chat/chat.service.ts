@@ -16,6 +16,7 @@ import type { Prisma } from '../../../generated/prisma';
 import { Cron } from '@nestjs/schedule';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { LEADER_USER_WHERE } from './leader-grade';
 import {
   POLL_MAX_OPTIONS,
   POLL_MIN_OPTIONS,
@@ -27,8 +28,15 @@ const RECENT_LIMIT = 100;
 // 알림 본문에 싣는 메시지 미리보기 길이
 const SNIPPET_LENGTH = 40;
 
-/** 단톡방 하나 — 팀 단톡방(roomId), 셀 단톡방(cellId), 취향소그룹 단톡방(groupId) 중 하나. */
-export type ChatRoom = { roomId: string } | { cellId: string } | { groupId: string };
+/**
+ * 단톡방 하나 — 팀 단톡방(roomId), 셀 단톡방(cellId), 취향소그룹 단톡방(groupId),
+ * 전체 리더 방(leaderRoomId) 중 하나.
+ */
+export type ChatRoom =
+  | { roomId: string }
+  | { cellId: string }
+  | { groupId: string }
+  | { leaderRoomId: string };
 
 interface RoomAccess {
   isAdmin: boolean;
@@ -121,7 +129,7 @@ type MessageRow = {
   } | null;
 };
 
-// 단톡방 — 팀·셀·소그룹 단톡방이 같은 로직을 쓴다. 그 방의 소속 멤버와 관리자만 읽고 쓴다.
+// 단톡방 — 팀·셀·소그룹·전체 리더 방이 같은 로직을 쓴다. 그 방의 소속 멤버와 관리자만 읽고 쓴다.
 @Injectable()
 export class ChatService {
   constructor(
@@ -132,6 +140,7 @@ export class ChatService {
   private readScope(room: ChatRoom): string {
     if ('roomId' in room) return `room:${room.roomId}`;
     if ('cellId' in room) return `cell:${room.cellId}`;
+    if ('leaderRoomId' in room) return `leader:${room.leaderRoomId}`;
     return `group:${room.groupId}`;
   }
 
@@ -410,7 +419,14 @@ export class ChatService {
         title: true,
         closesAt: true,
         createdById: true,
-        message: { select: { roomId: true, cellId: true, groupId: true } },
+        message: {
+          select: {
+            roomId: true,
+            cellId: true,
+            groupId: true,
+            leaderRoomId: true,
+          },
+        },
       },
     });
     for (const poll of expired) {
@@ -418,12 +434,14 @@ export class ChatService {
         where: { id: poll.id },
         data: { closedAt: poll.closesAt ?? now },
       });
-      const { roomId, cellId, groupId } = poll.message;
+      const { roomId, cellId, groupId, leaderRoomId } = poll.message;
       const linkUrl = roomId
         ? `team-room/${roomId}`
         : groupId
           ? `group-room/${groupId}`
-          : `cell-chat/${cellId}`;
+          : leaderRoomId
+            ? `leader-room/${leaderRoomId}`
+            : `cell-chat/${cellId}`;
       await this.notifications.notify([poll.createdById], {
         type: 'CHAT',
         title: '단톡방',
@@ -447,17 +465,26 @@ export class ChatService {
         createdById: true,
         options: { select: { id: true, text: true } },
         message: {
-          select: { id: true, deletedAt: true, roomId: true, cellId: true, groupId: true },
+          select: {
+            id: true,
+            deletedAt: true,
+            roomId: true,
+            cellId: true,
+            groupId: true,
+            leaderRoomId: true,
+          },
         },
       },
     });
     if (!poll || poll.message.deletedAt) throw new NotFoundException('투표를 찾을 수 없어요.');
-    const { roomId, cellId, groupId } = poll.message;
+    const { roomId, cellId, groupId, leaderRoomId } = poll.message;
     const room: ChatRoom = roomId
       ? { roomId }
       : groupId
         ? { groupId }
-        : { cellId: cellId as string };
+        : leaderRoomId
+          ? { leaderRoomId }
+          : { cellId: cellId as string };
     const access = await this.assertAccess(userId, room);
     return { poll, access };
   }
@@ -497,6 +524,7 @@ export class ChatService {
   private roomWhere(room: ChatRoom) {
     if ('roomId' in room) return { roomId: room.roomId };
     if ('groupId' in room) return { groupId: room.groupId };
+    if ('leaderRoomId' in room) return { leaderRoomId: room.leaderRoomId };
     return { cellId: room.cellId };
   }
 
@@ -547,6 +575,32 @@ export class ChatService {
         canNotice: isAdmin || isLeader || chatRoom.createdById === userId,
         members: this.toMembers(chatRoom.members.map((m) => m.user)),
         linkUrl: `team-room/${room.roomId}`,
+      };
+    }
+
+    if ('leaderRoomId' in room) {
+      // 전체 리더 방 — 관리자가 고른 멤버 중 지금도 리더 등급인 사람과 관리자만 들어온다.
+      // 멤버 목록도 같은 조건으로 걸러서, 강등된 사람에게는 알림·언급이 가지 않는다.
+      // 방 안의 멤버는 모두 리더라 공지는 들어와 있는 누구나 올릴 수 있다.
+      const leaderRoom = await this.prisma.leaderRoom.findFirst({
+        where: { id: room.leaderRoomId, deletedAt: null },
+        select: {
+          members: {
+            where: { user: LEADER_USER_WHERE },
+            select: { user: { select: { id: true, name: true, avatarUrl: true } } },
+          },
+        },
+      });
+      if (!leaderRoom) throw new NotFoundException('존재하지 않는 단톡방입니다.');
+      const isMember = leaderRoom.members.some((m) => m.user.id === userId);
+      if (!isAdmin && !isMember) {
+        throw new ForbiddenException('이 단톡방의 멤버만 볼 수 있습니다.');
+      }
+      return {
+        isAdmin,
+        canNotice: true,
+        members: this.toMembers(leaderRoom.members.map((m) => m.user)),
+        linkUrl: `leader-room/${room.leaderRoomId}`,
       };
     }
 
