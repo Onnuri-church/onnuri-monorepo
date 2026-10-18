@@ -21,7 +21,7 @@ import { SetChatNoticeDto } from './dto/set-chat-notice.dto';
 import { ToggleChatReactionDto } from './dto/toggle-chat-reaction.dto';
 
 // 팀 단톡방(/chat-rooms/:roomId/messages), 셀 단톡방(/cells/:cellId/messages), 취향소그룹 단톡방
-// (/group-meetings/:groupId/messages)이 같은 서비스를 쓴다.
+// (/group-meetings/:groupId/messages), 전체 리더 방(/leader-rooms/:roomId/messages)이 같은 서비스를 쓴다.
 // 접근 권한(그 방의 멤버·관리자)은 서비스가 검증한다.
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -191,6 +191,71 @@ export class ChatController {
     @Param('messageId') messageId: string,
   ) {
     return this.chatService.remove(user.sub, { groupId }, messageId);
+  }
+
+  // ---- 전체 리더 방 ----
+  @Get('leader-rooms/:roomId/messages')
+  findLeader(@CurrentUser() user: JwtPayload, @Param('roomId') roomId: string) {
+    return this.chatService.find(user.sub, { leaderRoomId: roomId });
+  }
+
+  @Post('leader-rooms/:roomId/messages')
+  sendLeader(
+    @CurrentUser() user: JwtPayload,
+    @Param('roomId') roomId: string,
+    @Body() dto: SendChatMessageDto,
+  ) {
+    return this.chatService.send(user.sub, { leaderRoomId: roomId }, dto);
+  }
+
+  @Put('leader-rooms/:roomId/messages/:messageId/notice')
+  setLeaderNotice(
+    @CurrentUser() user: JwtPayload,
+    @Param('roomId') roomId: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: SetChatNoticeDto,
+  ) {
+    return this.chatService.setNotice(
+      user.sub,
+      { leaderRoomId: roomId },
+      messageId,
+      dto.on,
+    );
+  }
+
+  @Put('leader-rooms/:roomId/messages/:messageId/reactions')
+  reactLeader(
+    @CurrentUser() user: JwtPayload,
+    @Param('roomId') roomId: string,
+    @Param('messageId') messageId: string,
+    @Body() dto: ToggleChatReactionDto,
+  ) {
+    return this.chatService.toggleReaction(
+      user.sub,
+      { leaderRoomId: roomId },
+      messageId,
+      dto.emoji,
+    );
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('leader-rooms/:roomId/messages/:messageId')
+  removeLeader(
+    @CurrentUser() user: JwtPayload,
+    @Param('roomId') roomId: string,
+    @Param('messageId') messageId: string,
+  ) {
+    return this.chatService.remove(
+      user.sub,
+      { leaderRoomId: roomId },
+      messageId,
+    );
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('leader-rooms/:roomId/read')
+  readLeader(@CurrentUser() user: JwtPayload, @Param('roomId') roomId: string) {
+    return this.chatService.markRead(user.sub, { leaderRoomId: roomId });
   }
 
   // ---- 투표 (방 종류와 무관 — 투표가 올라온 방의 접근 권한을 서비스가 확인한다) ----

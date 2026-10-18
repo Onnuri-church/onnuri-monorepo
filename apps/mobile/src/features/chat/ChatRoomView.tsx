@@ -104,6 +104,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       .then(() => {
         void queryClient.invalidateQueries({ queryKey: ["chat-unread"] });
         void queryClient.invalidateQueries({ queryKey: ["chat-rooms"] });
+        void queryClient.invalidateQueries({ queryKey: ["leader-rooms"] });
       })
       .catch(() => undefined);
   }, [focused, latestMessageId, kind, id, queryClient]);

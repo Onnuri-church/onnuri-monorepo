@@ -42,6 +42,8 @@ export interface MeResponse extends User {
   canUploadBulletin: boolean;
   /** 홈 배너 관리 가능 — 관리자이거나 배너 권한이 켜진 팀의 팀원 */
   canManageBanner: boolean;
+  /** 전체 리더 방 진입 가능 — 관리자, 팀장(어느 팀이든), 셀장·부셀장 */
+  canUseLeaderRooms: boolean;
 }
 
 /** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지와 전체 셀 목록이 같이 쓴다 */

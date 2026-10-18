@@ -17,6 +17,7 @@ import { signOut } from "../../shared/api/session";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { useLeaderRooms } from "../leader-room/api";
 import { fetchMe } from "../profile/api";
 import { useMyStats } from "./api";
 import { MenuLinkCard, type MenuLink } from "./components/MenuLinkCard";
@@ -131,6 +132,10 @@ export function MyPageScreen() {
   const team = leaderTeam?.name ?? me?.team?.name ?? t("없음");
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
   const myTeamId = leaderTeam?.id ?? me?.team?.id;
+  // 리더 방 안 읽은 수 합계 — 권한이 없으면 요청하지 않는다.
+  const { data: leaderRooms } = useLeaderRooms(me?.canUseLeaderRooms === true);
+  const leaderUnread = (leaderRooms ?? []).reduce((sum, room) => sum + room.unreadCount, 0);
+
   const roleLinks = getRoleLinks(role, team, {
     // 팀장 메뉴 — 내 팀이 있어야 갈 곳이 정해진다 (teamLeader 판정 자체가 me.team 기준이라 항상 있다).
     onBoardManagePress: myTeamId
@@ -154,6 +159,15 @@ export function MyPageScreen() {
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
     onBannerManagePress: () => navigation.navigate("AdminBannerManage"),
   });
+  // 전체 리더 방 — 팀장·팔로워(셀장·부셀장)·관리자에게만 보이는 입구. 방에 안 읽은 메시지가 있으면 빨간 점을 단다.
+  // 관리 카드의 첫 줄에 둬서 점이 바로 눈에 띄게 한다.
+  if (me?.canUseLeaderRooms) {
+    roleLinks.unshift({
+      label: t("전체 리더 방"),
+      onPress: () => navigation.navigate("LeaderRoomList"),
+      unreadCount: leaderUnread,
+    });
+  }
   // 업로드 권한이 켜진 팀의 팀원(팀장 포함)에게는 등급과 무관하게 해당 메뉴가 붙는다.
   // 관리자는 이미 홈 배너 관리가 있으니 중복해서 붙이지 않는다.
   if (role !== "admin") {
