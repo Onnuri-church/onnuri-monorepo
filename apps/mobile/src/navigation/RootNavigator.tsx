@@ -67,6 +67,9 @@ import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
 import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
+import { LeaderRoomFormScreen } from "../features/leader-room/LeaderRoomFormScreen";
+import { LeaderRoomListScreen } from "../features/leader-room/LeaderRoomListScreen";
+import { LeaderRoomScreen } from "../features/leader-room/LeaderRoomScreen";
 import { ChatRoomFormScreen } from "../features/team-space/ChatRoomFormScreen";
 import { ChatRoomListScreen } from "../features/team-space/ChatRoomListScreen";
 import { ChatRoomScreen } from "../features/team-space/ChatRoomScreen";
@@ -426,6 +429,21 @@ export function RootNavigator() {
             options={{ headerShown: true }}
           />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: true }} />
+          <Stack.Screen
+            name="LeaderRoomList"
+            component={LeaderRoomListScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="LeaderRoomForm"
+            component={LeaderRoomFormScreen}
+            options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="LeaderRoom"
+            component={LeaderRoomScreen}
+            options={{ headerShown: true }}
+          />
           <Stack.Screen
             name="ChatPollCreate"
             component={ChatPollCreateScreen}

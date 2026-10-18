@@ -136,6 +136,9 @@ export function NotificationScreen() {
       case "team-room":
         navigation.navigate("ChatRoom", { roomId: first });
         break;
+      case "leader-room":
+        navigation.navigate("LeaderRoom", { roomId: first });
+        break;
       case "cell-chat":
         navigation.navigate("CellChat", { cellId: first });
         break;
