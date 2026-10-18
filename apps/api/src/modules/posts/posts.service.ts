@@ -24,6 +24,7 @@ import {
   toDateLabel,
   toDayLabel,
 } from '../../common/utils/date';
+import { CellAccessService } from '../cells/cell-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
@@ -142,6 +143,7 @@ export class PostsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly notifications: NotificationsService,
+    private readonly cellAccess: CellAccessService,
   ) {}
 
   // 홈의 큐티나눔·부서활동 섹션 — 각 게시판 최신 글을 홈 카드에 필요한 필드만 담아 준다.
@@ -476,8 +478,12 @@ export class PostsService {
     }
   }
 
-  // 셀 소식 목록 — 소식 날짜(eventDate) 최신순. 열람은 게스트도 된다 (셀 페이지 열람 범위).
-  async findCellNews(cellId: string): Promise<CellNewsListItem[]> {
+  // 셀 소식 목록 — 소식 날짜(eventDate) 최신순. 열람은 그 셀 셀원·관리자만 (2026-10-18 확정).
+  async findCellNews(
+    userId: string,
+    cellId: string,
+  ): Promise<CellNewsListItem[]> {
+    await this.cellAccess.assertCanView(userId, cellId);
     const posts = await this.prisma.post.findMany({
       where: { board: 'CELL_NEWS', cellId, deletedAt: null },
       select: { id: true, title: true, eventDate: true, createdAt: true },
@@ -496,7 +502,7 @@ export class PostsService {
   // board 조건을 넣는 이유는 큐티 상세와 같다 (다른 게시판 글 id로 부르면 없는 글 취급).
   async findCellNewsDetail(
     id: string,
-    userId: string | undefined,
+    userId: string,
   ): Promise<CellNewsDetail> {
     const post = await this.prisma.post.findFirst({
       where: { id, board: 'CELL_NEWS', deletedAt: null },
@@ -530,8 +536,11 @@ export class PostsService {
       },
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    // 소식은 항상 셀에 속한다 — cellId가 비어 있는 비정상 글은 셀원 확인을 할 수 없어 없는 글 취급한다.
+    if (!post.cellId) throw new NotFoundException('게시글을 찾을 수 없습니다.');
+    await this.cellAccess.assertCanView(userId, post.cellId);
 
-    const isAdmin = userId ? await this.isAdminUser(userId) : false;
+    const isAdmin = await this.isAdminUser(userId);
 
     return {
       id: post.id,
