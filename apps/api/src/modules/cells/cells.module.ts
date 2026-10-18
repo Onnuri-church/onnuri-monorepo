@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 
 import { NotificationsModule } from '../notifications/notifications.module';
+import { CellAccessService } from './cell-access.service';
 import { CellAttendanceController } from './cell-attendance.controller';
 import { CellAttendanceService } from './cell-attendance.service';
 import { CellGalleryController } from './cell-gallery.controller';
@@ -19,10 +20,12 @@ import { FollowerNotesService } from './follower-notes.service';
     CellGalleryController,
   ],
   providers: [
+    CellAccessService,
     CellsService,
     FollowerNotesService,
     CellAttendanceService,
     CellGalleryService,
   ],
+  exports: [CellAccessService],
 })
 export class CellsModule {}

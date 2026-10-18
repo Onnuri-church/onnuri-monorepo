@@ -61,21 +61,21 @@ export class PostsController {
     return this.postsService.findQtShare(id, user.sub);
   }
 
-  // 셀 소식 — 열람은 게스트도, 작성은 그 셀 셀원·관리자만, 삭제는 작성자·셀장·관리자만
+  // 셀 소식 — 열람·작성은 그 셀 셀원·관리자만, 삭제는 작성자·셀장·관리자만
   // (권한 검증은 서비스).
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('cell-news')
-  findCellNews(@Query() query: FindCellNewsDto) {
-    return this.postsService.findCellNews(query.cellId);
+  findCellNews(
+    @CurrentUser() user: JwtPayload,
+    @Query() query: FindCellNewsDto,
+  ) {
+    return this.postsService.findCellNews(user.sub, query.cellId);
   }
 
-  @UseGuards(OptionalJwtAuthGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('cell-news/:id')
-  findCellNewsDetail(
-    @CurrentUser() user: JwtPayload | undefined,
-    @Param('id') id: string,
-  ) {
-    return this.postsService.findCellNewsDetail(id, user?.sub);
+  findCellNewsDetail(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
+    return this.postsService.findCellNewsDetail(id, user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
