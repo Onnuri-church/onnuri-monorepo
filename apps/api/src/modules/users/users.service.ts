@@ -101,6 +101,12 @@ export class UsersService {
         user.isAdmin || grantedTeam.some((team) => team.canUploadBulletin),
       canManageBanner:
         user.isAdmin || grantedTeam.some((team) => team.canManageBanner),
+      // 전체 리더 방 진입 — 관리자, 팀장(어느 팀이든), 셀장·부셀장 (chat/leader-grade.ts와 같은 기준)
+      canUseLeaderRooms:
+        user.isAdmin ||
+        teams.some((team) => team.role === 'LEADER') ||
+        cellMembership?.role === 'LEADER' ||
+        cellMembership?.role === 'SUB_LEADER',
     };
   }
 
