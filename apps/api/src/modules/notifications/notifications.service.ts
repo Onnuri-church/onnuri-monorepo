@@ -6,13 +6,23 @@ import type { NotificationType } from '../../../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 설정 화면의 알림 토글과 1:1인 타입만 유저 설정으로 푸시를 거른다 — 여기 없는 타입
-// (공지·댓글 등)은 끌 수단이 없으므로 모두에게 보낸다. 알림센터에는 꺼도 쌓인다
+// (좋아요·소그룹 등)은 끌 수단이 없으므로 모두에게 보낸다. CHAT은 일반 메시지만 끌 수 있어
+// (멘션·공지·투표 마감은 항상 전달) 보내는 쪽이 NotifyInput.pref로 직접 지정한다.
+// 알림센터에는 꺼도 쌓인다
 // (푸시만 조용해지는 것 — 기록까지 숨기면 나중에 놓친 걸 찾을 수 없다).
 const PUSH_PREF_COLUMN = {
   SERMON_UPLOAD: 'notifySermonUpload',
   LIVE_START: 'notifyLiveWorship',
   QT_NEW: 'notifyQtNewPost',
+  NOTICE: 'notifyNotice',
+  BULLETIN: 'notifyBulletin',
+  COMMENT: 'notifyComment',
+  FOLLOWER_NOTE: 'notifyFollowerNote',
 } as const satisfies Partial<Record<NotificationType, string>>;
+
+type PrefColumn =
+  | (typeof PUSH_PREF_COLUMN)[keyof typeof PUSH_PREF_COLUMN]
+  | 'notifyChat';
 
 // 다른 모듈이 이벤트 시점에 부르는 알림 생성 입력.
 export interface NotifyInput {
@@ -22,6 +32,8 @@ export interface NotifyInput {
   body: string;
   /** 앱 내부 경로 ("notice/{id}" 등) — shared NotificationInfo.linkUrl 참고 */
   linkUrl?: string;
+  /** 푸시를 거를 유저 설정 컬럼 — 없으면 타입별 기본(PUSH_PREF_COLUMN)을 쓴다 */
+  pref?: PrefColumn;
 }
 
 @Injectable()
@@ -132,7 +144,8 @@ export class NotificationsService {
   private async sendPush(userIds: string[], input: NotifyInput): Promise<void> {
     // 설정 토글이 있는 타입이면 꺼둔 사람을 뺀다.
     let targetIds = userIds;
-    const prefColumn =
+    const prefColumn: PrefColumn | undefined =
+      input.pref ??
       PUSH_PREF_COLUMN[input.type as keyof typeof PUSH_PREF_COLUMN];
     if (prefColumn) {
       const allowed = await this.prisma.user.findMany({

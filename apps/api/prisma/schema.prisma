@@ -128,6 +128,11 @@ model User {
   notifySermonUpload Boolean @default(true)
   notifyLiveWorship  Boolean @default(true)
   notifyQtNewPost    Boolean @default(true)
+  notifyNotice       Boolean @default(true)
+  notifyBulletin     Boolean @default(true)
+  notifyChat         Boolean @default(true)
+  notifyComment      Boolean @default(true)
+  notifyFollowerNote Boolean @default(true)
 
   withdrawnAt DateTime? // 탈퇴 soft delete — 출석·게시글 이력 보존
   createdAt   DateTime  @default(now())

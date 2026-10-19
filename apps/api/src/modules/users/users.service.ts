@@ -499,7 +499,7 @@ export class UsersService {
     return { qtShareCount, attendanceWeeks, prayerCount };
   }
 
-  // 알림 토글 3종 (설정 화면). DB 컬럼명(notify*)과 API 필드명이 달라 여기서 매핑한다.
+  // 알림 토글 8종 (설정 화면). DB 컬럼명(notify*)과 API 필드명이 달라 여기서 매핑한다.
   async getNotificationSettings(userId: string): Promise<NotificationSettings> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -507,6 +507,11 @@ export class UsersService {
         notifySermonUpload: true,
         notifyLiveWorship: true,
         notifyQtNewPost: true,
+        notifyNotice: true,
+        notifyBulletin: true,
+        notifyChat: true,
+        notifyComment: true,
+        notifyFollowerNote: true,
       },
     });
     if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
@@ -514,6 +519,11 @@ export class UsersService {
       sermonUpload: user.notifySermonUpload,
       liveWorship: user.notifyLiveWorship,
       qtNewPost: user.notifyQtNewPost,
+      notice: user.notifyNotice,
+      bulletin: user.notifyBulletin,
+      chatMessage: user.notifyChat,
+      comment: user.notifyComment,
+      followerNote: user.notifyFollowerNote,
     };
   }
 
@@ -531,6 +541,13 @@ export class UsersService {
           notifyLiveWorship: dto.liveWorship,
         }),
         ...(dto.qtNewPost !== undefined && { notifyQtNewPost: dto.qtNewPost }),
+        ...(dto.notice !== undefined && { notifyNotice: dto.notice }),
+        ...(dto.bulletin !== undefined && { notifyBulletin: dto.bulletin }),
+        ...(dto.chatMessage !== undefined && { notifyChat: dto.chatMessage }),
+        ...(dto.comment !== undefined && { notifyComment: dto.comment }),
+        ...(dto.followerNote !== undefined && {
+          notifyFollowerNote: dto.followerNote,
+        }),
       },
     });
     return this.getNotificationSettings(userId);
