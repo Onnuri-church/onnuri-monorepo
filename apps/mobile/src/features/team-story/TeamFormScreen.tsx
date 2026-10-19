@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useCreateTeam, useTeamDetail, useUpdateTeam } from "./api";
 import { uploadImage } from "../../shared/api/upload";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
 import { Icon, type IconName } from "../../shared/components/base/Icon";
@@ -56,6 +57,7 @@ export function TeamFormScreen() {
 
   const createTeam = useCreateTeam();
   const updateTeam = useUpdateTeam(teamId ?? "");
+  const { locked, acquire, release } = useSubmitLock();
 
   const [name, setName] = useState("");
   // 팀장은 한 명 이상 — 팀에 따라 여러 명이다 (셀장·부셀장처럼).
@@ -89,28 +91,34 @@ export function TeamFormScreen() {
   }, [team]);
 
   const handleSubmitPress = async () => {
-    if (leaderIds.length === 0) return;
+    if (leaderIds.length === 0 || !acquire()) return;
 
-    const coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
-    const body = {
-      name,
-      leaderIds,
-      iconName,
-      tagline,
-      description,
-      coverImageUrl,
-      canUploadBulletin,
-      canManageBanner,
-    };
-    if (teamId) {
-      await updateTeam.mutateAsync(body);
-    } else {
-      await createTeam.mutateAsync(body);
+    // 실패하면 다시 누를 수 있게 풀고, 오류는 기존처럼 그대로 던진다.
+    try {
+      const coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
+      const body = {
+        name,
+        leaderIds,
+        iconName,
+        tagline,
+        description,
+        coverImageUrl,
+        canUploadBulletin,
+        canManageBanner,
+      };
+      if (teamId) {
+        await updateTeam.mutateAsync(body);
+      } else {
+        await createTeam.mutateAsync(body);
+      }
+      navigation.goBack();
+    } catch (error) {
+      release();
+      throw error;
     }
-    navigation.goBack();
   };
 
-  const submitting = createTeam.isPending || updateTeam.isPending;
+  const submitting = createTeam.isPending || updateTeam.isPending || locked;
 
   return (
     <View className="flex-1 bg-background-normal">

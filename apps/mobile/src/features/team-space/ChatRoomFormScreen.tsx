@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Header } from "../../shared/components/base/Header";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { MemberPickRow } from "../team-story/components/MemberPickRow";
@@ -39,6 +40,7 @@ export function ChatRoomFormScreen() {
   const removeMember = useRemoveChatRoomMember(roomId ?? "");
   const deleteRoom = useDeleteChatRoom(roomId ?? "");
   const deleteDialogRef = useRef<AppDialogRef>(null);
+  const { acquire, release } = useSubmitLock();
 
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -71,6 +73,7 @@ export function ChatRoomFormScreen() {
       Alert.alert(t("단톡방 이름을 입력해주세요."));
       return;
     }
+    if (!acquire()) return;
     try {
       if (roomId) {
         if (trimmed !== room?.name) await rename.mutateAsync({ name: trimmed });
@@ -89,6 +92,7 @@ export function ChatRoomFormScreen() {
         );
       }
     } catch (error) {
+      release();
       showError(roomId ? t("저장 실패") : t("만들기 실패"))(error);
     }
   };

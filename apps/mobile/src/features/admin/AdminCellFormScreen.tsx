@@ -1,7 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
@@ -44,7 +44,12 @@ export function AdminCellFormScreen() {
 
   const createCell = useCreateCell();
   const updateCell = useUpdateCell(route.params?.cellId ?? "");
-  const saving = createCell.isPending || updateCell.isPending;
+  // "등록하기"를 연타하면 셀이 두 번 만들어졌다 — 사진 업로드를 기다리는 동안과 화면이 다시 그려지기 전에는
+  // isPending이 아직 false라 버튼이 잠기지 않기 때문이다. 누르는 즉시 바뀌는 ref로 막고(두 번째 호출 차단),
+  // 버튼은 state로 잠근다. 실패하면 풀고, 성공하면 화면을 떠나므로 그대로 둔다.
+  const submittingRef = useRef(false);
+  const [submitting, setSubmitting] = useState(false);
+  const saving = createCell.isPending || updateCell.isPending || submitting;
   const canSubmit =
     !saving &&
     name.trim() !== "" &&
@@ -66,12 +71,19 @@ export function AdminCellFormScreen() {
   };
 
   const handleSubmitPress = async () => {
-    if (!leaderId || !period) return;
+    if (submittingRef.current || !leaderId || !period) return;
+    submittingRef.current = true;
+    setSubmitting(true);
+    const releaseSubmit = () => {
+      submittingRef.current = false;
+      setSubmitting(false);
+    };
 
     let coverImageUrl: string | null = null;
     try {
       coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
     } catch {
+      releaseSubmit();
       Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     }
@@ -87,7 +99,10 @@ export function AdminCellFormScreen() {
     const mutation = editingCell ? updateCell : createCell;
     mutation.mutate(payload, {
       onSuccess: () => navigation.goBack(),
-      onError: () => Alert.alert(t("저장 실패"), t("잠시 후 다시 시도해주세요.")),
+      onError: () => {
+        releaseSubmit();
+        Alert.alert(t("저장 실패"), t("잠시 후 다시 시도해주세요."));
+      },
     });
   };
 

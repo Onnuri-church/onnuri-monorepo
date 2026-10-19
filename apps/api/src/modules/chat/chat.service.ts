@@ -703,6 +703,7 @@ export class ChatService {
       title: '단톡방',
       body: `${info.authorName}: ${snippet}`,
       linkUrl: access.linkUrl,
+      pref: 'notifyChat',
     });
   }
 

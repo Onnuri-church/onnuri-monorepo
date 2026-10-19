@@ -1,5 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { NotificationSettings } from "@onnuri/shared";
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
@@ -22,17 +23,47 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
 import { BrightnessSlider } from "./components/BrightnessSlider";
+import { useMe } from "../profile/useMe";
 import { SettingRow } from "./components/SettingRow";
 
 // 알림 종류별 켜짐 여부 — 서버에 저장되고, 끄면 그 종류의 푸시가 오지 않는다
 // (알림센터에는 그대로 쌓인다). key는 NotificationSettings 필드명과 같다.
-const NOTIFICATION_ROWS = [
-  { key: "sermonUpload", title: "말씀영상 업로드 알림" },
-  { key: "liveWorship", title: "실시간 예배 시작 알림" },
-  { key: "qtNewPost", title: "큐티나눔 새글 알림" },
+// 화면에는 묶음별 카드로 나눠 그린다. 팔로워 노트는 리더·관리자에게만 보인다.
+const NOTIFICATION_GROUPS = [
+  {
+    label: "콘텐츠 알림",
+    rows: [
+      { key: "sermonUpload", title: "말씀영상 업로드 알림" },
+      { key: "liveWorship", title: "실시간 예배 시작 알림" },
+      { key: "notice", title: "공지사항 알림" },
+      { key: "bulletin", title: "주보·나눔자료 알림" },
+    ],
+  },
+  {
+    label: "소통 알림",
+    rows: [
+      { key: "qtNewPost", title: "큐티나눔 새글 알림" },
+      { key: "comment", title: "댓글 알림" },
+      {
+        key: "chatMessage",
+        title: "단톡방 새 메시지 알림",
+        subtitle: "멘션·공지·투표 마감은 항상 알려드려요",
+      },
+    ],
+  },
+  {
+    label: "리더 알림",
+    leaderOnly: true,
+    rows: [{ key: "followerNote", title: "팔로워 노트 알림" }],
+  },
 ] as const;
 
-type NotificationKey = (typeof NOTIFICATION_ROWS)[number]["key"];
+type NotificationRow = {
+  key: NotificationKey;
+  title: string;
+  subtitle?: string;
+};
+type NotificationKey = keyof NotificationSettings;
 
 // 섹션 제목 시안 스타일(14px/600)과 버전정보(14px/400 #555555)는 등록된 텍스트 스타일·토큰에
 // 없다 — caption-main(13/500)·body-small(13/400)+text.neutral로 근사했고, 등록 여부는
@@ -60,7 +91,14 @@ export function SettingsScreen() {
     sermonUpload: true,
     liveWorship: true,
     qtNewPost: true,
+    notice: true,
+    bulletin: true,
+    chatMessage: true,
+    comment: true,
+    followerNote: true,
   };
+  const me = useMe();
+  const isLeader = me?.isAdmin === true || me?.canUseLeaderRooms === true;
 
   // 저장 피드백은 토스트 한 줄 — 확인 팝업은 조작을 끊어서 두지 않는다 (2026-10-02 결정,
   // 광고성 푸시가 생기면 그때 법정 고지 팝업을 별도로 단다).
@@ -77,7 +115,10 @@ export function SettingsScreen() {
 
   const handleNotificationChange = (key: NotificationKey, value: boolean) => {
     if (!requireLogin()) return;
-    const title = NOTIFICATION_ROWS.find((row) => row.key === key)?.title ?? "알림";
+    const title =
+      NOTIFICATION_GROUPS.flatMap((group) => group.rows as readonly NotificationRow[]).find(
+        (row) => row.key === key,
+      )?.title ?? "알림";
     toastRef.current?.show(
       value ? t("{{title}}이 켜졌어요", { title: t(title) }) : t("{{title}}이 꺼졌어요", { title: t(title) }),
     );
@@ -166,23 +207,26 @@ export function SettingsScreen() {
         </View>
 
         {/* 알림 */}
-        <View className="gap-2">
-          <SectionLabel>{t("알림")}</SectionLabel>
-          <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
-            {NOTIFICATION_ROWS.map((row) => (
-              <SettingRow
-                key={row.key}
-                title={t(row.title)}
-                right={
-                  <Toggle
-                    value={notifications[row.key]}
-                    onValueChange={(value) => handleNotificationChange(row.key, value)}
-                  />
-                }
-              />
-            ))}
+        {NOTIFICATION_GROUPS.filter((group) => !("leaderOnly" in group) || isLeader).map((group) => (
+          <View key={group.label} className="gap-2">
+            <SectionLabel>{t(group.label)}</SectionLabel>
+            <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
+              {(group.rows as readonly NotificationRow[]).map((row) => (
+                <SettingRow
+                  key={row.key}
+                  title={t(row.title)}
+                  subtitle={row.subtitle ? t(row.subtitle) : undefined}
+                  right={
+                    <Toggle
+                      value={notifications[row.key]}
+                      onValueChange={(value) => handleNotificationChange(row.key, value)}
+                    />
+                  }
+                />
+              ))}
+            </View>
           </View>
-        </View>
+        ))}
 
         {/* 계정 관리 */}
         <View className="gap-2">

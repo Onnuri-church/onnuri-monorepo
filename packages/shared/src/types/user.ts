@@ -114,7 +114,7 @@ export interface UpdateMyAvatarRequest {
   avatarUrl: string | null;
 }
 
-/** GET /users/me/notification-settings 응답 — 설정 화면 알림 토글 3종 (기본 전부 켜짐) */
+/** GET /users/me/notification-settings 응답 — 설정 화면 알림 토글 8종 (기본 전부 켜짐) */
 export interface NotificationSettings {
   /** 말씀영상 업로드 알림 */
   sermonUpload: boolean;
@@ -122,6 +122,16 @@ export interface NotificationSettings {
   liveWorship: boolean;
   /** 큐티나눔 새글 알림 */
   qtNewPost: boolean;
+  /** 공지사항 알림 */
+  notice: boolean;
+  /** 주보·나눔자료 알림 */
+  bulletin: boolean;
+  /** 단톡방 새 메시지 알림 (멘션·공지·투표 마감은 항상 전달) */
+  chatMessage: boolean;
+  /** 내 글 댓글 알림 */
+  comment: boolean;
+  /** 팔로워 노트 알림 (리더·관리자만 의미 있음) */
+  followerNote: boolean;
 }
 
 /** PATCH /users/me/notification-settings 요청 본문 (응답은 NotificationSettings) — 보낸 필드만 반영 */

@@ -81,12 +81,18 @@ export function LeaderRoomFormScreen() {
     Alert.alert(title, message ?? t("잠시 후 다시 시도해주세요."));
   };
 
+  // 헤더의 "만들기"를 연타하면 방이 두 번 만들어진다 — 누르는 즉시 바뀌는 ref로 두 번째 호출을 막는다.
+  // 실패하면 풀고, 성공하면 화면을 떠나므로 그대로 둔다.
+  const savingRef = useRef(false);
+
   const handleSavePress = async () => {
+    if (savingRef.current) return;
     const trimmed = name.trim();
     if (!trimmed) {
       Alert.alert(t("단톡방 이름을 입력해주세요."));
       return;
     }
+    savingRef.current = true;
     try {
       if (roomId) {
         if (trimmed !== room?.name) await rename.mutateAsync({ name: trimmed });
@@ -99,6 +105,7 @@ export function LeaderRoomFormScreen() {
         navigation.navigate("LeaderRoom", { roomId: created.id });
       }
     } catch (error) {
+      savingRef.current = false;
       showError(roomId ? t("저장 실패") : t("만들기 실패"))(error);
     }
   };
