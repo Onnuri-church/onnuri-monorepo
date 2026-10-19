@@ -14,6 +14,7 @@ import { TextField } from "../../shared/components/base/TextField";
 import { DateField } from "../../shared/components/composed/DateField";
 import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
 import { uploadImage } from "../../shared/api/upload";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useAdminMembers } from "../admin/api";
@@ -48,7 +49,8 @@ export function GroupMeetingFormScreen() {
   const { data: members } = useAdminMembers(isAdmin);
   const createMeeting = useCreateGroupMeeting();
   const updateMeeting = useUpdateGroupMeeting(meetingId ?? "");
-  const saving = createMeeting.isPending || updateMeeting.isPending;
+  const { locked, acquire, release } = useSubmitLock();
+  const saving = createMeeting.isPending || updateMeeting.isPending || locked;
 
   // 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://) — 저장 때 로컬만 업로드된다.
   const [coverUri, setCoverUri] = useState<string | null>(editing?.thumbnailUrl ?? null);
@@ -90,12 +92,13 @@ export function GroupMeetingFormScreen() {
   };
 
   const handleSubmitPress = async () => {
-    if (!recruitStart || !recruitEnd) return;
+    if (!recruitStart || !recruitEnd || !acquire()) return;
 
     let coverImageUrl: string | null = null;
     try {
       coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
     } catch {
+      release();
       Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     }
@@ -114,6 +117,7 @@ export function GroupMeetingFormScreen() {
     mutation.mutate(payload, {
       onSuccess: () => navigation.goBack(),
       onError: (error) => {
+        release();
         const message =
           (error as { response?: { data?: { message?: string } } }).response?.data?.message;
         Alert.alert(t("저장 실패"), message ?? t("잠시 후 다시 시도해주세요."));
