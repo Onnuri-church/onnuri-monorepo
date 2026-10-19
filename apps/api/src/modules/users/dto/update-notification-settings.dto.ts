@@ -13,4 +13,24 @@ export class UpdateNotificationSettingsDto {
   @IsOptional()
   @IsBoolean()
   qtNewPost?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  notice?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  bulletin?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  chatMessage?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  comment?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  followerNote?: boolean;
 }
