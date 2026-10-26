@@ -21,6 +21,7 @@ import { DecideMemberDto } from './dto/decide-member.dto';
 import { FindGroupMeetingsDto } from './dto/find-group-meetings.dto';
 import { UpdateGroupMeetingDto } from './dto/update-group-meeting.dto';
 import { GroupMeetingsService } from './group-meetings.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 열람은 게스트도 된다 (게시판 열람 범위 — 셀 페이지와 같은 결). 생성은 관리자 전용
 // (2026-09-21 관리자 시안), 수정·삭제·승인은 관리자/소그룹장 (검증은 서비스).
@@ -51,6 +52,7 @@ export class GroupMeetingsController {
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
+  @DedupeCreate()
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateGroupMeetingDto) {
     return this.groupMeetingsService.create(user.sub, dto);

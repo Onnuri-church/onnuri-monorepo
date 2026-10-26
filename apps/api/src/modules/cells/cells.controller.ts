@@ -20,6 +20,7 @@ import { CellsService } from './cells.service';
 import { AddCellMembersDto } from './dto/add-cell-members.dto';
 import { CreateCellDto } from './dto/create-cell.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 게스트도 셀 목록·페이지를 열람할 수 있다 (열람 가능 범위는 ARCHITECTURE.md Access Model —
 // 작성·관리 같은 동작 제한은 화면 쪽 몫). 그래서 조회는 필수 인증이 아니라 Optional 가드를 쓴다.
@@ -48,6 +49,7 @@ export class CellsController {
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
+  @DedupeCreate()
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateCellDto) {
     return this.cellsService.create(user.sub, dto);

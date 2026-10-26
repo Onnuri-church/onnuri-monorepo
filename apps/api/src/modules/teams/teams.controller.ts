@@ -16,6 +16,7 @@ import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guar
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamsService } from './teams.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 열람은 게스트도 된다 (팀스토리 열람 범위). 생성·수정·삭제는 관리자만
 // (docs/attendance-data-model.md §1 "관리자: 셀/팀 페이지 생성·수정·삭제").
@@ -38,6 +39,7 @@ export class TeamsController {
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
+  @DedupeCreate()
   @Post()
   create(@Body() dto: CreateTeamDto) {
     return this.teamsService.create(dto);

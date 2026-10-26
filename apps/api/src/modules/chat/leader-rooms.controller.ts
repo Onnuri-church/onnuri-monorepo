@@ -20,6 +20,7 @@ import {
   UpdateChatRoomDto,
 } from './dto/chat-room.dto';
 import { LeaderRoomsService } from './leader-rooms.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 전체 리더 방 관리 — 목록·상세는 리더 등급(방 멤버)·관리자, 만들기·수정·멤버 관리·삭제는 관리자 (검증은 서비스).
 // 대화 자체(메시지·공지·반응·읽음)는 ChatController의 leader-rooms/:roomId/… 주소가 맡는다.
@@ -39,6 +40,8 @@ export class LeaderRoomsController {
   findCandidates(@CurrentUser() user: JwtPayload) {
     return this.leaderRoomsService.findCandidates(user.sub);
   }
+
+  @DedupeCreate()
 
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateChatRoomDto) {
