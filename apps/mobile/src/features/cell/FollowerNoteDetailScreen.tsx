@@ -1,9 +1,10 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import type { FollowerNoteCommentInfo } from "@onnuri/shared";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -19,7 +20,9 @@ import { toTimeAgo } from "../../shared/utils/date";
 import {
   useAddFollowerNoteComment,
   useDeleteFollowerNote,
+  useDeleteFollowerNoteComment,
   useFollowerNotes,
+  useUpdateFollowerNoteComment,
 } from "./api";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
 import { getNoteQuestions } from "./followerNotes";
@@ -41,8 +44,13 @@ export function FollowerNoteDetailScreen() {
 
   const deleteNote = useDeleteFollowerNote(cellId);
   const addComment = useAddFollowerNoteComment(cellId);
+  const updateComment = useUpdateFollowerNoteComment(cellId);
+  const deleteComment = useDeleteFollowerNoteComment(cellId);
   const comments = note?.comments ?? [];
   const [commentDraft, setCommentDraft] = useState("");
+  // 답글 대상과 수정 중인 댓글 — 부서활동 상세와 같은 방식으로 입력창 하나를 모드만 바꿔 쓴다.
+  const [replyTo, setReplyTo] = useState<FollowerNoteCommentInfo | null>(null);
+  const [editing, setEditing] = useState<FollowerNoteCommentInfo | null>(null);
 
   // ⋮ 항목이 내 글 여부에 의존하므로 화면이 헤더를 단독 등록한다 (QtBoardDetail 패턴).
   // 수정·삭제는 작성자(셀장) 본인만 — 관리자는 열람·댓글만 한다 (서버 권한과 동일).
@@ -78,9 +86,80 @@ export function FollowerNoteDetailScreen() {
 
   const handleCommentSubmit = () => {
     const content = commentDraft.trim();
-    if (!content || addComment.isPending) return;
-    addComment.mutate({ noteId, content }, { onSuccess: () => setCommentDraft("") });
+    if (!content || addComment.isPending || updateComment.isPending) return;
+    if (editing) {
+      updateComment.mutate(
+        { noteId, commentId: editing.id, content },
+        {
+          onSuccess: () => {
+            setCommentDraft("");
+            setEditing(null);
+          },
+          onError: () =>
+            Alert.alert(t("댓글을 수정하지 못했어요"), t("잠시 후 다시 시도해주세요.")),
+        },
+      );
+      return;
+    }
+    addComment.mutate(
+      { noteId, content, parentId: replyTo?.id },
+      {
+        onSuccess: () => {
+          setCommentDraft("");
+          setReplyTo(null);
+        },
+      },
+    );
   };
+
+  const handleReplyPress = (comment: FollowerNoteCommentInfo) => {
+    setEditing(null);
+    setReplyTo(comment);
+  };
+
+  const handleEditPress = (comment: FollowerNoteCommentInfo) => {
+    setReplyTo(null);
+    setEditing(comment);
+    setCommentDraft(comment.content);
+  };
+
+  // 원댓글을 지우면 달린 답글도 서버가 같이 지우므로, 답글이 있으면 그 사실을 미리 알린다.
+  const handleDeletePress = (comment: FollowerNoteCommentInfo) => {
+    const hasReplies = comments.some((item) => item.parentId === comment.id);
+    Alert.alert(
+      t("댓글을 삭제할까요?"),
+      hasReplies
+        ? t("달린 답글도 함께 삭제되고, 되돌릴 수 없어요.")
+        : t("삭제한 댓글은 되돌릴 수 없어요."),
+      [
+        { text: t("취소"), style: "cancel" },
+        {
+          text: t("삭제"),
+          style: "destructive",
+          onPress: () =>
+            deleteComment.mutate(
+              { noteId, commentId: comment.id },
+              {
+                onError: () =>
+                  Alert.alert(t("댓글을 지우지 못했어요"), t("잠시 후 다시 시도해주세요.")),
+              },
+            ),
+        },
+      ],
+    );
+  };
+
+  const renderComment = (comment: FollowerNoteCommentInfo) => (
+    <CommentItem
+      authorName={comment.authorName}
+      timeAgo={comment.dateLabel}
+      content={comment.content}
+      // 답글은 원댓글에만 단다 — 깊이가 1단계까지라 서버가 400을 준다.
+      onReplyPress={comment.parentId ? undefined : () => handleReplyPress(comment)}
+      onEditPress={comment.canEdit ? () => handleEditPress(comment) : undefined}
+      onDeletePress={comment.canDelete ? () => handleDeletePress(comment) : undefined}
+    />
+  );
 
   if (!note) {
     return (
@@ -143,16 +222,22 @@ export function FollowerNoteDetailScreen() {
               <CommentEmpty />
             ) : (
               <View className="mt-2">
-                {comments.map((comment) => (
-                  /* 대댓글(parentId 있음)은 시안처럼 한 단계 들여쓴다. */
-                  <View key={comment.id} className={comment.parentId ? "pl-10" : ""}>
-                    <CommentItem
-                      authorName={comment.authorName}
-                      timeAgo={comment.dateLabel}
-                      content={comment.content}
-                    />
-                  </View>
-                ))}
+                {/* 대댓글은 시간순 목록에서 부모 바로 밑으로 모아 시안처럼 한 단계 들여쓴다 —
+                    순서대로만 그리면 그 사이에 달린 다른 댓글 밑에 붙어 보인다. */}
+                {comments
+                  .filter((comment) => !comment.parentId)
+                  .map((comment) => (
+                    <View key={comment.id}>
+                      {renderComment(comment)}
+                      {comments
+                        .filter((reply) => reply.parentId === comment.id)
+                        .map((reply) => (
+                          <View key={reply.id} className="pl-10">
+                            {renderComment(reply)}
+                          </View>
+                        ))}
+                    </View>
+                  ))}
               </View>
             )}
           </View>
@@ -167,11 +252,36 @@ export function FollowerNoteDetailScreen() {
             borderTopColor: themeColors.background.assistive,
           }}
         >
+          {/* 수정·답글 중일 때만 무엇을 하는 중인지 보여주고 빠져나갈 길을 준다 (부서활동 상세와 동일). */}
+          {editing && (
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-body-small text-text-alternative">{t("댓글 수정 중")}</Text>
+              <Pressable
+                onPress={() => {
+                  setEditing(null);
+                  setCommentDraft("");
+                }}
+                hitSlop={8}
+              >
+                <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
+              </Pressable>
+            </View>
+          )}
+          {replyTo && !editing && (
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="text-body-small text-text-alternative">
+                {t("{{name}}님에게 답글", { name: replyTo.authorName })}
+              </Text>
+              <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+                <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
+              </Pressable>
+            </View>
+          )}
           <CommentInput
             value={commentDraft}
             onChangeText={setCommentDraft}
             onSubmit={handleCommentSubmit}
-            placeholder={t("답변을 남겨보세요.")}
+            placeholder={replyTo ? t("답글을 입력하세요") : t("답변을 남겨보세요.")}
           />
         </View>
       </View>

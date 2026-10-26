@@ -14,6 +14,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
+import { UpdateFollowerNoteCommentDto } from './dto/update-follower-note-comment.dto';
 import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 import { FollowerNotesService } from './follower-notes.service';
 import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
@@ -70,5 +71,37 @@ export class FollowerNotesController {
     @Body() dto: CreateFollowerNoteCommentDto,
   ) {
     return this.followerNotesService.addComment(user.sub, cellId, noteId, dto);
+  }
+
+  @Patch(':noteId/comments/:commentId')
+  updateComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('cellId') cellId: string,
+    @Param('noteId') noteId: string,
+    @Param('commentId') commentId: string,
+    @Body() dto: UpdateFollowerNoteCommentDto,
+  ) {
+    return this.followerNotesService.updateComment(
+      user.sub,
+      cellId,
+      noteId,
+      commentId,
+      dto,
+    );
+  }
+
+  @Delete(':noteId/comments/:commentId')
+  removeComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('cellId') cellId: string,
+    @Param('noteId') noteId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.followerNotesService.removeComment(
+      user.sub,
+      cellId,
+      noteId,
+      commentId,
+    );
   }
 }
