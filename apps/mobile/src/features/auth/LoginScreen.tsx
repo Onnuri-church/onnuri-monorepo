@@ -1,7 +1,7 @@
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, Text, View } from "react-native";
+import { Alert, BackHandler, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { signInWithDev } from "../../shared/api/session";
@@ -35,7 +35,20 @@ const DEV_LOGIN_ENABLED = process.env.EXPO_PUBLIC_AUTH_DEV_LOGIN === "true";
 export function LoginScreen() {
   const { t } = useTranslation();
   const startGuestSession = useAuthStore((state) => state.startGuestSession);
+  const fromGuest = useAuthStore(
+    (state) => state.session.status === "unauthenticated" && state.session.fromGuest === true,
+  );
   const insets = useSafeAreaInsets();
+  // 게스트가 "로그인하기"로 왔으면 안드로이드 뒤로가기는 앱 종료가 아니라 게스트 둘러보기 복귀다.
+  // 메인 트리가 새로 그려지므로 보던 화면이 아니라 홈으로 돌아간다.
+  useEffect(() => {
+    if (!fromGuest) return;
+    const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+      startGuestSession();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [fromGuest, startGuestSession]);
   const [submitting, setSubmitting] = useState(false);
   // 마지막으로 성공한 소셜 로그인 수단 — 그 버튼 위에 "최근 로그인" 말풍선을 띄운다.
   const [lastProvider, setLastProvider] = useState<LastLoginProvider | null>(null);

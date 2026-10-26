@@ -7,7 +7,7 @@ import {
 import { Reflector } from '@nestjs/core';
 import { createHash } from 'crypto';
 import type { Request } from 'express';
-import { from, lastValueFrom, Observable } from 'rxjs';
+import { from, lastValueFrom, Observable, tap } from 'rxjs';
 
 import { DEDUPE_CREATE_KEY } from '../decorators/dedupe-create.decorator';
 
@@ -17,6 +17,7 @@ const WINDOW_MS = 5 * 60 * 1000;
 const PURGE_THRESHOLD = 500;
 
 interface Entry {
+  userId: string;
   expiresAt: number;
   result: Promise<unknown>;
 }
@@ -31,13 +32,20 @@ export class DedupeCreateInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    if (!this.reflector.get<boolean>(DEDUPE_CREATE_KEY, context.getHandler())) {
-      return next.handle();
-    }
     const request = context.switchToHttp().getRequest<
       Request & { user?: { sub?: string } }
     >();
     const userId = request.user?.sub;
+
+    // 지운 뒤 같은 내용으로 다시 만들면 새로 만들어야 한다 — 기억해 둔 응답은 이미 지운 것을
+    // 가리킨다. 무엇을 지웠는지는 여기서 알 수 없어서, 지운 사람의 기억을 통째로 비운다.
+    if (request.method === 'DELETE' && userId) {
+      return next.handle().pipe(tap(() => this.forgetUser(userId)));
+    }
+
+    if (!this.reflector.get<boolean>(DEDUPE_CREATE_KEY, context.getHandler())) {
+      return next.handle();
+    }
     if (!userId) return next.handle();
 
     const now = Date.now();
@@ -52,10 +60,16 @@ export class DedupeCreateInterceptor implements NestInterceptor {
     if (existing && existing.expiresAt > now) return from(existing.result);
 
     const result = lastValueFrom(next.handle());
-    this.entries.set(key, { expiresAt: now + WINDOW_MS, result });
+    this.entries.set(key, { userId, expiresAt: now + WINDOW_MS, result });
     // 실패한 요청은 기억하지 않는다 — 다시 시도하면 새로 처리돼야 한다.
     result.catch(() => this.entries.delete(key));
     return from(result);
+  }
+
+  private forgetUser(userId: string) {
+    for (const [key, entry] of this.entries) {
+      if (entry.userId === userId) this.entries.delete(key);
+    }
   }
 
   private purgeExpired(now: number) {
