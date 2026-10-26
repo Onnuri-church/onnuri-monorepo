@@ -11,6 +11,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
+import { UpdateFollowerNoteCommentDto } from './dto/update-follower-note-comment.dto';
 import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -31,7 +32,7 @@ export class FollowerNotesService {
   ) {}
 
   async findAll(requesterId: string, cellId: string): Promise<FollowerNoteInfo[]> {
-    await this.assertCanView(requesterId, cellId);
+    const { isAdmin } = await this.assertCanView(requesterId, cellId);
 
     const notes = await this.prisma.followerNote.findMany({
       where: { meeting: { cellId } },
@@ -50,6 +51,7 @@ export class FollowerNotesService {
             content: true,
             createdAt: true,
             parentId: true,
+            authorId: true,
             author: { select: { name: true, isAdmin: true } },
           },
           orderBy: { createdAt: 'asc' },
@@ -78,6 +80,9 @@ export class FollowerNotesService {
           content: comment.content,
           isPastor: comment.author.isAdmin,
           parentId: comment.parentId,
+          // 수정은 본인만, 삭제는 본인 + 관리자 (updateComment·removeComment와 같은 규칙).
+          canEdit: comment.authorId === requesterId,
+          canDelete: comment.authorId === requesterId || isAdmin,
         })),
       };
     });
@@ -223,6 +228,59 @@ export class FollowerNotesService {
     return this.findAll(requesterId, cellId);
   }
 
+  // 댓글 수정 — 작성자 본인만 (관리자도 남의 댓글은 못 고친다).
+  async updateComment(
+    requesterId: string,
+    cellId: string,
+    noteId: string,
+    commentId: string,
+    dto: UpdateFollowerNoteCommentDto,
+  ): Promise<FollowerNoteInfo[]> {
+    await this.assertCanView(requesterId, cellId);
+    const comment = await this.findCommentInNote(commentId, noteId, cellId);
+    if (comment.authorId !== requesterId) {
+      throw new ForbiddenException('내가 쓴 댓글만 수정할 수 있습니다.');
+    }
+    await this.prisma.followerNoteComment.update({
+      where: { id: comment.id },
+      data: { content: dto.content },
+    });
+    return this.findAll(requesterId, cellId);
+  }
+
+  // 댓글 삭제 — 작성자 본인 + 관리자. 지운 댓글에 달린 답글도 같이 지운다 (2026-10-27 확정) —
+  // 부모를 지우면 스키마 기본 동작(SetNull)으로 답글이 원댓글로 올라가 대화가 어긋나기 때문이다.
+  async removeComment(
+    requesterId: string,
+    cellId: string,
+    noteId: string,
+    commentId: string,
+  ): Promise<FollowerNoteInfo[]> {
+    const { isAdmin } = await this.assertCanView(requesterId, cellId);
+    const comment = await this.findCommentInNote(commentId, noteId, cellId);
+    if (comment.authorId !== requesterId && !isAdmin) {
+      throw new ForbiddenException('내가 쓴 댓글만 삭제할 수 있습니다.');
+    }
+    await this.prisma.followerNoteComment.deleteMany({
+      where: { OR: [{ id: comment.id }, { parentId: comment.id }] },
+    });
+    return this.findAll(requesterId, cellId);
+  }
+
+  private async findCommentInNote(
+    commentId: string,
+    noteId: string,
+    cellId: string,
+  ) {
+    const note = await this.findNoteInCell(noteId, cellId);
+    const comment = await this.prisma.followerNoteComment.findFirst({
+      where: { id: commentId, noteId: note.id },
+      select: { id: true, authorId: true },
+    });
+    if (!comment) throw new NotFoundException('댓글을 찾을 수 없습니다.');
+    return comment;
+  }
+
   private async findNoteInCell(noteId: string, cellId: string) {
     const note = await this.prisma.followerNote.findFirst({
       where: { id: noteId, meeting: { cellId } },
@@ -239,6 +297,7 @@ export class FollowerNotesService {
     if (!requester || (!requester.isAdmin && !isCellLeader)) {
       throw new ForbiddenException('셀장 또는 관리자만 볼 수 있습니다.');
     }
+    return { isAdmin: requester.isAdmin };
   }
 
   // 작성·삭제 권한: 그 셀의 셀장/부셀장만 — 관리자는 작성 불가 (댓글만).

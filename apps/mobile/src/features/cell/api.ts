@@ -225,11 +225,40 @@ export function useDeleteFollowerNote(cellId: string) {
 export function useAddFollowerNoteComment(cellId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ noteId, content }: { noteId: string; content: string }) =>
+    // parentId를 주면 그 댓글의 답글로 달린다 (1단계까지 — 서버가 검증).
+    mutationFn: ({ noteId, content, parentId }: { noteId: string; content: string; parentId?: string }) =>
       apiClient
         .post<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes/${noteId}/comments`, {
           content,
+          parentId,
         })
+        .then((res) => res.data),
+    onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
+  });
+}
+
+// 댓글 수정 — 작성자 본인만 (서버 검증).
+export function useUpdateFollowerNoteComment(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, commentId, content }: { noteId: string; commentId: string; content: string }) =>
+      apiClient
+        .patch<FollowerNoteInfo[]>(
+          `/cells/${cellId}/follower-notes/${noteId}/comments/${commentId}`,
+          { content },
+        )
+        .then((res) => res.data),
+    onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
+  });
+}
+
+// 댓글 삭제 — 작성자 본인 + 관리자. 달린 답글도 서버가 같이 지운다.
+export function useDeleteFollowerNoteComment(cellId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ noteId, commentId }: { noteId: string; commentId: string }) =>
+      apiClient
+        .delete<FollowerNoteInfo[]>(`/cells/${cellId}/follower-notes/${noteId}/comments/${commentId}`)
         .then((res) => res.data),
     onSuccess: (notes) => queryClient.setQueryData(["follower-notes", cellId], notes),
   });
