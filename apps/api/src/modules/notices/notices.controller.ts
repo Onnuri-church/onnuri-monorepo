@@ -25,6 +25,7 @@ import { SetBannerActiveDto } from './dto/set-banner-active.dto';
 import { UpdateBannerDto } from './dto/update-banner.dto';
 import { UpdateNoticeDto } from './dto/update-notice.dto';
 import { NoticesService } from './notices.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 홈 배너·공지사항 — 조회는 게스트도 된다. 배너 관리는 관리자와 배너 권한이 켜진 팀의 팀원,
 // 공지사항 등록·수정·삭제는 관리자만.
@@ -62,6 +63,7 @@ export class NoticesController {
 
   @UseGuards(JwtAuthGuard, ContentManagerGuard)
   @RequireContentPermission('canManageBanner')
+  @DedupeCreate()
   @Post('banners')
   createBanner(@CurrentUser() user: JwtPayload, @Body() dto: CreateBannerDto) {
     return this.noticesService.createBanner(user.sub, dto);
@@ -96,6 +98,7 @@ export class NoticesController {
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)
+  @DedupeCreate()
   @Post()
   createNotice(@CurrentUser() user: JwtPayload, @Body() dto: CreateNoticeDto) {
     return this.noticesService.createNotice(user.sub, dto);

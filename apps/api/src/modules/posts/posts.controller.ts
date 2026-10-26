@@ -30,6 +30,7 @@ import { FindTeamActivitiesDto } from './dto/find-team-activities.dto';
 import { CreateQtShareDto } from './dto/create-qt-share.dto';
 import { UpdateQtShareDto } from './dto/update-qt-share.dto';
 import { PostsService } from './posts.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 게시판별 엔드포인트를 먼저 두고 :id 라우트를 뒤에 둔다 — 나중에 GET /posts/:id(상세)가
 // 생겼을 때 순서가 뒤집혀 있으면 :id가 'qt-shares'를 게시글 ID로 먹는다.
@@ -79,6 +80,7 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @DedupeCreate()
   @Post('cell-news')
   createCellNews(
     @CurrentUser() user: JwtPayload,
@@ -121,6 +123,7 @@ export class PostsController {
 
   // 작성은 그 팀의 팀원·관리자만 (권한 검증은 서비스).
   @UseGuards(JwtAuthGuard)
+  @DedupeCreate()
   @Post('team-activities')
   createTeamActivity(
     @CurrentUser() user: JwtPayload,
@@ -142,6 +145,7 @@ export class PostsController {
 
   // 작성·수정·삭제는 로그인이 필요하다. 수정·삭제 권한(내 글인지)은 서비스가 본다.
   @UseGuards(JwtAuthGuard)
+  @DedupeCreate()
   @Post('qt-shares')
   createQtShare(
     @CurrentUser() user: JwtPayload,
@@ -171,6 +175,7 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @DedupeCreate()
   @Post(':id/comments')
   addComment(
     @CurrentUser() user: JwtPayload,

@@ -33,6 +33,10 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
   - `app.module.ts`에 등록된 `SentryGlobalFilter`는 이 규칙의 예외가 아니다 — 에러를 Sentry로 보내기만 하고 `super.catch()`로 Nest 기본 처리에 위임해서 응답 모양을 건드리지 않는다. **제거하면 에러가 Sentry에 안 잡히므로 지우지 않는다** (자세한 내용은 ARCHITECTURE.md "Observability").
 - 응답 모양을 바꿔야 할 필요가 생기면(예: 페이지네이션에 `packages/shared`의 `PaginatedResult` 사용) 이 문서와 함께 갱신한다.
 
+## 만들기 POST의 재시도 중복 방지
+
+글·방·팀처럼 새로 만드는 POST 핸들러에는 `@DedupeCreate()`를 붙인다 — 응답이 유실돼 앱이 오류로 보고 같은 내용을 다시 보내도 5분 안이면 새로 만들지 않고 먼저 처리한 결과를 돌려준다 (`common/interceptors/dedupe-create.interceptor.ts`). 채팅 메시지·좋아요처럼 같은 요청을 일부러 반복하는 핸들러, 같은 내용에 자체 중복 검사(예: 주보의 같은 날짜 400)가 있는 핸들러에는 붙이지 않는다.
+
 ## 테스트
 
 새 도메인 모듈(`posts`, `teams` 등)을 추가할 때, 아래처럼 **실패해도 겉으로 티가 안 나는 로직**은 최소 1개 이상 E2E 테스트(`test/*.e2e-spec.ts`, `pnpm --filter @onnuri/api run test:e2e`)로 커버한다. 단순 CRUD 조회 등 나머지는 강제하지 않는다.
