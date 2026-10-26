@@ -1,5 +1,6 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import * as Sentry from "@sentry/react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import { useEffect, useRef } from "react";
@@ -44,22 +45,33 @@ export function PushNotificationGate() {
   useEffect(() => {
     if (!isPushSupported()) return;
     void (async () => {
-      // 안드로이드는 채널이 있어야 배너가 뜬다 — 서버 발송의 기본 채널과 이름을 맞춘다.
-      if (Platform.OS === "android") {
-        await Notifications.setNotificationChannelAsync("default", {
-          name: i18n.t("알림"),
-          importance: Notifications.AndroidImportance.HIGH,
-        });
-      }
+      try {
+        // 안드로이드는 채널이 있어야 배너가 뜬다 — 서버 발송의 기본 채널과 이름을 맞춘다.
+        // 채널 설정이 실패해도 권한 안내는 이어간다 (여기서 끊기면 팝업이 영영 안 뜬다).
+        if (Platform.OS === "android") {
+          try {
+            await Notifications.setNotificationChannelAsync("default", {
+              name: i18n.t("알림"),
+              importance: Notifications.AndroidImportance.HIGH,
+            });
+          } catch (error) {
+            Sentry.captureException(error);
+          }
+        }
 
-      const permission = await Notifications.getPermissionsAsync();
-      if (permission.granted) {
-        await registerTokenSafely();
-        return;
-      }
-      if (permission.status === "undetermined" && permission.canAskAgain && !promptedThisRun) {
-        promptedThisRun = true;
-        dialogRef.current?.open();
+        const permission = await Notifications.getPermissionsAsync();
+        if (permission.granted) {
+          await registerTokenSafely();
+          return;
+        }
+        // 아직 안 물었거나(undetermined) 한 번 거절·닫았어도 다시 물을 수 있으면(denied +
+        // canAskAgain) 안내한다 — undetermined만 보면 OS 창을 한 번 닫은 기기는 영영 못 켠다.
+        if (permission.canAskAgain && !promptedThisRun) {
+          promptedThisRun = true;
+          dialogRef.current?.open();
+        }
+      } catch (error) {
+        Sentry.captureException(error);
       }
     })();
   }, []);
@@ -103,7 +115,8 @@ async function registerTokenSafely(): Promise<void> {
     const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
     const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
     await registerPushToken(token);
-  } catch {
-    // 토큰 미등록 = 이 기기로 푸시가 안 올 뿐, 알림센터는 그대로 동작한다.
+  } catch (error) {
+    // 토큰 미등록 = 이 기기로 푸시가 안 올 뿐, 알림센터는 그대로 동작한다. 원인은 Sentry로 남긴다.
+    Sentry.captureException(error);
   }
 }
