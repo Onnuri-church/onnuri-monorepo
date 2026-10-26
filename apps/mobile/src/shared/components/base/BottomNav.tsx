@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from "react";
 import {
   Alert,
   Animated,
-  Pressable,
   StyleSheet,
   Text,
   useWindowDimensions,
@@ -20,6 +19,7 @@ import { useThemeColors } from "../../theme/useThemeColors";
 import type { RootTabParamList } from "../../types/navigation";
 import { i18n } from "../../i18n";
 import { Icon } from "./Icon";
+import { PressableScale } from "./PressableScale";
 
 // 탭 하나가 쓰는 아이콘. 라벨은 여기 적지 않고 BottomTabNavigator의 options.title에서 읽는다 —
 // 같은 문자열을 두 군데 두면 한쪽만 바뀐다. 말씀은 라벨 없이 원형 버튼으로 그려서 목록에 없다.
@@ -180,9 +180,10 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
             const icon = TAB_ICON[route.name as keyof typeof TAB_ICON];
 
             return (
-              <Pressable
+              <PressableScale
                 key={route.key}
                 onPress={() => handleTabPress(route, isFocused)}
+                scaleTo={0.9}
                 accessibilityRole="button"
                 accessibilityState={{ selected: isFocused }}
                 className="min-w-0 flex-1 items-center justify-center gap-2 px-0.5"
@@ -211,7 +212,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 >
                   {descriptors[route.key].options.title}
                 </Text>
-              </Pressable>
+              </PressableScale>
             );
           })}
         </View>
@@ -219,7 +220,8 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
 
       {centerRoute ? (
         <View pointerEvents="box-none" className="absolute left-0 right-0 top-0 items-center">
-          <Pressable
+          <PressableScale
+            scaleTo={0.92}
             onPress={() =>
               handleTabPress(centerRoute, state.index === state.routes.indexOf(centerRoute))
             }
@@ -228,7 +230,7 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
             className="h-17 w-17 items-center justify-center rounded-full bg-primary-normal"
           >
             <Icon name="book-open-alt-light" size={36} color={colors.icon.disable} />
-          </Pressable>
+          </PressableScale>
         </View>
       ) : null}
     </View>

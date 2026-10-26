@@ -23,6 +23,7 @@ import {
   UpdateTeamBoardCommentDto,
 } from './dto/team-board.dto';
 import { TeamBoardService } from './team-board.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 팀 전용 게시판 — 그 팀 팀원과 관리자만 (검증은 서비스).
 @UseGuards(JwtAuthGuard)
@@ -52,6 +53,8 @@ export class TeamBoardController {
   unread(@CurrentUser() user: JwtPayload, @Param('teamId') teamId: string) {
     return this.teamBoardService.unreadCount(user.sub, teamId);
   }
+
+  @DedupeCreate()
 
   @Post()
   create(
@@ -92,6 +95,7 @@ export class TeamBoardController {
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
+  @DedupeCreate()
   @Post(':postId/comments')
   addComment(
     @CurrentUser() user: JwtPayload,

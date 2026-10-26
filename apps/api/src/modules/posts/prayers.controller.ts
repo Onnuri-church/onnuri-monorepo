@@ -20,6 +20,7 @@ import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { FindPrayersDto } from './dto/find-prayers.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
 import { PrayersService } from './prayers.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 기도제목 게시판 — 열람도 로그인한 회원만 (2026-10-13 확정: 개인적인 기도 내용이라 게스트에게 공개하지 않음).
 // 이전에는 게스트 열람이 됐다.
@@ -57,6 +58,7 @@ export class PrayersController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @DedupeCreate()
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePrayerDto) {
     return this.prayersService.create(user.sub, dto);

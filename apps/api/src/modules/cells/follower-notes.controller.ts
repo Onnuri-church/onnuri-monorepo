@@ -16,6 +16,7 @@ import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
 import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 import { FollowerNotesService } from './follower-notes.service';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 팔로워 노트는 열람부터 제한된 케어 기록이라(셀장·관리자만) 전부 필수 인증이다 —
 // 세부 권한(작성은 셀장만 등)은 서비스가 검증한다.
@@ -28,6 +29,8 @@ export class FollowerNotesController {
   findAll(@CurrentUser() user: JwtPayload, @Param('cellId') cellId: string) {
     return this.followerNotesService.findAll(user.sub, cellId);
   }
+
+  @DedupeCreate()
 
   @Post()
   create(
@@ -56,6 +59,8 @@ export class FollowerNotesController {
   ) {
     return this.followerNotesService.remove(user.sub, cellId, noteId);
   }
+
+  @DedupeCreate()
 
   @Post(':noteId/comments')
   addComment(

@@ -20,6 +20,7 @@ import {
   CreateChatRoomDto,
   UpdateChatRoomDto,
 } from './dto/chat-room.dto';
+import { DedupeCreate } from '../../common/decorators/dedupe-create.decorator';
 
 // 팀 단톡방 관리 — 만들기·이름 수정·멤버 추가/추방·삭제는 그 팀 팀장과 관리자 (검증은 서비스).
 @UseGuards(JwtAuthGuard)
@@ -31,6 +32,8 @@ export class ChatRoomsController {
   findByTeam(@CurrentUser() user: JwtPayload, @Param('teamId') teamId: string) {
     return this.chatRoomsService.findByTeam(user.sub, teamId);
   }
+
+  @DedupeCreate()
 
   @Post('teams/:teamId/chat-rooms')
   create(

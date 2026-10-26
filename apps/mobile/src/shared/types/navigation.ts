@@ -142,6 +142,7 @@ export type RootStackParamList = {
   NoticeWrite: { id: string } | undefined;
   // 마이페이지 상단 액션 바의 설정 버튼에서 진입한다.
   Settings: undefined;
+  NotificationSettings: undefined;
   // 설정 > 회원 정보 수정. 회원가입용 ProfileSetupScreen을 재사용한다 —
   // 라우트를 나누는 이유는 딥링크·화면 로그가 가입과 수정을 구분하기 위해서다.
   ProfileEdit: undefined;

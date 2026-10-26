@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable } from "react-native";
+import { PressableScale } from "./PressableScale";
 
 interface FloatingButtonProps {
   onPress: () => void;
@@ -8,8 +8,8 @@ interface FloatingButtonProps {
 
 export function FloatingButton({ onPress, children }: FloatingButtonProps) {
   return (
-    <Pressable className="absolute bottom-16 right-5 flex items-center justify-center w-18 h-18 rounded-full bg-primary-normal" onPress={onPress}>
+    <PressableScale scaleTo={0.9} className="absolute bottom-16 right-5 flex items-center justify-center w-18 h-18 rounded-full bg-primary-normal" onPress={onPress}>
       {children}
-    </Pressable>
+    </PressableScale>
   );
 }

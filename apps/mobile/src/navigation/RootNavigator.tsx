@@ -63,6 +63,7 @@ import { QrScreen } from "../features/qr/QrScreen";
 import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
+import { NotificationSettingsScreen } from "../features/settings/NotificationSettingsScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
@@ -587,6 +588,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("설정")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="NotificationSettings"
+            component={NotificationSettingsScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("알림 설정")} rightAction="home" />,
             }}
           />
           {/* 마이페이지 관리자 메뉴의 관리자 전용 화면들 (2026-09-09 시안). 출석부·회원 관리

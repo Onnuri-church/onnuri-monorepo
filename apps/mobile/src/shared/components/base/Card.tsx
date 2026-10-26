@@ -1,13 +1,14 @@
 import type { ReactNode } from "react";
 import {
   Image,
-  Pressable,
   StyleSheet,
   View,
   type ImageSourcePropType,
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+
+import { PressableScale } from "./PressableScale";
 
 // 시안 기준 썸네일 영역 비율 (173x109). 카드 폭은 카드가 정하지 않고 호출부(그리드)가 정한다.
 const IMAGE_ASPECT_RATIO = 173 / 109;
@@ -50,10 +51,8 @@ export function Card({
     .filter(Boolean)
     .join(" ");
 
-  const Container = onPress ? Pressable : View;
-
-  return (
-    <Container className={containerClassName} style={style} onPress={onPress}>
+  const content = (
+    <>
       {(imageSource || imageFallback) && (
         <View
           className={imageSource ? "bg-text-assistive" : "bg-background-assistive"}
@@ -70,6 +69,20 @@ export function Card({
         </View>
       )}
       <View className="grow p-4">{children}</View>
-    </Container>
+    </>
+  );
+
+  // 눌리는 카드는 살짝 눌렸다 튕긴다 — 큰 카드라 변화를 작게(0.98) 준다.
+  if (onPress) {
+    return (
+      <PressableScale className={containerClassName} style={style} onPress={onPress} scaleTo={0.98}>
+        {content}
+      </PressableScale>
+    );
+  }
+  return (
+    <View className={containerClassName} style={style}>
+      {content}
+    </View>
   );
 }
