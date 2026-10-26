@@ -1,8 +1,9 @@
-import {Pressable, Text, View} from "react-native";
+import {Text, View} from "react-native";
 import {Chip} from "../../../shared/components/base/Chip";
 import {Icon} from "../../../shared/components/base/Icon";
 import {colors} from "../../../shared/theme/tokens";
 import {getDepartmentColor} from "../departmentColor";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 export interface TeamPost {
     id: string;
@@ -25,7 +26,7 @@ interface TeamPostCardProps {
 
 export function TeamPostCard({post, onPress}: TeamPostCardProps) {
     return (
-        <Pressable className="bg-background-normal p-6 shadow-card" onPress={onPress}>
+        <PressableScale scaleTo={0.98} className="bg-background-normal p-6 shadow-card" onPress={onPress}>
             <View className="items-center justify-start row-auto flex-row gap-1">
                 <Chip color={getDepartmentColor(post.department)} text={post.categoryName}/>
                 <Text className="text-caption-main text-text-alternative">{post.date}</Text>
@@ -49,6 +50,6 @@ export function TeamPostCard({post, onPress}: TeamPostCardProps) {
                     </View>
                 </View>
             </View>
-        </Pressable>
+        </PressableScale>
         )
 }

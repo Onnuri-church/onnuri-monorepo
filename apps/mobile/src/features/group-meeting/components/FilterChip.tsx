@@ -1,4 +1,5 @@
 import { Pressable, Text } from "react-native";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface FilterChipProps {
   label: string;
@@ -11,14 +12,15 @@ interface FilterChipProps {
 // 눌림 상태는 prop이 아니라 Pressable 콜백으로 처리한다.
 export function FilterChip({ label, selected, onPress }: FilterChipProps) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.94}
       onPress={onPress}
       // 눌림은 active: 변형으로 준다 — className과 함수형 style을 같이 주면 NativeWind가
       // 함수 style을 무시한다.
       className={
         selected
-          ? "rounded-full border border-primary-normal bg-primary-normal px-3 py-1 active:opacity-60"
-          : "rounded-full border border-text-assistive bg-background-normal px-3 py-1 active:opacity-60"
+          ? "rounded-full border border-primary-normal bg-primary-normal px-3 py-1"
+          : "rounded-full border border-text-assistive bg-background-normal px-3 py-1"
       }
     >
       <Text
@@ -30,6 +32,6 @@ export function FilterChip({ label, selected, onPress }: FilterChipProps) {
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

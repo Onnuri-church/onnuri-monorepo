@@ -1,9 +1,10 @@
 import type { CellSummary } from "@onnuri/shared";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface CellListRowProps {
   cell: CellSummary;
@@ -24,7 +25,8 @@ export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
     : t("셀장 {{leader}}", { leader: cell.leaderName ?? t("미지정") });
 
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
       className="flex-row items-center border-b border-background-assistive py-2.5"
       onPress={onPress}
     >
@@ -43,6 +45,6 @@ export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
         </View>
       )}
       <Icon name="expand-right" size={28} />
-    </Pressable>
+    </PressableScale>
   );
 }

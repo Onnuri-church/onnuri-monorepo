@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface BulletinCardProps {
   date: string;
@@ -29,22 +30,22 @@ export function BulletinCard({
         {title && <Text className="text-body-main text-text-normal">{title}</Text>}
       </View>
       <View className="flex-row items-center gap-2.5">
-        <Pressable
+        <PressableScale
+          scaleTo={0.98}
           onPress={onBulletinPress}
-          style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
         >
           <Text className="text-body-main text-primary-normal">{t("주보")}</Text>
-        </Pressable>
+        </PressableScale>
         {hasHandout && (
           <>
             {/* 구분자는 링크와 색은 같고 스타일만 작다 — 시안이 링크는 Body/Main, /는 Body/Small이다. */}
             <Text className="text-body-small text-primary-normal">/</Text>
-            <Pressable
+            <PressableScale
+              scaleTo={0.98}
               onPress={onSharePress}
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
               <Text className="text-body-main text-primary-normal">{t("나눔지")}</Text>
-            </Pressable>
+            </PressableScale>
           </>
         )}
       </View>
