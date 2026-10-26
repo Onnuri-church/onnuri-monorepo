@@ -52,9 +52,9 @@ export function SettingsScreen() {
 
   const isGuest = useAuthStore((state) => state.session.status === "guest");
 
-  // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
+  // 게스트 세션을 끝내면 RootNavigator가 로그인 화면으로 전환한다 (뒤로가기로 게스트 복귀).
   const handleGuestLoginPress = () => {
-    useAuthStore.getState().clearSession();
+    useAuthStore.getState().startLoginFromGuest();
   };
 
   const handleLogoutPress = () => {

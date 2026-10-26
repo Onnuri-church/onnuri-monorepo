@@ -1,8 +1,9 @@
 import type { CellNewsListItem } from "@onnuri/shared";
-import { Pressable, StyleSheet, Text } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 import { useThemeColors } from "../../../shared/theme/useThemeColors";
 import { toTimeAgo } from "../../../shared/utils/date";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface CellNewsRowProps {
   news: CellNewsListItem;
@@ -13,7 +14,8 @@ interface CellNewsRowProps {
 export function CellNewsRow({ news, onPress }: CellNewsRowProps) {
   const themeColors = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
       className="gap-1 py-4"
       style={{
         borderBottomWidth: StyleSheet.hairlineWidth,
@@ -27,6 +29,6 @@ export function CellNewsRow({ news, onPress }: CellNewsRowProps) {
       <Text className="text-caption-main text-text-alternative">
         {news.dateLabel} · {toTimeAgo(news.createdAt)}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

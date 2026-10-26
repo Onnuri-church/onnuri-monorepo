@@ -81,6 +81,12 @@ export function BulletinScreen() {
             onSharePress={() => navigation.navigate("SharingSheet", { id: bulletin.id })}
           />
         ))}
+        {/* 주보가 하나도 없으면 서버가 달 목록도 비워 보내서(selectedMonth null) 화면이 통째로 빈다. */}
+        {items.length === 0 && (
+          <Text className="mt-10 text-center text-body-medium text-text-alternative">
+            {t("등록된 주보가 없어요")}
+          </Text>
+        )}
       </ScrollView>
       {canUpload && (
         <FloatingButton onPress={handleWritePress}>

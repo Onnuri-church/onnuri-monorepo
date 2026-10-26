@@ -19,6 +19,8 @@
   "삭제된 데이터는 복구할 수 없습니다.": "Deleted data can't be recovered.",
   "확인": "OK",
   "부서활동을 불러오지 못했어요": "Couldn't load department activities",
+  "팀 목록을 불러오지 못했어요": "Couldn't load teams",
+  "등록된 팀이 없어요": "No teams yet",
   "전체": "All",
   "저장하지 못했어요": "Couldn't save",
   "등록하지 못했어요": "Couldn't register",

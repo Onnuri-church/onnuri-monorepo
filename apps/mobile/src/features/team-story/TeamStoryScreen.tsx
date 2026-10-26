@@ -11,6 +11,7 @@ import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDi
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { Header } from "../../shared/components/base/Header";
 import { Icon, isIconName } from "../../shared/components/base/Icon";
+import { Skeleton } from "../../shared/components/base/Skeleton";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
@@ -27,7 +28,7 @@ export function TeamStoryScreen() {
   // 팀이 적어 목록이 화면보다 짧으면 스크롤 자체가 안 돼 탭바가 안 숨겨진다 —
   // 콘텐츠 최소 높이를 화면 높이 + 여유분으로 잡아 항상 살짝 스크롤되게 한다.
   const [viewportHeight, setViewportHeight] = useState(0);
-  const { data: teams, refetch, isRefetching } = useTeams();
+  const { data: teams, refetch, isRefetching, isPending, isError } = useTeams();
   const me = useMe();
   const canManage = me?.isAdmin === true;
   const deleteDialogRef = useRef<AppDialogRef>(null);
@@ -87,6 +88,25 @@ export function TeamStoryScreen() {
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
       >
+        {/* 로딩·실패·빈 목록도 스크롤 안에서 그린다 — 당겨서 새로고침과 관리자의 "팀 생성" 줄이
+            그대로 남아야 첫 팀을 만들거나 다시 불러올 수 있다. */}
+        {isPending && (
+          <>
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
+          </>
+        )}
+        {isError && !teams && (
+          <Text className="mt-10 text-center text-body-medium text-text-alternative">
+            {t("팀 목록을 불러오지 못했어요")}
+          </Text>
+        )}
+        {teams?.length === 0 && (
+          <Text className="mt-10 text-center text-body-medium text-text-alternative">
+            {t("등록된 팀이 없어요")}
+          </Text>
+        )}
         {(teams ?? []).map((team) => (
           <TeamListItem
             key={team.id}

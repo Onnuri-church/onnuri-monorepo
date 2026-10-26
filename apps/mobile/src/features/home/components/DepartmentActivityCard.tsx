@@ -1,7 +1,8 @@
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
+import { Image, StyleSheet, Text, View } from "react-native";
 
 import { Chip } from "../../../shared/components/base/Chip";
 import { getDepartmentColor } from "../../department-activity/departmentColor";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface DepartmentActivityCardProps {
   /** 부서 키. 배지 색을 정한다 — 부서활동 게시판과 같은 매핑을 쓴다. */
@@ -24,7 +25,7 @@ export function DepartmentActivityCard({
   onPress,
 }: DepartmentActivityCardProps) {
   return (
-    <Pressable className="w-37.5 gap-2 active:opacity-80" onPress={onPress}>
+    <PressableScale scaleTo={0.97} className="w-37.5 gap-2" onPress={onPress}>
       <View className="h-40 overflow-hidden rounded-5 bg-text-assistive">
         {imageUrl && (
           <Image source={{ uri: imageUrl }} style={StyleSheet.absoluteFill} resizeMode="cover" />
@@ -36,6 +37,6 @@ export function DepartmentActivityCard({
       <Text className="text-body-medium text-text-normal" numberOfLines={1}>
         {title}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

@@ -1,13 +1,14 @@
 import type { FollowerNoteInfo } from "@onnuri/shared";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { CommentInput } from "../../../shared/components/composed/CommentInput";
 import { CommentItem } from "../../../shared/components/composed/CommentItem";
 import { colors } from "../../../shared/theme/tokens";
 import { useThemeColors } from "../../../shared/theme/useThemeColors";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface FollowerNoteCardProps {
   note: FollowerNoteInfo;
@@ -43,7 +44,8 @@ export function FollowerNoteCard({
 
   return (
     <View>
-      <Pressable
+      <PressableScale
+        scaleTo={0.98}
         className="rounded-t-5 border-x border-t border-background-assistive px-5 py-4"
         onPress={onPress}
       >
@@ -52,23 +54,24 @@ export function FollowerNoteCard({
           <Text className="flex-1 text-body-medium text-text-alternative">{note.meetingLabel}</Text>
           {onEditPress && (
             <View className="flex-row items-center gap-4">
-              <Pressable className="flex-row items-center gap-0.5" onPress={onEditPress}>
+              <PressableScale scaleTo={0.98} className="flex-row items-center gap-0.5" onPress={onEditPress}>
                 <Icon name="edit" size={12} color={colors.icon.normal} />
                 <Text className="text-caption-main text-text-alternative">{t("수정")}</Text>
-              </Pressable>
+              </PressableScale>
               {onDeletePress && (
-                <Pressable className="flex-row items-center gap-0.5" onPress={onDeletePress}>
+                <PressableScale scaleTo={0.98} className="flex-row items-center gap-0.5" onPress={onDeletePress}>
                   <Icon name="trash-can" size={12} color={colors.semantic.danger} />
                   <Text className="text-caption-main text-semantic-danger">{t("삭제")}</Text>
-                </Pressable>
+                </PressableScale>
               )}
             </View>
           )}
         </View>
         <Text className="mt-1 text-caption-main text-text-neutral">{t("{{name}} 작성", { name: note.authorName })}</Text>
-      </Pressable>
+      </PressableScale>
 
-      <Pressable
+      <PressableScale
+        scaleTo={0.98}
         className={`flex-row items-center justify-between bg-background-muted px-5 py-3.5 ${
           expanded ? "" : "rounded-b-5"
         }`}
@@ -99,7 +102,7 @@ export function FollowerNoteCard({
           size={14}
           color={hasPastorComment ? themeColors.primary.normal : themeColors.icon.normal}
         />
-      </Pressable>
+      </PressableScale>
 
       {expanded && (
         <View className="gap-5 rounded-b-5 border-x border-b border-background-assistive px-4 py-5">

@@ -35,7 +35,7 @@ ARCHITECTURE.md의 "Backend Module Shape"를 따른다 — `Controller` + `Servi
 
 ## 만들기 POST의 재시도 중복 방지
 
-글·방·팀처럼 새로 만드는 POST 핸들러에는 `@DedupeCreate()`를 붙인다 — 응답이 유실돼 앱이 오류로 보고 같은 내용을 다시 보내도 5분 안이면 새로 만들지 않고 먼저 처리한 결과를 돌려준다 (`common/interceptors/dedupe-create.interceptor.ts`). 채팅 메시지·좋아요처럼 같은 요청을 일부러 반복하는 핸들러, 같은 내용에 자체 중복 검사(예: 주보의 같은 날짜 400)가 있는 핸들러에는 붙이지 않는다.
+글·방·팀처럼 새로 만드는 POST 핸들러에는 `@DedupeCreate()`를 붙인다 — 응답이 유실돼 앱이 오류로 보고 같은 내용을 다시 보내도 5분 안이면 새로 만들지 않고 먼저 처리한 결과를 돌려준다 (`common/interceptors/dedupe-create.interceptor.ts`). 그 사이 같은 사람이 무언가를 삭제(DELETE 성공)하면 그 사람의 기억을 비운다 — 지우고 같은 내용으로 다시 만들 때 지운 결과가 돌아오지 않게. 채팅 메시지·좋아요처럼 같은 요청을 일부러 반복하는 핸들러, 같은 내용에 자체 중복 검사(예: 주보의 같은 날짜 400)가 있는 핸들러에는 붙이지 않는다.
 
 ## 테스트
 

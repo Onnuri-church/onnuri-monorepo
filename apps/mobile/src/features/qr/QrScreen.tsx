@@ -42,9 +42,15 @@ export function QrScreen() {
   // 카메라가 같은 QR을 프레임마다 계속 읽어대므로, 한 번 처리하면 잠그고
   // 결과 화면에서 돌아오거나 "다시 스캔하기"를 눌러야 푼다. 렌더와 무관해 ref로 든다.
   const lockedRef = useRef(false);
+  // 권한은 화면에 들어왔을 때 한 번만 묻는다. permission이 바뀔 때마다 물으면 한 번 거부해도
+  // canAskAgain이 아직 true라 곧바로 다시 물어서, 허용하거나 "다시 묻지 않음"을 고를 때까지
+  // 권한 창을 빠져나갈 수 없다. 거부하면 아래 "설정에서 허용해주세요" 안내가 남는다.
+  const askedPermissionRef = useRef(false);
 
   useEffect(() => {
-    if (permission && !permission.granted && permission.canAskAgain) {
+    if (!permission || askedPermissionRef.current) return;
+    askedPermissionRef.current = true;
+    if (!permission.granted && permission.canAskAgain) {
       void requestPermission();
     }
   }, [permission, requestPermission]);

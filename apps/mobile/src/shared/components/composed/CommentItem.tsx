@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { Avatar } from "../base/Avatar";
+import { PressableScale } from "../base/PressableScale";
 
 interface CommentItemProps {
   authorName: string;
@@ -41,19 +42,19 @@ export function CommentItem({
         {(onReplyPress || onEditPress || onDeletePress) && (
           <View className="mt-1 flex-row gap-3">
             {onReplyPress && (
-              <Pressable onPress={onReplyPress} hitSlop={8}>
+              <PressableScale scaleTo={0.9} onPress={onReplyPress} hitSlop={8}>
                 <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
             {onEditPress && (
-              <Pressable onPress={onEditPress} hitSlop={8}>
+              <PressableScale scaleTo={0.9} onPress={onEditPress} hitSlop={8}>
                 <Text className="text-body-small text-text-alternative">{t("수정")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
             {onDeletePress && (
-              <Pressable onPress={onDeletePress} hitSlop={8}>
+              <PressableScale scaleTo={0.9} onPress={onDeletePress} hitSlop={8}>
                 <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
-              </Pressable>
+              </PressableScale>
             )}
           </View>
         )}

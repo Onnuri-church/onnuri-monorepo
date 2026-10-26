@@ -10,6 +10,7 @@ import { useThemeColors } from "../../theme/useThemeColors";
 import { ContextMenu, type ContextMenuItem } from "./ContextMenu";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
+import { PressableScale } from "./PressableScale";
 
 // 벨 아이콘 + 안읽음 빨간 점. 메인 헤더와 마이페이지 액션 바가 같이 쓴다.
 // 게스트는 알림이 없으므로(401) 로그인일 때만 개수를 묻는다.
@@ -130,13 +131,13 @@ export function Header(props: HeaderProps) {
         className="absolute left-0 right-0 top-0 z-10 flex-row items-center justify-between px-4"
         style={{ paddingTop: insets.top, height: insets.top + 56 }}
       >
-        <Pressable onPress={() => navigation.goBack()} hitSlop={8}>
+        <PressableScale scaleTo={0.85} onPress={() => navigation.goBack()} hitSlop={8}>
           <Icon name="back" size={28} color={colors.icon.strong} />
-        </Pressable>
+        </PressableScale>
         {props.onPressShare && (
-          <Pressable onPress={props.onPressShare} hitSlop={8}>
+          <PressableScale scaleTo={0.85} onPress={props.onPressShare} hitSlop={8}>
             <Icon name="export" size={28} color={colors.icon.strong} />
-          </Pressable>
+          </PressableScale>
         )}
       </View>
     );
@@ -153,14 +154,16 @@ export function Header(props: HeaderProps) {
               <Logo variant="horizontal-green" />
               <View className="flex-row items-center gap-4">
                 {/* QR은 하단 탭이 아니라 여기서 연다. 갈 곳이 정해져 있어 기본 동작을 준다. */}
-                <Pressable
+                <PressableScale
+                  scaleTo={0.85}
                   onPress={props.onPressQr ?? (() => navigation.navigate("Qr" as never))}
                   hitSlop={8}
                 >
                   <Icon name="qr" size={23} color={colors.icon.strong} />
-                </Pressable>
+                </PressableScale>
                 {/* 알림센터도 QR처럼 갈 곳이 정해져 있어 기본 동작을 준다. */}
-                <Pressable
+                <PressableScale
+                  scaleTo={0.85}
                   onPress={
                     props.onPressNotification ??
                     (() => navigation.navigate("Notifications" as never))
@@ -168,9 +171,10 @@ export function Header(props: HeaderProps) {
                   hitSlop={8}
                 >
                   <NotificationBell />
-                </Pressable>
+                </PressableScale>
                 {/* 설정도 갈 곳이 정해져 있어 기본 동작을 준다 (마이페이지 액션 바와 같은 화면). */}
-                <Pressable
+                <PressableScale
+                  scaleTo={0.85}
                   onPress={
                     props.onPressSettings ??
                     (() => navigation.navigate("Settings" as never))
@@ -178,7 +182,7 @@ export function Header(props: HeaderProps) {
                   hitSlop={8}
                 >
                   <Icon name="setting" size={28} color={colors.icon.strong} />
-                </Pressable>
+                </PressableScale>
               </View>
             </>
         ) : (
@@ -188,20 +192,21 @@ export function Header(props: HeaderProps) {
                 {props.hideBack ? (
                   <View style={{ width: 28, height: 28 }} />
                 ) : (
-                  <Pressable
+                  <PressableScale
+                      scaleTo={0.85}
                       onPress={props.onPressBack ?? (() => navigation.goBack())}
                       hitSlop={8}
                       style={{ alignSelf: "flex-start" }}
                   >
                     <Icon name="back" size={28} color={colors.icon.strong} />
-                  </Pressable>
+                  </PressableScale>
                 )}
               </View>
               <Text className="font-pretendard-semibold text-heading-small text-text-normal">{props.title}</Text>
               {props.rightAction === "home" ? (
                   <View className="flex-row items-center gap-3">
                     {props.extraRightAction && (
-                        <Pressable onPress={props.extraRightAction.onPress} hitSlop={8}>
+                        <PressableScale scaleTo={0.85} onPress={props.extraRightAction.onPress} hitSlop={8}>
                           <Icon name={props.extraRightAction.icon} size={28} color={colors.icon.strong} />
                           {props.extraRightAction.badge && (
                             <View
@@ -209,35 +214,36 @@ export function Header(props: HeaderProps) {
                               style={{ top: -1, right: -1 }}
                             />
                           )}
-                        </Pressable>
+                        </PressableScale>
                     )}
-                    <Pressable
+                    <PressableScale
+                        scaleTo={0.85}
                         onPress={props.onPressHome ?? (() => navigation.navigate("Main" as never))}
                         hitSlop={8}
                     >
                       <Icon name="home" size={28} color={colors.icon.strong} />
-                    </Pressable>
+                    </PressableScale>
                   </View>
               ) : props.rightAction === "export" ? (
                   props.onPressShare ? (
-                      <Pressable onPress={props.onPressShare} hitSlop={8}>
+                      <PressableScale scaleTo={0.85} onPress={props.onPressShare} hitSlop={8}>
                         <Icon name="export" size={28} color={colors.icon.strong} />
-                      </Pressable>
+                      </PressableScale>
                   ) : (
                       <View className="w-7" />
                   )
               ) : props.rightAction === "bookmark" ? (
-                  <Pressable onPress={props.onPressBookmark} hitSlop={8}>
+                  <PressableScale scaleTo={0.85} onPress={props.onPressBookmark} hitSlop={8}>
                     <Icon
                         name={props.bookmarked ? "bookmark-active" : "bookmark"}
                         size={28}
                         color={props.bookmarked ? themeColors.primary.normal : themeColors.icon.strong}
                     />
-                  </Pressable>
+                  </PressableScale>
               ) : props.rightAction === "text" ? (
-                  <Pressable onPress={props.onPressRightLabel} hitSlop={8}>
+                  <PressableScale scaleTo={0.85} onPress={props.onPressRightLabel} hitSlop={8}>
                     <Text className="text-body-main text-primary-normal">{props.rightLabel}</Text>
-                  </Pressable>
+                  </PressableScale>
               ) : props.rightAction === "none" ? (
                   <View className="w-7" />
               ) : props.menuItems?.length ? (

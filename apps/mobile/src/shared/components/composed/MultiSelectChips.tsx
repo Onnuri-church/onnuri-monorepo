@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { PressableScale } from "../base/PressableScale";
 
 interface MultiSelectChipsProps {
   label: string;
@@ -20,10 +21,10 @@ export function MultiSelectChips({ label, hint, options, selected, onToggle }: M
         {options.map((option) => {
           const isSelected = selected.includes(option);
           return (
-            <Pressable
+            <PressableScale
+              scaleTo={0.94}
               key={option}
               onPress={() => onToggle(option)}
-              style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
               className={
                 isSelected
                   ? "h-10 items-center justify-center rounded-2xl border border-primary-normal bg-background-alternative px-4"
@@ -39,7 +40,7 @@ export function MultiSelectChips({ label, hint, options, selected, onToggle }: M
               >
                 {option}
               </Text>
-            </Pressable>
+            </PressableScale>
           );
         })}
       </View>
