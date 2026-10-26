@@ -22,7 +22,7 @@ const KNOB_SPRING = { damping: 14, stiffness: 260, mass: 0.7 };
 // RN 기본 Switch는 51×31로 고정이라 시안 크기를 맞출 수 없어 직접 그린다.
 // 시안에는 켜짐 상태만 있다 — 꺼짐 트랙 색(background.muted)은 임시값이라 확인 필요.
 // 노브 그림자(0 3 7 12%)는 등록된 그림자 토큰에 없어 생략 — 필요해지면 토큰 추가 후 적용.
-// 노브는 스프링으로 미끄러지고 누를 때 가벼운 진동이 난다 (애니메이션 줄이기 설정이면 즉시 이동).
+// 노브는 스프링으로 미끄러진다 (애니메이션 줄이기 설정이면 즉시 이동).
 export function Toggle({ value, onValueChange }: ToggleProps) {
   const reducedMotion = useReducedMotion();
   const offset = useSharedValue(value ? KNOB_TRAVEL : 0);
@@ -40,7 +40,6 @@ export function Toggle({ value, onValueChange }: ToggleProps) {
       accessibilityState={{ checked: value }}
       onPress={() => onValueChange(!value)}
       scaleTo={0.94}
-      haptic
       className={`h-5.5 w-8.75 items-start justify-center rounded-2xl p-px ${
         value ? "bg-primary-normal" : "bg-background-muted"
       }`}

@@ -184,7 +184,6 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 key={route.key}
                 onPress={() => handleTabPress(route, isFocused)}
                 scaleTo={0.9}
-                haptic
                 accessibilityRole="button"
                 accessibilityState={{ selected: isFocused }}
                 className="min-w-0 flex-1 items-center justify-center gap-2 px-0.5"
@@ -223,7 +222,6 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
         <View pointerEvents="box-none" className="absolute left-0 right-0 top-0 items-center">
           <PressableScale
             scaleTo={0.92}
-            haptic
             onPress={() =>
               handleTabPress(centerRoute, state.index === state.routes.indexOf(centerRoute))
             }

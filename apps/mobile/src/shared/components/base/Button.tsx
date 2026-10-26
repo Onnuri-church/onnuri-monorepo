@@ -22,7 +22,6 @@ export function Button({ label, onPress, disabled, loading }: ButtonProps) {
       onPress={onPress}
       disabled={blocked}
       scaleTo={0.97}
-      haptic
       className={
         // 로딩은 "진행 중"이지 "못 누르는 상태"가 아니라서 초록 배경을 유지한다.
         disabled && !loading

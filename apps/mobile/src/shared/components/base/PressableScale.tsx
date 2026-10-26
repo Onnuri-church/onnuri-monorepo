@@ -6,8 +6,6 @@ import Animated, {
   withSpring,
 } from "react-native-reanimated";
 
-import { hapticLight } from "../../utils/haptics";
-
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 // className은 NativeWind가 Reanimated 컴포넌트에 자동으로 이어준다 — 여기서 cssInterop을 한 번 더
 // 걸면 이중 적용돼 flex-1 같은 레이아웃 클래스가 빠진다.
@@ -21,13 +19,10 @@ interface PressableScaleProps extends Omit<PressableProps, "style"> {
   style?: StyleProp<ViewStyle>;
   /** 눌렀을 때의 크기 비율. 큰 버튼은 0.97, 작은 아이콘은 0.85처럼 크기에 맞춰 준다. */
   scaleTo?: number;
-  /** 누를 때 가벼운 진동 — 탭 전환·토글·주요 버튼에만 켠다. */
-  haptic?: boolean;
 }
 
 export function PressableScale({
   scaleTo = 0.96,
-  haptic = false,
   onPress,
   onPressIn,
   onPressOut,
@@ -53,10 +48,7 @@ export function PressableScale({
         if (!reducedMotion) scale.value = withSpring(1, RELEASE_SPRING);
         onPressOut?.(event);
       }}
-      onPress={(event) => {
-        if (haptic) hapticLight();
-        onPress?.(event);
-      }}
+      onPress={onPress}
     />
   );
 }

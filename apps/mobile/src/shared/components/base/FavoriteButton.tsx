@@ -32,7 +32,7 @@ export function FavoriteButton({count, className, size = "small", favorited, onP
 
     return (
         <View className={`${className} flex-row items-center gap-1`}>
-            <PressableScale scaleTo={0.85} haptic className={`${button} ${buttonStyle}`} onPress={onPress}>
+            <PressableScale scaleTo={0.85} className={`${button} ${buttonStyle}`} onPress={onPress}>
                 {/* 채운 하트 색은 아이콘이 아니라 여기서 정한다 — svgr이 SVG의 hex를
                     currentColor로 치환하므로 color prop이 그대로 먹는다. */}
                 <Icon

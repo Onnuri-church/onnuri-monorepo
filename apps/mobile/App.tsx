@@ -13,7 +13,6 @@ import { pretendardFonts } from "./src/shared/theme/fonts";
 import "./src/shared/i18n";
 import { restoreLanguage } from "./src/shared/store/useLanguageStore";
 import { ThemeRoot } from "./src/shared/theme/ThemeRoot";
-import { restoreHapticsEnabled } from "./src/shared/store/useHapticsStore";
 import { restoreThemeMode } from "./src/shared/store/useThemeStore";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
@@ -36,7 +35,6 @@ function App() {
 
   useEffect(() => {
     void restoreThemeMode();
-    void restoreHapticsEnabled();
     void restoreLanguage();
   }, []);
 

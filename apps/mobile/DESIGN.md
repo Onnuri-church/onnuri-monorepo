@@ -95,13 +95,13 @@ RN에는 CSS state variant(`hover:` 등)가 없다. 상호작용 상태는 다�
 * 비활성 상태: `disabled`는 RN 컴포넌트가 실제로 받는 prop으로 그대로 전달 (커스텀 wrapper에서 스타일 로직으로 재구현하지 않음)
 * `hover`, `focus`는 터치 디바이스 특성상 기본적으로 다루지 않는다. 필요한 화면(태블릿 등 포인터 입력)에 한해 별도 확인 후 정의.
 
-## 눌림 효과 · 햅틱 규칙
+## 눌림 효과 규칙
 
 - 누를 수 있는 요소는 `shared/components/base/PressableScale`을 쓴다 — 누르면 스프링으로 살짝 작아졌다 튕겨 돌아온다. `className`만 그대로 넘기면 되고, 눌림 표현은 이 컴포넌트 한 곳에서만 한다 (`active:opacity-*`나 함수형 `style`을 같이 주지 않는다).
 - `PressableScale` 안에서 `cssInterop`을 따로 걸지 않는다 — NativeWind가 Reanimated 컴포넌트를 이미 이어주므로 이중 적용돼 `flex-1` 같은 레이아웃 클래스가 빠진다.
 - 크기가 클수록 변화를 작게 준다 (`scaleTo`: 카드 0.98, 버튼 0.97, 탭·칩 0.9~0.94, 작은 아이콘 버튼 0.85).
-- 진동은 `shared/utils/haptics.ts`(`hapticLight`/`hapticSuccess`/`hapticError`)로만 낸다. 탭 전환·토글·주요 버튼은 light, 성공(출석 완료)은 success, 오류는 error. 채팅 수신처럼 자주 생기는 일에는 쓰지 않는다. 설정의 "진동 효과"로 끌 수 있다.
 - 폰의 "애니메이션 줄이기"가 켜져 있으면 크기 효과를 건너뛴다 (`useReducedMotion`).
+- 진동(햅틱)은 쓰지 않는다 — 2026-10-26 결정 (촌스러워서 제외).
 
 ## 작업 시작 조건
 
