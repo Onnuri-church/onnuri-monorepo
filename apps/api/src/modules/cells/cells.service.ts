@@ -6,6 +6,7 @@ import {
 import type { CellDetailResponse, CellRole, CellSummary } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
+import { kstToday } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellDto } from './dto/create-cell.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
@@ -19,9 +20,10 @@ export class CellsService {
 
   // 전체 셀 목록·프로필 설정 선택지 — 지금 활동 중인 셀만 내려준다
   // (관리자가 삭제했거나 활동 종료일이 지난 셀 제외). 목록 행에 쓰는 셀장/부셀장 이름을 같이 붙인다.
+  // 종료일 당일까지는 활동 중이다 — 한국 시간 자정에 넘어간다 (CellExpiryService와 같은 기준).
   async findAll(): Promise<CellSummary[]> {
     const cells = await this.prisma.cell.findMany({
-      where: { deletedAt: null, expiresAt: { gte: new Date() } },
+      where: { deletedAt: null, expiresAt: { gte: kstToday() } },
       select: {
         id: true,
         name: true,

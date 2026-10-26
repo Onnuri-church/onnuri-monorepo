@@ -16,7 +16,7 @@ import type {
 } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
-import { toDateLabel } from '../../common/utils/date';
+import { kstToday, toDateLabel } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
@@ -66,9 +66,16 @@ export class UsersService {
     if (!user) return null;
 
     const [cellMembership, teamMemberships, grantedTeam] = await Promise.all([
+      // 활동기간이 끝난 셀은 소속 종료 작업(CellExpiryService)이 돌기 전이라도 현재 소속으로
+      // 치지 않는다 — 셀 목록(/cells)과 같은 기준이어야 마이페이지와 셀 탭이 같은 셀을 본다.
       this.prisma.cellMembership.findFirst({
-        where: { userId: id, endedAt: null, cell: { deletedAt: null } },
+        where: {
+          userId: id,
+          endedAt: null,
+          cell: { deletedAt: null, expiresAt: { gte: kstToday() } },
+        },
         select: { role: true, cell: { select: { id: true, name: true } } },
+        orderBy: { startedAt: 'desc' },
       }),
       this.prisma.teamMembership.findMany({
         where: { userId: id, endedAt: null, team: { deletedAt: null } },

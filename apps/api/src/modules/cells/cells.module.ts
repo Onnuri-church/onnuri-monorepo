@@ -4,6 +4,7 @@ import { NotificationsModule } from '../notifications/notifications.module';
 import { CellAccessService } from './cell-access.service';
 import { CellAttendanceController } from './cell-attendance.controller';
 import { CellAttendanceService } from './cell-attendance.service';
+import { CellExpiryService } from './cell-expiry.service';
 import { CellGalleryController } from './cell-gallery.controller';
 import { CellGalleryService } from './cell-gallery.service';
 import { CellsController } from './cells.controller';
@@ -24,6 +25,7 @@ import { FollowerNotesService } from './follower-notes.service';
     CellsService,
     FollowerNotesService,
     CellAttendanceService,
+    CellExpiryService,
     CellGalleryService,
   ],
   exports: [CellAccessService],
