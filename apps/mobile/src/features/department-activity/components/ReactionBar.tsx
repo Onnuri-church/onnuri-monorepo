@@ -1,8 +1,9 @@
 import { BOARD_EMOJIS, type PostReactionSummary } from "@onnuri/shared";
 import { useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface ReactionBarProps {
   reactions: PostReactionSummary[];
@@ -24,38 +25,41 @@ export function ReactionBar({ reactions, onReact }: ReactionBarProps) {
     <View className="mt-5">
       <View className="flex-row flex-wrap items-center gap-2">
         {reactions.map((reaction) => (
-          <Pressable
+          <PressableScale
+            scaleTo={0.9}
             key={reaction.emoji}
             onPress={() => onReact(reaction.emoji)}
             className={
               reaction.reactedByMe
-                ? "flex-row items-center gap-1.5 rounded-full border border-primary-normal bg-background-alternative px-3 py-1.5 active:opacity-70"
-                : "flex-row items-center gap-1.5 rounded-full bg-background-muted px-3 py-1.5 active:opacity-70"
+                ? "flex-row items-center gap-1.5 rounded-full border border-primary-normal bg-background-alternative px-3 py-1.5"
+                : "flex-row items-center gap-1.5 rounded-full bg-background-muted px-3 py-1.5"
             }
           >
             <Text className="text-body-main">{reaction.emoji}</Text>
             <Text className="text-body-main text-text-normal">{reaction.count}</Text>
-          </Pressable>
+          </PressableScale>
         ))}
-        <Pressable
+        <PressableScale
+          scaleTo={0.9}
           onPress={() => setPickerOpen((prev) => !prev)}
-          className="h-9 w-9 items-center justify-center rounded-full bg-background-muted active:opacity-70"
+          className="h-9 w-9 items-center justify-center rounded-full bg-background-muted"
           hitSlop={4}
         >
           <Icon name="add-round-light" size={22} />
-        </Pressable>
+        </PressableScale>
       </View>
 
       {pickerOpen && (
         <View className="mt-2 flex-row items-center gap-1 self-start rounded-full bg-background-normal px-2 py-1.5 shadow-dropdown">
           {BOARD_EMOJIS.map((emoji) => (
-            <Pressable
+            <PressableScale
+              scaleTo={0.9}
               key={emoji}
               onPress={() => handlePick(emoji)}
               className="h-10 w-10 items-center justify-center rounded-full active:bg-background-muted"
             >
               <Text className="text-heading-medium">{emoji}</Text>
-            </Pressable>
+            </PressableScale>
           ))}
         </View>
       )}

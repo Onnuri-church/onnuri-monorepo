@@ -1,8 +1,9 @@
 import { useTranslation } from "react-i18next";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { useThemeColors } from "../../../shared/theme/useThemeColors";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 export type CellTabKey = "news" | "gallery" | "members" | "manage";
 
@@ -43,7 +44,8 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
         const activeColor = isManage ? "text-semantic-warning" : "text-text-normal";
 
         return (
-          <Pressable
+          <PressableScale
+            scaleTo={0.94}
             key={key}
             className="h-full min-w-0 shrink flex-row items-center gap-1"
             onPress={() => onChange(key)}
@@ -73,7 +75,7 @@ export function CellTabBar({ active, onChange, manageLocked }: CellTabBarProps) 
                 }`}
               />
             )}
-          </Pressable>
+          </PressableScale>
         );
       })}
     </View>

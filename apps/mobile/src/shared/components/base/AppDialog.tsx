@@ -5,8 +5,9 @@ import {
   BottomSheetView,
 } from "@gorhom/bottom-sheet";
 import { forwardRef, useCallback, useImperativeHandle, useRef, useState } from "react";
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { PressableScale } from "./PressableScale";
 
 export interface AppDialogRef {
   open: () => void;
@@ -106,21 +107,23 @@ export const AppDialog = forwardRef<AppDialogRef, AppDialogProps>(function AppDi
 
           <View className="mt-4 flex-row justify-center gap-4">
             {cancelLabel && (
-              <Pressable
+              <PressableScale
+                scaleTo={0.96}
                 onPress={() => modalRef.current?.dismiss()}
-                className={`h-8 w-24 items-center justify-center bg-background-assistive active:opacity-60 ${buttonRadius}`}
+                className={`h-8 w-24 items-center justify-center bg-background-assistive ${buttonRadius}`}
               >
                 <Text className="text-body-medium text-text-normal">{cancelLabel}</Text>
-              </Pressable>
+              </PressableScale>
             )}
-            <Pressable
+            <PressableScale
+              scaleTo={0.96}
               onPress={onConfirm}
-              className={`h-8 items-center justify-center bg-primary-normal active:opacity-80 ${buttonRadius} ${
+              className={`h-8 items-center justify-center bg-primary-normal ${buttonRadius} ${
                 cancelLabel ? "w-24" : "flex-1"
               }`}
             >
               <Text className="text-body-main text-background-normal">{confirmLabel}</Text>
-            </Pressable>
+            </PressableScale>
           </View>
         </View>
       </BottomSheetView>

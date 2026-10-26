@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface RadioOptionProps {
   label: string;
@@ -10,10 +11,10 @@ interface RadioOptionProps {
 // 라벨도 선택 시 굵어진다 (시안 700 → body-main, 미선택 400 → body-regular).
 export function RadioOption({ label, selected, onPress }: RadioOptionProps) {
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
       className="flex-row items-center gap-2"
       onPress={onPress}
-      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
     >
       {selected ? (
         <View className="h-5.5 w-5.5 items-center justify-center rounded-full bg-primary-normal">
@@ -30,6 +31,6 @@ export function RadioOption({ label, selected, onPress }: RadioOptionProps) {
       >
         {label}
       </Text>
-    </Pressable>
+    </PressableScale>
   );
 }

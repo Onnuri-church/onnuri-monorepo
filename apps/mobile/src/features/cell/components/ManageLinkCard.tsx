@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
 import { useThemeColors } from "../../../shared/theme/useThemeColors";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 interface ManageLinkCardProps {
   title: string;
@@ -16,7 +17,8 @@ interface ManageLinkCardProps {
 export function ManageLinkCard({ title, description, onPress, right }: ManageLinkCardProps) {
   const themeColors = useThemeColors();
   return (
-    <Pressable
+    <PressableScale
+      scaleTo={0.98}
       className="flex-row items-center rounded-5 px-4 py-3"
       style={{
         borderWidth: StyleSheet.hairlineWidth,
@@ -30,6 +32,6 @@ export function ManageLinkCard({ title, description, onPress, right }: ManageLin
       </View>
       {right && <View className="mr-1">{right}</View>}
       <Icon name="expand-right" size={28} />
-    </Pressable>
+    </PressableScale>
   );
 }

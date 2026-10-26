@@ -4,6 +4,7 @@ import { Pressable, Text, View } from "react-native";
 import GoogleMark from "../../../shared/assets/logo/google.svg";
 import KakaoMark from "../../../shared/assets/logo/kakao.svg";
 import { LastLoginTooltip } from "./LastLoginTooltip";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 
 // 카카오·구글 버튼의 색·마크·문구는 각 사 브랜딩 가이드가 고정한 값이라 semantic 토큰으로 만들지 않는다
 // (로고와 같은 브랜드 자산 예외 — DESIGN.md 컬러 규칙 참고). 그래서 토큰 클래스가 아니라 style로 직접 준다.
@@ -43,7 +44,7 @@ export function SocialLoginButton({
   // 시안에 pressed 색이 없어서 우선 투명도로 두고, 확정 규칙이 나오면 이 줄만 바꾼다.
   return (
     <View>
-      <Pressable onPress={onPress} style={({ pressed }) => (pressed ? { opacity: 0.85 } : null)}>
+      <PressableScale scaleTo={0.97} onPress={onPress}>
         <View className="h-12 flex-row items-center justify-center rounded-5" style={box}>
           {/* 마크는 버튼 왼쪽에 고정하고 문구는 버튼 전체 기준으로 가운데 — 시안과 같은 배치 */}
           <View className="absolute left-6">
@@ -53,7 +54,7 @@ export function SocialLoginButton({
             {label}
           </Text>
         </View>
-      </Pressable>
+      </PressableScale>
       {isLastUsed && <LastLoginTooltip />}
     </View>
   );
