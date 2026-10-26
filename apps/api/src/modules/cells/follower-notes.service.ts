@@ -6,7 +6,12 @@ import {
 } from '@nestjs/common';
 import type { FollowerNoteInfo } from '@onnuri/shared';
 
-import { pad, toDateLabel, toDayLabel } from '../../common/utils/date';
+import {
+  pad,
+  toDateLabel,
+  toDayLabel,
+  toKstDate,
+} from '../../common/utils/date';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
@@ -15,10 +20,11 @@ import { UpdateFollowerNoteDto } from './dto/update-follower-note.dto';
 
 const WEEKDAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
-// "08.17" — 댓글 작성일 (시안 표기). createdAt은 시각이 있는 값이라 로컬(KST) 기준이 맞지만,
-// 서버·DB가 UTC라 date util들과 같은 UTC 기준으로 통일한다 (몇 시간 차이는 날짜 표기에 무해).
+// "08.17" — 댓글 작성일 (시안 표기). createdAt은 시각이 있는 값이라 한국 날짜로 바꿔 읽는다 —
+// UTC로 읽으면 자정~오전 9시에 단 댓글이 전날로 찍힌다.
 function toShortDateLabel(date: Date): string {
-  return `${pad(date.getUTCMonth() + 1)}.${pad(date.getUTCDate())}`;
+  const kst = toKstDate(date);
+  return `${pad(kst.getUTCMonth() + 1)}.${pad(kst.getUTCDate())}`;
 }
 
 // 팔로워 노트 — 셀 케어 기록이라 게시판(Post)이 아니라 CellMeeting에 붙는다 (스키마 주석).
@@ -68,7 +74,7 @@ export class FollowerNotesService {
         authorName: note.author.name,
         authorAvatarUrl: note.author.avatarUrl,
         isMine: note.authorId === requesterId,
-        writtenDateLabel: toDayLabel(note.createdAt),
+        writtenDateLabel: toDayLabel(toKstDate(note.createdAt)),
         createdAt: note.createdAt.toISOString(),
         answers: [note.answer1 ?? '', note.answer2 ?? '', note.answer3 ?? ''],
         comments: note.comments.map((comment) => ({
