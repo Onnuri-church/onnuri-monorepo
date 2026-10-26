@@ -12,6 +12,7 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { hapticError, hapticSuccess } from "../../shared/utils/haptics";
 import { checkInWorship } from "./api";
 
 // 시안 좌표(402x874 프레임): 조준 프레임 266, 헤더 아래 149, 프레임-안내문구 간격 57.
@@ -72,6 +73,7 @@ export function QrScreen() {
 
     try {
       const result = await checkInWorship(data);
+      hapticSuccess();
       navigation.navigate("QrResult", { result });
     } catch (err) {
       const response = (err as { response?: { status?: number; data?: { message?: string } } })
@@ -82,6 +84,7 @@ export function QrScreen() {
         return;
       }
       // 시간창 밖·요일 아님 등 — 서버 안내 문구를 카드 제목으로 그대로 보여준다.
+      hapticError();
       setError({
         title: response?.data?.message ?? t("출석 처리에 실패했어요"),
         sub: response?.data?.message ? null : t("잠시 후 다시 스캔해주세요"),

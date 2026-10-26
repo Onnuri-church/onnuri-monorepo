@@ -1,6 +1,7 @@
-import { ActivityIndicator, Pressable, Text } from "react-native";
+import { ActivityIndicator, Text } from "react-native";
 
 import { useThemeColors } from "../../theme/useThemeColors";
+import { PressableScale } from "./PressableScale";
 
 interface ButtonProps {
   label: string;
@@ -11,20 +12,22 @@ interface ButtonProps {
 }
 
 // 시안 확정값(402pt 프레임): 362x48. 폭은 호출부의 좌우 여백이 정하고 높이만 h-12(48)로 고정한다.
-// 눌림은 active: 변형으로 준다 — className과 함수형 style을 같이 주면 NativeWind가
-// 함수 style을 무시해서 크기까지 통째로 빠진다.
+// 눌림은 PressableScale이 스프링으로 준다 (className과 함수형 style을 같이 주면 NativeWind가
+// 함수 style을 무시해서 크기까지 통째로 빠지므로 눌림 표현은 여기 한 곳에서만 한다).
 export function Button({ label, onPress, disabled, loading }: ButtonProps) {
   const themeColors = useThemeColors();
   const blocked = disabled || loading;
   return (
-    <Pressable
+    <PressableScale
       onPress={onPress}
       disabled={blocked}
+      scaleTo={0.97}
+      haptic
       className={
         // 로딩은 "진행 중"이지 "못 누르는 상태"가 아니라서 초록 배경을 유지한다.
         disabled && !loading
           ? "h-12 items-center justify-center rounded-xl bg-text-assistive"
-          : "h-12 items-center justify-center rounded-xl bg-primary-normal active:opacity-80"
+          : "h-12 items-center justify-center rounded-xl bg-primary-normal"
       }
     >
       {loading ? (
@@ -32,6 +35,6 @@ export function Button({ label, onPress, disabled, loading }: ButtonProps) {
       ) : (
         <Text className="text-body-main text-background-normal">{label}</Text>
       )}
-    </Pressable>
+    </PressableScale>
   );
 }

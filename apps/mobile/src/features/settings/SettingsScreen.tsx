@@ -15,6 +15,7 @@ import { signOut } from "../../shared/api/session";
 import { LANGUAGES } from "../../shared/i18n";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useLanguageStore } from "../../shared/store/useLanguageStore";
+import { useHapticsStore } from "../../shared/store/useHapticsStore";
 import { useThemeStore } from "../../shared/store/useThemeStore";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
@@ -38,6 +39,8 @@ export function SettingsScreen() {
   const currentLanguageLabel = LANGUAGES.find((option) => option.code === language)?.label;
   const themeMode = useThemeStore((state) => state.mode);
   const setThemeMode = useThemeStore((state) => state.setMode);
+  const hapticsEnabled = useHapticsStore((state) => state.enabled);
+  const setHapticsEnabled = useHapticsStore((state) => state.setEnabled);
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -104,6 +107,11 @@ export function SettingsScreen() {
                   onValueChange={(value) => setThemeMode(value ? "dark" : "light")}
                 />
               }
+            />
+            <SettingRow
+              title={t("진동 효과")}
+              subtitle={t("버튼·토글·탭을 누를 때 가볍게 진동")}
+              right={<Toggle value={hapticsEnabled} onValueChange={setHapticsEnabled} />}
             />
           </View>
         </View>
