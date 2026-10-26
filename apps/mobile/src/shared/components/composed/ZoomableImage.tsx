@@ -3,12 +3,14 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withTiming,
+  withSpring,
 } from "react-native-reanimated";
 
 const MIN_SCALE = 1;
 const MAX_SCALE = 4;
 const DOUBLE_TAP_SCALE = 2.5;
+// 확대·복귀는 손을 뗀 뒤 스프링으로 자리를 잡는다.
+const ZOOM_SPRING = { damping: 20, stiffness: 220, mass: 0.8 };
 // 사진은 화면 가장자리에 붙지 않게 영역의 이 비율만큼만 쓴다 (가로 92%, 세로 84%).
 const FIT_WIDTH_RATIO = 0.92;
 const FIT_HEIGHT_RATIO = 0.84;
@@ -48,10 +50,10 @@ export function ZoomableImage({ uri, width, height, zoomed, onZoomChange }: Zoom
 
   const reset = () => {
     "worklet";
-    scale.value = withTiming(1);
+    scale.value = withSpring(1, ZOOM_SPRING);
     savedScale.value = 1;
-    translateX.value = withTiming(0);
-    translateY.value = withTiming(0);
+    translateX.value = withSpring(0, ZOOM_SPRING);
+    translateY.value = withSpring(0, ZOOM_SPRING);
     savedX.value = 0;
     savedY.value = 0;
     runOnJS(notifyZoom)(false);
@@ -96,7 +98,7 @@ export function ZoomableImage({ uri, width, height, zoomed, onZoomChange }: Zoom
         reset();
         return;
       }
-      scale.value = withTiming(DOUBLE_TAP_SCALE);
+      scale.value = withSpring(DOUBLE_TAP_SCALE, ZOOM_SPRING);
       savedScale.value = DOUBLE_TAP_SCALE;
       runOnJS(notifyZoom)(true);
     });

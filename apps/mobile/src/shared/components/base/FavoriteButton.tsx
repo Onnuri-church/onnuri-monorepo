@@ -1,5 +1,6 @@
-import { Pressable, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import {Icon} from "./Icon";
+import { PressableScale } from "./PressableScale";
 import {colors} from "../../theme/tokens";
 import { useThemeColors } from "../../theme/useThemeColors";
 
@@ -31,7 +32,7 @@ export function FavoriteButton({count, className, size = "small", favorited, onP
 
     return (
         <View className={`${className} flex-row items-center gap-1`}>
-            <Pressable className={`${button} ${buttonStyle}`} onPress={onPress}>
+            <PressableScale scaleTo={0.85} className={`${button} ${buttonStyle}`} onPress={onPress}>
                 {/* 채운 하트 색은 아이콘이 아니라 여기서 정한다 — svgr이 SVG의 hex를
                     currentColor로 치환하므로 color prop이 그대로 먹는다. */}
                 <Icon
@@ -39,7 +40,7 @@ export function FavoriteButton({count, className, size = "small", favorited, onP
                     color={favorited ? themeColors.semantic.danger : themeColors.icon.strongest}
                     size={icon}
                 />
-            </Pressable>
+            </PressableScale>
             {count != null && count > 0 && <Text className="text-body-regular text-text-normal">{count}</Text>}
         </View>
     );
