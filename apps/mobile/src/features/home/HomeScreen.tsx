@@ -65,8 +65,8 @@ export function HomeScreen() {
   const handleLoginRequiredPress = () => {
     Alert.alert(t("로그인이 필요해요"), t("로그인 후 볼 수 있어요."), [
       { text: t("취소"), style: "cancel" },
-      // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
-      { text: t("로그인하기"), onPress: () => useAuthStore.getState().clearSession() },
+      // 게스트 세션을 끝내면 RootNavigator가 로그인 화면으로 전환한다 (뒤로가기로 게스트 복귀).
+      { text: t("로그인하기"), onPress: () => useAuthStore.getState().startLoginFromGuest() },
     ]);
   };
 

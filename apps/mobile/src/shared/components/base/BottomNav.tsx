@@ -103,8 +103,8 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
         { text: i18n.t("취소"), style: "cancel" },
         {
           text: i18n.t("로그인하기"),
-          // 게스트 세션만 지우면 RootNavigator가 로그인 화면으로 전환한다.
-          onPress: () => useAuthStore.getState().clearSession(),
+          // 게스트 세션을 끝내면 RootNavigator가 로그인 화면으로 전환한다 (뒤로가기로 게스트 복귀).
+          onPress: () => useAuthStore.getState().startLoginFromGuest(),
         },
       ]);
       return;
