@@ -28,3 +28,16 @@ export function toMonthLabel(monthValue: string): string {
   const [year, month] = monthValue.split('.');
   return `${year.slice(2)}년 ${Number(month)}월`;
 }
+
+const KST_OFFSET_MS = 9 * 60 * 60 * 1000;
+
+/**
+ * 한국 날짜로 "오늘"을 `@db.Date` 컬럼과 비교할 수 있게 그 날짜의 UTC 자정으로 돌려준다.
+ * 셀 활동기간처럼 날짜 단위로 끝나는 값은 한국 시간 자정에 넘어가야 한다 — UTC로 자르면
+ * 끝나는 날 오전 9시에 바뀐다.
+ */
+export function kstToday(now: Date = new Date()): Date {
+  return new Date(
+    new Date(now.getTime() + KST_OFFSET_MS).toISOString().slice(0, 10),
+  );
+}
