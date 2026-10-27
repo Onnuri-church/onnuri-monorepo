@@ -11,6 +11,7 @@ import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
 import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUploadBoxMultiple";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { createBulletin, fetchBulletin, updateBulletin } from "./api";
 
@@ -49,6 +50,7 @@ export function BulletinWriteScreen() {
     setSharingSheetUris(existing.handoutImages.map((image) => image.url));
   }, [existing]);
 
+  const { locked, acquire, release } = useSubmitLock();
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
       // 사진은 기기 경로(file://)라 등록 전에 URL로 바꾼다. 한 장이라도 실패하면 등록하지
@@ -72,6 +74,7 @@ export function BulletinWriteScreen() {
     },
 
     onError: (error) => {
+      release();
       // 이미 주보가 있는 날짜 등은 서버가 이유를 message로 준다 (검증 실패면 배열로 온다).
       const message = (error as { response?: { data?: { message?: string | string[] } } })
         .response?.data?.message;
@@ -85,7 +88,11 @@ export function BulletinWriteScreen() {
   // 주보는 앞·뒤 2장이 다 있어야 한다 (서버도 정확히 2장만 받는다). 나눔지는 없어도 된다.
   const canSubmit = bulletinUris.length === BULLETIN_PHOTO_COUNT;
 
-  const handleSubmitPress = () => submit();
+  // isPending은 요청을 보낸 뒤에야 버튼을 잠근다 — 연타하면 goBack이 여러 번 불려 화면을 지나쳐 나간다.
+  const handleSubmitPress = () => {
+    if (!acquire()) return;
+    submit();
+  };
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -131,7 +138,7 @@ export function BulletinWriteScreen() {
             label={editingId ? t("저장") : t("등록하기")}
             onPress={handleSubmitPress}
             disabled={!canSubmit}
-            loading={isPending}
+            loading={isPending || locked}
           />
         </View>
       </ScrollView>

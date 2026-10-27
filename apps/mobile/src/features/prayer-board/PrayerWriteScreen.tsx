@@ -15,6 +15,7 @@ import { TextField } from "../../shared/components/base/TextField";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import {
@@ -61,6 +62,8 @@ export function PrayerWriteScreen() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
+  const { acquire, release } = useSubmitLock();
 
   const { data: editingPrayer } = useQuery({
     queryKey: ["prayer", editingId],
@@ -98,7 +101,7 @@ export function PrayerWriteScreen() {
       return;
     }
     const categoryValue = categoryLabelToValue(category);
-    if (!categoryValue) return;
+    if (!categoryValue || !acquire()) return;
 
     setSaving(true);
     try {
@@ -124,6 +127,7 @@ export function PrayerWriteScreen() {
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
       navigation.goBack();
     } catch {
+      release();
       Alert.alert(t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);

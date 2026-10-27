@@ -12,6 +12,7 @@ import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import { uploadImage } from "../../shared/api/upload";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCellNewsDetail, useCreateCellNews, useUpdateCellNews } from "./api";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
@@ -41,9 +42,11 @@ export function CellNewsWriteScreen() {
   const createNews = useCreateCellNews(cellId);
   const updateNews = useUpdateCellNews(cellId, newsId ?? "");
   const saving = createNews.isPending || updateNews.isPending;
+  // saving·uploading은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
+  const { acquire, release } = useSubmitLock();
 
   const handleSubmitPress = async () => {
-    if (!selectDate || saving || uploading) return;
+    if (!selectDate || saving || uploading || !acquire()) return;
 
     // 사진 먼저 전부 업로드해 주소로 바꾼 뒤 글을 만든다 — 하나라도 실패하면 등록하지 않는다.
     let imageUrls: string[];
@@ -51,6 +54,7 @@ export function CellNewsWriteScreen() {
     try {
       imageUrls = await Promise.all(photoUris.map((uri) => uploadImage(uri)));
     } catch {
+      release();
       Alert.alert(t("사진 업로드 실패"), t("잠시 후 다시 시도해주세요."));
       return;
     } finally {
@@ -61,7 +65,10 @@ export function CellNewsWriteScreen() {
     const mutation = isEditing ? updateNews : createNews;
     mutation.mutate(payload, {
       onSuccess: () => navigation.goBack(),
-      onError: () => Alert.alert(isEditing ? t("저장 실패") : t("등록 실패"), t("잠시 후 다시 시도해주세요.")),
+      onError: () => {
+        release();
+        Alert.alert(isEditing ? t("저장 실패") : t("등록 실패"), t("잠시 후 다시 시도해주세요."));
+      },
     });
   };
 
