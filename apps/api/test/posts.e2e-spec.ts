@@ -445,6 +445,45 @@ describe('Posts (e2e)', () => {
     });
   });
 
+  describe('부서활동 날짜 (활동 날짜가 없는 글)', () => {
+    it('작성 시각의 한국 날짜로 보인다', async () => {
+      // 10/26 16:30 UTC는 한국 시간으로 10/27 새벽 1시 30분이다. 시드 팀에 기대지 않으려고 팀도 직접 만든다.
+      const teamName = `${FIXTURE_PREFIX}날짜팀`;
+      await prisma.team.deleteMany({ where: { name: teamName } });
+      const team = await prisma.team.create({ data: { name: teamName } });
+      try {
+        const post = await prisma.post.create({
+          data: {
+            board: 'TEAM_ACTIVITY',
+            authorId: userId,
+            teamId: team.id,
+            title: `${FIXTURE_PREFIX}날짜없음`,
+            content: '본문',
+            createdAt: new Date('2026-10-26T16:30:00.000Z'),
+          },
+        });
+
+        const list = await request(app.getHttpServer())
+          .get(`/posts/team-activities?teamId=${team.id}`)
+          .expect(200);
+        const item = (list.body as TeamActivityListResponse).items.find(
+          (activity) => activity.id === post.id,
+        );
+        expect(item?.dateLabel).toBe('2026.10.27');
+
+        const detail = await request(app.getHttpServer())
+          .get(`/posts/team-activities/${post.id}`)
+          .expect(200);
+        const body = detail.body as { dateLabel: string; eventDate: string };
+        expect(body.dateLabel).toBe('10월 27일');
+        expect(body.eventDate).toBe('2026-10-27');
+      } finally {
+        await prisma.post.deleteMany({ where: { teamId: team.id } });
+        await prisma.team.delete({ where: { id: team.id } });
+      }
+    });
+  });
+
   describe('부서활동 (GET /posts/team-activities)', () => {
     let snsTeamId: string;
     let praiseTeamId: string;
@@ -528,7 +567,6 @@ describe('Posts (e2e)', () => {
       const { item } = await findFixture();
       expect(item?.description).toBe('첫 줄');
     });
-
     it('상세를 열면 조회수가 오른다', async () => {
       const before = await findFixture();
       await request(app.getHttpServer())

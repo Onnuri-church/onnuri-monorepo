@@ -139,7 +139,10 @@ describe('Cell expiry (e2e)', () => {
     expect((await me(endedLeader.token)).cell).toBeNull();
     expect((await me(lastDayMember.token)).cell?.id).toBe(lastDayCellId);
 
-    const res = await request(app.getHttpServer()).get('/cells').expect(200);
+    const res = await request(app.getHttpServer())
+      .get('/cells')
+      .set('Authorization', `Bearer ${lastDayMember.token}`)
+      .expect(200);
     const ids = (res.body as CellSummary[]).map((cell) => cell.id);
     expect(ids).toContain(lastDayCellId);
     expect(ids).not.toContain(endedCellId);

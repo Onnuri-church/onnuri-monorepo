@@ -20,10 +20,7 @@ import type {
 } from '@onnuri/shared';
 
 import type { BoardType } from '../../../generated/prisma';
-import {
-  toDateLabel,
-  toDayLabel,
-} from '../../common/utils/date';
+import { toDateLabel, toDayLabel, toKstDate } from '../../common/utils/date';
 import { CellAccessService } from '../cells/cell-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -70,6 +67,15 @@ function toEventDate(value: string): Date {
 // 위의 역방향 — 수정 화면 프리필용 "2026-05-07". UTC 자정이라 ISO 앞 10자가 곧 저장된 날짜다.
 function toDateValue(date: Date): string {
   return date.toISOString().slice(0, 10);
+}
+
+// 활동 날짜(eventDate)가 없는 글은 작성 시각의 한국 날짜로 대신한다 — createdAt을 그대로 읽으면
+// 자정~오전 9시(KST)에 쓴 글이 전날로 찍힌다. eventDate는 UTC 자정 DATE 값이라 그대로 쓴다.
+function toActivityDate(post: {
+  eventDate: Date | null;
+  createdAt: Date;
+}): Date {
+  return post.eventDate ?? toKstDate(post.createdAt);
 }
 
 // 본문사진 행. 보낸 순서가 곧 표시 순서다 — 상세가 sortOrder 오름차순으로 읽는다.
@@ -623,7 +629,7 @@ export class PostsService {
       teamName: post.team?.name ?? '',
       department: DEPARTMENT_KEY_BY_TEAM_NAME[post.team?.name ?? ''] ?? '',
       // 활동 날짜가 없는 글은 작성 시각으로 대신한다 (eventDate는 스키마상 선택값).
-      dateLabel: toDateLabel(post.eventDate ?? post.createdAt),
+      dateLabel: toDateLabel(toActivityDate(post)),
       title: post.title ?? '',
       description: toDescription(post.content),
       createdAt: post.createdAt.toISOString(),
@@ -711,8 +717,8 @@ export class PostsService {
       department: DEPARTMENT_KEY_BY_TEAM_NAME[post.team?.name ?? ''] ?? '',
       title: post.title ?? '',
       content: post.content,
-      dateLabel: toDayLabel(post.eventDate ?? post.createdAt),
-      eventDate: toDateValue(post.eventDate ?? post.createdAt),
+      dateLabel: toDayLabel(toActivityDate(post)),
+      eventDate: toDateValue(toActivityDate(post)),
       createdAt: post.createdAt.toISOString(),
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,

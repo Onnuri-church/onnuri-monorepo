@@ -32,9 +32,9 @@ export class DedupeCreateInterceptor implements NestInterceptor {
   constructor(private readonly reflector: Reflector) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
-    const request = context.switchToHttp().getRequest<
-      Request & { user?: { sub?: string } }
-    >();
+    const request = context
+      .switchToHttp()
+      .getRequest<Request & { user?: { sub?: string } }>();
     const userId = request.user?.sub;
 
     // 지운 뒤 같은 내용으로 다시 만들면 새로 만들어야 한다 — 기억해 둔 응답은 이미 지운 것을

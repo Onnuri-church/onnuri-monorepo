@@ -119,15 +119,18 @@ describe('Users (e2e)', () => {
     gender: 'MALE',
     phone: '01012345678',
     cellId: cellAId,
-    teamId: teamAId,
+    teamIds: [teamAId],
   });
 
   describe('소속 선택지 목록', () => {
+    // 셀 이름이 보통 셀장 이름이라 셀 목록은 로그인해야 받는다. 팀 목록은 게스트도 받는다 (OptionalJwtAuthGuard).
     it('GET /cells는 토큰 없이 401', () =>
       request(app.getHttpServer()).get('/cells').expect(401));
 
-    it('GET /teams는 토큰 없이 401', () =>
-      request(app.getHttpServer()).get('/teams').expect(401));
+    it('GET /teams는 토큰 없이도 목록을 준다', async () => {
+      const res = await request(app.getHttpServer()).get('/teams').expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+    });
 
     it('GET /cells는 삭제·만료되지 않은 셀만 준다', async () => {
       const res = await request(app.getHttpServer())
@@ -261,7 +264,7 @@ describe('Users (e2e)', () => {
       await request(app.getHttpServer())
         .patch('/users/me')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ ...validBody(), cellId: null, teamId: null })
+        .send({ ...validBody(), cellId: null, teamIds: [] })
         .expect(200);
 
       const activeCell = await prisma.cellMembership.findFirst({
