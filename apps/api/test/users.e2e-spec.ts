@@ -123,11 +123,9 @@ describe('Users (e2e)', () => {
   });
 
   describe('소속 선택지 목록', () => {
-    // 셀/팀 목록은 토큰 없이도 받을 수 있다 (OptionalJwtAuthGuard).
-    it('GET /cells는 토큰 없이도 목록을 준다', async () => {
-      const res = await request(app.getHttpServer()).get('/cells').expect(200);
-      expect(Array.isArray(res.body)).toBe(true);
-    });
+    // 셀 이름이 보통 셀장 이름이라 셀 목록은 로그인해야 받는다. 팀 목록은 게스트도 받는다 (OptionalJwtAuthGuard).
+    it('GET /cells는 토큰 없이 401', () =>
+      request(app.getHttpServer()).get('/cells').expect(401));
 
     it('GET /teams는 토큰 없이도 목록을 준다', async () => {
       const res = await request(app.getHttpServer()).get('/teams').expect(200);
