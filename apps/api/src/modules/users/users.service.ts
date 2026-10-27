@@ -16,7 +16,7 @@ import type {
 } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
-import { kstToday, toDateLabel } from '../../common/utils/date';
+import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
@@ -230,7 +230,7 @@ export class UsersService {
           : isCellLeader
             ? 'cellLeader'
             : null,
-      joinedAtLabel: toDateLabel(user.createdAt),
+      joinedAtLabel: toDateLabel(toKstDate(user.createdAt)),
     };
   }
 

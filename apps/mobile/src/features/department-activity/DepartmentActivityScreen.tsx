@@ -89,6 +89,11 @@ export function DepartmentActivityScreen() {
       <ScrollView contentContainerClassName="justify-start px-5 gap-3"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 44 + insets.bottom }}>
+        {items.length === 0 && (
+          <Text className="pt-10 text-center text-body-medium text-text-alternative">
+            {t("아직 올라온 부서활동이 없어요.")}
+          </Text>
+        )}
         {items.map((item) => (
           <TeamPostCard
             key={item.id}

@@ -100,7 +100,7 @@ export function TeamStoryDetailScreen() {
       <View className="mt-12">
         <TeamBoardLink
           title={t("{{name}} 게시판", { name: team?.name ?? t("팀") })}
-          description={t("연습 일정, 셋리스트, 공지를 확인해요")}
+          description={t("팀의 활동 소식을 확인해요")}
           onPress={handleBoardPress}
         />
       </View>

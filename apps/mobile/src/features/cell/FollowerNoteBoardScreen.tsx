@@ -3,7 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
@@ -35,7 +35,7 @@ export function FollowerNoteBoardScreen() {
   const me = useMe();
   const canWrite = canWriteFollowerNote(cellId, me);
 
-  const { data: notes, isLoading } = useFollowerNotes(cellId);
+  const { data: notes, isLoading, refetch, isRefetching } = useFollowerNotes(cellId);
   const deleteNote = useDeleteFollowerNote(cellId);
   const addComment = useAddFollowerNoteComment(cellId);
   // null = 전체 기간
@@ -69,6 +69,7 @@ export function FollowerNoteBoardScreen() {
       </Text>
 
       <ScrollView contentContainerClassName="px-5 pt-5"
+        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
         <Pressable
