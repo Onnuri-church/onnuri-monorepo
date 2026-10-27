@@ -198,6 +198,7 @@ export function PrayerWriteScreen() {
                   placeholder={t("공개 종료일을 선택하세요.")}
                   value={customUntil}
                   onChange={setCustomUntil}
+                  minDate={addDays(0)}
                 />
               </View>
             )}
