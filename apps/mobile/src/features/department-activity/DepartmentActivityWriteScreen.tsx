@@ -11,6 +11,7 @@ import { uploadImage } from "../../shared/api/upload";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -49,7 +50,17 @@ export function DepartmentActivityWriteScreen() {
 
   // isPending은 요청을 보낸 뒤에야 바뀐다 — 그 전에 "완료"를 연타하면 pop(2)가 여러 번 불려
   // 앞 화면들까지 닫힌다. 누르는 즉시 잠그고, 실패하면 푼다.
-  const { acquire, release } = useSubmitLock();
+  const { locked, acquire, release } = useSubmitLock();
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 두 화면이 닫힐 때(pop(2))는 막지 않는다(locked).
+  // 앞 단계(날짜·부서·제목)는 짧고 이 화면에서 되돌아가면 그대로 남아 있어서 여기에만 단다.
+  const dirty = useFormDirty({ content, photoUris }, !isEditing || prefilled);
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: isEditing ? "edit" : "write",
+  });
+
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
       // 사진은 기기 경로(file://)라 글에 담기 전에 URL로 바꾼다. 한 장이라도 실패하면
@@ -177,6 +188,7 @@ export function DepartmentActivityWriteScreen() {
           </Text>
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

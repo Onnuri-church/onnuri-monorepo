@@ -1,7 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -11,6 +11,7 @@ import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
 import { ImageUploadBoxMultiple } from "../../shared/components/base/ImageUploadBoxMultiple";
 import { DateField, toDateString } from "../../shared/components/composed/DateField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { createBulletin, fetchBulletin, updateBulletin } from "./api";
@@ -41,16 +42,28 @@ export function BulletinWriteScreen() {
     queryFn: () => fetchBulletin(editingId as string),
     enabled: editingId !== undefined,
   });
-  // 처음 한 번만 채운다 — 배경 재조회가 편집 중인 사진을 덮어쓰지 않게.
-  const prefilled = useRef(false);
+  // 처음 한 번만 채운다 — 배경 재조회가 편집 중인 사진을 덮어쓰지 않게. 나가기 확인의
+  // "처음 상태"를 채워진 뒤에 잡아야 해서 렌더에 반영되는 state로 둔다.
+  const [prefilled, setPrefilled] = useState(false);
   useEffect(() => {
-    if (!existing || prefilled.current) return;
-    prefilled.current = true;
+    if (!existing || prefilled) return;
     setBulletinUris(existing.bulletinImages.map((image) => image.url));
     setSharingSheetUris(existing.handoutImages.map((image) => image.url));
-  }, [existing]);
+    setPrefilled(true);
+  }, [existing, prefilled]);
 
   const { locked, acquire, release } = useSubmitLock();
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty(
+    { selectDate, bulletinUris, sharingSheetUris },
+    editingId === undefined || prefilled,
+  );
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: editingId ? "edit" : "write",
+  });
   const { mutate: submit, isPending } = useMutation({
     mutationFn: async () => {
       // 사진은 기기 경로(file://)라 등록 전에 URL로 바꾼다. 한 장이라도 실패하면 등록하지
@@ -142,6 +155,7 @@ export function BulletinWriteScreen() {
           />
         </View>
       </ScrollView>
+      {discardDialog}
     </View>
   );
 }

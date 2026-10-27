@@ -70,5 +70,15 @@
   "{{count}}시간 전": "{{count}} hr ago",
   "{{count}}일 전": "{{count}} days ago",
   "댓글은 로그인 후 작성할 수 있어요.": "You can comment after logging in.",
-  "여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.": "You can pick more than one team. Leave empty if none."
+  "여러 팀을 고를 수 있어요. 소속이 없으면 비워두세요.": "You can pick more than one team. Leave empty if none.",
+  "작성을 그만할까요?": "Stop writing?",
+  "작성 중인 내용이 사라져요.": "What you've written will be lost.",
+  "계속 작성": "Keep writing",
+  "만들기를 그만할까요?": "Stop creating?",
+  "입력한 내용이 사라져요.": "What you've entered will be lost.",
+  "계속 만들기": "Keep creating",
+  "수정을 그만할까요?": "Stop editing?",
+  "수정한 내용은 저장되지 않아요.": "Your changes won't be saved.",
+  "계속 수정": "Keep editing",
+  "나가기": "Leave"
 }

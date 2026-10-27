@@ -6,6 +6,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useCreateTeam, useTeamDetail, useUpdateTeam } from "./api";
 import { uploadImage } from "../../shared/api/upload";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { Button } from "../../shared/components/base/Button";
 import { Field } from "../../shared/components/base/Field";
@@ -72,6 +73,8 @@ export function TeamFormScreen() {
   // 콘텐츠 업로드 권한 — 켜면 이 팀의 팀원(팀장 포함) 전원이 주보 등록 / 홈 배너 관리를 할 수 있다.
   const [canUploadBulletin, setCanUploadBulletin] = useState(false);
   const [canManageBanner, setCanManageBanner] = useState(false);
+  // 입력칸이 기존 팀으로 채워졌는지 — 나가기 확인의 "처음 상태"를 채워진 뒤에 잡으려고 둔다.
+  const [prefilled, setPrefilled] = useState(false);
 
   // 편집 모드 프리필 — 상세를 받아온 뒤에 채운다 (PrayerWrite와 같은 방식).
   useEffect(() => {
@@ -88,7 +91,15 @@ export function TeamFormScreen() {
     setDescription(team.description ?? "");
     setCanUploadBulletin(team.canUploadBulletin);
     setCanManageBanner(team.canManageBanner);
+    setPrefilled(true);
   }, [team]);
+
+  // 입력하던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty(
+    { name, leaderIds, iconName, coverUri, tagline, description, canUploadBulletin, canManageBanner },
+    !teamId || prefilled,
+  );
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: teamId ? "edit" : "create" });
 
   const handleSubmitPress = async () => {
     if (leaderIds.length === 0 || !acquire()) return;
@@ -269,6 +280,7 @@ export function TeamFormScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

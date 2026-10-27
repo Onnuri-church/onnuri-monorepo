@@ -11,6 +11,7 @@ import { Field } from "../../shared/components/base/Field";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { TextAreaField } from "../../shared/components/base/TextAreaField";
 import { TextField } from "../../shared/components/base/TextField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateNotice, useNotice, useUpdateNotice } from "./api";
@@ -32,7 +33,7 @@ export function NoticeWriteScreen() {
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
-  const { acquire, release } = useSubmitLock();
+  const { locked, acquire, release } = useSubmitLock();
 
   // 수정 모드 프리필 — 한 번만 채운다 (입력 중 캐시가 갱신돼도 덮지 않는다).
   const [prefilled, setPrefilled] = useState(false);
@@ -43,6 +44,10 @@ export function NoticeWriteScreen() {
     setPhotoUri(editingNotice.imageUrl);
     setPrefilled(true);
   }, [editingNotice, prefilled]);
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty({ title, content, photoUri }, !editingId || prefilled);
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: editingId ? "edit" : "write" });
 
   const canSubmit =
     !saving && title.trim() !== "" && (content.trim() !== "" || photoUri !== null);
@@ -143,6 +148,7 @@ export function NoticeWriteScreen() {
           />
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }
