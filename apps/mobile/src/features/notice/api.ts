@@ -95,7 +95,10 @@ export function useDeleteNotice() {
   });
 }
 
-// "2026-09-28T…" → "2026.09.28"
+// "2026-09-28T…" → "2026.09.28". 시각이 있는 값(createdAt)은 기기 시간대의 날짜로 읽는다 —
+// 앞 10자를 자르면 UTC 날짜라 자정~오전 9시(KST)에 쓴 공지가 전날로 찍힌다.
 export function toNoticeDateLabel(iso: string): string {
-  return iso.slice(0, 10).replaceAll("-", ".");
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`;
 }

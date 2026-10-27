@@ -16,6 +16,8 @@ interface DateFieldProps {
   /** YYYY-MM-DD. 표시 포맷이 정해지면 표시용 변환을 여기서 처리한다. */
   value: string | null;
   onChange: (date: string) => void;
+  /** YYYY-MM-DD. 이 날짜 이전은 고를 수 없다. */
+  minDate?: string;
 }
 
 // new Date("YYYY-MM-DD")는 UTC로 해석돼 타임존에 따라 하루 밀릴 수 있어서 직접 쪼갠다.
@@ -34,11 +36,12 @@ export function toDateString(date: Date) {
 // 라벨 + 선택값 줄. 누르면 OS 기본 날짜 선택 UI가 뜬다 — 안드로이드는 자체 다이얼로그라
 // 시트가 필요 없고, iOS는 인라인 달력 뷰라 AppSheet에 담아 바텀시트로 올린다.
 // 트리거 줄의 스타일은 composed/SelectField와 같은 시안(입력줄 48 / 좌우 8 / 아래 구분선)이다.
-export function DateField({ label, placeholder, value, onChange }: DateFieldProps) {
+export function DateField({ label, placeholder, value, onChange, minDate }: DateFieldProps) {
   const sheetRef = useRef<AppSheetRef>(null);
 
   // 아직 고른 날짜가 없으면 오늘부터 시작한다.
   const pickerValue = value ? parseDateString(value) : new Date();
+  const minimumDate = minDate ? parseDateString(minDate) : undefined;
 
   const handleDateChange = (event: DateTimePickerEvent, date?: Date) => {
     if (event.type !== "set" || !date) return;
@@ -53,6 +56,7 @@ export function DateField({ label, placeholder, value, onChange }: DateFieldProp
       DateTimePickerAndroid.open({
         value: pickerValue,
         mode: "date",
+        minimumDate,
         onChange: handleDateChange,
       });
     } else {
@@ -87,6 +91,7 @@ export function DateField({ label, placeholder, value, onChange }: DateFieldProp
             <DateTimePicker
               value={pickerValue}
               mode="date"
+              minimumDate={minimumDate}
               display="inline"
               onChange={handleDateChange}
             />
