@@ -9,6 +9,7 @@ import type {
   PrayerListResponse,
 } from '@onnuri/shared';
 
+import { toKstDate } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
@@ -47,9 +48,10 @@ type ListRow = {
 };
 
 // 공개기간 비교 기준일 — visibleUntil은 DATE 컬럼(UTC 자정)이라 now를 그대로 쓰면
-// 종료일 당일(D-0)이 빠진다. 오늘 자정으로 맞춘다.
+// 종료일 당일(D-0)이 빠진다. 한국 날짜로 오늘 자정에 맞춘다 — UTC 날짜로 자르면 종료일이
+// 지난 글이 다음 날 오전 9시까지 목록에 남는다.
 function startOfToday(): Date {
-  return new Date(new Date().toISOString().slice(0, 10));
+  return new Date(toKstDate(new Date()).toISOString().slice(0, 10));
 }
 
 // 내 북마크 조건 — posts.service의 myLikeFilter와 같은 이유 (게스트 undefined 방어).
