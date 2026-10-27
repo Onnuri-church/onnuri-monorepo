@@ -11,7 +11,7 @@ import { API_BASE_URL } from "../../shared/api/config";
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
-import { DateField } from "../../shared/components/composed/DateField";
+import { DateField, toDateString } from "../../shared/components/composed/DateField";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -106,7 +106,8 @@ export function AdminDataDownloadScreen() {
 
     setDownloading(true);
     try {
-      const stamp = new Date().toISOString().slice(0, 10);
+      // 파일명의 날짜는 기기 시간대의 오늘이다 — toISOString은 UTC라 자정~오전 9시(KST)에 전날로 찍힌다.
+      const stamp = toDateString(new Date());
       const destination = new File(Paths.cache, `onnuri-export-${stamp}.xlsx`);
       const file = await File.downloadFileAsync(
         `${API_BASE_URL}/admin/download?${params.toString()}`,
