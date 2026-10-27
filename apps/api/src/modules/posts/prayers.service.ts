@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ForbiddenException,
   Injectable,
   NotFoundException,
@@ -222,10 +223,21 @@ export class PrayersService {
     };
   }
 
+  // 공개 종료일은 오늘(한국 날짜)부터 — 앱은 과거 날짜를 못 고르게 막지만 API를 직접 부르면
+  // 지난 날짜로 만들 수 있고, 그러면 글이 만들자마자 목록에서 사라진다.
+  private assertVisibleUntilNotPast(visibleUntil: string) {
+    if (new Date(visibleUntil) < startOfToday()) {
+      throw new BadRequestException(
+        '공개 종료일은 오늘이거나 그 이후여야 합니다.',
+      );
+    }
+  }
+
   async create(
     userId: string,
     dto: CreatePrayerDto,
   ): Promise<PrayerDetailResponse> {
+    this.assertVisibleUntilNotPast(dto.visibleUntil);
     const post = await this.prisma.post.create({
       data: {
         board: 'PRAYER',
@@ -268,6 +280,9 @@ export class PrayersService {
     if (!post) throw new NotFoundException('기도제목을 찾을 수 없습니다.');
     if (post.authorId !== userId) {
       throw new ForbiddenException('본인 글만 수정할 수 있습니다.');
+    }
+    if (dto.visibleUntil !== undefined) {
+      this.assertVisibleUntilNotPast(dto.visibleUntil);
     }
 
     await this.prisma.$transaction(async (tx) => {

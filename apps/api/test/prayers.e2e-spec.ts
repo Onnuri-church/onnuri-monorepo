@@ -181,6 +181,41 @@ describe('Prayers (e2e)', () => {
     });
   });
 
+  describe('공개 종료일 검증', () => {
+    // 서버는 한국 날짜의 오늘을 기준으로 본다 (UTC 날짜로 자르면 한국 오전 9시 전에 하루 밀린다).
+    const kstToday = () =>
+      new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
+
+    const createBody = (title: string, visibleUntil: string) => ({
+      title: `${FIXTURE_PREFIX}${title}`,
+      content: 'x',
+      category: 'OTHER',
+      isAnonymous: false,
+      visibleUntil,
+    });
+
+    it('지난 날짜로 작성하면 400', () =>
+      request(app.getHttpServer())
+        .post('/posts/prayers')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send(createBody('종료일과거', '2020-01-01'))
+        .expect(400));
+
+    it('종료일이 오늘이면 작성할 수 있다 (당일까지 공개)', () =>
+      request(app.getHttpServer())
+        .post('/posts/prayers')
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send(createBody('종료일오늘', kstToday()))
+        .expect(201));
+
+    it('수정에서 지난 날짜로 바꾸면 400', () =>
+      request(app.getHttpServer())
+        .patch(`/posts/prayers/${anonymousPostId}`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .send({ visibleUntil: '2020-01-01' })
+        .expect(400));
+  });
+
   describe('인가·소유권', () => {
     it('토큰 없이 작성하면 401', () =>
       request(app.getHttpServer())
