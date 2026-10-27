@@ -9,6 +9,7 @@ import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { TextField } from "../../shared/components/base/TextField";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateHomeBanner, useHomeBanners, useUpdateHomeBanner } from "./api";
 import { RadioOption } from "./components/RadioOption";
@@ -33,6 +34,7 @@ export function AdminBannerFormScreen() {
   const [passage, setPassage] = useState("");
   const [posterUri, setPosterUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { acquire, release } = useSubmitLock();
 
   useEffect(() => {
     if (!editing) return;
@@ -57,7 +59,9 @@ export function AdminBannerFormScreen() {
   };
 
   const handleSubmitPress = async () => {
-    if (!canSubmit) return;
+    // saving은 다시 그려져야 버튼을 잠근다 — 그 전에 한 번 더 누르면 두 번 저장되고 goBack도
+    // 두 번 불려 관리 목록까지 빠져나간다. 누르는 즉시 잠그고, 실패하면 푼다.
+    if (!canSubmit || !acquire()) return;
     setSaving(true);
     try {
       if (isEditing) {
@@ -81,6 +85,7 @@ export function AdminBannerFormScreen() {
       });
       navigation.goBack();
     } catch {
+      release();
       Alert.alert(isEditing ? t("수정 실패") : t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);

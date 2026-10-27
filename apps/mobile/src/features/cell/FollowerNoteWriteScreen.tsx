@@ -8,6 +8,7 @@ import { Alert, ScrollView, Text, TextInput, View } from "react-native";
 import { Button } from "../../shared/components/base/Button";
 import { toDateString } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateFollowerNote, useFollowerNotes, useUpdateFollowerNote } from "./api";
@@ -42,13 +43,16 @@ export function FollowerNoteWriteScreen() {
   const createNote = useCreateFollowerNote(cellId);
   const updateNote = useUpdateFollowerNote(cellId);
   const saving = createNote.isPending || updateNote.isPending;
+  // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
+  const { acquire, release } = useSubmitLock();
 
   const handleAnswerChange = (index: number) => (text: string) =>
     setAnswers((prev) => prev.map((answer, i) => (i === index ? text : answer)));
 
   const handleSubmitPress = () => {
-    if (saving) return;
+    if (saving || !acquire()) return;
     const onError = (error: unknown) => {
+      release();
       // 서버 검증 메시지(그 주 노트 중복 등)를 그대로 보여준다.
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -68,7 +72,10 @@ export function FollowerNoteWriteScreen() {
 
     // 선택지는 라벨 문자열이라 같은 인덱스의 Date에서 요청 날짜를 얻는다.
     const meetingDate = sundays.find((sunday) => formatSundayLabel(sunday) === selectedSunday);
-    if (!meetingDate) return;
+    if (!meetingDate) {
+      release();
+      return;
+    }
     createNote.mutate(
       { meetingDate: toDateString(meetingDate), answers },
       { onSuccess: () => navigation.goBack(), onError },
