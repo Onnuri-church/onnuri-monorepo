@@ -10,6 +10,7 @@ import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { DateField } from "../../shared/components/composed/DateField";
 import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
 import { uploadImage } from "../../shared/api/upload";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCell } from "../cell/api";
@@ -50,6 +51,16 @@ export function AdminCellFormScreen() {
   const submittingRef = useRef(false);
   const [submitting, setSubmitting] = useState(false);
   const saving = createCell.isPending || updateCell.isPending || submitting;
+
+  // 입력하던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다
+  // (submitting은 성공하면 그대로 남는다). 편집 모드의 기존 값은 위 useState 초기값으로 이미 채워져 있다.
+  const dirty = useFormDirty({ coverUri, name, leaderId, hasViceLeader, viceLeaderId, period });
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting,
+    mode: route.params?.cellId ? "edit" : "create",
+  });
+
   const canSubmit =
     !saving &&
     name.trim() !== "" &&
@@ -199,6 +210,7 @@ export function AdminCellFormScreen() {
           />
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Header } from "../../shared/components/base/Header";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -40,7 +41,7 @@ export function ChatRoomFormScreen() {
   const removeMember = useRemoveChatRoomMember(roomId ?? "");
   const deleteRoom = useDeleteChatRoom(roomId ?? "");
   const deleteDialogRef = useRef<AppDialogRef>(null);
-  const { acquire, release } = useSubmitLock();
+  const { locked, acquire, release } = useSubmitLock();
 
   const [name, setName] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -51,6 +52,11 @@ export function ChatRoomFormScreen() {
     setName(room.name);
     setPrefilled(true);
   }, [room, prefilled]);
+
+  // 입력하던 내용(이름·추가할 멤버)이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장·방 삭제로 화면이
+  // 닫힐 때는 막지 않는다(locked). 멤버 내보내기는 누르는 즉시 반영되므로 입력에 들어가지 않는다.
+  const dirty = useFormDirty({ name, selectedIds }, !roomId || prefilled);
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: roomId ? "edit" : "create" });
 
   const teamMembers = team?.members ?? [];
   const roomMemberIds = new Set((room?.members ?? []).map((member) => member.id));
@@ -110,13 +116,18 @@ export function ChatRoomFormScreen() {
 
   const confirmDeleteRoom = () => {
     deleteDialogRef.current?.close();
+    // 이름을 고치다가 방을 지우는 경우 — 지운 뒤 화면이 닫힐 때 나가기 확인이 뜨면 안 되므로 잠근다.
+    if (!acquire()) return;
     deleteRoom.mutate(undefined, {
       onSuccess: () => {
         // 방 화면까지 두 단계 뒤로 — 목록으로 돌아간다.
         navigation.goBack();
         navigation.goBack();
       },
-      onError: showError(t("삭제 실패")),
+      onError: (error) => {
+        release();
+        showError(t("삭제 실패"))(error);
+      },
     });
   };
 
@@ -215,6 +226,7 @@ export function ChatRoomFormScreen() {
         cancelLabel={t("취소")}
         onConfirm={confirmDeleteRoom}
       />
+      {discardDialog}
     </View>
   );
 }

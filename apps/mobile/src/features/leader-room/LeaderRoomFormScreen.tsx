@@ -10,6 +10,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Header } from "../../shared/components/base/Header";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
@@ -81,18 +83,22 @@ export function LeaderRoomFormScreen() {
     Alert.alert(title, message ?? t("잠시 후 다시 시도해주세요."));
   };
 
-  // 헤더의 "만들기"를 연타하면 방이 두 번 만들어진다 — 누르는 즉시 바뀌는 ref로 두 번째 호출을 막는다.
-  // 실패하면 풀고, 성공하면 화면을 떠나므로 그대로 둔다.
-  const savingRef = useRef(false);
+  // 헤더의 "만들기"를 연타하면 방이 두 번 만들어진다 — 누르는 즉시 잠겨 두 번째 호출을 막는다.
+  // 실패하면 풀고, 성공하면 화면을 떠나므로 그대로 둔다. 잠금 상태(locked)는 나가기 확인을 끄는 데도 쓴다.
+  const { locked, acquire, release } = useSubmitLock();
+
+  // 입력하던 내용(이름·추가할 멤버)이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장·방 삭제로 화면이
+  // 닫힐 때는 막지 않는다(locked). 멤버 내보내기는 누르는 즉시 반영되므로 입력에 들어가지 않는다.
+  const dirty = useFormDirty({ name, selectedIds }, !roomId || prefilled);
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: roomId ? "edit" : "create" });
 
   const handleSavePress = async () => {
-    if (savingRef.current) return;
     const trimmed = name.trim();
     if (!trimmed) {
       Alert.alert(t("단톡방 이름을 입력해주세요."));
       return;
     }
-    savingRef.current = true;
+    if (!acquire()) return;
     try {
       if (roomId) {
         if (trimmed !== room?.name) await rename.mutateAsync({ name: trimmed });
@@ -105,7 +111,7 @@ export function LeaderRoomFormScreen() {
         navigation.navigate("LeaderRoom", { roomId: created.id });
       }
     } catch (error) {
-      savingRef.current = false;
+      release();
       showError(roomId ? t("저장 실패") : t("만들기 실패"))(error);
     }
   };
@@ -123,13 +129,18 @@ export function LeaderRoomFormScreen() {
 
   const handleDeleteConfirm = () => {
     deleteDialogRef.current?.close();
+    // 이름을 고치다가 방을 지우는 경우 — 지운 뒤 화면이 닫힐 때 나가기 확인이 뜨면 안 되므로 잠근다.
+    if (!acquire()) return;
     deleteRoom.mutate(undefined, {
       onSuccess: () => {
         // 방 화면까지 두 단계 뒤로 — 목록으로 돌아간다.
         navigation.goBack();
         navigation.goBack();
       },
-      onError: showError(t("삭제 실패")),
+      onError: (error) => {
+        release();
+        showError(t("삭제 실패"))(error);
+      },
     });
   };
 
@@ -228,6 +239,7 @@ export function LeaderRoomFormScreen() {
         cancelLabel={t("취소")}
         onConfirm={handleDeleteConfirm}
       />
+      {discardDialog}
     </View>
   );
 }

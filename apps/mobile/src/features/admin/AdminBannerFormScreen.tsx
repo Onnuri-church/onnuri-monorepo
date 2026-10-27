@@ -9,6 +9,7 @@ import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { TextField } from "../../shared/components/base/TextField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateHomeBanner, useHomeBanners, useUpdateHomeBanner } from "./api";
@@ -34,14 +35,25 @@ export function AdminBannerFormScreen() {
   const [passage, setPassage] = useState("");
   const [posterUri, setPosterUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const { acquire, release } = useSubmitLock();
+  const { locked, acquire, release } = useSubmitLock();
+  // 입력칸이 기존 배너로 채워졌는지 — 나가기 확인의 "처음 상태"를 채워진 뒤에 잡으려고 둔다.
+  const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
     if (!editing) return;
     setTitle(editing.title);
     setPassage(editing.passage ?? "");
     setPosterUri(editing.imageUrl);
+    setPrefilled(true);
   }, [editing]);
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty({ title, passage, posterUri }, !isEditing || prefilled);
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: isEditing ? "edit" : "create",
+  });
 
   const canSubmit = !saving && title.trim() !== "" && passage.trim() !== "";
 
@@ -149,6 +161,7 @@ export function AdminBannerFormScreen() {
           />
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

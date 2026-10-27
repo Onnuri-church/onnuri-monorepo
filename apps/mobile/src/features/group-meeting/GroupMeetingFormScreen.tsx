@@ -14,6 +14,7 @@ import { TextField } from "../../shared/components/base/TextField";
 import { DateField } from "../../shared/components/composed/DateField";
 import { MemberPickerField } from "../../shared/components/composed/MemberPickerField";
 import { uploadImage } from "../../shared/api/upload";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
@@ -61,6 +62,11 @@ export function GroupMeetingFormScreen() {
   const [place, setPlace] = useState(editing?.place === "미정" ? "" : (editing?.place ?? ""));
   const [cost, setCost] = useState(editing?.cost === "미정" ? "" : (editing?.cost ?? ""));
   const [leaders, setLeaders] = useState<LeaderPick[]>(editing?.leaders ?? []);
+
+  // 입력하던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  // 편집 모드의 기존 값은 위 useState 초기값으로 이미 채워져 있어 첫 렌더 값이 처음 상태다.
+  const dirty = useFormDirty({ coverUri, title, description, recruitStart, recruitEnd, place, cost, leaders });
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: meetingId ? "edit" : "create" });
 
   const canSubmit =
     !saving &&
@@ -223,6 +229,7 @@ export function GroupMeetingFormScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

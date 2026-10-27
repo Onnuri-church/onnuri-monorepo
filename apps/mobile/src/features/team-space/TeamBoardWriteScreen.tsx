@@ -8,6 +8,7 @@ import { uploadAttachment, uploadImage } from "../../shared/api/upload";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
@@ -53,7 +54,7 @@ export function TeamBoardWriteScreen() {
   const [isNotice, setIsNotice] = useState(false);
   const [saving, setSaving] = useState(false);
   // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
-  const { acquire, release } = useSubmitLock();
+  const { locked, acquire, release } = useSubmitLock();
   const [prefilled, setPrefilled] = useState(false);
 
   // 공지로 등록은 팀장과 관리자만 보인다 (서버도 같은 규칙).
@@ -70,6 +71,13 @@ export function TeamBoardWriteScreen() {
     setIsNotice(editing.isNotice);
     setPrefilled(true);
   }, [editing, prefilled]);
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty(
+    { content, photos, links, linkDraft, existingFiles, newFiles, isNotice },
+    !postId || prefilled,
+  );
+  const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: postId ? "edit" : "write" });
 
   const attachmentCount = photos.length + links.length + existingFiles.length + newFiles.length;
   const canSubmit = !saving && (content.trim() !== "" || attachmentCount > 0);
@@ -328,6 +336,7 @@ export function TeamBoardWriteScreen() {
           </Text>
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }
