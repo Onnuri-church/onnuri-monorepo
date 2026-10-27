@@ -13,6 +13,8 @@ import {Toggle} from "../../shared/components/base/Toggle";
 import {ImageUploadBoxSingle} from "../../shared/components/base/ImageUploadBoxSingle";
 import {ImageUploadBoxMultiple} from "../../shared/components/base/ImageUploadBoxMultiple";
 import {uploadImage} from "../../shared/api/upload";
+import {useDiscardGuard, useFormDirty} from "../../shared/hooks/useDiscardGuard";
+import {useSubmitLock} from "../../shared/hooks/useSubmitLock";
 import type {RootStackParamList} from "../../shared/types/navigation";
 import {createQtShare, fetchQtDetails, updateQtShare} from "./api";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
@@ -41,6 +43,9 @@ export function QtBoardWriteScreen () {
         enabled: editingId !== undefined,
     })
 
+    // 입력칸이 기존 글로 채워졌는지 — 나가기 확인의 "처음 상태"를 채워진 뒤에 잡으려고 둔다.
+    const [prefilled, setPrefilled] = useState(false)
+
     useEffect(() => {
         if (!editingPost) return
         setSelectDate(editingPost.eventDate)
@@ -50,7 +55,19 @@ export function QtBoardWriteScreen () {
         setBackgroundPhotoUri(editingPost.coverImageUrl)
         setBodyPhotoUris(editingPost.imageUrls)
         setAnonymous(editingPost.isAnonymous)
+        setPrefilled(true)
     }, [editingPost])
+
+    // isPending은 요청을 보낸 뒤에야 바뀐다 — 그 전의 연타는 goBack을 여러 번 불러 홈까지 빠져나간다.
+    // 누르는 즉시 잠그고, 실패하면 푼다.
+    const {locked, acquire, release} = useSubmitLock()
+
+    // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+    const dirty = useFormDirty(
+        {selectDate, verse, title, content, backgroundPhotoUri, bodyPhotoUris, anonymous},
+        editingId === undefined || prefilled,
+    )
+    const discardDialog = useDiscardGuard({dirty, submitting: locked, mode: editingId ? "edit" : "write"})
 
     const {mutate: submit, isPending} = useMutation({
         mutationFn: async (eventDate: string) => {
@@ -82,6 +99,7 @@ export function QtBoardWriteScreen () {
         },
 
         onError: () => {
+            release()
             Alert.alert(
                 editingId ? t("수정하지 못했어요") : t("등록하지 못했어요"),
                 t("잠시 후 다시 시도해주세요."),
@@ -92,7 +110,7 @@ export function QtBoardWriteScreen () {
     const canSubmit = selectDate !== null && title.trim().length > 0 && content.trim().length > 0
 
     const handleSubmitPress = () => {
-        if (selectDate === null) return
+        if (selectDate === null || !acquire()) return
         submit(selectDate)
     }
 
@@ -135,10 +153,11 @@ export function QtBoardWriteScreen () {
 
                     <View className="mt-16">
                         {/* 등록 중에도 막는다 — 사진 업로드까지 끝나야 응답이 와서 두 번 눌리기 쉽다. */}
-                        <Button label={t("등록하기")} onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending}/>
+                        <Button label={t("등록하기")} onPress={handleSubmitPress} disabled={!canSubmit} loading={isPending || locked}/>
                     </View>
                 </ScrollView>
             </KeyboardAvoidingContainer>
+            {discardDialog}
         </View>
     )
 }

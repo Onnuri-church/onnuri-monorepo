@@ -9,6 +9,8 @@ import { uploadImage } from "../../shared/api/upload";
 import { Button } from "../../shared/components/base/Button";
 import { ImageSlot } from "../../shared/components/base/ImageSlot";
 import { TextField } from "../../shared/components/base/TextField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateHomeBanner, useHomeBanners, useUpdateHomeBanner } from "./api";
 import { RadioOption } from "./components/RadioOption";
@@ -33,13 +35,25 @@ export function AdminBannerFormScreen() {
   const [passage, setPassage] = useState("");
   const [posterUri, setPosterUri] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const { locked, acquire, release } = useSubmitLock();
+  // 입력칸이 기존 배너로 채워졌는지 — 나가기 확인의 "처음 상태"를 채워진 뒤에 잡으려고 둔다.
+  const [prefilled, setPrefilled] = useState(false);
 
   useEffect(() => {
     if (!editing) return;
     setTitle(editing.title);
     setPassage(editing.passage ?? "");
     setPosterUri(editing.imageUrl);
+    setPrefilled(true);
   }, [editing]);
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty({ title, passage, posterUri }, !isEditing || prefilled);
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: isEditing ? "edit" : "create",
+  });
 
   const canSubmit = !saving && title.trim() !== "" && passage.trim() !== "";
 
@@ -57,7 +71,9 @@ export function AdminBannerFormScreen() {
   };
 
   const handleSubmitPress = async () => {
-    if (!canSubmit) return;
+    // saving은 다시 그려져야 버튼을 잠근다 — 그 전에 한 번 더 누르면 두 번 저장되고 goBack도
+    // 두 번 불려 관리 목록까지 빠져나간다. 누르는 즉시 잠그고, 실패하면 푼다.
+    if (!canSubmit || !acquire()) return;
     setSaving(true);
     try {
       if (isEditing) {
@@ -81,6 +97,7 @@ export function AdminBannerFormScreen() {
       });
       navigation.goBack();
     } catch {
+      release();
       Alert.alert(isEditing ? t("수정 실패") : t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);
@@ -144,6 +161,7 @@ export function AdminBannerFormScreen() {
           />
         </View>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

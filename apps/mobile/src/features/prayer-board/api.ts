@@ -53,15 +53,23 @@ function categoryQuery(category: PrayerCategory): string {
   return category === "all" ? "" : `?category=${CATEGORY_TO_SERVER[category]}`;
 }
 
-// "2026-08-03T…" → "2026.08.03"
+// "2026-08-03T…" → "2026.08.03". 시각이 있는 값(createdAt)은 기기 시간대의 날짜로 읽는다 —
+// 앞 10자를 자르면 UTC 날짜라 자정~오전 9시(KST)에 쓴 글이 전날로 찍힌다.
+// 날짜만 있는 값(visibleUntil)은 그대로 쓴다.
 function toDotDate(iso: string): string {
-  return iso.slice(0, 10).replaceAll("-", ".");
+  if (iso.length === 10) return iso.replaceAll("-", ".");
+  const date = new Date(iso);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}`;
 }
 
 // 공개기간 종료일까지 남은 날. 지난 글(내/저장한 목록에만 남는다)은 D-day를 떼서
 // 카드가 그 자리를 그리지 않게 한다.
 function toDdayLabel(visibleUntil: string): string | null {
-  const today = new Date(new Date().toISOString().slice(0, 10)).getTime();
+  // 기기의 오늘 날짜를 visibleUntil(UTC 자정)과 같은 축에 놓는다 — toISOString으로 자르면
+  // 자정~오전 9시(KST)에 하루가 더 남은 것으로 계산된다.
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(visibleUntil).getTime();
   const days = Math.round((end - today) / 86_400_000);
   return days >= 0 ? `D-${days}` : null;

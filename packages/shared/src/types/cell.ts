@@ -88,6 +88,10 @@ export interface FollowerNoteCommentInfo {
   isPastor: boolean;
   /** 대댓글 부모 (1단계 깊이만) — null이면 원댓글 */
   parentId: string | null;
+  /** 수정 가능 여부 — 작성자 본인만 */
+  canEdit: boolean;
+  /** 삭제 가능 여부 — 작성자 본인 + 관리자 */
+  canDelete: boolean;
 }
 
 /** GET /cells/:id/follower-notes 응답 항목 — 게시판 카드와 상세가 같이 쓴다 */

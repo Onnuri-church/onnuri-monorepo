@@ -15,6 +15,8 @@ import { TextField } from "../../shared/components/base/TextField";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { DateField } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import {
@@ -61,6 +63,10 @@ export function PrayerWriteScreen() {
   const [photoUris, setPhotoUris] = useState<string[]>([]);
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
+  // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
+  const { locked, acquire, release } = useSubmitLock();
+  // 입력칸이 기존 글로 채워졌는지 — 나가기 확인의 "처음 상태"를 채워진 뒤에 잡으려고 둔다.
+  const [prefilled, setPrefilled] = useState(false);
 
   const { data: editingPrayer } = useQuery({
     queryKey: ["prayer", editingId],
@@ -77,7 +83,19 @@ export function PrayerWriteScreen() {
     setCategory(editingPrayer.category);
     setContent(editingPrayer.content);
     setPhotoUris(editingPrayer.photoUrls);
+    setPrefilled(true);
   }, [editingPrayer]);
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  const dirty = useFormDirty(
+    { anonymous, title, category, period, customUntil, photoUris, content },
+    editingId === undefined || prefilled,
+  );
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: editingId ? "edit" : "write",
+  });
 
   // 프리셋이면 오늘부터 계산, 직접설정이면 고른 날짜, 수정 모드에서 안 골랐으면 null(기존 유지).
   const visibleUntil =
@@ -98,7 +116,7 @@ export function PrayerWriteScreen() {
       return;
     }
     const categoryValue = categoryLabelToValue(category);
-    if (!categoryValue) return;
+    if (!categoryValue || !acquire()) return;
 
     setSaving(true);
     try {
@@ -124,6 +142,7 @@ export function PrayerWriteScreen() {
       await queryClient.invalidateQueries({ queryKey: ["prayers"] });
       navigation.goBack();
     } catch {
+      release();
       Alert.alert(t("등록 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
       setSaving(false);
@@ -213,6 +232,7 @@ export function PrayerWriteScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }

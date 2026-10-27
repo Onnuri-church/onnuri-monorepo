@@ -152,14 +152,22 @@ export class AuthService {
         where: { cellId: cell.id, userId, endedAt: null },
       });
       if (!membership) {
-        await this.prisma.cellMembership.create({
-          data: {
-            cellId: cell.id,
-            userId,
-            role: CellRole.LEADER,
-            startedAt: now,
-          },
-        });
+        // 실제 셀장 지정(CellsService.assignRole)처럼 다른 셀 소속은 끝내고 옮긴다 — 안 그러면
+        // 소속이 두 개가 되어 /users/me가 엉뚱한 셀을 "내 셀"로 고른다.
+        await this.prisma.$transaction([
+          this.prisma.cellMembership.updateMany({
+            where: { userId, endedAt: null },
+            data: { endedAt: now },
+          }),
+          this.prisma.cellMembership.create({
+            data: {
+              cellId: cell.id,
+              userId,
+              role: CellRole.LEADER,
+              startedAt: now,
+            },
+          }),
+        ]);
       }
     }
     // MEMBER는 세팅할 것이 없다.

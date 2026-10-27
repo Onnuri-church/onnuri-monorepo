@@ -8,6 +8,8 @@ import { Alert, ScrollView, Text, TextInput, View } from "react-native";
 import { Button } from "../../shared/components/base/Button";
 import { toDateString } from "../../shared/components/composed/DateField";
 import { SelectField } from "../../shared/components/composed/SelectField";
+import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
+import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateFollowerNote, useFollowerNotes, useUpdateFollowerNote } from "./api";
@@ -42,13 +44,25 @@ export function FollowerNoteWriteScreen() {
   const createNote = useCreateFollowerNote(cellId);
   const updateNote = useUpdateFollowerNote(cellId);
   const saving = createNote.isPending || updateNote.isPending;
+  // saving은 다시 그려져야 바뀐다 — 그 전의 연타는 즉시 잠기는 이 잠금으로 막는다.
+  const { locked, acquire, release } = useSubmitLock();
+
+  // 쓰던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 등록에 성공해 화면이 닫힐 때는 막지 않는다(locked).
+  // 수정 모드의 기존 답변은 위 useState 초기값으로 이미 채워져 있어 첫 렌더 값이 처음 상태다.
+  const dirty = useFormDirty({ selectedSunday, answers });
+  const discardDialog = useDiscardGuard({
+    dirty,
+    submitting: locked,
+    mode: isEditing ? "edit" : "write",
+  });
 
   const handleAnswerChange = (index: number) => (text: string) =>
     setAnswers((prev) => prev.map((answer, i) => (i === index ? text : answer)));
 
   const handleSubmitPress = () => {
-    if (saving) return;
+    if (saving || !acquire()) return;
     const onError = (error: unknown) => {
+      release();
       // 서버 검증 메시지(그 주 노트 중복 등)를 그대로 보여준다.
       const message =
         (error as { response?: { data?: { message?: string } } }).response?.data?.message;
@@ -68,7 +82,10 @@ export function FollowerNoteWriteScreen() {
 
     // 선택지는 라벨 문자열이라 같은 인덱스의 Date에서 요청 날짜를 얻는다.
     const meetingDate = sundays.find((sunday) => formatSundayLabel(sunday) === selectedSunday);
-    if (!meetingDate) return;
+    if (!meetingDate) {
+      release();
+      return;
+    }
     createNote.mutate(
       { meetingDate: toDateString(meetingDate), answers },
       { onSuccess: () => navigation.goBack(), onError },
@@ -133,6 +150,7 @@ export function FollowerNoteWriteScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingContainer>
+      {discardDialog}
     </View>
   );
 }
