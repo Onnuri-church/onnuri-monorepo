@@ -18,6 +18,7 @@ import { KakaoTokenVerifier } from '../src/modules/auth/social/kakao-token.verif
 import type { SocialProfile } from '../src/modules/auth/social/social-profile';
 import type { JwtPayload } from '../src/modules/auth/strategies/jwt.strategy';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 테스트 데이터 식별용 도메인 — 시작/종료 시 이 도메인의 유저를 정리한다.
 // 개발용 로그인은 test/setup-e2e.ts가 AUTH_DEV_LOGIN을 켜준다 (import 시점 검증보다 먼저 실행).
@@ -271,6 +272,7 @@ describe('Auth (e2e)', () => {
     it('이메일만으로 유저를 만들고 토큰 쌍을 준다', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: DEV_EMAIL })
         .expect(201);
 
@@ -287,10 +289,38 @@ describe('Auth (e2e)', () => {
     it('재호출이면 같은 유저로 들어온다', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: DEV_EMAIL })
         .expect(201);
 
       expect((res.body as LoginBody).isNewUser).toBe(false);
+    });
+
+    it('비밀 헤더가 없으면 401', () =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email: DEV_EMAIL })
+        .expect(401));
+
+    it('비밀 헤더가 틀리면 401', () =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set('X-Dev-Login-Secret', 'wrong-secret')
+        .send({ email: DEV_EMAIL })
+        .expect(401));
+
+    // 위 소셜 로그인 테스트에서 카카오로 가입한 실제 계정 — 관리자 권한도 붙지 않아야 한다.
+    it('소셜 로그인이 연결된 계정이면 403이고 역할도 세팅하지 않는다', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
+        .send({ email: MINSU_EMAIL, role: 'ADMIN' })
+        .expect(403);
+
+      const minsu = await prisma.user.findUnique({
+        where: { email: MINSU_EMAIL },
+      });
+      expect(minsu?.isAdmin).toBe(false);
     });
 
     // 꺼졌을 때 404로 숨기는지는 유닛 테스트(auth.service.spec.ts)가 커버한다 —
@@ -301,6 +331,7 @@ describe('Auth (e2e)', () => {
     const devLogin = (email: string, role: string) =>
       request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email, role })
         .expect(201);
 
@@ -344,6 +375,7 @@ describe('Auth (e2e)', () => {
     it('목록에 없는 role 값이면 400', () =>
       request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: `dev-admin@${EMAIL_DOMAIN}`, role: 'SUPER' })
         .expect(400));
   });

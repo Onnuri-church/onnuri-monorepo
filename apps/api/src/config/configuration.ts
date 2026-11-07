@@ -29,6 +29,7 @@ const configuration = () => {
     auth: {
       // 개발용 로그인 — 명시적으로 켠 환경에서만 (기본 꺼짐, 운영 금지)
       devLoginEnabled: e.AUTH_DEV_LOGIN === 'true',
+      devLoginSecret: e.AUTH_DEV_LOGIN_SECRET || null,
     },
     storage: {
       url: e.SUPABASE_URL || deriveSupabaseUrl(e.DATABASE_URL),

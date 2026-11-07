@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 const EMAIL_DOMAIN = 'attendance-e2e.test';
 
@@ -38,6 +39,7 @@ describe('Attendance (e2e)', () => {
 
     const login = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: `member@${EMAIL_DOMAIN}` })
       .expect(201);
     accessToken = (login.body as { accessToken: string }).accessToken;
