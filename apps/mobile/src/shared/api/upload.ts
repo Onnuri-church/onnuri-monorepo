@@ -1,4 +1,5 @@
 import { apiClient } from "./client";
+import { UPLOAD_TIMEOUT_MS } from "./config";
 
 // 확장자 → mimetype. RN의 FormData 파일 파트는 type이 없으면 서버에서 형식 검증에 걸린다.
 const MIME_TYPES: Record<string, string> = {
@@ -31,6 +32,7 @@ export async function uploadImage(uri: string): Promise<string> {
 
   const response = await apiClient.post<{ url: string }>("/uploads", form, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: UPLOAD_TIMEOUT_MS,
   });
   return response.data.url;
 }
@@ -53,6 +55,7 @@ export async function uploadAttachment(
 
   const response = await apiClient.post<{ url: string }>("/uploads", form, {
     headers: { "Content-Type": "multipart/form-data" },
+    timeout: UPLOAD_TIMEOUT_MS,
   });
   return response.data.url;
 }

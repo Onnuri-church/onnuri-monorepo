@@ -2,11 +2,11 @@ import axios from "axios";
 
 import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
 
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 
 // 인터셉터 없는 인스턴스를 따로 쓴다 — apiClient의 401 → refresh 재시도 로직이
 // refresh 요청 자신에게 다시 걸려 무한 루프가 되는 것을 막는다.
-const bareClient = axios.create({ baseURL: API_BASE_URL });
+const bareClient = axios.create({ baseURL: API_BASE_URL, timeout: API_TIMEOUT_MS });
 
 export function postKakaoLogin(kakaoAccessToken: string): Promise<LoginResponse> {
   return bareClient
