@@ -46,6 +46,7 @@ onnuri-monorepo/
 | 패키지 매니저 | **pnpm** | — |
 | 컬러 토큰 | **semantic만, primitive 없음** | primitive 원시 스케일은 앞으로도 필요 없다고 확정 (`tailwind.config.js`가 `colors`를 통째로 교체해 강제) |
 | 오버레이 라이브러리 | **`@gorhom/bottom-sheet` 단일** | `react-native-modal`과 병행 — 서로 다른 애니메이션 시스템 두 개를 유지하는 중복 |
+| 파일 저장소 | **Supabase Storage** (DB와 같은 프로젝트) | Cloudflare R2 — 계정·키·요금 관리가 하나 더 늘고, 비공개 파일용 서명 URL도 Supabase가 기본 제공한다. 대신 무료 플랜 한도(저장 1GB·전송 5GB, 1주 비활성 시 일시정지)가 작아 운영 전환 시 Pro 플랜을 함께 검토한다 (2026-11 결정) |
 
 ## App Responsibilities
 
