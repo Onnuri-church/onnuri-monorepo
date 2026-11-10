@@ -623,9 +623,13 @@ model FollowerNote {
   meetingId String      @unique // 셀모임당 주간 보고 1개
   author    User        @relation(fields: [authorId], references: [id])
   authorId  String // 셀장/부셀장
-  answer1   String? // 요즘 상황과 기도제목
-  answer2   String? // 나눔 중 함께 이야기하면 좋을 것
-  answer3   String? // 궁금한 점이나 하고 싶은 말
+  // 문항 제목은 양식 버전(formVersion)에 따라 다르다 — 예전 노트는 예전 제목 그대로 보인다.
+  // v1: 요즘 상황과 기도제목 / 나눔 중 함께 이야기하면 좋을 것 / 궁금한 점이나 하고 싶은 말
+  // v2 (2026-11-10, 목사님 양식): 셀 나눔 이야기 / 셀 기도제목 / 그 외 이야기
+  formVersion Int     @default(2)
+  answer1     String?
+  answer2     String?
+  answer3     String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 

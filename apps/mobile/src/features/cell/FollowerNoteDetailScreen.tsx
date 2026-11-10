@@ -194,7 +194,7 @@ export function FollowerNoteDetailScreen() {
             </Text>
 
             <View className="mt-6 gap-6">
-              {getNoteQuestions().map((question, index) =>
+              {getNoteQuestions(note.formVersion).map((question, index) =>
                 note.answers[index]?.trim() ? (
                   <View key={question.title} className="gap-2.5">
                     <View className="flex-row items-center gap-1">
