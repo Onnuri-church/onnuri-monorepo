@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { AdminAttendanceService } from './admin-attendance.service';
 import { AdminDownloadService } from './admin-download.service';
+import { AdminFollowerNotesService } from './admin-follower-notes.service';
 import { AdminOffDaysService } from './admin-off-days.service';
 import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
 import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
@@ -30,7 +31,14 @@ export class AdminController {
     private readonly adminAttendanceService: AdminAttendanceService,
     private readonly adminDownloadService: AdminDownloadService,
     private readonly adminOffDaysService: AdminOffDaysService,
+    private readonly adminFollowerNotesService: AdminFollowerNotesService,
   ) {}
+
+  // 팔로워 노트 관리 (SCRUM-181) — 셀·팀 목록에 노트 수와 "새 노트" 수를 붙여 준다.
+  @Get('follower-notes')
+  followerNoteOverview(@CurrentUser() user: JwtPayload) {
+    return this.adminFollowerNotesService.overview(user.sub);
+  }
 
   @Get('attendance')
   findAttendance(@Query() query: FindAdminAttendanceDto) {

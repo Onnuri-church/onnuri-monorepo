@@ -1,6 +1,7 @@
 // DB 스키마(apps/api/prisma/schema.prisma)의 Team·TeamMembership을 따른다 (docs/erd.md 참고).
 // 팀 목록 요약(TeamSummary)은 프로필 설정과 같이 쓰는 계약이라 user.ts에 있다.
 
+import type { FollowerNoteCommentInfo } from "./cell";
 import type { TeamRole } from "./user";
 
 /** GET /teams/:id 응답의 팀원 한 명 — 진행 중(endedAt 없음) 멤버십 기준 */
@@ -89,4 +90,39 @@ export interface TeamMemberCandidate {
 /** POST /teams/:id/members 요청 본문 — 추가 화면에서 여러 명을 한 번에 고른다. */
 export interface AddTeamMembersRequest {
   userIds: string[];
+}
+
+// ── 팀 팔로워 노트 (SCRUM-180) ────────────────────────────────────────────
+
+/**
+ * GET /teams/:id/follower-notes 응답 항목 — 팀장들이 함께 쓰는 팀원 케어 기록.
+ * 셀 노트와 달리 모임 날짜가 없어 작성일 기준으로 연·월을 거른다. 댓글 모양은 셀 노트와 같다.
+ */
+export interface TeamFollowerNoteInfo {
+  id: string;
+  /** 작성일 — "2026.11.10" (카드 제목) */
+  dateLabel: string;
+  /** 작성일 연·월 — 게시판 연·월 필터용 */
+  year: number;
+  month: number;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  /** 쓴 사람이 아닌 팀장이 마지막으로 고쳤으면 그 이름, 아니면 null */
+  editedByName: string | null;
+  createdAt: string;
+  /** 마지막 수정 시각 — 수정 요청에 그대로 돌려보내 동시 편집을 막는다 */
+  updatedAt: string;
+  content: string;
+  comments: FollowerNoteCommentInfo[];
+}
+
+/** POST /teams/:id/follower-notes 요청 본문 */
+export interface CreateTeamFollowerNoteRequest {
+  content: string;
+}
+
+/** PATCH /teams/:id/follower-notes/:noteId 요청 본문 — updatedAt이 서버 값과 다르면 409 */
+export interface UpdateTeamFollowerNoteRequest {
+  content: string;
+  updatedAt: string;
 }

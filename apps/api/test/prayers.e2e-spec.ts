@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 공용 개발 DB를 쓰므로 접두사/도메인으로 만든 행만 정리한다 (posts.e2e-spec과 같은 방식).
 const EMAIL_DOMAIN = 'prayers-e2e.test';
@@ -35,6 +36,7 @@ describe('Prayers (e2e)', () => {
   const login = async (email: string, role?: 'ADMIN') => {
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send(role ? { email, role } : { email })
       .expect(201);
     return res.body as { accessToken: string; user: { id: string } };
@@ -58,6 +60,11 @@ describe('Prayers (e2e)', () => {
     authorToken = author.accessToken;
     otherToken = other.accessToken;
     adminToken = admin.accessToken;
+    // 기도제목 작성은 민감정보 동의가 필요하다 (SCRUM-175).
+    await prisma.user.updateMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+      data: { sensitiveConsentAt: new Date() },
+    });
 
     const future = new Date(Date.now() + 7 * 86_400_000)
       .toISOString()

@@ -13,6 +13,8 @@
 
 프로필은 [eas.json](eas.json)에 있다 — `development`(dev client·APK), `preview`(내부 배포용 APK), `production`(AAB). 실행은 `pnpm --filter @onnuri/mobile exec eas <command>`.
 
+**개발용 빌드는 별도 앱이다** — `APP_VARIANT=development`면 `app.config.js`가 앱 ID를 `com.onnuri.mobile.dev`, 이름을 "온누리 DEV"로 바꿔 베타·실사용 앱(`com.onnuri.mobile`)과 한 폰에 나란히 깔린다. EAS `development` 프로필은 이 값을 넣어두었고, 로컬 빌드는 `APP_VARIANT=development pnpm --filter @onnuri/mobile exec expo prebuild --clean --platform android` 후 `expo run:android`로 한다 (`android/`는 생성물이라 gitignore). 개발 앱은 Firebase·카카오·구글 콘솔에 등록되지 않은 앱 ID라 푸시와 소셜 로그인이 안 되고, 개발용 로그인 버튼으로 쓴다.
+
 **빌드는 공용 조직 계정 `onnuri-church-app`의 프로젝트 `onnuri-app`으로 나간다.** 계정을 공유하지 않고, 각자 자기 Expo 계정으로 로그인한 채 조직 멤버(Developer 이상)로 참여한다.
 
 - 계정 연결값(`owner`, `extra.eas.projectId`)은 `eas init`이 **`app.json`에 직접 쓴다**. `.env`로 빼는 건 안 된다 — EAS CLI는 `.env`를 읽지 않아서 "EAS project not configured"로 빌드가 죽는다 (Expo CLI는 읽으므로 `expo config`만으로 검증하면 못 잡는다).

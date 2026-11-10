@@ -4,12 +4,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { View } from "react-native";
 
 import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
 import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
 import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
 import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
+import { AdminFollowerNotesScreen } from "../features/admin/AdminFollowerNotesScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
@@ -34,8 +36,9 @@ import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen"
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
 import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
-import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
+import { TeamFollowerNoteBoardScreen } from "../features/follower-note/TeamFollowerNoteBoardScreen";
+import { TeamFollowerNoteWriteScreen } from "../features/follower-note/TeamFollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
 import { canPostToCell } from "../features/cell/cellDetail";
 import { useMe } from "../features/profile/useMe";
@@ -57,6 +60,10 @@ import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScr
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
+import { ConsentScreen } from "../features/consent/ConsentScreen";
+import { PermissionGuideScreen } from "../features/consent/PermissionGuideScreen";
+import { PolicyDocumentScreen } from "../features/consent/PolicyDocumentScreen";
+import { POLICIES } from "../features/consent/policies";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrResultScreen } from "../features/qr/QrResultScreen";
 import { QrScreen } from "../features/qr/QrScreen";
@@ -91,6 +98,7 @@ import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
+import { usePermissionGuideStore } from "../shared/store/usePermissionGuideStore";
 import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
@@ -163,7 +171,9 @@ export function RootNavigator() {
     },
   };
 
-  useAppBootstrap();
+  const permissionGuideSeen = usePermissionGuideStore((state) => state.seen);
+  // 첫 실행이면 앱 접근 권한 안내 → (확인) → 스플래시 → 로그인/메인 순서다 — 안내를 보는 동안 세션 복원을 미룬다.
+  useAppBootstrap(permissionGuideSeen === true);
 
   // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
   // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
@@ -173,13 +183,26 @@ export function RootNavigator() {
     }
   }, [session.status]);
 
+  // 저장소를 읽는 아주 짧은 순간은 빈 화면 — 여기서 스플래시를 띄우면 첫 실행에 스플래시 → 안내 → 스플래시가 된다.
+  if (permissionGuideSeen === null) {
+    return <View className="flex-1 bg-background-normal" />;
+  }
+  // 이 기기에서 처음 연 경우 — 스플래시보다 먼저 앱 접근 권한 안내를 한 번 보여준다 (SCRUM-184).
+  if (!permissionGuideSeen) {
+    return <PermissionGuideScreen />;
+  }
   if (session.status === "loading") {
     return <SplashScreen />;
   }
 
+  // 현재 방침에 동의하지 않은 로그인 유저(신규 가입·기존 회원 모두)는 동의 화면만 본다 (SCRUM-175).
+  const needsConsent =
+    (session.status === "authenticated" || session.status === "onboarding") &&
+    !session.user.privacyConsented;
+
   return (
     <NavigationContainer theme={navigationTheme}>
-      {session.status === "authenticated" || session.status === "guest" ? (
+      {(session.status === "authenticated" && !needsConsent) || session.status === "guest" ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
           <Stack.Screen
@@ -397,7 +420,7 @@ export function RootNavigator() {
             component={TeamBoardScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title={t("팀 게시판")} rightAction="home" />,
+              header: () => <Header variant="sub" title={t("팀 활동 게시판")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -576,11 +599,39 @@ export function RootNavigator() {
               ),
             })}
           />
-          {/* 헤더는 화면이 단독 등록한다 (⋮ 항목이 내 글 여부에 의존) — 여기 header를 두면 이중 정의. */}
+          {/* 약관·개인정보 문서 전문 (SCRUM-184) — 설정에서 연다. 가입 전에는 AuthStack의 같은 화면을 쓴다. */}
           <Stack.Screen
-            name="FollowerNoteDetail"
-            component={FollowerNoteDetailScreen}
-            options={{ headerShown: true }}
+            name="PolicyDocument"
+            component={PolicyDocumentScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+              ),
+            })}
+          />
+          {/* 팀 팔로워 노트 (SCRUM-180) — 셀 노트와 같은 화면 구성 */}
+          <Stack.Screen
+            name="TeamFollowerNoteBoard"
+            component={TeamFollowerNoteBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀 팔로워 노트")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamFollowerNoteWrite"
+            component={TeamFollowerNoteWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.noteId ? t("팀 팔로워 노트 수정") : t("팀 팔로워 노트 작성")}
+                  rightAction="none"
+                />
+              ),
+            })}
           />
           <Stack.Screen
             name="Settings"
@@ -663,6 +714,15 @@ export function RootNavigator() {
                 />
               ),
             })}
+          />
+          {/* 팔로워 노트 관리 (SCRUM-181) — 셀·팀 노트 목록 → 각 게시판 */}
+          <Stack.Screen
+            name="AdminFollowerNotes"
+            component={AdminFollowerNotesScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팔로워 노트 관리")} />,
+            }}
           />
           <Stack.Screen
             name="AdminCellManage"
@@ -777,12 +837,26 @@ export function RootNavigator() {
         </Stack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-          {/* 세션 상태에 따라 화면을 하나만 등록한다 — onboarding(프로필 미완, 토큰은 이미 있음)이면
+          {/* 세션 상태에 따라 화면을 하나만 등록한다 — 동의 전이면 동의 화면, onboarding(프로필 미완, 토큰은 이미 있음)이면
               프로필 설정만 남고, 등록을 마치면 setSession이 메인 트리로 전환한다. 뒤로가기는
               온보딩 중단이므로 signOut으로 세션을 정리해 로그인 화면으로 돌아간다 — 세션이
               남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
               ProfileSetupScreen이 같은 동작으로 처리한다.) */}
-          {session.status === "onboarding" ? (
+          {needsConsent ? (
+            <>
+              <AuthStack.Screen name="Consent" component={ConsentScreen} />
+              <AuthStack.Screen
+                name="PolicyDocument"
+                component={PolicyDocumentScreen}
+                options={({ route }) => ({
+                  headerShown: true,
+                  header: () => (
+                    <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+                  ),
+                })}
+              />
+            </>
+          ) : session.status === "onboarding" ? (
             <AuthStack.Screen
               name="ProfileSetup"
               component={ProfileSetupScreen}

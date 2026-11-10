@@ -20,8 +20,38 @@ import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
+import { UpdateConsentDto } from './dto/update-consent.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
+
+// 탈퇴 계정의 이메일 — 실존할 수 없는 예약 도메인(.invalid)이라 누구의 이메일과도 겹치지 않는다.
+export function withdrawnEmail(userId: string): string {
+  return `withdrawn-${userId}@withdrawn.invalid`;
+}
+
+// 탈퇴 후 프로필을 보관하는 기간 (2026-09-08 확정: 30일 후 파기).
+const WITHDRAWN_PROFILE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
+// 탈퇴 후 이름(출석·글·댓글의 작성자 표시)을 남겨 두는 기간 — 지나면 익명 처리한다
+// (2026-11-10 변경: 기명 무기한 보존 → 1년 후 익명. 출석 수 등 통계는 그대로 남는다).
+const WITHDRAWN_NAME_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
+export const WITHDRAWN_DISPLAY_NAME = '탈퇴한 회원';
+
+// 지금 시행 중인 개인정보처리방침의 버전 — 방침 내용이 바뀌면 올린다. 동의한 버전이 이것과
+// 다르면 privacyConsented가 false가 되어 앱이 동의 화면을 다시 띄운다.
+// 필수 동의(서비스 이용약관 + 개인정보 수집·이용)의 버전 — 앱 동의 화면은 두 항목을 모두 체크해야
+// 보내므로 한 버전으로 함께 기록한다 (SCRUM-184). 약관·방침을 바꿔 다시 동의받으려면 올린다.
+export const PRIVACY_POLICY_VERSION = '2026-11';
+
+// 가입할 수 있는 최소 나이 (처리방침 "만 14세 미만 아동은 가입을 받지 않습니다").
+const MIN_SIGNUP_AGE = 14;
+
+// 생년월일(YYYY-MM-DD)과 오늘(한국 날짜) 기준 만 나이.
+function ageOn(birthYmd: string, todayYmd: string): number {
+  const [by, bm, bd] = birthYmd.split('-').map(Number);
+  const [ty, tm, td] = todayYmd.split('-').map(Number);
+  return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+}
 
 @Injectable()
 export class UsersService {
@@ -44,12 +74,17 @@ export class UsersService {
         intro: true,
         isAdmin: true,
         createdAt: true,
+        privacyConsentVersion: true,
+        sensitiveConsentAt: true,
       },
     });
     if (!user) return null;
 
+    const { privacyConsentVersion, sensitiveConsentAt, ...rest } = user;
     return {
-      ...user,
+      ...rest,
+      privacyConsented: privacyConsentVersion === PRIVACY_POLICY_VERSION,
+      sensitiveConsented: sensitiveConsentAt !== null,
       // 계약: birthDate는 YYYY-MM-DD (나이는 클라이언트가 계산), createdAt은 ISO 문자열
       birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
       createdAt: user.createdAt.toISOString(),
@@ -302,8 +337,8 @@ export class UsersService {
     return this.findDetailForAdmin(id);
   }
 
-  // 회원 삭제 (관리자 전용) — 탈퇴와 같은 soft delete. 출석·활동 기록은 기명 보존이고
-  // 프로필 파기는 30일 배치 소관 (2026-09-08 확정). 진행 중 소속은 종료 처리한다.
+  // 회원 삭제 (관리자 전용) — 본인 탈퇴와 같은 처리(withdrawOps). 이후 프로필 파기(30일)·
+  // 이름 익명 처리(1년)는 WithdrawnProfilePurgeService 소관.
   async withdrawByAdmin(id: string): Promise<{ id: string }> {
     const target = await this.prisma.user.findFirst({
       where: { id, withdrawnAt: null },
@@ -314,19 +349,94 @@ export class UsersService {
       throw new BadRequestException('관리자 계정은 여기서 삭제할 수 없습니다.');
     }
 
-    const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id }, data: { withdrawnAt: now } }),
+    await this.prisma.$transaction(this.withdrawOps(id, new Date()));
+    return { id };
+  }
+
+  // 탈퇴 처리 (본인·관리자 공통). 탈퇴한 사람이 같은 카카오·구글 계정으로 다시 로그인하면
+  // 예전 계정이 살아나지 않고 새로 가입되게 한다 — 로그인 수단 연결을 끊고, 이메일은 바로
+  // 예약 도메인으로 바꾼다 (이메일이 유니크라 원래 값이 남아 있으면 같은 이메일로 새로 가입할
+  // 수 없고, 로그인이 이메일로 예전 계정을 다시 찾아 연결해 버린다). 세션·푸시 토큰도 지워
+  // 탈퇴 즉시 로그아웃되게 한다. 나머지 프로필(생년월일·성별·연락처·사진·소개)은 30일 뒤,
+  // 이름은 1년 뒤 배치가 정리한다 (보관 정책은 docs/erd.md).
+  private withdrawOps(userId: string, now: Date) {
+    return [
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { withdrawnAt: now, email: withdrawnEmail(userId) },
+      }),
+      this.prisma.socialAccount.deleteMany({ where: { userId } }),
       this.prisma.cellMembership.updateMany({
-        where: { userId: id, endedAt: null },
+        where: { userId, endedAt: null },
         data: { endedAt: now },
       }),
       this.prisma.teamMembership.updateMany({
-        where: { userId: id, endedAt: null },
+        where: { userId, endedAt: null },
         data: { endedAt: now },
       }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      this.prisma.pushToken.deleteMany({ where: { userId } }),
+    ];
+  }
+
+  // 이 변경 전에 탈퇴한 계정은 로그인 수단과 원래 이메일이 남아 있다 — 그 사람이 다시 로그인하면
+  // 로그인 직전에 여기서 연결을 끊어 새 계정으로 가입되게 한다 (AuthService.findOrCreateUser).
+  async detachWithdrawn(userId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { email: withdrawnEmail(userId) },
+      }),
+      this.prisma.socialAccount.deleteMany({ where: { userId } }),
     ]);
-    return { id };
+  }
+
+  // 탈퇴 30일이 지난 계정의 프로필 파기 — 이름은 1년까지 남긴다 (anonymizeWithdrawnNames).
+  // 사진 파일은 창고에서도 지운다 (실패해도 deleteByUrl이 경고만 남긴다).
+  // 탈퇴 1년이 지난 계정의 이름을 익명으로 바꾼다 — 출석·글·댓글은 남지만 누구 것인지
+  // 알 수 없게 된다. 이미 익명인 계정은 건드리지 않는다.
+  async anonymizeWithdrawnNames(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - WITHDRAWN_NAME_RETENTION_MS);
+    const result = await this.prisma.user.updateMany({
+      where: {
+        withdrawnAt: { lte: cutoff },
+        name: { not: WITHDRAWN_DISPLAY_NAME },
+      },
+      data: { name: WITHDRAWN_DISPLAY_NAME },
+    });
+    return result.count;
+  }
+
+  async purgeWithdrawnProfiles(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - WITHDRAWN_PROFILE_RETENTION_MS);
+    const targets = await this.prisma.user.findMany({
+      where: {
+        withdrawnAt: { lte: cutoff },
+        OR: [
+          { birthDate: { not: null } },
+          { gender: { not: null } },
+          { phone: { not: null } },
+          { avatarUrl: { not: null } },
+          { intro: { not: null } },
+        ],
+      },
+      select: { id: true, avatarUrl: true },
+    });
+    for (const target of targets) {
+      await this.prisma.user.update({
+        where: { id: target.id },
+        data: {
+          birthDate: null,
+          gender: null,
+          phone: null,
+          avatarUrl: null,
+          intro: null,
+        },
+      });
+      if (target.avatarUrl)
+        await this.uploadsService.deleteByUrl(target.avatarUrl);
+    }
+    return targets.length;
   }
 
   // 권한 선택을 멤버십 역할로 옮긴다. 역할 변경도 행 종료 + 새 행 (이력 보존 패턴).
@@ -454,9 +564,8 @@ export class UsersService {
     return (await this.findMe(userId))!;
   }
 
-  // 본인 탈퇴 — 관리자 탈퇴와 같은 soft 처리에 더해 세션·푸시 토큰을 지운다
-  // (안 지우면 탈퇴한 기기로 리프레시·푸시가 계속 간다). 관리자 계정은 권한 양도
-  // 절차가 없어서 막는다 (withdrawByAdmin과 같은 기준).
+  // 본인 탈퇴 — 처리 내용은 withdrawOps. 관리자 계정은 권한 양도 절차가 없어서 막는다
+  // (withdrawByAdmin과 같은 기준).
   async withdrawMe(userId: string): Promise<void> {
     const me = await this.prisma.user.findFirst({
       where: { id: userId, withdrawnAt: null },
@@ -469,23 +578,7 @@ export class UsersService {
       );
     }
 
-    const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { withdrawnAt: now },
-      }),
-      this.prisma.cellMembership.updateMany({
-        where: { userId, endedAt: null },
-        data: { endedAt: now },
-      }),
-      this.prisma.teamMembership.updateMany({
-        where: { userId, endedAt: null },
-        data: { endedAt: now },
-      }),
-      this.prisma.refreshToken.deleteMany({ where: { userId } }),
-      this.prisma.pushToken.deleteMany({ where: { userId } }),
-    ]);
+    await this.prisma.$transaction(this.withdrawOps(userId, new Date()));
   }
 
   // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라
@@ -575,10 +668,58 @@ export class UsersService {
     await this.prisma.pushToken.deleteMany({ where: { token, userId } });
   }
 
+  // 동의 기록 — 필수 동의는 현재 방침 버전으로 남기고, 민감정보 동의는 켜고 끌 수 있다.
+  async updateConsent(
+    userId: string,
+    dto: UpdateConsentDto,
+  ): Promise<User> {
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.privacy && {
+          privacyConsentAt: now,
+          privacyConsentVersion: PRIVACY_POLICY_VERSION,
+        }),
+        ...(dto.sensitive !== undefined && {
+          sensitiveConsentAt: dto.sensitive ? now : null,
+        }),
+      },
+    });
+    const user = await this.findById(userId);
+    if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    return user;
+  }
+
+  // 동의 화면에서 "동의하지 않고 나가기" (SCRUM-183). 소셜 로그인 순간 계정이 먼저 만들어지므로,
+  // 한 번도 동의하지 않았고 프로필도 없는 막 가입한 계정은 바로 지운다 — 동의 전에는 정보를 남기지 않는다.
+  // 소셜 연결·토큰·푸시 토큰은 cascade로 같이 지워진다. 이미 가입을 마친 기존 회원(방침 개정으로 다시
+  // 묻는 경우)이나 다른 기록이 걸린 계정은 지우지 않는다 — 그 경우 앱은 로그아웃만 한다.
+  async declineConsent(userId: string): Promise<{ deleted: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { privacyConsentAt: true, birthDate: true, gender: true, phone: true },
+    });
+    if (!user || user.privacyConsentAt !== null) return { deleted: false };
+    const profileStarted = user.birthDate !== null || user.gender !== null || user.phone !== null;
+    if (profileStarted) return { deleted: false };
+    try {
+      await this.prisma.user.delete({ where: { id: userId } });
+      return { deleted: true };
+    } catch {
+      // 지울 수 없게 걸린 기록(외래키)이 있으면 남겨 둔다 — 정상 흐름에선 생기지 않는다.
+      return { deleted: false };
+    }
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,
   ): Promise<MeResponse> {
+    const todayYmd = kstToday().toISOString().slice(0, 10);
+    if (ageOn(dto.birthDate, todayYmd) < MIN_SIGNUP_AGE) {
+      throw new BadRequestException('만 14세 미만은 가입할 수 없어요.');
+    }
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({

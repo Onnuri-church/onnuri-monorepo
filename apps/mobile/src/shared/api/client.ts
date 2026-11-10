@@ -3,11 +3,11 @@ import { Alert } from "react-native";
 
 import { i18n } from "../i18n";
 import { useAuthStore } from "../store/useAuthStore";
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 import { clearTokens } from "./tokenStorage";
 import { refreshSession } from "./session";
 
-export const apiClient = axios.create({ baseURL: API_BASE_URL });
+export const apiClient = axios.create({ baseURL: API_BASE_URL, timeout: API_TIMEOUT_MS });
 
 // 프로필 설정 중(onboarding)도 토큰이 있는 상태라 똑같이 붙인다 — PATCH /users/me가 인증을 요구한다.
 apiClient.interceptors.request.use((config) => {

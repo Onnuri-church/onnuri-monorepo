@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 const EMAIL_DOMAIN = 'dedupe-create-e2e.test';
 const TITLE_PREFIX = 'dedupe-e2e-';
@@ -24,6 +25,7 @@ describe('Dedupe create (e2e)', () => {
   const login = async (name: string) => {
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: `${name}@${EMAIL_DOMAIN}` })
       .expect(201);
     return (res.body as { accessToken: string }).accessToken;
@@ -61,6 +63,11 @@ describe('Dedupe create (e2e)', () => {
     await cleanup();
     token = await login('me');
     otherToken = await login('other');
+    // 기도제목·큐티 작성은 민감정보 동의가 필요하다 (SCRUM-175).
+    await prisma.user.updateMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+      data: { sensitiveConsentAt: new Date() },
+    });
   });
 
   afterAll(async () => {

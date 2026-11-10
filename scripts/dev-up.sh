@@ -9,7 +9,7 @@
 #   scripts/dev-up.sh --restart  # 위 작업 + 앱 강제 재시작(새 번들 로드)
 set -u
 
-APP_ID="com.onnuri.mobile"
+APP_ID="com.onnuri.mobile.dev" # 개발용 빌드(별도 앱) — apps/mobile/AGENTS.md "EAS 빌드"
 
 echo "── 기기 연결 ──"
 if ! adb devices | grep -q "device$"; then

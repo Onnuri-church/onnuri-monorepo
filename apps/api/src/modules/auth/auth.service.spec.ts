@@ -17,7 +17,7 @@ describe('AuthService.loginWithDev 게이트', () => {
 
   it('AUTH_DEV_LOGIN이 꺼져 있으면 NotFoundException(404)', async () => {
     await expect(
-      buildService(false).loginWithDev('dev@example.com'),
+      buildService(false).loginWithDev('dev@example.com', 'MEMBER', 'x'),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

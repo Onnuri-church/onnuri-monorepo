@@ -12,6 +12,7 @@ import {
   toDayLabel,
   toKstDate,
 } from '../../common/utils/date';
+import { markFollowerNotesViewed } from '../admin/admin-follower-notes.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
@@ -39,11 +40,14 @@ export class FollowerNotesService {
 
   async findAll(requesterId: string, cellId: string): Promise<FollowerNoteInfo[]> {
     const { isAdmin } = await this.assertCanView(requesterId, cellId);
+    // 관리자가 연 시각을 남긴다 — 팔로워 노트 관리 목록의 "새 노트" 기준 (SCRUM-181).
+    if (isAdmin) await markFollowerNotesViewed(this.prisma, requesterId, { cellId });
 
     const notes = await this.prisma.followerNote.findMany({
       where: { meeting: { cellId } },
       select: {
         id: true,
+        formVersion: true,
         answer1: true,
         answer2: true,
         answer3: true,
@@ -71,6 +75,7 @@ export class FollowerNotesService {
       return {
         id: note.id,
         dateLabel: toDateLabel(meetingDate),
+        year: meetingDate.getUTCFullYear(),
         month: meetingDate.getUTCMonth() + 1,
         meetingLabel: `(${WEEKDAY_LABELS[meetingDate.getUTCDay()]}) 셀모임`,
         authorName: note.author.name,
@@ -78,6 +83,7 @@ export class FollowerNotesService {
         isMine: note.authorId === requesterId,
         writtenDateLabel: toDayLabel(toKstDate(note.createdAt)),
         createdAt: note.createdAt.toISOString(),
+        formVersion: note.formVersion,
         answers: [note.answer1 ?? '', note.answer2 ?? '', note.answer3 ?? ''],
         comments: note.comments.map((comment) => ({
           id: comment.id,
@@ -104,7 +110,7 @@ export class FollowerNotesService {
   ): Promise<FollowerNoteInfo[]> {
     await this.assertIsCellLeader(requesterId, cellId);
     if (!dto.answers[0]?.trim()) {
-      throw new BadRequestException('첫 문항(요즘 상황과 기도제목)은 필수입니다.');
+      throw new BadRequestException('첫 문항은 필수입니다.');
     }
 
     const meetingDate = new Date(dto.meetingDate);
@@ -174,7 +180,7 @@ export class FollowerNotesService {
   ): Promise<FollowerNoteInfo[]> {
     await this.assertIsCellLeader(requesterId, cellId);
     if (!dto.answers[0]?.trim()) {
-      throw new BadRequestException('첫 문항(요즘 상황과 기도제목)은 필수입니다.');
+      throw new BadRequestException('첫 문항은 필수입니다.');
     }
     const note = await this.findNoteInCell(noteId, cellId);
 

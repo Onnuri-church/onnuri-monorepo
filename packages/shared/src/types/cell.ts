@@ -99,6 +99,8 @@ export interface FollowerNoteInfo {
   id: string;
   /** 셀모임 날짜 — "2026.08.02" */
   dateLabel: string;
+  /** 셀모임 연도 — 게시판 연·월 필터용 */
+  year: number;
   /** 셀모임 달 (1~12) — 게시판 월 필터용 */
   month: number;
   /** "(일) 셀모임" */
@@ -110,6 +112,8 @@ export interface FollowerNoteInfo {
   /** 작성일 — "08월 03일". "3주 전"은 앱이 계산한다 */
   writtenDateLabel: string;
   createdAt: string;
+  /** 문항 양식 버전 — 1: 예전 문항, 2: 목사님 양식(2026-11). 앱이 버전에 맞는 문항 제목을 보여준다 */
+  formVersion: number;
   /** 3문항 답변 순서 고정 (빈 답변은 "") */
   answers: string[];
   /** 작성 시각순 — 대댓글은 parentId로 구분 */

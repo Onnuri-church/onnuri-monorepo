@@ -1,142 +1,70 @@
 import { useNavigation, useRoute } from "@react-navigation/native";
 import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
-import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
-import { FloatingButton } from "../../shared/components/base/FloatingButton";
-import { Icon } from "../../shared/components/base/Icon";
-import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { toTimeAgo } from "../../shared/utils/date";
+import { FollowerNoteBoardView } from "../follower-note/FollowerNoteBoardView";
 import { useMe } from "../profile/useMe";
 import {
   useAddFollowerNoteComment,
   useCell,
   useDeleteFollowerNote,
+  useDeleteFollowerNoteComment,
   useFollowerNotes,
+  useUpdateFollowerNoteComment,
 } from "./api";
 import { canWriteFollowerNote } from "./cellDetail";
-import { MonthPicker } from "./components/MonthPicker";
-import { FollowerNoteCard } from "./components/FollowerNoteCard";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { NoteNumberBadge } from "./components/NoteNumberBadge";
+import { getNoteQuestions } from "./followerNotes";
 
-// 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
-// "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
+// 셀 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
+// 화면 본체는 팀 노트와 공용(FollowerNoteBoardView)이고, 여기서는 셀 노트의 3문항 내용만 그린다.
 export function FollowerNoteBoardScreen() {
-  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteBoard">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { cellId } = route.params;
+  const { cellId, noteId } = route.params;
   const cell = useCell(cellId);
   // 작성·편집·삭제는 그 셀의 셀장·부셀장만 — 관리자는 열람과 댓글(목사님 댓글)만 (2026-09-10 확정).
   const me = useMe();
-  const canWrite = canWriteFollowerNote(cellId, me);
-
   const { data: notes, isLoading, refetch, isRefetching } = useFollowerNotes(cellId);
-  const deleteNote = useDeleteFollowerNote(cellId);
-  const addComment = useAddFollowerNoteComment(cellId);
-  // null = 전체 기간
-  const [monthFilter, setMonthFilter] = useState<number | null>(new Date().getMonth() + 1);
-  const [calendarOpen, setCalendarOpen] = useState(false);
-  const deleteDialogRef = useRef<AppDialogRef>(null);
-  const deleteTargetId = useRef<string | null>(null);
-
-  const visibleNotes =
-    monthFilter === null
-      ? (notes ?? [])
-      : (notes ?? []).filter((note) => note.month === monthFilter);
-
-  const handleDeletePress = (noteId: string) => {
-    deleteTargetId.current = noteId;
-    deleteDialogRef.current?.open();
-  };
-
-  const confirmDelete = () => {
-    if (deleteTargetId.current && !deleteNote.isPending) {
-      deleteNote.mutate(deleteTargetId.current);
-    }
-    deleteDialogRef.current?.close();
-  };
 
   return (
-    <View className="flex-1 bg-background-normal">
-      {/* 헤더 타이틀 아래 셀 이름 캡션 (시안) */}
-      <Text className="text-center text-caption-main text-text-alternative">
-        {cell?.name ?? ""}
-      </Text>
-
-      <ScrollView contentContainerClassName="px-5 pt-5"
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
-        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
-        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}>
-        <Pressable
-          className="flex-row items-center gap-1 self-start"
-          onPress={() => setCalendarOpen((prev) => !prev)}
-        >
-          <Text className="text-heading-small text-text-normal">
-            {monthFilter === null ? t("전체 기간") : t("2026년 {{month}}월", { month: monthFilter })}
-          </Text>
-          <Icon name="arrow-drop-down" size={24} color={colors.icon.strong} />
-        </Pressable>
-
-        {calendarOpen && (
-          <View className="mt-4">
-            <MonthPicker
-              selectedMonth={monthFilter}
-              onSelectMonth={(month) => {
-                setMonthFilter(month);
-                setCalendarOpen(false);
-              }}
-              onSelectAll={() => {
-                setMonthFilter(null);
-                setCalendarOpen(false);
-              }}
-            />
-          </View>
-        )}
-
-        <View className="mt-6 gap-7">
-          {visibleNotes.map((note) => (
-            <FollowerNoteCard
-              key={note.id}
-              note={note}
-              onPress={() =>
-                navigation.navigate("FollowerNoteDetail", { cellId, noteId: note.id })
-              }
-              onEditPress={
-                canWrite
-                  ? () => navigation.navigate("FollowerNoteWrite", { cellId, noteId: note.id })
-                  : undefined
-              }
-              onDeletePress={canWrite ? () => handleDeletePress(note.id) : undefined}
-              onCommentSubmit={(content) => addComment.mutate({ noteId: note.id, content })}
-            />
-          ))}
-          {visibleNotes.length === 0 && (
-            <Text className="pt-10 text-center text-body-medium text-text-alternative">
-              {isLoading ? t("노트를 불러오고 있어요.") : t("이 기간에 작성된 노트가 없어요.")}
-            </Text>
-          )}
-        </View>
-      </ScrollView>
-
-      {canWrite && (
-        <FloatingButton onPress={() => navigation.navigate("FollowerNoteWrite", { cellId })}>
-          <Icon name="write" size={24} color={colors.icon.disable} />
-        </FloatingButton>
-      )}
-
-      <AppDialog
-        ref={deleteDialogRef}
-        title={t("정말 삭제하시겠습니까?")}
-        description={t("삭제된 데이터는 복구할 수 없습니다.")}
-        confirmLabel={t("확인")}
-        cancelLabel={t("취소")}
-        onConfirm={confirmDelete}
-      />
-    </View>
+    <FollowerNoteBoardView
+      caption={cell?.name ?? ""}
+      notes={notes}
+      isLoading={isLoading}
+      isRefetching={isRefetching}
+      onRefresh={() => void refetch()}
+      targetNoteId={noteId}
+      canWrite={canWriteFollowerNote(cellId, me)}
+      onWritePress={() => navigation.navigate("FollowerNoteWrite", { cellId })}
+      onEditNote={(id) => navigation.navigate("FollowerNoteWrite", { cellId, noteId: id })}
+      deleteNote={useDeleteFollowerNote(cellId)}
+      addComment={useAddFollowerNoteComment(cellId)}
+      updateComment={useUpdateFollowerNoteComment(cellId)}
+      deleteComment={useDeleteFollowerNoteComment(cellId)}
+      renderContent={(note) => ({
+        title: note.dateLabel,
+        subtitle: note.meetingLabel,
+        authorLine: t("{{name}} 작성", { name: note.authorName }),
+        avatarUrl: note.authorAvatarUrl,
+        timeLabel: `${note.writtenDateLabel} · ${toTimeAgo(note.createdAt)}`,
+        body: getNoteQuestions(note.formVersion).map((question, index) =>
+          note.answers[index]?.trim() ? (
+            <View key={question.title} className="gap-2.5">
+              <View className="flex-row items-center gap-1">
+                <NoteNumberBadge number={index + 1} />
+                <Text className="text-body-main text-text-normal">{question.title}</Text>
+              </View>
+              <Text className="text-body-medium text-text-neutral">{note.answers[index]}</Text>
+            </View>
+          ) : null,
+        ),
+      })}
+    />
   );
 }

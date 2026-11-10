@@ -1,12 +1,13 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
 
 import type { DevLoginRole } from '@onnuri/shared';
 
@@ -78,12 +79,37 @@ export class AuthService {
   // 개발용: 소셜 SDK가 없는 웹·Expo Go에서 유저 기반 기능을 개발할 수 있게 이메일만으로
   // 로그인시킨다. AUTH_DEV_LOGIN=true인 환경에서만 열리고, 꺼진 환경에선 404로 존재를 숨긴다.
   // role을 주면 그 역할로 확인할 수 있게 관리자 플래그·팀장/셀장 멤버십을 함께 세팅한다.
-  async loginWithDev(email: string, role: DevLoginRole = 'MEMBER') {
+  // 개발 서버는 실제 성도 계정이 있는 공용 DB를 쓰므로 (1) 비밀 헤더가 맞아야 하고
+  // (2) 소셜 로그인이 연결된 실제 계정으로는 들어갈 수 없다 — 둘 다 없으면 이메일만으로
+  // 남의 계정에 들어가 관리자 권한까지 줄 수 있었다.
+  async loginWithDev(
+    email: string,
+    role: DevLoginRole = 'MEMBER',
+    secret?: string,
+  ) {
     if (!this.config.get('auth.devLoginEnabled', { infer: true })) {
       throw new NotFoundException();
     }
+    if (!this.isDevLoginSecretValid(secret)) {
+      throw new UnauthorizedException(
+        '개발용 로그인 비밀 헤더가 올바르지 않습니다.',
+      );
+    }
 
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    let existing = await this.prisma.user.findUnique({
+      where: { email },
+      include: { _count: { select: { socialAccounts: true } } },
+    });
+    // 탈퇴한 계정으로는 들어가지 않고 새로 만든다 (소셜 로그인과 같은 기준).
+    if (existing?.withdrawnAt) {
+      await this.usersService.detachWithdrawn(existing.id);
+      existing = null;
+    }
+    if (existing && existing._count.socialAccounts > 0) {
+      throw new ForbiddenException(
+        '소셜 로그인으로 가입한 계정은 개발용 로그인으로 들어갈 수 없습니다.',
+      );
+    }
     const user =
       existing ??
       (await this.prisma.user.create({
@@ -91,6 +117,15 @@ export class AuthService {
       }));
     await this.provisionDevRole(user.id, role);
     return this.buildLoginResponse(user.id, !existing);
+  }
+
+  // 길이가 달라도 비교 시간이 같도록 해시끼리 비교한다 (timingSafeEqual은 길이가 다르면 throw).
+  private isDevLoginSecretValid(secret: string | undefined) {
+    const expected = this.config.get('auth.devLoginSecret', { infer: true });
+    if (!expected || !secret) return false;
+    const digest = (value: string) =>
+      createHash('sha256').update(value).digest();
+    return timingSafeEqual(digest(secret), digest(expected));
   }
 
   // 개발용 역할 세팅 — 등급의 실체는 isAdmin·멤버십이므로 역할별로 그 상태를 만들어준다.
@@ -219,7 +254,10 @@ export class AuthService {
       },
       select: { user: true },
     });
-    if (account) {
+    // 이 변경 전에 탈퇴한 계정은 연결이 남아 있다 — 끊고 아래에서 새로 가입시킨다.
+    if (account?.user.withdrawnAt) {
+      await this.usersService.detachWithdrawn(account.user.id);
+    } else if (account) {
       // 임시 이메일로 가입했던 계정에 실제 이메일이 생겼으면(동의항목 심사 통과 후) 교체한다.
       const user = await this.replacePlaceholderEmail(
         account.user,
@@ -234,7 +272,12 @@ export class AuthService {
       profile.email ?? placeholderEmail(provider, profile.providerUid);
 
     // 같은 이메일의 기존 유저가 있으면 새 로그인 수단으로 연결한다 (카카오·구글 병용).
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    let existing = await this.prisma.user.findUnique({ where: { email } });
+    // 탈퇴한 계정에는 연결하지 않는다 — 이메일을 비워 새 가입이 그 이메일을 쓸 수 있게 한다.
+    if (existing?.withdrawnAt) {
+      await this.usersService.detachWithdrawn(existing.id);
+      existing = null;
+    }
     if (existing) {
       await this.prisma.socialAccount.create({
         data: {

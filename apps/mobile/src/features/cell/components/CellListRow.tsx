@@ -11,10 +11,12 @@ interface CellListRowProps {
   /** 내가 속한 셀이면 "나의 셀" 뱃지를 단다. */
   isMyCell: boolean;
   onPress?: () => void;
+  /** 오른쪽 초록 뱃지 문구 — 팔로워 노트 관리의 "새 노트 N" (SCRUM-181). 있으면 "나의 셀" 대신 단다. */
+  badgeLabel?: string;
 }
 
 // 전체 셀 목록의 한 행 (시안 Member/Detail/Row: 높이 60 = 아바타 40 + 상하 10, 아래 1px 구분선).
-export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
+export function CellListRow({ cell, isMyCell, onPress, badgeLabel }: CellListRowProps) {
   const { t } = useTranslation();
   // 셀장 멤버십이 아직 없는 셀(시드 직후 등)은 "미지정"으로 표시한다.
   const leaderLine = cell.viceLeaderName
@@ -39,9 +41,9 @@ export function CellListRow({ cell, isMyCell, onPress }: CellListRowProps) {
           {leaderLine}
         </Text>
       </View>
-      {isMyCell && (
+      {(badgeLabel || isMyCell) && (
         <View className="rounded-2xl bg-background-alternative px-2.5 py-1">
-          <Text className="text-caption-main text-primary-normal">{t("나의 셀")}</Text>
+          <Text className="text-caption-main text-primary-normal">{badgeLabel ?? t("나의 셀")}</Text>
         </View>
       )}
       <Icon name="expand-right" size={28} />

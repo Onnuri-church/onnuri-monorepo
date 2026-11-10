@@ -26,7 +26,20 @@ export interface User {
    * (저장 컬럼 아님). 모바일은 이 값으로 온보딩(프로필 설정 화면) 분기를 판단한다.
    */
   profileCompleted: boolean;
+  /**
+   * 현재 개인정보처리방침에 필수 동의했는지 — 서버가 동의 버전을 비교해 계산한다. false면
+   * 모바일이 동의 화면을 먼저 띄운다 (처리방침이 바뀌면 다시 false가 된다).
+   */
+  privacyConsented: boolean;
+  /** 민감정보(큐티·기도제목 등 신앙 관련 글) 처리 동의 여부 — 없으면 그 글쓰기만 막는다. */
+  sensitiveConsented: boolean;
   createdAt: string;
+}
+
+/** PATCH /users/me/consent 요청 — 보낸 항목만 바뀐다. 필수 동의는 철회 대신 회원탈퇴로 한다. */
+export interface UpdateConsentRequest {
+  privacy?: true;
+  sensitive?: boolean;
 }
 
 /**

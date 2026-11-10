@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 테스트 데이터 식별용 접두사/도메인 — 시작/종료 시 이 값들로 만든 행을 정리한다.
 // 개발용 로그인은 test/setup-e2e.ts가 AUTH_DEV_LOGIN을 켜준다.
@@ -64,6 +65,7 @@ describe('Users (e2e)', () => {
 
     const login = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: USER_EMAIL })
       .expect(201);
     const loginBody = login.body as {
@@ -154,6 +156,71 @@ describe('Users (e2e)', () => {
     });
   });
 
+  describe('개인정보 동의 (PATCH /users/me/consent)', () => {
+    const consent = (body: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .patch('/users/me/consent')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(body);
+
+    it('동의 전에는 privacyConsented·sensitiveConsented가 false다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const body = res.body as UserBody & { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(false);
+      expect(body.sensitiveConsented).toBe(false);
+    });
+
+    it('토큰 없이 401', () =>
+      request(app.getHttpServer()).patch('/users/me/consent').send({ privacy: true }).expect(401));
+
+    it('필수 동의를 false로 보내면 400 (철회는 회원탈퇴로)', () =>
+      consent({ privacy: false }).expect(400));
+
+    it('필수·민감정보 동의를 저장한다', async () => {
+      const res = await consent({ privacy: true, sensitive: true }).expect(200);
+      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(true);
+      expect(body.sensitiveConsented).toBe(true);
+      const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(row.privacyConsentAt).not.toBeNull();
+      expect(row.privacyConsentVersion).not.toBeNull();
+    });
+
+    it('민감정보 동의만 철회할 수 있고 필수 동의는 남는다', async () => {
+      const res = await consent({ sensitive: false }).expect(200);
+      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(true);
+      expect(body.sensitiveConsented).toBe(false);
+    });
+
+    it('동의하지 않고 나가면 막 가입한 계정은 지워진다 (SCRUM-183)', async () => {
+      const login = await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
+        .send({ email: `decline@${EMAIL_DOMAIN}` })
+        .expect(201);
+      const body = login.body as { accessToken: string; user: { id: string } };
+      const res = await request(app.getHttpServer())
+        .post('/users/me/consent/decline')
+        .set('Authorization', `Bearer ${body.accessToken}`)
+        .expect(200);
+      expect((res.body as { deleted: boolean }).deleted).toBe(true);
+      expect(await prisma.user.findUnique({ where: { id: body.user.id } })).toBeNull();
+    });
+
+    it('이미 동의한 회원은 나가기를 눌러도 지워지지 않는다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/users/me/consent/decline')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect((res.body as { deleted: boolean }).deleted).toBe(false);
+      expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
+    });
+  });
+
   describe('프로필 등록 (PATCH /users/me)', () => {
     it('등록 전에는 profileCompleted가 false다 (온보딩 분기 기준)', async () => {
       const res = await request(app.getHttpServer())
@@ -190,6 +257,16 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ ...validBody(), cellId: undefined })
         .expect(400));
+
+    it('만 14세 미만이면 400 (가입 불가)', () => {
+      const tenYearsAgo = new Date();
+      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+      return request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ ...validBody(), birthDate: tenYearsAgo.toISOString().slice(0, 10) })
+        .expect(400);
+    });
 
     it('존재하지 않는 셀이면 400', () =>
       request(app.getHttpServer())

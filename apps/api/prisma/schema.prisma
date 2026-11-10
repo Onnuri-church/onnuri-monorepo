@@ -134,6 +134,12 @@ model User {
   notifyComment      Boolean @default(true)
   notifyFollowerNote Boolean @default(true)
 
+  // 개인정보 동의 — 필수 동의는 처리방침 버전과 함께 기록해, 방침이 바뀌면 다시 받는다.
+  // 민감정보(큐티·기도제목 등 신앙 관련 글) 동의는 선택이고, 없으면 그 글쓰기만 막는다 (SCRUM-175).
+  privacyConsentAt      DateTime?
+  privacyConsentVersion String?
+  sensitiveConsentAt    DateTime?
+
   withdrawnAt DateTime? // 탈퇴 soft delete — 출석·게시글 이력 보존
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -167,6 +173,10 @@ model User {
   createdCellMeetings    CellMeeting[]           @relation("CellMeetingCreator")
   followerNotes          FollowerNote[]
   followerNoteComments   FollowerNoteComment[]
+  teamFollowerNotes        TeamFollowerNote[]        @relation("TeamFollowerNoteAuthor")
+  teamFollowerNotesEdited  TeamFollowerNote[]        @relation("TeamFollowerNoteEditor")
+  teamFollowerNoteComments TeamFollowerNoteComment[]
+  followerNoteViews        FollowerNoteView[]
   posts                  Post[]
   comments               Comment[]
   postLikes              PostLike[]
@@ -226,6 +236,8 @@ model Team {
   images      Image[]
   chatRooms   ChatRoom[]
   boardPosts  TeamBoardPost[]
+  followerNotes TeamFollowerNote[]
+  followerNoteViews FollowerNoteView[]
 }
 
 // 단톡방 메시지 — 팀 단톡방(roomId)과 셀 단톡방(cellId)이 같은 구조를 쓴다 (둘 중 하나만 채운다).
@@ -491,6 +503,7 @@ model Cell {
   posts       Post[]
   images      Image[]
   messages    ChatMessage[]
+  followerNoteViews FollowerNoteView[]
 }
 
 model CellMembership {
@@ -617,9 +630,13 @@ model FollowerNote {
   meetingId String      @unique // 셀모임당 주간 보고 1개
   author    User        @relation(fields: [authorId], references: [id])
   authorId  String // 셀장/부셀장
-  answer1   String? // 요즘 상황과 기도제목
-  answer2   String? // 나눔 중 함께 이야기하면 좋을 것
-  answer3   String? // 궁금한 점이나 하고 싶은 말
+  // 문항 제목은 양식 버전(formVersion)에 따라 다르다 — 예전 노트는 예전 제목 그대로 보인다.
+  // v1: 요즘 상황과 기도제목 / 나눔 중 함께 이야기하면 좋을 것 / 궁금한 점이나 하고 싶은 말
+  // v2 (2026-11-10, 목사님 양식): 셀 나눔 이야기 / 셀 기도제목 / 그 외 이야기
+  formVersion Int     @default(2)
+  answer1     String?
+  answer2     String?
+  answer3     String?
   createdAt DateTime    @default(now())
   updatedAt DateTime    @updatedAt
 
@@ -638,6 +655,58 @@ model FollowerNoteComment {
   content   String
   createdAt DateTime              @default(now())
   updatedAt DateTime              @updatedAt
+
+  @@index([noteId, createdAt])
+}
+
+// 팀 팔로워 노트 (SCRUM-180) — 팀장들이 팀원 케어를 기록하는 곳. 셀 노트와 달리 모임 날짜가 없고
+// 자유 입력칸 하나다. 그 팀의 현재 팀장이면 누구나 쓰고·고치고·지운다(한 노트를 함께 편집) —
+// 동시에 고치면 updatedAt으로 나중 저장을 거절한다. 열람은 그 팀 현재 팀장 + 관리자.
+model TeamFollowerNote {
+  id         String   @id @default(cuid())
+  team       Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId     String
+  author     User     @relation("TeamFollowerNoteAuthor", fields: [authorId], references: [id])
+  authorId   String // 처음 쓴 팀장
+  editedBy   User?    @relation("TeamFollowerNoteEditor", fields: [editedById], references: [id], onDelete: SetNull)
+  editedById String? // 마지막으로 고친 팀장 — 쓴 사람과 다를 때 카드에 "OO 수정"으로 보인다
+  content    String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  comments TeamFollowerNoteComment[]
+
+  @@index([teamId, createdAt])
+}
+
+// 관리자가 셀·팀 팔로워 노트 게시판을 마지막으로 연 시각 (SCRUM-181) — 관리 목록의 "새 노트 N" 기준.
+// 한 행은 셀 하나 또는 팀 하나(cellId·teamId 중 하나만 채운다). 관리자가 그 게시판을 열 때마다 갱신한다.
+model FollowerNoteView {
+  id       String   @id @default(cuid())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  cell     Cell?    @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId   String?
+  team     Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   String?
+  viewedAt DateTime
+
+  @@unique([userId, cellId])
+  @@unique([userId, teamId])
+}
+
+model TeamFollowerNoteComment {
+  id        String                    @id @default(cuid())
+  note      TeamFollowerNote          @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  noteId    String
+  author    User                      @relation(fields: [authorId], references: [id])
+  authorId  String
+  parent    TeamFollowerNoteComment?  @relation("TeamFollowerNoteReplies", fields: [parentId], references: [id])
+  parentId  String? // 대댓글 부모 — 1단계 깊이만 (서비스 검증)
+  replies   TeamFollowerNoteComment[] @relation("TeamFollowerNoteReplies")
+  content   String
+  createdAt DateTime                  @default(now())
+  updatedAt DateTime                  @updatedAt
 
   @@index([noteId, createdAt])
 }

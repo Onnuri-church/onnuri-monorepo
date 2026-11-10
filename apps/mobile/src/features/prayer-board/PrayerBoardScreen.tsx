@@ -22,6 +22,7 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { ensureSensitiveConsent } from "../consent/ensureSensitiveConsent";
 import { PRAYER_CATEGORIES, deletePrayer, fetchPrayers, type PrayerCategory } from "./api";
 import { useMe } from "../profile/useMe";
 import { useToggleBookmark } from "./useToggleBookmark";
@@ -73,7 +74,7 @@ export function PrayerBoardScreen() {
       Alert.alert(t("로그인이 필요해요"), t("글쓰기는 로그인 후 할 수 있어요."));
       return;
     }
-    navigation.navigate("PrayerWrite");
+    ensureSensitiveConsent(t, () => navigation.navigate("PrayerWrite"));
   };
 
   const handleDeletePress = (prayer: PrayerRequest) => {

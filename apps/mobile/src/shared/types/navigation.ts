@@ -1,4 +1,5 @@
 import type { QrCheckInResponse } from "@onnuri/shared";
+import type { PolicyKind } from "../../features/consent/policies";
 
 export type RootTabParamList = {
   Home: undefined;
@@ -107,13 +108,18 @@ export type RootStackParamList = {
   CellMemberManage: { cellId: string };
   CellMemberAdd: { cellId: string };
   CellAttendance: { cellId: string };
-  FollowerNoteBoard: { cellId: string };
+  // noteId: 알림 등에서 특정 노트를 펼친 채로 열 때 (상세 화면 없이 목록에서 펼친다 — SCRUM-182)
+  FollowerNoteBoard: { cellId: string; noteId?: string };
   FollowerNoteWrite: { cellId: string; noteId?: string };
-  FollowerNoteDetail: { cellId: string; noteId: string };
+  PolicyDocument: { kind: PolicyKind };
+  // 팀 팔로워 노트 (SCRUM-180) — noteId: 알림에서 그 노트를 펼친 채로 열 때 / 수정할 때
+  TeamFollowerNoteBoard: { teamId: string; noteId?: string };
+  TeamFollowerNoteWrite: { teamId: string; noteId?: string };
   // 마이페이지 관리자 메뉴에서 진입하는 관리자 전용 화면들 (2026-09-09 시안).
   // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라
   // cellId가 있으면 편집 모드다.
   AdminCellManage: undefined;
+  AdminFollowerNotes: undefined;
   AdminCellForm: { cellId?: string } | undefined;
   AdminMemberList: undefined;
   AdminMemberDetail: { memberId: string };
@@ -149,9 +155,12 @@ export type RootStackParamList = {
 };
 
 // 로그인 전(unauthenticated)·신규 가입 직후(onboarding)에 마운트되는 스택.
-// 세션 상태에 따라 화면이 하나만 등록된다 — unauthenticated면 Login, onboarding이면
-// ProfileSetup (RootNavigator 참고).
+// 세션 상태에 따라 화면이 하나만 등록된다 — 방침 미동의면 Consent, unauthenticated면 Login,
+// onboarding이면 ProfileSetup (RootNavigator 참고).
 export type AuthStackParamList = {
+  Consent: undefined;
+  // 약관·개인정보 문서 전문 (SCRUM-184) — 메인 Stack에도 같은 이름으로 있다.
+  PolicyDocument: { kind: PolicyKind };
   Login: undefined;
   ProfileSetup: undefined;
 };

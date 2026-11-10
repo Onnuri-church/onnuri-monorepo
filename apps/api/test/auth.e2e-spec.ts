@@ -18,6 +18,8 @@ import { KakaoTokenVerifier } from '../src/modules/auth/social/kakao-token.verif
 import type { SocialProfile } from '../src/modules/auth/social/social-profile';
 import type { JwtPayload } from '../src/modules/auth/strategies/jwt.strategy';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { UsersService } from '../src/modules/users/users.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 테스트 데이터 식별용 도메인 — 시작/종료 시 이 도메인의 유저를 정리한다.
 // 개발용 로그인은 test/setup-e2e.ts가 AUTH_DEV_LOGIN을 켜준다 (import 시점 검증보다 먼저 실행).
@@ -79,7 +81,14 @@ describe('Auth (e2e)', () => {
 
   // 임시 이메일(@social.invalid)로 가입된 테스트 유저는 이메일 도메인으로 못 찾으므로
   // 테스트가 쓰는 providerUid로도 지운다.
-  const TEST_UIDS = ['kakao-uid-1', 'kakao-uid-2', 'google-uid-1'];
+  const TEST_UIDS = [
+    'kakao-uid-1',
+    'kakao-uid-2',
+    'kakao-uid-3',
+    'google-uid-1',
+  ];
+  // 탈퇴하면 이메일이 바뀌고 로그인 수단 연결도 끊겨 위 조건으로 못 찾는다 — id로 따로 지운다.
+  const withdrawnUserIds: string[] = [];
   const cleanup = async () => {
     // 개발용 로그인 테스트가 만든 셀은 createdById가 Restrict FK라 유저보다 먼저 지운다.
     // (팀은 유저 쪽 FK가 없어 남겨둔다 — 실제 개발용 로그인이 재사용하는 고정 팀이다.)
@@ -91,6 +100,7 @@ describe('Auth (e2e)', () => {
         OR: [
           { email: { endsWith: `@${EMAIL_DOMAIN}` } },
           { socialAccounts: { some: { providerUid: { in: TEST_UIDS } } } },
+          { id: { in: withdrawnUserIds } },
         ],
       },
     });
@@ -118,6 +128,12 @@ describe('Auth (e2e)', () => {
               avatarUrl: null,
             },
             // 같은 계정(uid-2)이 동의항목 심사 통과 후 이메일을 제공하기 시작한 상황
+            'kakao-withdraw': {
+              providerUid: 'kakao-uid-3',
+              email: `withdraw@${EMAIL_DOMAIN}`,
+              name: '탈퇴할사람',
+              avatarUrl: null,
+            },
             'kakao-noemail-later': {
               providerUid: 'kakao-uid-2',
               email: `later@${EMAIL_DOMAIN}`,
@@ -271,6 +287,7 @@ describe('Auth (e2e)', () => {
     it('이메일만으로 유저를 만들고 토큰 쌍을 준다', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: DEV_EMAIL })
         .expect(201);
 
@@ -287,10 +304,38 @@ describe('Auth (e2e)', () => {
     it('재호출이면 같은 유저로 들어온다', async () => {
       const res = await request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: DEV_EMAIL })
         .expect(201);
 
       expect((res.body as LoginBody).isNewUser).toBe(false);
+    });
+
+    it('비밀 헤더가 없으면 401', () =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .send({ email: DEV_EMAIL })
+        .expect(401));
+
+    it('비밀 헤더가 틀리면 401', () =>
+      request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set('X-Dev-Login-Secret', 'wrong-secret')
+        .send({ email: DEV_EMAIL })
+        .expect(401));
+
+    // 위 소셜 로그인 테스트에서 카카오로 가입한 실제 계정 — 관리자 권한도 붙지 않아야 한다.
+    it('소셜 로그인이 연결된 계정이면 403이고 역할도 세팅하지 않는다', async () => {
+      await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
+        .send({ email: MINSU_EMAIL, role: 'ADMIN' })
+        .expect(403);
+
+      const minsu = await prisma.user.findUnique({
+        where: { email: MINSU_EMAIL },
+      });
+      expect(minsu?.isAdmin).toBe(false);
     });
 
     // 꺼졌을 때 404로 숨기는지는 유닛 테스트(auth.service.spec.ts)가 커버한다 —
@@ -301,6 +346,7 @@ describe('Auth (e2e)', () => {
     const devLogin = (email: string, role: string) =>
       request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email, role })
         .expect(201);
 
@@ -344,6 +390,7 @@ describe('Auth (e2e)', () => {
     it('목록에 없는 role 값이면 400', () =>
       request(app.getHttpServer())
         .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
         .send({ email: `dev-admin@${EMAIL_DOMAIN}`, role: 'SUPER' })
         .expect(400));
   });
@@ -428,6 +475,146 @@ describe('Auth (e2e)', () => {
         .post('/auth/refresh')
         .send({ refreshToken })
         .expect(401);
+    });
+  });
+
+  describe('탈퇴', () => {
+    // 로그인이 필요한 아무 엔드포인트 — 토큰이 살아 있는지만 본다.
+    const probe = (token: string) =>
+      request(app.getHttpServer())
+        .get('/notifications/unread-count')
+        .set('Authorization', `Bearer ${token}`);
+    const kakaoLogin = () =>
+      request(app.getHttpServer())
+        .post('/auth/login/kakao')
+        .send({ token: 'kakao-withdraw' })
+        .expect(201);
+
+    it('탈퇴하면 기존 토큰이 바로 막히고, 같은 카카오 계정으로 다시 로그인하면 새 계정으로 가입된다', async () => {
+      const first = (await kakaoLogin()).body as LoginBody;
+      withdrawnUserIds.push(first.user.id);
+      await probe(first.accessToken).expect(200);
+
+      await request(app.getHttpServer())
+        .delete('/users/me')
+        .set('Authorization', `Bearer ${first.accessToken}`)
+        .expect(204);
+
+      // 액세스 토큰 만료(15분) 전이라도 막힌다.
+      await probe(first.accessToken).expect(401);
+      await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: first.refreshToken })
+        .expect(401);
+
+      const second = (await kakaoLogin()).body as LoginBody;
+      withdrawnUserIds.push(second.user.id);
+      expect(second.isNewUser).toBe(true);
+      expect(second.user.id).not.toBe(first.user.id);
+
+      // 예전 계정은 이름만 남고 이메일은 예약 도메인으로 바뀐다.
+      const old = await prisma.user.findUnique({
+        where: { id: first.user.id },
+      });
+      expect(old?.name).toBe('탈퇴할사람');
+      expect(old?.email.endsWith('@withdrawn.invalid')).toBe(true);
+    });
+
+    it('관리자가 강제 탈퇴시키면 그 사람의 토큰이 바로 막힌다', async () => {
+      const target = (await kakaoLogin()).body as LoginBody;
+      withdrawnUserIds.push(target.user.id);
+      const admin = (
+        await request(app.getHttpServer())
+          .post('/auth/login/dev')
+          .set(DEV_LOGIN_HEADER)
+          .send({ email: `dev-admin@${EMAIL_DOMAIN}`, role: 'ADMIN' })
+          .expect(201)
+      ).body as LoginBody;
+
+      await request(app.getHttpServer())
+        .delete(`/users/${target.user.id}`)
+        .set('Authorization', `Bearer ${admin.accessToken}`)
+        .expect(200);
+
+      await probe(target.accessToken).expect(401);
+      await request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: target.refreshToken })
+        .expect(401);
+    });
+
+    it('예전 방식으로 탈퇴한 계정(로그인 연결이 남은 계정)도 다시 로그인하면 새로 가입된다', async () => {
+      const current = (await kakaoLogin()).body as LoginBody;
+      withdrawnUserIds.push(current.user.id);
+      // 이 변경 전의 탈퇴 = 표시만 하고 연결·이메일은 그대로
+      await prisma.user.update({
+        where: { id: current.user.id },
+        data: { withdrawnAt: new Date() },
+      });
+
+      const next = (await kakaoLogin()).body as LoginBody;
+      withdrawnUserIds.push(next.user.id);
+      expect(next.isNewUser).toBe(true);
+      expect(next.user.id).not.toBe(current.user.id);
+    });
+
+    // 배치는 공용 개발 DB의 모든 탈퇴 계정에 적용되므로, 미래 시각을 넘기지 않고 테스트 계정의
+    // 탈퇴일을 과거로 돌려서 확인한다 — 다른 계정에는 실제 배치와 같은 결과만 생긴다.
+    const daysAgo = (days: number) =>
+      new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    it('탈퇴 30일이 지나면 프로필을 지우고 이름은 남긴다', async () => {
+      const id = withdrawnUserIds[0];
+      const users = app.get(UsersService);
+      await prisma.user.update({
+        where: { id },
+        data: {
+          withdrawnAt: daysAgo(29),
+          phone: '010-0000-0000',
+          birthDate: new Date('2000-01-01'),
+          intro: '소개',
+        },
+      });
+
+      // 아직 30일 전이면 그대로
+      await users.purgeWithdrawnProfiles();
+      expect((await prisma.user.findUnique({ where: { id } }))?.phone).toBe(
+        '010-0000-0000',
+      );
+
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(31) },
+      });
+      await users.purgeWithdrawnProfiles();
+      const purged = await prisma.user.findUnique({ where: { id } });
+      expect(purged?.phone).toBeNull();
+      expect(purged?.birthDate).toBeNull();
+      expect(purged?.intro).toBeNull();
+      expect(purged?.name).toBe('탈퇴할사람');
+    });
+
+    it('탈퇴 1년이 지나면 이름을 익명 처리한다 (출석·글 행은 남는다)', async () => {
+      const id = withdrawnUserIds[0];
+      const users = app.get(UsersService);
+
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(300) },
+      });
+      await users.anonymizeWithdrawnNames();
+      expect((await prisma.user.findUnique({ where: { id } }))?.name).toBe(
+        '탈퇴할사람',
+      );
+
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(366) },
+      });
+      await users.anonymizeWithdrawnNames();
+      expect((await prisma.user.findUnique({ where: { id } }))?.name).toBe(
+        '탈퇴한 회원',
+      );
     });
   });
 });

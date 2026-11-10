@@ -2,11 +2,11 @@ import axios from "axios";
 
 import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
 
-import { API_BASE_URL } from "./config";
+import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 
 // 인터셉터 없는 인스턴스를 따로 쓴다 — apiClient의 401 → refresh 재시도 로직이
 // refresh 요청 자신에게 다시 걸려 무한 루프가 되는 것을 막는다.
-const bareClient = axios.create({ baseURL: API_BASE_URL });
+const bareClient = axios.create({ baseURL: API_BASE_URL, timeout: API_TIMEOUT_MS });
 
 export function postKakaoLogin(kakaoAccessToken: string): Promise<LoginResponse> {
   return bareClient
@@ -21,9 +21,15 @@ export function postGoogleLogin(googleIdToken: string): Promise<LoginResponse> {
 }
 
 // 개발용 로그인 — 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다 (아니면 404).
+// 백엔드 AUTH_DEV_LOGIN_SECRET과 같은 값을 헤더로 보내야 한다 (틀리면 401). EXPO_PUBLIC_ 값은
+// 번들에 그대로 박히므로 개발용 .env에만 넣고 preview/production 빌드에는 넣지 않는다.
 export function postDevLogin(email: string, role: DevLoginRole): Promise<LoginResponse> {
   return bareClient
-    .post<LoginResponse>("/auth/login/dev", { email, role })
+    .post<LoginResponse>(
+      "/auth/login/dev",
+      { email, role },
+      { headers: { "X-Dev-Login-Secret": process.env.EXPO_PUBLIC_AUTH_DEV_LOGIN_SECRET ?? "" } },
+    )
     .then((res) => res.data);
 }
 

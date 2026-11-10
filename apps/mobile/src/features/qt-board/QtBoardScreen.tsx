@@ -27,6 +27,7 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { ensureSensitiveConsent } from "../consent/ensureSensitiveConsent";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export function QtBoardScreen() {
@@ -107,7 +108,7 @@ export function QtBoardScreen() {
       Alert.alert(t("로그인이 필요해요"), t("글쓰기는 로그인 후 할 수 있어요."));
       return;
     }
-    navigation.navigate("QtBoardWrite");
+    ensureSensitiveConsent(t, () => navigation.navigate("QtBoardWrite"));
   };
 
   if (isPending) {

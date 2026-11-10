@@ -1,4 +1,5 @@
 import type {
+  AdminFollowerNoteOverview,
   AdminAttendanceResponse,
   AdminDownloadPreview,
   AdminOffDaysResponse,
@@ -285,5 +286,15 @@ export function useAdminDownloadPreview(params: DownloadPreviewParams | null) {
         .get<AdminDownloadPreview>("/admin/download/preview", { params })
         .then((res) => res.data),
     enabled: params !== null,
+  });
+}
+
+// 팔로워 노트 관리 (SCRUM-181) — 셀·팀 목록과 노트 수·새 노트 수. 게시판을 다녀오면 새 노트 수가 바뀌므로
+// 화면이 다시 보일 때마다 새로 받는다 (화면 쪽 useFocusEffect).
+export function useAdminFollowerNoteOverview() {
+  return useQuery({
+    queryKey: ["admin-follower-notes"],
+    queryFn: () =>
+      apiClient.get<AdminFollowerNoteOverview>("/admin/follower-notes").then((res) => res.data),
   });
 }

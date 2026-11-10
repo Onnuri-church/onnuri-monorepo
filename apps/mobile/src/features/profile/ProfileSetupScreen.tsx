@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
@@ -23,6 +24,7 @@ import { MultiSelectChips } from "../../shared/components/composed/MultiSelectCh
 import { SelectField } from "../../shared/components/composed/SelectField";
 import { fetchCells, fetchMe, fetchTeams, patchMyProfile } from "./api";
 import { AvatarEditor } from "./components/AvatarEditor";
+import { SignupCompleteModal } from "./components/SignupCompleteModal";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 소속이 없는 경우를 고를 수 있어야 해서 셀/팀 다 "없음"이 첫 항목이다.
@@ -87,6 +89,8 @@ export function ProfileSetupScreen() {
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const teamsTouched = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  // 처음 가입한 사람은 저장 후 가입 완료 팝업을 거쳐 메인으로 간다 (SCRUM-184) — 팝업을 닫을 때 세션을 확정한다.
+  const [completeSession, setCompleteSession] = useState<(() => void) | null>(null);
 
   // 수정 모드 프리필 — 소속은 세션 유저에 없어서 /users/me로 받아 채운다 (소속 없음 = "없음").
   // 사용자가 먼저 고른 값(null 아님)은 덮지 않는다. 온보딩은 직접 고르게 비워둔다.
@@ -154,17 +158,26 @@ export function ProfileSetupScreen() {
       const current = useAuthStore.getState().session;
       if (current.status === "onboarding" || current.status === "authenticated") {
         const wasOnboarding = current.status === "onboarding";
-        setSession(user, {
-          accessToken: current.accessToken,
-          refreshToken: current.refreshToken,
-        });
-        // onboarding이면 setSession이 RootNavigator를 메인 트리로 전환하므로 네비게이션이 필요 없다.
-        if (!wasOnboarding) {
+        const tokens = { accessToken: current.accessToken, refreshToken: current.refreshToken };
+        if (wasOnboarding) {
+          // onboarding이면 setSession이 RootNavigator를 메인 트리로 전환한다 — 가입 완료 팝업의 "메인으로"에서.
+          setCompleteSession(() => () => setSession(user, tokens));
+        } else {
+          setSession(user, tokens);
           navigation.goBack();
         }
       }
-    } catch {
-      Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
+    } catch (error) {
+      // 만 14세 미만 등 입력값 문제는 서버가 400과 이유를 준다 — 번역 키가 한국어 원문이라 그대로 t에 넘긴다.
+      const message =
+        axios.isAxiosError(error) && error.response?.status === 400
+          ? (error.response.data as { message?: unknown }).message
+          : undefined;
+      if (typeof message === "string") {
+        Alert.alert(t("프로필 저장에 실패했습니다"), t(message));
+      } else {
+        Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -278,6 +291,7 @@ export function ProfileSetupScreen() {
           <Button label={t("등록하기")} disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
         </View>
       </KeyboardAvoidingContainer>
+      <SignupCompleteModal visible={completeSession !== null} onConfirm={() => completeSession?.()} />
     </View>
   );
 }

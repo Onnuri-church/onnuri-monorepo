@@ -45,6 +45,7 @@ interface RoleLinkHandlers {
   onBoardManagePress?: () => void;
   onTeamMemberPress?: () => void;
   onCellManagePress?: () => void;
+  onFollowerNoteManagePress?: () => void;
   onFollowerNotePress?: () => void;
   onAttendancePress?: () => void;
   onMemberListPress?: () => void;
@@ -71,7 +72,9 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
       // 2026-09-09 관리자 시안 기준 4개 — 첫 항목은 "팔로워 노트"였다가 셀 관리로 변경
       // (2026-09-10 지환님: 셀 전체 목록에서 생성·편집·삭제). 기도제목 관리는 별도 화면이
       // 아니라 같은 게시판이다 — 관리자에겐 실명 표시·삭제 줄이 붙는다 (2026-09-23 확정).
+      // 팔로워 노트 관리(SCRUM-181)는 목사님이 가장 자주 보는 곳이라 맨 위에 둔다.
       return [
+        { label: i18n.t("팔로워 노트 관리"), onPress: handlers.onFollowerNoteManagePress },
         { label: i18n.t("셀 관리"), onPress: handlers.onCellManagePress },
         { label: i18n.t("회원 관리"), onPress: handlers.onMemberListPress },
         { label: i18n.t("출석부"), onPress: handlers.onAttendanceSheetPress },
@@ -145,6 +148,7 @@ export function MyPageScreen() {
       ? () => navigation.navigate("TeamMemberAdmin", { teamId: myTeamId })
       : undefined,
     onCellManagePress: () => navigation.navigate("AdminCellManage"),
+    onFollowerNoteManagePress: () => navigation.navigate("AdminFollowerNotes"),
     // 셀장 메뉴 — 내 셀이 있어야 갈 곳이 정해진다 (cellLeader 판정 자체가 me.cell 기준이라 항상 있다).
     onFollowerNotePress: me?.cell
       ? () => navigation.navigate("FollowerNoteBoard", { cellId: me.cell!.id })
@@ -166,6 +170,16 @@ export function MyPageScreen() {
       label: t("전체 리더 방"),
       onPress: () => navigation.navigate("LeaderRoomList"),
       unreadCount: leaderUnread,
+    });
+  }
+  // 팀 팔로워 노트 (SCRUM-180) — 팀장이면 등급(겸직 셀장 등)과 무관하게 '전체 리더 방' 바로 밑에 둔다.
+  // 누르면 내가 팀장인 첫 팀의 노트 목록으로 간다. 셀장을 겸하면 셀 노트와 헷갈리지 않게 이름을 나눈다.
+  if (leaderTeam) {
+    const cellNoteLink = roleLinks.find((link) => link.label === t("팔로워 노트"));
+    if (cellNoteLink) cellNoteLink.label = t("셀 팔로워 노트");
+    roleLinks.splice(me?.canUseLeaderRooms ? 1 : 0, 0, {
+      label: t("팀 팔로워 노트"),
+      onPress: () => navigation.navigate("TeamFollowerNoteBoard", { teamId: leaderTeam.id }),
     });
   }
   // 업로드 권한이 켜진 팀의 팀원(팀장 포함)에게는 등급과 무관하게 해당 메뉴가 붙는다.

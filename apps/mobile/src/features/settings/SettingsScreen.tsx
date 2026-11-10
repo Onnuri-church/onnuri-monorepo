@@ -19,6 +19,7 @@ import { useThemeStore } from "../../shared/store/useThemeStore";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { submitConsent } from "../consent/api";
 import { BrightnessSlider } from "./components/BrightnessSlider";
 import { SettingRow } from "./components/SettingRow";
 
@@ -51,6 +52,16 @@ export function SettingsScreen() {
   };
 
   const isGuest = useAuthStore((state) => state.session.status === "guest");
+  const sensitiveConsented = useAuthStore((state) =>
+    state.session.status === "authenticated" ? state.session.user.sensitiveConsented : false,
+  );
+
+  // 민감정보(큐티나눔·기도제목) 처리 동의는 선택이라 언제든 바꿀 수 있다 (SCRUM-175).
+  // 철회해도 이미 쓴 글은 그대로고, 새 글쓰기만 막힌다.
+  const { mutate: changeSensitiveConsent, isPending: changingConsent } = useMutation({
+    mutationFn: (sensitive: boolean) => submitConsent({ sensitive }),
+    onError: () => Alert.alert(t("동의를 저장하지 못했어요"), t("잠시 후 다시 시도해 주세요.")),
+  });
 
   // 게스트 세션을 끝내면 RootNavigator가 로그인 화면으로 전환한다 (뒤로가기로 게스트 복귀).
   const handleGuestLoginPress = () => {
@@ -134,6 +145,38 @@ export function SettingsScreen() {
               onPress={() => navigation.navigate("NotificationSettings")}
               right={<Icon name="expand-right" color={colors.primary.normal} />}
             />
+          </View>
+        </View>
+
+        {/* 약관·개인정보 — 문서 전문은 게스트도 볼 수 있다 */}
+        <View className="gap-2">
+          <SectionLabel>{t("개인정보")}</SectionLabel>
+          <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
+            {/* 문서 전문은 웹 대신 앱 안에서 보여준다 (SCRUM-184). */}
+            <SettingRow
+              title={t("서비스 이용약관")}
+              onPress={() => navigation.navigate("PolicyDocument", { kind: "terms" })}
+              right={<Icon name="expand-right" color={colors.primary.normal} />}
+            />
+            <SettingRow
+              title={t("개인정보 처리방침")}
+              onPress={() => navigation.navigate("PolicyDocument", { kind: "privacyPolicy" })}
+              right={<Icon name="expand-right" color={colors.primary.normal} />}
+            />
+            {!isGuest && (
+              <SettingRow
+                title={t("민감정보 처리 동의")}
+                subtitle={t("큐티나눔·기도제목 글쓰기에 필요해요")}
+                right={
+                  <Toggle
+                    value={sensitiveConsented}
+                    onValueChange={(value) => {
+                      if (!changingConsent) changeSensitiveConsent(value);
+                    }}
+                  />
+                }
+              />
+            )}
           </View>
         </View>
 

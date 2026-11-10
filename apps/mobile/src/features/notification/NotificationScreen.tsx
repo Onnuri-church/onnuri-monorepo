@@ -143,7 +143,10 @@ export function NotificationScreen() {
         navigation.navigate("CellChat", { cellId: first });
         break;
       case "follower-note":
-        if (second) navigation.navigate("FollowerNoteDetail", { cellId: first, noteId: second });
+        navigation.navigate("FollowerNoteBoard", { cellId: first, noteId: second });
+        break;
+      case "team-follower-note":
+        navigation.navigate("TeamFollowerNoteBoard", { teamId: first, noteId: second });
         break;
       case "group-meeting":
         navigation.navigate("GroupMeetingDetail", { id: first });
