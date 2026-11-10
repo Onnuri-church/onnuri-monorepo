@@ -1,3 +1,5 @@
+import axios from "axios";
+
 import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
 
 import { useAuthStore } from "../store/useAuthStore";
@@ -108,9 +110,12 @@ async function doRefresh(): Promise<AuthTokens | null> {
       startOnboarding(session.user, tokens);
     }
     return tokens;
-  } catch {
-    // 만료·회수된 리프레시 토큰 — 다시 로그인해야 하므로 지운다.
-    await clearTokens();
+  } catch (error) {
+    // 서버가 거절한 경우(만료·회수된 리프레시 토큰)만 지운다. 응답 자체가 없는 네트워크 오류·타임아웃은
+    // 토큰 문제가 아니므로 남겨둔다 — 지우면 서버가 잠깐 느렸을 뿐인데 다음 부팅에도 다시 로그인해야 한다.
+    if (axios.isAxiosError(error) && error.response) {
+      await clearTokens();
+    }
     return null;
   }
 }

@@ -165,6 +165,14 @@ export function HomeScreen() {
             <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
           </Pressable>
         )}
+        {/* 응답을 받은 뒤에만 빈 문구를 띄운다 — 로딩 중에 "없어요"가 잠깐 보였다 사라지지 않게. */}
+        {!isGuest && homePosts && homePosts.qtShares.length === 0 && (
+          <View className="mt-4 items-center py-6">
+            <Text className="text-body-medium text-text-alternative">
+              {t("등록된 큐티나눔이 없어요")}
+            </Text>
+          </View>
+        )}
         <View className="mt-4 gap-2.5 px-2">
           {(isGuest ? [] : (homePosts?.qtShares ?? [])).map((qt) => (
             <QtShareRow
