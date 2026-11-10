@@ -5,12 +5,11 @@ import { useTranslation } from "react-i18next";
 import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { isIconName } from "../../shared/components/base/Icon";
+import { Icon, isIconName } from "../../shared/components/base/Icon";
 import { PressableScale } from "../../shared/components/base/PressableScale";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { CellListRow } from "../cell/components/CellListRow";
-import { TeamListItem } from "../team-story/components/TeamListItem";
 import { useAdminFollowerNoteOverview } from "./api";
 
 type TabKey = "cell" | "team";
@@ -115,9 +114,9 @@ export function AdminFollowerNotesScreen() {
           contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
           refreshControl={refreshControl}
           renderItem={({ item }) => (
-            <TeamListItem
+            <TeamNoteRow
               name={item.name}
-              description={subtitle(item.totalCount)}
+              subtitle={subtitle(item.totalCount)}
               icon={isIconName(item.iconName) ? item.iconName : undefined}
               badgeLabel={badge(item.newCount)}
               onPress={() => navigation.navigate("TeamFollowerNoteBoard", { teamId: item.id })}
@@ -127,5 +126,44 @@ export function AdminFollowerNotesScreen() {
         />
       )}
     </View>
+  );
+}
+
+type IconName = React.ComponentProps<typeof Icon>["name"];
+
+interface TeamNoteRowProps {
+  name: string;
+  subtitle: string;
+  icon?: IconName;
+  badgeLabel?: string;
+  onPress: () => void;
+}
+
+// 팀 탭의 한 줄 — 같은 화면의 셀 탭(CellListRow: 높이 60, 원 40, 이름+보조 한 줄)과 크기를 맞췄다.
+// 팀 스토리 목록(TeamListItem, 높이 81)은 그대로 두고 이 화면에서만 쓴다.
+function TeamNoteRow({ name, subtitle, icon, badgeLabel, onPress }: TeamNoteRowProps) {
+  const themeColors = useThemeColors();
+  return (
+    <PressableScale
+      scaleTo={0.98}
+      className="flex-row items-center border-b border-background-assistive py-2.5"
+      onPress={onPress}
+    >
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-text-assistive">
+        {icon && <Icon name={icon} size={20} color={themeColors.icon.strong} />}
+      </View>
+      <View className="ml-2.5 flex-1 flex-row items-center gap-1">
+        <Text className="text-body-main text-text-normal">{name}</Text>
+        <Text className="text-body-small text-text-alternative" numberOfLines={1}>
+          {subtitle}
+        </Text>
+      </View>
+      {badgeLabel && (
+        <View className="rounded-2xl bg-background-alternative px-2.5 py-1">
+          <Text className="text-caption-main text-primary-normal">{badgeLabel}</Text>
+        </View>
+      )}
+      <Icon name="expand-right" size={28} />
+    </PressableScale>
   );
 }
