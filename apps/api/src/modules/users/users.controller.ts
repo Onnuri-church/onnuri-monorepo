@@ -7,6 +7,7 @@ import {
   HttpStatus,
   Param,
   Patch,
+  Post,
   UseGuards,
 } from '@nestjs/common';
 
@@ -62,6 +63,14 @@ export class UsersController {
     @Body() dto: UpdateConsentDto,
   ) {
     return this.usersService.updateConsent(user.sub, dto);
+  }
+
+  // 동의 화면의 "동의하지 않고 나가기" — 막 가입한(동의·프로필 없는) 계정이면 지운다 (SCRUM-183).
+  @UseGuards(JwtAuthGuard)
+  @Post('me/consent/decline')
+  @HttpCode(HttpStatus.OK)
+  declineConsent(@CurrentUser() user: JwtPayload) {
+    return this.usersService.declineConsent(user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
