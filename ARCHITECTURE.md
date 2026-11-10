@@ -162,7 +162,7 @@ apps/mobile/src/
 (2026-09-04 확정) 배포 대상과 시점:
 
 * **API — Render.** 개발 중에는 무료 인스턴스(15분 유휴 시 잠들고 깨어날 때 30초~1분 콜드 스타트 — 개발 단계에선 감수). 실사용(출시) 직전에 Starter(월 $7)로 올려 상시 가동으로 전환한다. 무료 티어의 750시간/월 제한은 무료 전용이라 유료 전환 후에는 계정 분리·시간 제한이 없다.
-  * **개발 서버 배포됨 (2026-09-10)**: https://onnuri-api-dev.onrender.com — `dev` 브랜치 자동 배포(머지될 때마다 갱신), 공용 Supabase DB 사용. 모바일 `.env`의 `EXPO_PUBLIC_API_URL`을 이 주소로 바꾸면 로컬 서버 없이 테스트할 수 있다. 빌드 명령은 pnpm을 직접 설치한다(`npm install -g pnpm@10.34.4 && pnpm install --frozen-lockfile && prisma generate && api build` — `corepack enable`은 Render 빌드 환경에서 실패). 환경변수는 `apps/api/.env`와 같되 `PORT`는 넣지 않는다(Render가 주입). 운영 전환 시 `main` 브랜치 기준 별도 서비스로 올리고 `AUTH_DEV_LOGIN`을 제거한다.
+  * **개발 서버 배포됨 (2026-09-10)**: https://onnuri-api-dev.onrender.com — `dev` 브랜치 자동 배포(머지될 때마다 갱신), 공용 Supabase DB 사용. 모바일 `.env`의 `EXPO_PUBLIC_API_URL`을 이 주소로 바꾸면 로컬 서버 없이 테스트할 수 있다. 빌드 명령은 pnpm을 직접 설치한다(`npm install -g pnpm@10.34.4 && pnpm install --frozen-lockfile && prisma generate && api build` — `corepack enable`은 Render 빌드 환경에서 실패). 환경변수는 `apps/api/.env`와 같되 `PORT`는 넣지 않는다(Render가 주입). 운영 전환 시 `main` 브랜치 기준 별도 서비스로 올리고 `AUTH_DEV_LOGIN`을 제거한다. 개발용 로그인(`POST /auth/login/dev`)은 `AUTH_DEV_LOGIN_SECRET`(32자 이상)이 있어야 부팅되고, 요청 헤더 `X-Dev-Login-Secret`이 그 값과 같아야 하며, 소셜 로그인이 연결된 실제 계정으로는 들어갈 수 없다(403) — 공용 DB라 이메일만으로 남의 계정에 관리자 권한을 줄 수 있던 문제(SCRUM-162). 앱은 같은 값을 `EXPO_PUBLIC_AUTH_DEV_LOGIN_SECRET`으로 보낸다.
 * **DB — Supabase Postgres.** 개발용 인스턴스는 이미 떠 있고 Render 개발 서버와 로컬이 이걸 공유한다(공용이라 주의할 점은 Known Issues). **로컬을 격리하고 싶으면 Docker Postgres**(`apps/api`의 docker-compose)를 띄우고 `.env`의 `DATABASE_URL`을 `.env.example` 값으로 되돌린다 — 스키마를 바꿀 때는 이쪽에서 마이그레이션을 만든다. 운영은 출시 시점에 별도 인스턴스로 분리한다. Vercel(서버리스라 NestJS 부적합)·AWS(운영 부담 과함)는 기각.
 
 ## Known Issues

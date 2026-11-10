@@ -1,4 +1,11 @@
-import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Post,
+} from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 import { DevLoginDto } from './dto/dev-login.dto';
@@ -20,10 +27,13 @@ export class AuthController {
     return this.authService.loginWithGoogle(dto.token);
   }
 
-  // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404
+  // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404, 비밀 헤더가 틀리면 401
   @Post('login/dev')
-  loginWithDev(@Body() dto: DevLoginDto) {
-    return this.authService.loginWithDev(dto.email, dto.role);
+  loginWithDev(
+    @Body() dto: DevLoginDto,
+    @Headers('x-dev-login-secret') secret: string | undefined,
+  ) {
+    return this.authService.loginWithDev(dto.email, dto.role, secret);
   }
 
   @Post('refresh')

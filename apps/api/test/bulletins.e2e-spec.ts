@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 공용 개발 DB를 쓰므로(ARCHITECTURE.md Known Issues) 실데이터와 안 겹치는 날짜·도메인을 쓴다.
 // 회차(WorshipService)는 날짜가 unique라 테스트가 만든 회차만 지우려면 날짜가 겹치면 안 된다.
@@ -43,6 +44,7 @@ describe('Bulletins (e2e)', () => {
   const login = async (email: string) => {
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email })
       .expect(201);
     return res.body as { accessToken: string; user: { id: string } };

@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { NotificationsService } from '../src/modules/notifications/notifications.service';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 const EMAIL_DOMAIN = 'notification-settings-e2e.test';
 
@@ -36,6 +37,7 @@ describe('Notification settings (e2e)', () => {
 
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: `me@${EMAIL_DOMAIN}` })
       .expect(201);
     const body = res.body as { accessToken: string; user: { id: string } };

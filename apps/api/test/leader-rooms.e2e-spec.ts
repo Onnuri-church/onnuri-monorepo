@@ -6,6 +6,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 테스트 데이터 식별용 접두사/도메인 — 공용 개발 DB를 쓰므로 시드/실데이터와 안 겹치게 붙인다.
 const EMAIL_DOMAIN = 'leader-rooms-e2e.test';
@@ -43,6 +44,7 @@ describe('Leader rooms (e2e)', () => {
   const devLogin = async (name: string, role?: 'ADMIN') => {
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: `${name}@${EMAIL_DOMAIN}`, ...(role ? { role } : {}) })
       .expect(201);
     const body = res.body as { accessToken: string; user: { id: string } };

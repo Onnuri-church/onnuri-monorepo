@@ -63,6 +63,16 @@ export class EnvironmentVariables {
   })
   AUTH_DEV_LOGIN?: string;
 
+  // 개발용 로그인을 켜면 필수 — 요청의 X-Dev-Login-Secret 헤더가 이 값과 같아야 로그인된다.
+  // 개발 서버 주소만 알면 누구나 관리자 토큰을 받을 수 있던 문제를 막는다 (openssl rand -hex 32).
+  @ValidateIf((e: EnvironmentVariables) => Boolean(e.AUTH_DEV_LOGIN))
+  @IsString()
+  @MinLength(32, {
+    message:
+      'AUTH_DEV_LOGIN_SECRET은 32자 이상이어야 합니다 (AUTH_DEV_LOGIN을 켰을 때 필수).',
+  })
+  AUTH_DEV_LOGIN_SECRET?: string;
+
   // 쉼표 구분 목록 (Android/iOS 클라이언트 ID가 다르다).
   // 비어 있으면 구글 ID 토큰의 aud 검증을 건너뛴다 (로컬 개발용).
   @IsOptional()

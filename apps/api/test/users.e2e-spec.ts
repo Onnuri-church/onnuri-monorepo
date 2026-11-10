@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 // 테스트 데이터 식별용 접두사/도메인 — 시작/종료 시 이 값들로 만든 행을 정리한다.
 // 개발용 로그인은 test/setup-e2e.ts가 AUTH_DEV_LOGIN을 켜준다.
@@ -64,6 +65,7 @@ describe('Users (e2e)', () => {
 
     const login = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: USER_EMAIL })
       .expect(201);
     const loginBody = login.body as {

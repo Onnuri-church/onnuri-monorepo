@@ -5,6 +5,7 @@ import { App } from 'supertest/types';
 
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
+import { DEV_LOGIN_HEADER } from './dev-login';
 
 const EMAIL_DOMAIN = 'dedupe-create-e2e.test';
 const TITLE_PREFIX = 'dedupe-e2e-';
@@ -24,6 +25,7 @@ describe('Dedupe create (e2e)', () => {
   const login = async (name: string) => {
     const res = await request(app.getHttpServer())
       .post('/auth/login/dev')
+      .set(DEV_LOGIN_HEADER)
       .send({ email: `${name}@${EMAIL_DOMAIN}` })
       .expect(201);
     return (res.body as { accessToken: string }).accessToken;
