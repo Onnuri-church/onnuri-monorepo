@@ -34,7 +34,6 @@ import { CellMemberManageScreen } from "../features/cell/CellMemberManageScreen"
 import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
 import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
-import { FollowerNoteDetailScreen } from "../features/cell/FollowerNoteDetailScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
 import { canPostToCell } from "../features/cell/cellDetail";
@@ -575,12 +574,6 @@ export function RootNavigator() {
                 />
               ),
             })}
-          />
-          {/* 헤더는 화면이 단독 등록한다 (⋮ 항목이 내 글 여부에 의존) — 여기 header를 두면 이중 정의. */}
-          <Stack.Screen
-            name="FollowerNoteDetail"
-            component={FollowerNoteDetailScreen}
-            options={{ headerShown: true }}
           />
           <Stack.Screen
             name="Settings"

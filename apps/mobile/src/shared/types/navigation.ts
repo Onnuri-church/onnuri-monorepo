@@ -107,9 +107,9 @@ export type RootStackParamList = {
   CellMemberManage: { cellId: string };
   CellMemberAdd: { cellId: string };
   CellAttendance: { cellId: string };
-  FollowerNoteBoard: { cellId: string };
+  // noteId: 알림 등에서 특정 노트를 펼친 채로 열 때 (상세 화면 없이 목록에서 펼친다 — SCRUM-182)
+  FollowerNoteBoard: { cellId: string; noteId?: string };
   FollowerNoteWrite: { cellId: string; noteId?: string };
-  FollowerNoteDetail: { cellId: string; noteId: string };
   // 마이페이지 관리자 메뉴에서 진입하는 관리자 전용 화면들 (2026-09-09 시안).
   // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라
   // cellId가 있으면 편집 모드다.
