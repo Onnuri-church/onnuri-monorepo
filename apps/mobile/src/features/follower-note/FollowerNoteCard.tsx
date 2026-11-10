@@ -1,19 +1,16 @@
-import type { FollowerNoteCommentInfo, FollowerNoteInfo } from "@onnuri/shared";
-import { useRef } from "react";
+import type { FollowerNoteCommentInfo } from "@onnuri/shared";
+import { useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { Avatar } from "../../../shared/components/base/Avatar";
-import { Icon } from "../../../shared/components/base/Icon";
-import { PressableScale } from "../../../shared/components/base/PressableScale";
-import { CommentEmpty } from "../../../shared/components/composed/CommentEmpty";
-import { CommentInput } from "../../../shared/components/composed/CommentInput";
-import { CommentItem } from "../../../shared/components/composed/CommentItem";
-import { colors } from "../../../shared/theme/tokens";
-import { useThemeColors } from "../../../shared/theme/useThemeColors";
-import { toTimeAgo } from "../../../shared/utils/date";
-import { getNoteQuestions } from "../followerNotes";
-import { NoteNumberBadge } from "./NoteNumberBadge";
+import { Avatar } from "../../shared/components/base/Avatar";
+import { Icon } from "../../shared/components/base/Icon";
+import { PressableScale } from "../../shared/components/base/PressableScale";
+import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
+import { CommentInput } from "../../shared/components/composed/CommentInput";
+import { CommentItem } from "../../shared/components/composed/CommentItem";
+import { colors } from "../../shared/theme/tokens";
+import { useThemeColors } from "../../shared/theme/useThemeColors";
 
 export interface MenuAnchor {
   x: number;
@@ -22,12 +19,26 @@ export interface MenuAnchor {
   height: number;
 }
 
+/** 카드에 그릴 노트 내용 — 셀 노트(3문항)와 팀 노트(본문 하나)가 각자 채운다. */
+export interface FollowerNoteCardContent {
+  /** 카드 제목 — 셀은 셀모임 날짜, 팀은 작성일 */
+  title: string;
+  subtitle?: string;
+  /** "OO 작성" 줄 */
+  authorLine: string;
+  avatarUrl: string | null;
+  /** 펼쳤을 때 작성자 사진 옆 시각 — "11월 10일 · 3분 전" */
+  timeLabel: string;
+  body: ReactNode;
+}
+
 interface FollowerNoteCardProps {
-  note: FollowerNoteInfo;
+  content: FollowerNoteCardContent;
+  comments: FollowerNoteCommentInfo[];
   expanded: boolean;
   /** 카드 머리를 누르면 펼치고 접는다 — 한 번에 하나만 펼치는 건 게시판이 정한다. */
   onToggle: () => void;
-  /** 수정·삭제 메뉴(⋮) — 그 셀 셀장·부셀장에게만, 펼쳤을 때만 보인다. 버튼 화면 좌표를 넘긴다. */
+  /** 수정·삭제 메뉴(⋮) — 쓸 권한이 있을 때만, 펼쳤을 때만 보인다. 버튼 화면 좌표를 넘긴다. */
   onMenuPress?: (anchor: MenuAnchor) => void;
   onReplyComment: (comment: FollowerNoteCommentInfo) => void;
   onEditComment: (comment: FollowerNoteCommentInfo) => void;
@@ -42,10 +53,11 @@ interface FollowerNoteCardProps {
   onComposerFocus: () => void;
 }
 
-// 팔로워 노트 게시판의 카드. 접혀 있을 땐 날짜·작성자만 깔끔하게(화살표 없음), 머리를 누르면 그 자리에서
-// 3문항 내용 → 댓글 → 댓글 입력창이 카드 안에 펼쳐진다 (상세 화면 없음 — SCRUM-182).
+// 팔로워 노트 카드 — 셀·팀 노트 공용 (SCRUM-182·180). 접혀 있을 땐 날짜·작성자만 깔끔하게(화살표 없음),
+// 머리를 누르면 그 자리에서 내용 → 댓글 → 댓글 입력창이 카드 안에 펼쳐진다 (상세 화면 없음).
 export function FollowerNoteCard({
-  note,
+  content,
+  comments,
   expanded,
   onToggle,
   onMenuPress,
@@ -62,7 +74,6 @@ export function FollowerNoteCard({
 }: FollowerNoteCardProps) {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
-  const comments = note.comments;
   const menuButtonRef = useRef<View>(null);
 
   const handleMenuPress = () => {
@@ -87,39 +98,25 @@ export function FollowerNoteCard({
     <View className="rounded-5 border border-background-assistive">
       <PressableScale scaleTo={0.98} className="px-5 py-4" onPress={onToggle}>
         <View className="flex-row items-center gap-2.5">
-          <Text className="text-heading-small text-text-normal">{note.dateLabel}</Text>
-          <Text className="flex-1 text-body-medium text-text-alternative">{note.meetingLabel}</Text>
+          <Text className="text-heading-small text-text-normal">{content.title}</Text>
+          <Text className="flex-1 text-body-medium text-text-alternative">{content.subtitle ?? ""}</Text>
           {expanded && onMenuPress && (
             <Pressable ref={menuButtonRef} onPress={handleMenuPress} hitSlop={10}>
               <Icon name="more" size={24} color={colors.icon.normal} />
             </Pressable>
           )}
         </View>
-        <Text className="mt-1 text-caption-main text-text-neutral">
-          {t("{{name}} 작성", { name: note.authorName })}
-        </Text>
+        <Text className="mt-1 text-caption-main text-text-neutral">{content.authorLine}</Text>
       </PressableScale>
 
       {expanded && (
         <View className="px-5 pb-5">
           <View className="gap-6">
             <View className="flex-row items-center gap-2">
-              <Avatar imageUrl={note.authorAvatarUrl} size={32} />
-              <Text className="text-body-small text-text-alternative">
-                {note.writtenDateLabel} · {toTimeAgo(note.createdAt)}
-              </Text>
+              <Avatar imageUrl={content.avatarUrl} size={32} />
+              <Text className="text-body-small text-text-alternative">{content.timeLabel}</Text>
             </View>
-            {getNoteQuestions(note.formVersion).map((question, index) =>
-              note.answers[index]?.trim() ? (
-                <View key={question.title} className="gap-2.5">
-                  <View className="flex-row items-center gap-1">
-                    <NoteNumberBadge number={index + 1} />
-                    <Text className="text-body-main text-text-normal">{question.title}</Text>
-                  </View>
-                  <Text className="text-body-medium text-text-neutral">{note.answers[index]}</Text>
-                </View>
-              ) : null,
-            )}
+            {content.body}
           </View>
 
           <View

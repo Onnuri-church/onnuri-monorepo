@@ -25,10 +25,14 @@ export function TeamStoryDetailScreen() {
   // 사진은 갤러리 조회를 같이 쓴다 — 미리보기만 잘라 쓰고 전체 장수도 여기서 센다.
   const { data: gallery } = useTeamGallery(params.teamId);
 
-  // 소속팀 공간은 그 팀 팀원과 관리자에게만 보인다 (서버도 같은 규칙).
+  // 팀 공간(옛 이름 소속팀 공간)은 그 팀 팀원과 관리자에게만 보인다 (서버도 같은 규칙).
   const me = useMe();
   const canChat =
     me?.isAdmin === true || (me?.teams ?? []).some((item) => item.id === params.teamId);
+  // 팀 팔로워 노트 입구는 그 팀 현재 팀장에게만 (관리자는 마이페이지 관리 화면으로 본다 — SCRUM-181).
+  const isLeader = (me?.teams ?? []).some(
+    (item) => item.id === params.teamId && item.role === "LEADER",
+  );
 
   // 소속팀 공간 입구의 빨간 점 — 그 팀 단톡방 중 안 읽은 메시지가 있는 방이 하나라도 있으면.
   const { data: chatRooms } = useChatRooms(canChat ? params.teamId : "");
@@ -45,7 +49,7 @@ export function TeamStoryDetailScreen() {
     navigation.navigate("TeamMemberList", { teamId: params.teamId });
   const handleViewAllPhotosPress = () =>
     navigation.navigate("TeamStoryGallery", { teamId: params.teamId });
-  // 팀 게시판은 부서활동 게시판이다 (기획 확인) — 이 팀으로 필터된 채 연다.
+  // 팀 활동 게시판은 부서활동 게시판이다 (기획 확인) — 이 팀으로 필터된 채 연다.
   const handleBoardPress = () =>
     navigation.navigate("DepartmentActivity", { teamId: params.teamId });
 
@@ -86,21 +90,27 @@ export function TeamStoryDetailScreen() {
         <Icon name="expand-right" size={28} />
       </Pressable>
 
-      {canChat && (
-        <View className="mt-12">
+      {/* 팀 팔로워 노트·팀 공간·팀 활동 게시판 — 같은 모양의 카드를 촘촘히(16) 쌓는다 (2026-11-10 피드백:
+          48 간격은 너무 비어 보인다). 팔로워 노트는 그 팀 팀장에게만, 팀 공간은 팀원·관리자에게만 보인다. */}
+      <View className="mt-12 gap-4">
+        {isLeader && (
           <TeamBoardLink
-            title={t("{{name}} 소속팀 공간", { name: team?.name ?? t("팀") })}
+            title={t("{{name}} 팔로워 노트", { name: team?.name ?? t("팀") })}
+            description={t("팀장들이 함께 쓰는 팀원 케어 기록")}
+            onPress={() => navigation.navigate("TeamFollowerNoteBoard", { teamId: params.teamId })}
+          />
+        )}
+        {canChat && (
+          <TeamBoardLink
+            title={t("{{name}} 공간", { name: team?.name ?? t("팀") })}
             description={t("팀원만 볼 수 있는 게시판과 단톡방")}
             badge={hasUnread}
             onPress={() => navigation.navigate("TeamSpace", { teamId: params.teamId })}
           />
-        </View>
-      )}
-
-      <View className="mt-12">
+        )}
         <TeamBoardLink
-          title={t("{{name}} 게시판", { name: team?.name ?? t("팀") })}
-          description={t("팀의 활동 소식을 확인해요")}
+          title={t("{{name}} 활동 게시판", { name: team?.name ?? t("팀") })}
+          description={t("팀의 활동 소식을 다른 사람들과 공유해요.")}
           onPress={handleBoardPress}
         />
       </View>
