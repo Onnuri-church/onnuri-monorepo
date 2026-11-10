@@ -63,6 +63,8 @@ describe('Posts (e2e)', () => {
     };
     accessToken = loginBody.accessToken;
     userId = loginBody.user.id;
+    // 큐티나눔 작성은 민감정보 동의가 필요하다 (SCRUM-175) — 동의 없는 경우는 작성 테스트에서 따로 본다.
+    await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: new Date() } });
 
     // 픽스처는 시드(2026.03~05)와 안 겹치게 2025년으로 잡는다. 목록이 최신 달을 고르므로
     // 이 글들이 기본 조회에 잡히지 않아도 month를 지정해 검증한다.
@@ -901,6 +903,15 @@ describe('Posts (e2e)', () => {
         .post('/posts/qt-shares')
         .send(body())
         .expect(401));
+
+    it('민감정보 처리 동의가 없으면 403', async () => {
+      await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: null } });
+      try {
+        await create(body()).expect(403);
+      } finally {
+        await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: new Date() } });
+      }
+    });
 
     it('날짜가 YYYY-MM-DD가 아니면 400', () =>
       create({ ...body(), eventDate: '2025.03.21' }).expect(400));

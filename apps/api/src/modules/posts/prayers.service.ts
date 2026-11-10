@@ -11,6 +11,7 @@ import type {
 } from '@onnuri/shared';
 
 import { toKstDate } from '../../common/utils/date';
+import { assertSensitiveConsent } from '../../common/utils/consent';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
@@ -237,6 +238,7 @@ export class PrayersService {
     userId: string,
     dto: CreatePrayerDto,
   ): Promise<PrayerDetailResponse> {
+    await assertSensitiveConsent(this.prisma, userId);
     this.assertVisibleUntilNotPast(dto.visibleUntil);
     const post = await this.prisma.post.create({
       data: {

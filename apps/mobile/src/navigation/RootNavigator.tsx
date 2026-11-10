@@ -57,6 +57,7 @@ import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScr
 import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
+import { ConsentScreen } from "../features/consent/ConsentScreen";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrResultScreen } from "../features/qr/QrResultScreen";
 import { QrScreen } from "../features/qr/QrScreen";
@@ -177,9 +178,14 @@ export function RootNavigator() {
     return <SplashScreen />;
   }
 
+  // 현재 방침에 동의하지 않은 로그인 유저(신규 가입·기존 회원 모두)는 동의 화면만 본다 (SCRUM-175).
+  const needsConsent =
+    (session.status === "authenticated" || session.status === "onboarding") &&
+    !session.user.privacyConsented;
+
   return (
     <NavigationContainer theme={navigationTheme}>
-      {session.status === "authenticated" || session.status === "guest" ? (
+      {(session.status === "authenticated" && !needsConsent) || session.status === "guest" ? (
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Main" component={BottomTabNavigator} />
           <Stack.Screen
@@ -777,12 +783,14 @@ export function RootNavigator() {
         </Stack.Navigator>
       ) : (
         <AuthStack.Navigator screenOptions={{ headerShown: false }}>
-          {/* 세션 상태에 따라 화면을 하나만 등록한다 — onboarding(프로필 미완, 토큰은 이미 있음)이면
+          {/* 세션 상태에 따라 화면을 하나만 등록한다 — 동의 전이면 동의 화면, onboarding(프로필 미완, 토큰은 이미 있음)이면
               프로필 설정만 남고, 등록을 마치면 setSession이 메인 트리로 전환한다. 뒤로가기는
               온보딩 중단이므로 signOut으로 세션을 정리해 로그인 화면으로 돌아간다 — 세션이
               남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
               ProfileSetupScreen이 같은 동작으로 처리한다.) */}
-          {session.status === "onboarding" ? (
+          {needsConsent ? (
+            <AuthStack.Screen name="Consent" component={ConsentScreen} />
+          ) : session.status === "onboarding" ? (
             <AuthStack.Screen
               name="ProfileSetup"
               component={ProfileSetupScreen}
