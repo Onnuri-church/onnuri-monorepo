@@ -23,6 +23,14 @@ import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 
+// 탈퇴 계정의 이메일 — 실존할 수 없는 예약 도메인(.invalid)이라 누구의 이메일과도 겹치지 않는다.
+export function withdrawnEmail(userId: string): string {
+  return `withdrawn-${userId}@withdrawn.invalid`;
+}
+
+// 탈퇴 후 프로필을 보관하는 기간 (2026-09-08 확정: 30일 후 파기).
+const WITHDRAWN_PROFILE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -302,8 +310,8 @@ export class UsersService {
     return this.findDetailForAdmin(id);
   }
 
-  // 회원 삭제 (관리자 전용) — 탈퇴와 같은 soft delete. 출석·활동 기록은 기명 보존이고
-  // 프로필 파기는 30일 배치 소관 (2026-09-08 확정). 진행 중 소속은 종료 처리한다.
+  // 회원 삭제 (관리자 전용) — 본인 탈퇴와 같은 처리(withdrawOps). 출석·활동 기록은 기명 보존이고
+  // 프로필 파기는 30일 배치(WithdrawnProfilePurgeService) 소관 (2026-09-08 확정).
   async withdrawByAdmin(id: string): Promise<{ id: string }> {
     const target = await this.prisma.user.findFirst({
       where: { id, withdrawnAt: null },
@@ -314,19 +322,80 @@ export class UsersService {
       throw new BadRequestException('관리자 계정은 여기서 삭제할 수 없습니다.');
     }
 
-    const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id }, data: { withdrawnAt: now } }),
+    await this.prisma.$transaction(this.withdrawOps(id, new Date()));
+    return { id };
+  }
+
+  // 탈퇴 처리 (본인·관리자 공통). 탈퇴한 사람이 같은 카카오·구글 계정으로 다시 로그인하면
+  // 예전 계정이 살아나지 않고 새로 가입되게 한다 — 로그인 수단 연결을 끊고, 이메일은 바로
+  // 예약 도메인으로 바꾼다 (이메일이 유니크라 원래 값이 남아 있으면 같은 이메일로 새로 가입할
+  // 수 없고, 로그인이 이메일로 예전 계정을 다시 찾아 연결해 버린다). 세션·푸시 토큰도 지워
+  // 탈퇴 즉시 로그아웃되게 한다. 이름과 출석·활동 기록은 기명 보존, 나머지 프로필(생년월일·
+  // 성별·연락처·사진·소개)은 30일 뒤 배치가 지운다 (2026-09-08 확정, docs/erd.md).
+  private withdrawOps(userId: string, now: Date) {
+    return [
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { withdrawnAt: now, email: withdrawnEmail(userId) },
+      }),
+      this.prisma.socialAccount.deleteMany({ where: { userId } }),
       this.prisma.cellMembership.updateMany({
-        where: { userId: id, endedAt: null },
+        where: { userId, endedAt: null },
         data: { endedAt: now },
       }),
       this.prisma.teamMembership.updateMany({
-        where: { userId: id, endedAt: null },
+        where: { userId, endedAt: null },
         data: { endedAt: now },
       }),
+      this.prisma.refreshToken.deleteMany({ where: { userId } }),
+      this.prisma.pushToken.deleteMany({ where: { userId } }),
+    ];
+  }
+
+  // 이 변경 전에 탈퇴한 계정은 로그인 수단과 원래 이메일이 남아 있다 — 그 사람이 다시 로그인하면
+  // 로그인 직전에 여기서 연결을 끊어 새 계정으로 가입되게 한다 (AuthService.findOrCreateUser).
+  async detachWithdrawn(userId: string): Promise<void> {
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { email: withdrawnEmail(userId) },
+      }),
+      this.prisma.socialAccount.deleteMany({ where: { userId } }),
     ]);
-    return { id };
+  }
+
+  // 탈퇴 30일이 지난 계정의 프로필 파기 — 이름은 기명 보존 정책이라 남긴다.
+  // 사진 파일은 창고에서도 지운다 (실패해도 deleteByUrl이 경고만 남긴다).
+  async purgeWithdrawnProfiles(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - WITHDRAWN_PROFILE_RETENTION_MS);
+    const targets = await this.prisma.user.findMany({
+      where: {
+        withdrawnAt: { lte: cutoff },
+        OR: [
+          { birthDate: { not: null } },
+          { gender: { not: null } },
+          { phone: { not: null } },
+          { avatarUrl: { not: null } },
+          { intro: { not: null } },
+        ],
+      },
+      select: { id: true, avatarUrl: true },
+    });
+    for (const target of targets) {
+      await this.prisma.user.update({
+        where: { id: target.id },
+        data: {
+          birthDate: null,
+          gender: null,
+          phone: null,
+          avatarUrl: null,
+          intro: null,
+        },
+      });
+      if (target.avatarUrl)
+        await this.uploadsService.deleteByUrl(target.avatarUrl);
+    }
+    return targets.length;
   }
 
   // 권한 선택을 멤버십 역할로 옮긴다. 역할 변경도 행 종료 + 새 행 (이력 보존 패턴).
@@ -454,9 +523,8 @@ export class UsersService {
     return (await this.findMe(userId))!;
   }
 
-  // 본인 탈퇴 — 관리자 탈퇴와 같은 soft 처리에 더해 세션·푸시 토큰을 지운다
-  // (안 지우면 탈퇴한 기기로 리프레시·푸시가 계속 간다). 관리자 계정은 권한 양도
-  // 절차가 없어서 막는다 (withdrawByAdmin과 같은 기준).
+  // 본인 탈퇴 — 처리 내용은 withdrawOps. 관리자 계정은 권한 양도 절차가 없어서 막는다
+  // (withdrawByAdmin과 같은 기준).
   async withdrawMe(userId: string): Promise<void> {
     const me = await this.prisma.user.findFirst({
       where: { id: userId, withdrawnAt: null },
@@ -469,23 +537,7 @@ export class UsersService {
       );
     }
 
-    const now = new Date();
-    await this.prisma.$transaction([
-      this.prisma.user.update({
-        where: { id: userId },
-        data: { withdrawnAt: now },
-      }),
-      this.prisma.cellMembership.updateMany({
-        where: { userId, endedAt: null },
-        data: { endedAt: now },
-      }),
-      this.prisma.teamMembership.updateMany({
-        where: { userId, endedAt: null },
-        data: { endedAt: now },
-      }),
-      this.prisma.refreshToken.deleteMany({ where: { userId } }),
-      this.prisma.pushToken.deleteMany({ where: { userId } }),
-    ]);
+    await this.prisma.$transaction(this.withdrawOps(userId, new Date()));
   }
 
   // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라

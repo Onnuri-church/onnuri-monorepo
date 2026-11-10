@@ -96,10 +96,15 @@ export class AuthService {
       );
     }
 
-    const existing = await this.prisma.user.findUnique({
+    let existing = await this.prisma.user.findUnique({
       where: { email },
       include: { _count: { select: { socialAccounts: true } } },
     });
+    // 탈퇴한 계정으로는 들어가지 않고 새로 만든다 (소셜 로그인과 같은 기준).
+    if (existing?.withdrawnAt) {
+      await this.usersService.detachWithdrawn(existing.id);
+      existing = null;
+    }
     if (existing && existing._count.socialAccounts > 0) {
       throw new ForbiddenException(
         '소셜 로그인으로 가입한 계정은 개발용 로그인으로 들어갈 수 없습니다.',
@@ -249,7 +254,10 @@ export class AuthService {
       },
       select: { user: true },
     });
-    if (account) {
+    // 이 변경 전에 탈퇴한 계정은 연결이 남아 있다 — 끊고 아래에서 새로 가입시킨다.
+    if (account?.user.withdrawnAt) {
+      await this.usersService.detachWithdrawn(account.user.id);
+    } else if (account) {
       // 임시 이메일로 가입했던 계정에 실제 이메일이 생겼으면(동의항목 심사 통과 후) 교체한다.
       const user = await this.replacePlaceholderEmail(
         account.user,
@@ -264,7 +272,12 @@ export class AuthService {
       profile.email ?? placeholderEmail(provider, profile.providerUid);
 
     // 같은 이메일의 기존 유저가 있으면 새 로그인 수단으로 연결한다 (카카오·구글 병용).
-    const existing = await this.prisma.user.findUnique({ where: { email } });
+    let existing = await this.prisma.user.findUnique({ where: { email } });
+    // 탈퇴한 계정에는 연결하지 않는다 — 이메일을 비워 새 가입이 그 이메일을 쓸 수 있게 한다.
+    if (existing?.withdrawnAt) {
+      await this.usersService.detachWithdrawn(existing.id);
+      existing = null;
+    }
     if (existing) {
       await this.prisma.socialAccount.create({
         data: {
