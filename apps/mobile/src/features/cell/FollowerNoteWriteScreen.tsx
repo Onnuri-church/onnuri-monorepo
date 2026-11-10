@@ -15,7 +15,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCreateFollowerNote, useFollowerNotes, useUpdateFollowerNote } from "./api";
 import { formatSundayLabel, getSundaysOfMonth } from "./attendance";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
-import { getNoteQuestions } from "./followerNotes";
+import { NOTE_ANSWER_MAX_LENGTH, getNoteQuestions } from "./followerNotes";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
 
 // 팔로워 노트 작성·수정 겸용 (시안: 날짜 선택 + 3문항 박스 + 등록하기).
@@ -118,7 +118,7 @@ export function FollowerNoteWriteScreen() {
             />
           )}
 
-          {getNoteQuestions().map((question, index) => (
+          {getNoteQuestions(editing?.formVersion).map((question, index) => (
             <View key={question.title} className="gap-4">
               <View className="flex-row items-center gap-1">
                 <NoteNumberBadge number={index + 1} />
@@ -132,6 +132,7 @@ export function FollowerNoteWriteScreen() {
                 placeholder={question.placeholder}
                 placeholderTextColor={themeColors.text.assistive}
                 multiline
+                maxLength={NOTE_ANSWER_MAX_LENGTH}
                 textAlignVertical="top"
               />
             </View>

@@ -236,6 +236,34 @@ describe('Follower note comments (e2e)', () => {
       .expect(403);
   });
 
+  it('노트마다 양식 버전을 내려준다 — 예전 노트는 1, 새 노트는 2 (SCRUM-179)', async () => {
+    const versionOf = async () => {
+      const res = await request(app.getHttpServer())
+        .get(notesPath())
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+      const notes = res.body as { id: string; formVersion: number }[];
+      return notes.find((n) => n.id === noteId)?.formVersion;
+    };
+    expect(await versionOf()).toBe(2);
+    await prisma.followerNote.update({ where: { id: noteId }, data: { formVersion: 1 } });
+    expect(await versionOf()).toBe(1);
+    await prisma.followerNote.update({ where: { id: noteId }, data: { formVersion: 2 } });
+  });
+
+  it('답변 한 칸이 5000자를 넘으면 400', async () => {
+    await request(app.getHttpServer())
+      .patch(`${notesPath()}/${noteId}`)
+      .set('Authorization', `Bearer ${leaderToken}`)
+      .send({ answers: ['가'.repeat(5001), '', ''] })
+      .expect(400);
+    await request(app.getHttpServer())
+      .patch(`${notesPath()}/${noteId}`)
+      .set('Authorization', `Bearer ${leaderToken}`)
+      .send({ answers: ['가'.repeat(5000), '', ''] })
+      .expect(200);
+  });
+
   it('없는 댓글이면 404', async () => {
     await request(app.getHttpServer())
       .delete(`${commentsPath()}/no-such-comment`)

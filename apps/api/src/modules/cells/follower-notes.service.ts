@@ -44,6 +44,7 @@ export class FollowerNotesService {
       where: { meeting: { cellId } },
       select: {
         id: true,
+        formVersion: true,
         answer1: true,
         answer2: true,
         answer3: true,
@@ -78,6 +79,7 @@ export class FollowerNotesService {
         isMine: note.authorId === requesterId,
         writtenDateLabel: toDayLabel(toKstDate(note.createdAt)),
         createdAt: note.createdAt.toISOString(),
+        formVersion: note.formVersion,
         answers: [note.answer1 ?? '', note.answer2 ?? '', note.answer3 ?? ''],
         comments: note.comments.map((comment) => ({
           id: comment.id,
@@ -104,7 +106,7 @@ export class FollowerNotesService {
   ): Promise<FollowerNoteInfo[]> {
     await this.assertIsCellLeader(requesterId, cellId);
     if (!dto.answers[0]?.trim()) {
-      throw new BadRequestException('첫 문항(요즘 상황과 기도제목)은 필수입니다.');
+      throw new BadRequestException('첫 문항은 필수입니다.');
     }
 
     const meetingDate = new Date(dto.meetingDate);
@@ -174,7 +176,7 @@ export class FollowerNotesService {
   ): Promise<FollowerNoteInfo[]> {
     await this.assertIsCellLeader(requesterId, cellId);
     if (!dto.answers[0]?.trim()) {
-      throw new BadRequestException('첫 문항(요즘 상황과 기도제목)은 필수입니다.');
+      throw new BadRequestException('첫 문항은 필수입니다.');
     }
     const note = await this.findNoteInCell(noteId, cellId);
 

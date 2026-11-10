@@ -93,11 +93,14 @@
   "추가": "Add",
   "{{month}}월": "{{month}}",
   "요즘 상황과 기도제목": "How things are going and prayer requests",
-  "근황, 고민, 함께 기도했으면 하는 부분": "Updates, concerns, things to pray about together",
   "나눔 중 함께 이야기하면 좋을 것": "Things worth discussing together during sharing",
-  "다음 모임 때 자연스럽게 물어볼 이야기": "Topics to naturally ask about at the next meeting",
   "궁금한 점이나 하고 싶은 말": "Questions or things you want to say",
-  "더 챙기고 싶은 것, 남기고 싶은 메모": "Things to follow up on, notes to leave",
   "셀원 추가": "Add members",
-  "소속 셀 없음": "No cell"
+  "소속 셀 없음": "No cell",
+  "셀 나눔 이야기": "Cell sharing",
+  "이번 모임에서 나눈 이야기": "What was shared at this meeting",
+  "셀 기도제목": "Cell prayer requests",
+  "셀원들의 기도제목": "Prayer requests from cell members",
+  "그 외 이야기": "Other notes",
+  "예) 목사님께 함께 기도·관심 부탁, 셀 계획, 셀장으로서 근황": "e.g. prayer or care requests for the pastor, cell plans, updates from you as a cell leader"
 }
