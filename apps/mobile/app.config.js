@@ -4,8 +4,26 @@ const { colors } = require("./src/shared/theme/tokens");
 // 배경색을 tokens.js에서 가져오기 위해서다 — JSON에는 import가 없어서 그냥 두면 #276E4C가
 // tokens.js와 app.json 두 곳에 따로 적히고, 한쪽만 바뀌어도 아무도 모른다.
 // 토큰이 필요 없는 정적인 값은 계속 app.json에 둔다.
+
+// 개발용 빌드(APP_VARIANT=development)는 앱 ID·이름을 바꿔 별도 앱으로 깐다 — 베타·실사용 앱과
+// 한 폰에 나란히 설치돼서, 개발 앱을 깔려고 베타 앱을 지우지 않아도 된다.
+// 스킴도 따로 둬야 딥링크가 두 앱 중 어디로 갈지 묻지 않는다.
+// google-services.json에는 com.onnuri.mobile만 등록돼 있어 개발 앱에서는 뺀다 — 개발 앱은 푸시
+// 토큰 발급이 실패하지만 PushNotificationGate가 실패를 삼켜 나머지는 정상 동작한다
+// (푸시까지 확인하려면 Firebase에 .dev 앱을 추가하고 받은 파일로 바꾼다).
+const IS_DEV_VARIANT = process.env.APP_VARIANT === "development";
+
 module.exports = ({ config }) => ({
   ...config,
+  ...(IS_DEV_VARIANT && {
+    name: "온누리 DEV",
+    scheme: "onnurichurch-dev",
+    android: {
+      ...config.android,
+      package: "com.onnuri.mobile.dev",
+      googleServicesFile: undefined,
+    },
+  }),
   plugins: [
     ...(config.plugins ?? []),
     // 데이터 다운로드(엑셀)의 공유 시트용 — expo install이 동적 config라 자동 추가를 못 해 수동 등록.
