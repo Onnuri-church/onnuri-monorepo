@@ -4,16 +4,15 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FollowerNoteCommentInfo } from "@onnuri/shared";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Alert, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { ContextMenu } from "../../shared/components/base/ContextMenu";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
-import { CommentInput } from "../../shared/components/composed/CommentInput";
 import { colors } from "../../shared/theme/tokens";
-import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import {
@@ -25,17 +24,17 @@ import {
   useUpdateFollowerNoteComment,
 } from "./api";
 import { canWriteFollowerNote } from "./cellDetail";
-import { FollowerNoteCard } from "./components/FollowerNoteCard";
+import { FollowerNoteCard, type MenuAnchor } from "./components/FollowerNoteCard";
 import { MonthPicker } from "./components/MonthPicker";
 
 // 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
 // "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
-// 상세 화면은 따로 두지 않는다 — 카드를 누르면 그 자리에서 내용과 댓글이 펼쳐지고, 펼친 노트가 있을 때만
-// 화면 아래에 댓글 입력창이 붙는다 (SCRUM-182). 알림으로 들어오면(noteId) 그 노트를 펼쳐서 보여준다.
+// 상세 화면은 따로 두지 않는다 — 카드를 누르면 그 자리에서 내용·댓글·댓글 입력창이 펼쳐진다 (SCRUM-182).
+// 수정·삭제는 펼친 카드의 ⋮ 메뉴에만 둔다. 알림으로 들어오면(noteId) 그 노트를 펼쳐서 보여준다.
 export function FollowerNoteBoardScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const themeColors = useThemeColors();
+  const { width: windowWidth } = useWindowDimensions();
   const route = useRoute<RouteProp<RootStackParamList, "FollowerNoteBoard">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { cellId, noteId: targetNoteId } = route.params;
@@ -65,7 +64,11 @@ export function FollowerNoteBoardScreen() {
   // 펼친 카드로 스크롤하기 위한 위치 — 목록 묶음의 y + 묶음 안 카드의 y.
   const scrollRef = useRef<ScrollView>(null);
   const listY = useRef(0);
-  const cardY = useRef(new Map<string, number>());
+  const cardLayout = useRef(new Map<string, { y: number; height: number }>());
+  const viewportHeight = useRef(0);
+  const scrollY = useRef(0);
+  // ⋮ 메뉴 — 누른 버튼 아래에 붙인다 (큐티나눔 게시판과 같은 방식).
+  const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const pendingScrollId = useRef<string | null>(null);
 
   const visibleNotes =
@@ -100,11 +103,26 @@ export function FollowerNoteBoardScreen() {
   // 펼친 카드의 새 위치가 잡힌 뒤(onLayout) 그 카드 머리로 스크롤한다.
   const scrollToPending = (id: string) => {
     if (pendingScrollId.current !== id) return;
-    const y = cardY.current.get(id);
-    if (y === undefined) return;
+    const layout = cardLayout.current.get(id);
+    if (!layout) return;
     pendingScrollId.current = null;
-    scrollRef.current?.scrollTo({ y: Math.max(listY.current + y - 12, 0), animated: true });
+    scrollRef.current?.scrollTo({ y: Math.max(listY.current + layout.y - 12, 0), animated: true });
   };
+
+  // 카드 맨 아래 댓글 입력창을 누르면 키보드가 올라온 뒤 그 카드 바닥이 보이게 스크롤한다
+  // (키보드가 열리면 바깥 틀이 줄어들어 ScrollView 높이가 바뀐다 — 그걸 기다린다).
+  const handleComposerFocus = (id: string) => {
+    setTimeout(() => {
+      const layout = cardLayout.current.get(id);
+      if (!layout) return;
+      const bottom = listY.current + layout.y + layout.height + 16;
+      const target = bottom - viewportHeight.current;
+      if (target > scrollY.current) scrollRef.current?.scrollTo({ y: target, animated: true });
+    }, 350);
+  };
+
+  const handleMenuPress = (id: string, anchor: MenuAnchor) =>
+    setMenu({ id, top: anchor.y + anchor.height + 4, right: windowWidth - (anchor.x + anchor.width) });
 
   const handleDeletePress = (noteId: string) => {
     deleteTargetId.current = noteId;
@@ -190,6 +208,13 @@ export function FollowerNoteBoardScreen() {
           ref={scrollRef}
           contentContainerClassName="px-5 pt-5"
           keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={32}
+          onScroll={(event) => {
+            scrollY.current = event.nativeEvent.contentOffset.y;
+          }}
+          onLayout={(event) => {
+            viewportHeight.current = event.nativeEvent.layout.height;
+          }}
           refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
           // 안전영역은 바깥 틀이 띄우므로 여기는 FAB에 마지막 카드가 가리지 않을 만큼만 둔다.
           contentContainerStyle={{ paddingBottom: 96 }}
@@ -230,7 +255,8 @@ export function FollowerNoteBoardScreen() {
               <View
                 key={note.id}
                 onLayout={(event) => {
-                  cardY.current.set(note.id, event.nativeEvent.layout.y);
+                  const { y, height } = event.nativeEvent.layout;
+                  cardLayout.current.set(note.id, { y, height });
                   scrollToPending(note.id);
                 }}
               >
@@ -238,15 +264,17 @@ export function FollowerNoteBoardScreen() {
                   note={note}
                   expanded={note.id === expandedId}
                   onToggle={() => expand(note.id === expandedId ? null : note.id)}
-                  onEditPress={
-                    canWrite
-                      ? () => navigation.navigate("FollowerNoteWrite", { cellId, noteId: note.id })
-                      : undefined
-                  }
-                  onDeletePress={canWrite ? () => handleDeletePress(note.id) : undefined}
+                  onMenuPress={canWrite ? (anchor) => handleMenuPress(note.id, anchor) : undefined}
                   onReplyComment={handleReplyComment}
                   onEditComment={handleEditComment}
                   onDeleteComment={handleDeleteComment}
+                  draft={note.id === expandedId ? commentDraft : ""}
+                  onDraftChange={setCommentDraft}
+                  onSubmitComment={handleCommentSubmit}
+                  replyTo={note.id === expandedId ? replyTo : null}
+                  editing={note.id === expandedId ? editing : null}
+                  onCancelComposerMode={resetComposer}
+                  onComposerFocus={() => handleComposerFocus(note.id)}
                 />
               </View>
             ))}
@@ -258,49 +286,32 @@ export function FollowerNoteBoardScreen() {
           </View>
         </ScrollView>
 
-        {expandedNote && (
-          <View
-            className="px-5 pb-2 pt-3"
-            style={{
-              borderTopWidth: StyleSheet.hairlineWidth,
-              borderTopColor: themeColors.background.assistive,
-            }}
-          >
-            {/* 수정·답글 중일 때만 무엇을 하는 중인지 보여주고 빠져나갈 길을 준다. */}
-            {editing && (
-              <View className="mb-2 flex-row items-center justify-between">
-                <Text className="text-body-small text-text-alternative">{t("댓글 수정 중")}</Text>
-                <Pressable onPress={resetComposer} hitSlop={8}>
-                  <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
-                </Pressable>
-              </View>
-            )}
-            {replyTo && !editing && (
-              <View className="mb-2 flex-row items-center justify-between">
-                <Text className="text-body-small text-text-alternative">
-                  {t("{{name}}님에게 답글", { name: replyTo.authorName })}
-                </Text>
-                <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-                  <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
-                </Pressable>
-              </View>
-            )}
-            <CommentInput
-              value={commentDraft}
-              onChangeText={setCommentDraft}
-              onSubmit={handleCommentSubmit}
-              placeholder={replyTo ? t("답글을 입력하세요") : t("답변을 남겨보세요.")}
-            />
-          </View>
-        )}
       </KeyboardAvoidingContainer>
 
-      {/* 노트를 펼쳐 댓글을 쓰는 동안은 입력창과 겹치지 않게 작성 버튼을 숨긴다. */}
+      {/* 노트를 펼친 동안은 카드 아래 댓글 입력창과 겹치지 않게 작성 버튼을 숨긴다. */}
       {canWrite && !expandedNote && (
         <FloatingButton onPress={() => navigation.navigate("FollowerNoteWrite", { cellId })}>
           <Icon name="write" size={24} color={colors.icon.disable} />
         </FloatingButton>
       )}
+
+      <ContextMenu
+        visible={menu !== null}
+        onClose={() => setMenu(null)}
+        style={menu ? { top: menu.top, right: menu.right } : undefined}
+        items={[
+          {
+            icon: "edit",
+            label: t("수정하기"),
+            onPress: () => menu && navigation.navigate("FollowerNoteWrite", { cellId, noteId: menu.id }),
+          },
+          {
+            icon: "trash-can",
+            label: t("삭제하기"),
+            onPress: () => menu && handleDeletePress(menu.id),
+          },
+        ]}
+      />
 
       <AppDialog
         ref={deleteDialogRef}
