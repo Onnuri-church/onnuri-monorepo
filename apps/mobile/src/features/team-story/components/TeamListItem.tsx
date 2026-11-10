@@ -17,6 +17,8 @@ interface TeamListItemProps {
    */
   onEditPress?: () => void;
   onDeletePress?: () => void;
+  /** 화살표 앞 초록 뱃지 문구 — 팔로워 노트 관리의 "새 노트 N" (SCRUM-181) */
+  badgeLabel?: string;
 }
 
 // 팀 목록의 한 줄. 회색 원 안에 팀 아이콘, 오른쪽에 팀명과 한 줄 소개가 온다.
@@ -29,6 +31,7 @@ export function TeamListItem({
   onPress,
   onEditPress,
   onDeletePress,
+  badgeLabel,
 }: TeamListItemProps) {
   const row = (
     <Pressable
@@ -42,6 +45,11 @@ export function TeamListItem({
         <Text className="text-heading-small text-text-normal">{name}</Text>
         <Text className="text-body-small text-text-neutral">{description}</Text>
       </View>
+      {badgeLabel && (
+        <View className="rounded-2xl bg-background-alternative px-2.5 py-1">
+          <Text className="text-caption-main text-primary-normal">{badgeLabel}</Text>
+        </View>
+      )}
       {onEditPress || onDeletePress ? (
         <View className="flex-row items-center gap-5">
           {onEditPress && (

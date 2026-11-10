@@ -93,5 +93,11 @@
   "앞쪽 10건만 보여드려요. 전체는 엑셀로 내려받을 수 있어요.": "Showing only the first 10. Download the Excel file for everything.",
   "공지 수정": "Edit notice",
   "수정하는 중...": "Saving...",
-  "등록": "Add"
+  "등록": "Add",
+  "팔로워 노트 관리": "Follower notes",
+  "새 노트 {{count}}": "{{count}} new",
+  "노트 {{count}}개": "{{count}} notes",
+  "아직 노트가 없어요": "No notes yet",
+  "목록을 불러오고 있어요.": "Loading…",
+  "표시할 항목이 없어요.": "Nothing to show."
 }

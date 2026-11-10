@@ -12,6 +12,7 @@ import {
   toDayLabel,
   toKstDate,
 } from '../../common/utils/date';
+import { markFollowerNotesViewed } from '../admin/admin-follower-notes.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
@@ -39,6 +40,8 @@ export class FollowerNotesService {
 
   async findAll(requesterId: string, cellId: string): Promise<FollowerNoteInfo[]> {
     const { isAdmin } = await this.assertCanView(requesterId, cellId);
+    // 관리자가 연 시각을 남긴다 — 팔로워 노트 관리 목록의 "새 노트" 기준 (SCRUM-181).
+    if (isAdmin) await markFollowerNotesViewed(this.prisma, requesterId, { cellId });
 
     const notes = await this.prisma.followerNote.findMany({
       where: { meeting: { cellId } },

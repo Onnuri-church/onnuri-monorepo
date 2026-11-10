@@ -176,6 +176,7 @@ model User {
   teamFollowerNotes        TeamFollowerNote[]        @relation("TeamFollowerNoteAuthor")
   teamFollowerNotesEdited  TeamFollowerNote[]        @relation("TeamFollowerNoteEditor")
   teamFollowerNoteComments TeamFollowerNoteComment[]
+  followerNoteViews        FollowerNoteView[]
   posts                  Post[]
   comments               Comment[]
   postLikes              PostLike[]
@@ -236,6 +237,7 @@ model Team {
   chatRooms   ChatRoom[]
   boardPosts  TeamBoardPost[]
   followerNotes TeamFollowerNote[]
+  followerNoteViews FollowerNoteView[]
 }
 
 // 단톡방 메시지 — 팀 단톡방(roomId)과 셀 단톡방(cellId)이 같은 구조를 쓴다 (둘 중 하나만 채운다).
@@ -501,6 +503,7 @@ model Cell {
   posts       Post[]
   images      Image[]
   messages    ChatMessage[]
+  followerNoteViews FollowerNoteView[]
 }
 
 model CellMembership {
@@ -674,6 +677,22 @@ model TeamFollowerNote {
   comments TeamFollowerNoteComment[]
 
   @@index([teamId, createdAt])
+}
+
+// 관리자가 셀·팀 팔로워 노트 게시판을 마지막으로 연 시각 (SCRUM-181) — 관리 목록의 "새 노트 N" 기준.
+// 한 행은 셀 하나 또는 팀 하나(cellId·teamId 중 하나만 채운다). 관리자가 그 게시판을 열 때마다 갱신한다.
+model FollowerNoteView {
+  id       String   @id @default(cuid())
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId   String
+  cell     Cell?    @relation(fields: [cellId], references: [id], onDelete: Cascade)
+  cellId   String?
+  team     Team?    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  teamId   String?
+  viewedAt DateTime
+
+  @@unique([userId, cellId])
+  @@unique([userId, teamId])
 }
 
 model TeamFollowerNoteComment {
