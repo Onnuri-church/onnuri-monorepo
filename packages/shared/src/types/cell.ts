@@ -99,6 +99,8 @@ export interface FollowerNoteInfo {
   id: string;
   /** 셀모임 날짜 — "2026.08.02" */
   dateLabel: string;
+  /** 셀모임 연도 — 게시판 연·월 필터용 */
+  year: number;
   /** 셀모임 달 (1~12) — 게시판 월 필터용 */
   month: number;
   /** "(일) 셀모임" */

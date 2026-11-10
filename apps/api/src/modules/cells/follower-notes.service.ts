@@ -72,6 +72,7 @@ export class FollowerNotesService {
       return {
         id: note.id,
         dateLabel: toDateLabel(meetingDate),
+        year: meetingDate.getUTCFullYear(),
         month: meetingDate.getUTCMonth() + 1,
         meetingLabel: `(${WEEKDAY_LABELS[meetingDate.getUTCDay()]}) 셀모임`,
         authorName: note.author.name,

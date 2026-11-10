@@ -13,6 +13,8 @@ interface CommentInputProps {
   /** 로그인한 사용자 프로필 사진. 없으면(게스트 포함) 기본 프로필 이미지(OY 심볼)가 나온다. */
   avatarUrl?: string | null;
   placeholder?: string;
+  /** 입력창이 목록 안에 있을 때 키보드에 가리지 않게 스크롤하려고 받는다. */
+  onFocus?: () => void;
 }
 
 // 시안 확정값(402pt 프레임): 아바타 36, 전송 36, 간격 8, 입력창 높이 36.
@@ -25,6 +27,7 @@ export function CommentInput({
   onSubmit,
   avatarUrl,
   placeholder,
+  onFocus,
 }: CommentInputProps) {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
@@ -59,6 +62,7 @@ export function CommentInput({
           placeholder={placeholder ?? t("댓글을 입력하세요")}
           placeholderTextColor={themeColors.text.alternative}
           onSubmitEditing={canSubmit ? onSubmit : undefined}
+          onFocus={onFocus}
           returnKeyType="send"
         />
       )}
