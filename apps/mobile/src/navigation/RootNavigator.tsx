@@ -11,6 +11,7 @@ import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
 import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
 import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
+import { AdminFollowerNotesScreen } from "../features/admin/AdminFollowerNotesScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
@@ -713,6 +714,15 @@ export function RootNavigator() {
                 />
               ),
             })}
+          />
+          {/* 팔로워 노트 관리 (SCRUM-181) — 셀·팀 노트 목록 → 각 게시판 */}
+          <Stack.Screen
+            name="AdminFollowerNotes"
+            component={AdminFollowerNotesScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팔로워 노트 관리")} />,
+            }}
           />
           <Stack.Screen
             name="AdminCellManage"

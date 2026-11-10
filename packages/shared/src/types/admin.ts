@@ -1,3 +1,4 @@
+import type { CellSummary, TeamSummary } from "./user";
 // 관리자 화면 전용 집계 계약 (회원 관리 계약은 user.ts에 있다 — GET /users 계열과 묶여 있어서).
 
 /** 출석표 칸 하나 — O=출석, X=결석, -=셀모임이 없던 주(결석 아님, docs/erd.md) */
@@ -107,4 +108,20 @@ export interface AdminDownloadPreview {
       weekTotal: number;
     }[];
   } | null;
+}
+
+// ── 팔로워 노트 관리 (SCRUM-181) ─────────────────────────────────────────
+
+/** 관리 목록 행에 붙는 노트 수 — newCount는 이 관리자가 그 게시판을 마지막으로 연 뒤 새로 올라온 노트 수 */
+export interface FollowerNoteCounts {
+  newCount: number;
+  totalCount: number;
+  /** 가장 최근 노트 작성 시각 (ISO) — 없으면 null */
+  lastNoteAt: string | null;
+}
+
+/** GET /admin/follower-notes 응답 — 마이페이지 > 팔로워 노트 관리의 셀·팀 탭 목록 */
+export interface AdminFollowerNoteOverview {
+  cells: (CellSummary & FollowerNoteCounts)[];
+  teams: (TeamSummary & FollowerNoteCounts)[];
 }

@@ -119,6 +119,7 @@ export type RootStackParamList = {
   // 셀 관리 — 전체 셀 목록에서 생성(헤더)·편집·삭제(행 스와이프). 폼은 생성/편집 겸용이라
   // cellId가 있으면 편집 모드다.
   AdminCellManage: undefined;
+  AdminFollowerNotes: undefined;
   AdminCellForm: { cellId?: string } | undefined;
   AdminMemberList: undefined;
   AdminMemberDetail: { memberId: string };
