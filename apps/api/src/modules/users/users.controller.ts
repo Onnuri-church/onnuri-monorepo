@@ -18,6 +18,7 @@ import { RegisterPushTokenDto } from './dto/register-push-token.dto';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 import { UpdateMyAvatarDto } from './dto/update-my-avatar.dto';
+import { UpdateConsentDto } from './dto/update-consent.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UsersService } from './users.service';
 
@@ -51,6 +52,16 @@ export class UsersController {
   @Delete('me')
   withdrawMe(@CurrentUser() user: JwtPayload) {
     return this.usersService.withdrawMe(user.sub);
+  }
+
+  // 개인정보 동의 (필수·민감정보) — 동의 화면과 설정의 민감정보 토글이 부른다.
+  @UseGuards(JwtAuthGuard)
+  @Patch('me/consent')
+  updateConsent(
+    @CurrentUser() user: JwtPayload,
+    @Body() dto: UpdateConsentDto,
+  ) {
+    return this.usersService.updateConsent(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)

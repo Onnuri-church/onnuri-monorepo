@@ -134,6 +134,12 @@ model User {
   notifyComment      Boolean @default(true)
   notifyFollowerNote Boolean @default(true)
 
+  // 개인정보 동의 — 필수 동의는 처리방침 버전과 함께 기록해, 방침이 바뀌면 다시 받는다.
+  // 민감정보(큐티·기도제목 등 신앙 관련 글) 동의는 선택이고, 없으면 그 글쓰기만 막는다 (SCRUM-175).
+  privacyConsentAt      DateTime?
+  privacyConsentVersion String?
+  sensitiveConsentAt    DateTime?
+
   withdrawnAt DateTime? // 탈퇴 soft delete — 출석·게시글 이력 보존
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

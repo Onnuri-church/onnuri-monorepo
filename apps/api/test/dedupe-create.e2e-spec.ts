@@ -63,6 +63,11 @@ describe('Dedupe create (e2e)', () => {
     await cleanup();
     token = await login('me');
     otherToken = await login('other');
+    // 기도제목·큐티 작성은 민감정보 동의가 필요하다 (SCRUM-175).
+    await prisma.user.updateMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+      data: { sensitiveConsentAt: new Date() },
+    });
   });
 
   afterAll(async () => {

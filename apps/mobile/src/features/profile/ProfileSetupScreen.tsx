@@ -1,3 +1,4 @@
+import axios from "axios";
 import { useNavigation } from "@react-navigation/native";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
@@ -163,8 +164,17 @@ export function ProfileSetupScreen() {
           navigation.goBack();
         }
       }
-    } catch {
-      Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
+    } catch (error) {
+      // 만 14세 미만 등 입력값 문제는 서버가 400과 이유를 준다 — 번역 키가 한국어 원문이라 그대로 t에 넘긴다.
+      const message =
+        axios.isAxiosError(error) && error.response?.status === 400
+          ? (error.response.data as { message?: unknown }).message
+          : undefined;
+      if (typeof message === "string") {
+        Alert.alert(t("프로필 저장에 실패했습니다"), t(message));
+      } else {
+        Alert.alert(t("프로필 저장에 실패했습니다"), t("잠시 후 다시 시도해 주세요."));
+      }
     } finally {
       setSubmitting(false);
     }

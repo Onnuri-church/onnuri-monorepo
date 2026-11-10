@@ -23,6 +23,7 @@ import type { BoardType } from '../../../generated/prisma';
 import { toDateLabel, toDayLabel, toKstDate } from '../../common/utils/date';
 import { CellAccessService } from '../cells/cell-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { assertSensitiveConsent } from '../../common/utils/consent';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateQtShareDto } from './dto/create-qt-share.dto';
@@ -381,6 +382,7 @@ export class PostsService {
     userId: string,
     dto: CreateQtShareDto,
   ): Promise<QtShareDetail> {
+    await assertSensitiveConsent(this.prisma, userId);
     const post = await this.prisma.post.create({
       data: {
         board: 'QT_SHARE',

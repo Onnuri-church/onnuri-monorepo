@@ -20,6 +20,7 @@ import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
+import { UpdateConsentDto } from './dto/update-consent.dto';
 import { UpdateMyProfileDto } from './dto/update-my-profile.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 
@@ -35,6 +36,20 @@ const WITHDRAWN_PROFILE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 // (2026-11-10 변경: 기명 무기한 보존 → 1년 후 익명. 출석 수 등 통계는 그대로 남는다).
 const WITHDRAWN_NAME_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
 export const WITHDRAWN_DISPLAY_NAME = '탈퇴한 회원';
+
+// 지금 시행 중인 개인정보처리방침의 버전 — 방침 내용이 바뀌면 올린다. 동의한 버전이 이것과
+// 다르면 privacyConsented가 false가 되어 앱이 동의 화면을 다시 띄운다.
+export const PRIVACY_POLICY_VERSION = '2026-11';
+
+// 가입할 수 있는 최소 나이 (처리방침 "만 14세 미만 아동은 가입을 받지 않습니다").
+const MIN_SIGNUP_AGE = 14;
+
+// 생년월일(YYYY-MM-DD)과 오늘(한국 날짜) 기준 만 나이.
+function ageOn(birthYmd: string, todayYmd: string): number {
+  const [by, bm, bd] = birthYmd.split('-').map(Number);
+  const [ty, tm, td] = todayYmd.split('-').map(Number);
+  return ty - by - (tm < bm || (tm === bm && td < bd) ? 1 : 0);
+}
 
 @Injectable()
 export class UsersService {
@@ -57,12 +72,17 @@ export class UsersService {
         intro: true,
         isAdmin: true,
         createdAt: true,
+        privacyConsentVersion: true,
+        sensitiveConsentAt: true,
       },
     });
     if (!user) return null;
 
+    const { privacyConsentVersion, sensitiveConsentAt, ...rest } = user;
     return {
-      ...user,
+      ...rest,
+      privacyConsented: privacyConsentVersion === PRIVACY_POLICY_VERSION,
+      sensitiveConsented: sensitiveConsentAt !== null,
       // 계약: birthDate는 YYYY-MM-DD (나이는 클라이언트가 계산), createdAt은 ISO 문자열
       birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
       createdAt: user.createdAt.toISOString(),
@@ -646,10 +666,37 @@ export class UsersService {
     await this.prisma.pushToken.deleteMany({ where: { token, userId } });
   }
 
+  // 동의 기록 — 필수 동의는 현재 방침 버전으로 남기고, 민감정보 동의는 켜고 끌 수 있다.
+  async updateConsent(
+    userId: string,
+    dto: UpdateConsentDto,
+  ): Promise<User> {
+    const now = new Date();
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        ...(dto.privacy && {
+          privacyConsentAt: now,
+          privacyConsentVersion: PRIVACY_POLICY_VERSION,
+        }),
+        ...(dto.sensitive !== undefined && {
+          sensitiveConsentAt: dto.sensitive ? now : null,
+        }),
+      },
+    });
+    const user = await this.findById(userId);
+    if (!user) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    return user;
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,
   ): Promise<MeResponse> {
+    const todayYmd = kstToday().toISOString().slice(0, 10);
+    if (ageOn(dto.birthDate, todayYmd) < MIN_SIGNUP_AGE) {
+      throw new BadRequestException('만 14세 미만은 가입할 수 없어요.');
+    }
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({

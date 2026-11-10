@@ -156,6 +156,47 @@ describe('Users (e2e)', () => {
     });
   });
 
+  describe('개인정보 동의 (PATCH /users/me/consent)', () => {
+    const consent = (body: Record<string, unknown>) =>
+      request(app.getHttpServer())
+        .patch('/users/me/consent')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(body);
+
+    it('동의 전에는 privacyConsented·sensitiveConsented가 false다', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      const body = res.body as UserBody & { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(false);
+      expect(body.sensitiveConsented).toBe(false);
+    });
+
+    it('토큰 없이 401', () =>
+      request(app.getHttpServer()).patch('/users/me/consent').send({ privacy: true }).expect(401));
+
+    it('필수 동의를 false로 보내면 400 (철회는 회원탈퇴로)', () =>
+      consent({ privacy: false }).expect(400));
+
+    it('필수·민감정보 동의를 저장한다', async () => {
+      const res = await consent({ privacy: true, sensitive: true }).expect(200);
+      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(true);
+      expect(body.sensitiveConsented).toBe(true);
+      const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      expect(row.privacyConsentAt).not.toBeNull();
+      expect(row.privacyConsentVersion).not.toBeNull();
+    });
+
+    it('민감정보 동의만 철회할 수 있고 필수 동의는 남는다', async () => {
+      const res = await consent({ sensitive: false }).expect(200);
+      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      expect(body.privacyConsented).toBe(true);
+      expect(body.sensitiveConsented).toBe(false);
+    });
+  });
+
   describe('프로필 등록 (PATCH /users/me)', () => {
     it('등록 전에는 profileCompleted가 false다 (온보딩 분기 기준)', async () => {
       const res = await request(app.getHttpServer())
@@ -192,6 +233,16 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ ...validBody(), cellId: undefined })
         .expect(400));
+
+    it('만 14세 미만이면 400 (가입 불가)', () => {
+      const tenYearsAgo = new Date();
+      tenYearsAgo.setFullYear(tenYearsAgo.getFullYear() - 10);
+      return request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ ...validBody(), birthDate: tenYearsAgo.toISOString().slice(0, 10) })
+        .expect(400);
+    });
 
     it('존재하지 않는 셀이면 400', () =>
       request(app.getHttpServer())

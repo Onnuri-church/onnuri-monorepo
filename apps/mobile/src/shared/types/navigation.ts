@@ -149,9 +149,10 @@ export type RootStackParamList = {
 };
 
 // 로그인 전(unauthenticated)·신규 가입 직후(onboarding)에 마운트되는 스택.
-// 세션 상태에 따라 화면이 하나만 등록된다 — unauthenticated면 Login, onboarding이면
-// ProfileSetup (RootNavigator 참고).
+// 세션 상태에 따라 화면이 하나만 등록된다 — 방침 미동의면 Consent, unauthenticated면 Login,
+// onboarding이면 ProfileSetup (RootNavigator 참고).
 export type AuthStackParamList = {
+  Consent: undefined;
   Login: undefined;
   ProfileSetup: undefined;
 };
