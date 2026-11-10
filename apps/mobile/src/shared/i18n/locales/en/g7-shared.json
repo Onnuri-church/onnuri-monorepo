@@ -80,5 +80,9 @@
   "수정을 그만할까요?": "Stop editing?",
   "수정한 내용은 저장되지 않아요.": "Your changes won't be saved.",
   "계속 수정": "Keep editing",
-  "나가기": "Leave"
+  "나가기": "Leave",
+  "청년부 소식을 놓치지 마세요!": "Don't miss youth group news!",
+  "공지사항, 설교 영상, 라이브 예배, 댓글 소식을 알림으로 받아볼 수 있어요.": "Get notified about notices, sermon videos, live worship, and comments.",
+  "(설정 > 알림 설정에서 바꿀 수 있어요)": "(You can change this in Settings > Notifications)",
+  "알림 보지 않기": "Don't show again"
 }

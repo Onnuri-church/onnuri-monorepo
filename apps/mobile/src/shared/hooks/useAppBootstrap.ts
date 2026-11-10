@@ -9,7 +9,8 @@ const MIN_SPLASH_DURATION_MS = 1500;
 
 // 앱이 처음 뜰 때 한 번 도는 준비 작업. 끝나면 useAuthStore의 session이 loading에서 벗어나고,
 // RootNavigator가 스플래시 대신 실제 화면 트리를 그린다.
-export function useAppBootstrap() {
+// enabled가 false면(앱 접근 권한 안내를 아직 안 본 첫 실행) 기다린다 — 안내를 마친 뒤 스플래시가 뜨게 (SCRUM-184).
+export function useAppBootstrap(enabled = true) {
   const status = useAuthStore((state) => state.session.status);
   const setSession = useAuthStore((state) => state.setSession);
   const startOnboarding = useAuthStore((state) => state.startOnboarding);
@@ -18,7 +19,7 @@ export function useAppBootstrap() {
   useEffect(() => {
     // 이미 확정된 뒤면 다시 돌리지 않는다 — 개발 중 fast refresh로 이 훅이 재실행돼도
     // 로그인해둔 세션이 초기화되지 않게 한다.
-    if (status !== "loading") {
+    if (!enabled || status !== "loading") {
       return;
     }
 
@@ -38,5 +39,5 @@ export function useAppBootstrap() {
         clearSession();
       }
     });
-  }, [status, setSession, startOnboarding, clearSession]);
+  }, [enabled, status, setSession, startOnboarding, clearSession]);
 }

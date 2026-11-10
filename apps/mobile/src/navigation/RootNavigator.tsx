@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { View } from "react-native";
 
 import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
 import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
@@ -169,8 +170,9 @@ export function RootNavigator() {
     },
   };
 
-  useAppBootstrap();
   const permissionGuideSeen = usePermissionGuideStore((state) => state.seen);
+  // 첫 실행이면 앱 접근 권한 안내 → (확인) → 스플래시 → 로그인/메인 순서다 — 안내를 보는 동안 세션 복원을 미룬다.
+  useAppBootstrap(permissionGuideSeen === true);
 
   // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
   // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
@@ -180,12 +182,16 @@ export function RootNavigator() {
     }
   }, [session.status]);
 
-  if (session.status === "loading" || permissionGuideSeen === null) {
-    return <SplashScreen />;
+  // 저장소를 읽는 아주 짧은 순간은 빈 화면 — 여기서 스플래시를 띄우면 첫 실행에 스플래시 → 안내 → 스플래시가 된다.
+  if (permissionGuideSeen === null) {
+    return <View className="flex-1 bg-background-normal" />;
   }
-  // 이 기기에서 처음 연 경우 — 로그인·동의보다 먼저 앱 접근 권한 안내를 한 번 보여준다 (SCRUM-184).
+  // 이 기기에서 처음 연 경우 — 스플래시보다 먼저 앱 접근 권한 안내를 한 번 보여준다 (SCRUM-184).
   if (!permissionGuideSeen) {
     return <PermissionGuideScreen />;
+  }
+  if (session.status === "loading") {
+    return <SplashScreen />;
   }
 
   // 현재 방침에 동의하지 않은 로그인 유저(신규 가입·기존 회원 모두)는 동의 화면만 본다 (SCRUM-175).
