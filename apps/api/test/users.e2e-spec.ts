@@ -195,6 +195,30 @@ describe('Users (e2e)', () => {
       expect(body.privacyConsented).toBe(true);
       expect(body.sensitiveConsented).toBe(false);
     });
+
+    it('동의하지 않고 나가면 막 가입한 계정은 지워진다 (SCRUM-183)', async () => {
+      const login = await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
+        .send({ email: `decline@${EMAIL_DOMAIN}` })
+        .expect(201);
+      const body = login.body as { accessToken: string; user: { id: string } };
+      const res = await request(app.getHttpServer())
+        .post('/users/me/consent/decline')
+        .set('Authorization', `Bearer ${body.accessToken}`)
+        .expect(200);
+      expect((res.body as { deleted: boolean }).deleted).toBe(true);
+      expect(await prisma.user.findUnique({ where: { id: body.user.id } })).toBeNull();
+    });
+
+    it('이미 동의한 회원은 나가기를 눌러도 지워지지 않는다', async () => {
+      const res = await request(app.getHttpServer())
+        .post('/users/me/consent/decline')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect((res.body as { deleted: boolean }).deleted).toBe(false);
+      expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
+    });
   });
 
   describe('프로필 등록 (PATCH /users/me)', () => {

@@ -689,6 +689,27 @@ export class UsersService {
     return user;
   }
 
+  // 동의 화면에서 "동의하지 않고 나가기" (SCRUM-183). 소셜 로그인 순간 계정이 먼저 만들어지므로,
+  // 한 번도 동의하지 않았고 프로필도 없는 막 가입한 계정은 바로 지운다 — 동의 전에는 정보를 남기지 않는다.
+  // 소셜 연결·토큰·푸시 토큰은 cascade로 같이 지워진다. 이미 가입을 마친 기존 회원(방침 개정으로 다시
+  // 묻는 경우)이나 다른 기록이 걸린 계정은 지우지 않는다 — 그 경우 앱은 로그아웃만 한다.
+  async declineConsent(userId: string): Promise<{ deleted: boolean }> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { privacyConsentAt: true, birthDate: true, gender: true, phone: true },
+    });
+    if (!user || user.privacyConsentAt !== null) return { deleted: false };
+    const profileStarted = user.birthDate !== null || user.gender !== null || user.phone !== null;
+    if (profileStarted) return { deleted: false };
+    try {
+      await this.prisma.user.delete({ where: { id: userId } });
+      return { deleted: true };
+    } catch {
+      // 지울 수 없게 걸린 기록(외래키)이 있으면 남겨 둔다 — 정상 흐름에선 생기지 않는다.
+      return { deleted: false };
+    }
+  }
+
   async updateMyProfile(
     userId: string,
     dto: UpdateMyProfileDto,

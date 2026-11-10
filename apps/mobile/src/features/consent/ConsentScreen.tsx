@@ -4,12 +4,11 @@ import { useTranslation } from "react-i18next";
 import { Alert, Linking, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { signOut } from "../../shared/api/session";
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
 import { PressableScale } from "../../shared/components/base/PressableScale";
 import { colors } from "../../shared/theme/tokens";
-import { PRIVACY_POLICY_URL, submitConsent } from "./api";
+import { PRIVACY_POLICY_URL, declineConsent, submitConsent } from "./api";
 
 // 개인정보 동의 화면 — 처음 가입할 때(프로필 설정 앞)와, 이미 가입한 회원이 아직 현재 방침에
 // 동의하지 않았을 때 RootNavigator가 이 화면만 그린다 (SCRUM-175).
@@ -94,8 +93,8 @@ export function ConsentScreen() {
           disabled={!privacy}
           loading={submitting}
         />
-        {/* 동의하지 않으면 가입·이용을 진행할 수 없다 — 세션을 정리하고 로그인 화면으로 돌아간다. */}
-        <PressableScale className="items-center py-2" scaleTo={0.94} onPress={() => void signOut()}>
+        {/* 동의하지 않으면 가입·이용을 진행할 수 없다 — 막 가입한 계정이면 지우고(SCRUM-183), 로그인 화면으로 돌아간다. */}
+        <PressableScale className="items-center py-2" scaleTo={0.94} onPress={() => void declineConsent()}>
           <Text className="text-body-small text-text-alternative">{t("동의하지 않고 나가기")}</Text>
         </PressableScale>
       </View>
