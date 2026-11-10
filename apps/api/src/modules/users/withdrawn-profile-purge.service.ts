@@ -3,8 +3,9 @@ import { Cron } from '@nestjs/schedule';
 
 import { UsersService } from './users.service';
 
-// 탈퇴 30일이 지난 계정의 프로필(생년월일·성별·연락처·사진·소개)을 지운다 — 매일 한 번
-// (2026-09-08 확정 정책, docs/erd.md). 이름과 출석·활동 기록은 기명 보존이라 건드리지 않는다.
+// 탈퇴 계정 정리 — 매일 한 번 (보관 정책은 docs/erd.md).
+// 30일 지나면 프로필(생년월일·성별·연락처·사진·소개) 파기, 1년 지나면 이름 익명 처리.
+// 출석·글·댓글 행은 지우지 않는다 (통계 유지).
 @Injectable()
 export class WithdrawnProfilePurgeService implements OnApplicationBootstrap {
   private readonly logger = new Logger(WithdrawnProfilePurgeService.name);
@@ -26,10 +27,16 @@ export class WithdrawnProfilePurgeService implements OnApplicationBootstrap {
   // 매일 한국 시간 새벽 3시(서버 UTC 18시).
   @Cron('0 18 * * *')
   async purge(): Promise<void> {
-    const count = await this.usersService.purgeWithdrawnProfiles();
-    if (count > 0) {
+    const purged = await this.usersService.purgeWithdrawnProfiles();
+    if (purged > 0) {
       this.logger.log(
-        `탈퇴 30일이 지난 회원 ${count}명의 프로필을 파기했습니다`,
+        `탈퇴 30일이 지난 회원 ${purged}명의 프로필을 파기했습니다`,
+      );
+    }
+    const anonymized = await this.usersService.anonymizeWithdrawnNames();
+    if (anonymized > 0) {
+      this.logger.log(
+        `탈퇴 1년이 지난 회원 ${anonymized}명의 이름을 익명 처리했습니다`,
       );
     }
   }

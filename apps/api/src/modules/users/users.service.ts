@@ -31,6 +31,11 @@ export function withdrawnEmail(userId: string): string {
 // 탈퇴 후 프로필을 보관하는 기간 (2026-09-08 확정: 30일 후 파기).
 const WITHDRAWN_PROFILE_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 
+// 탈퇴 후 이름(출석·글·댓글의 작성자 표시)을 남겨 두는 기간 — 지나면 익명 처리한다
+// (2026-11-10 변경: 기명 무기한 보존 → 1년 후 익명. 출석 수 등 통계는 그대로 남는다).
+const WITHDRAWN_NAME_RETENTION_MS = 365 * 24 * 60 * 60 * 1000;
+export const WITHDRAWN_DISPLAY_NAME = '탈퇴한 회원';
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -310,8 +315,8 @@ export class UsersService {
     return this.findDetailForAdmin(id);
   }
 
-  // 회원 삭제 (관리자 전용) — 본인 탈퇴와 같은 처리(withdrawOps). 출석·활동 기록은 기명 보존이고
-  // 프로필 파기는 30일 배치(WithdrawnProfilePurgeService) 소관 (2026-09-08 확정).
+  // 회원 삭제 (관리자 전용) — 본인 탈퇴와 같은 처리(withdrawOps). 이후 프로필 파기(30일)·
+  // 이름 익명 처리(1년)는 WithdrawnProfilePurgeService 소관.
   async withdrawByAdmin(id: string): Promise<{ id: string }> {
     const target = await this.prisma.user.findFirst({
       where: { id, withdrawnAt: null },
@@ -330,8 +335,8 @@ export class UsersService {
   // 예전 계정이 살아나지 않고 새로 가입되게 한다 — 로그인 수단 연결을 끊고, 이메일은 바로
   // 예약 도메인으로 바꾼다 (이메일이 유니크라 원래 값이 남아 있으면 같은 이메일로 새로 가입할
   // 수 없고, 로그인이 이메일로 예전 계정을 다시 찾아 연결해 버린다). 세션·푸시 토큰도 지워
-  // 탈퇴 즉시 로그아웃되게 한다. 이름과 출석·활동 기록은 기명 보존, 나머지 프로필(생년월일·
-  // 성별·연락처·사진·소개)은 30일 뒤 배치가 지운다 (2026-09-08 확정, docs/erd.md).
+  // 탈퇴 즉시 로그아웃되게 한다. 나머지 프로필(생년월일·성별·연락처·사진·소개)은 30일 뒤,
+  // 이름은 1년 뒤 배치가 정리한다 (보관 정책은 docs/erd.md).
   private withdrawOps(userId: string, now: Date) {
     return [
       this.prisma.user.update({
@@ -364,8 +369,22 @@ export class UsersService {
     ]);
   }
 
-  // 탈퇴 30일이 지난 계정의 프로필 파기 — 이름은 기명 보존 정책이라 남긴다.
+  // 탈퇴 30일이 지난 계정의 프로필 파기 — 이름은 1년까지 남긴다 (anonymizeWithdrawnNames).
   // 사진 파일은 창고에서도 지운다 (실패해도 deleteByUrl이 경고만 남긴다).
+  // 탈퇴 1년이 지난 계정의 이름을 익명으로 바꾼다 — 출석·글·댓글은 남지만 누구 것인지
+  // 알 수 없게 된다. 이미 익명인 계정은 건드리지 않는다.
+  async anonymizeWithdrawnNames(now = new Date()): Promise<number> {
+    const cutoff = new Date(now.getTime() - WITHDRAWN_NAME_RETENTION_MS);
+    const result = await this.prisma.user.updateMany({
+      where: {
+        withdrawnAt: { lte: cutoff },
+        name: { not: WITHDRAWN_DISPLAY_NAME },
+      },
+      data: { name: WITHDRAWN_DISPLAY_NAME },
+    });
+    return result.count;
+  }
+
   async purgeWithdrawnProfiles(now = new Date()): Promise<number> {
     const cutoff = new Date(now.getTime() - WITHDRAWN_PROFILE_RETENTION_MS);
     const targets = await this.prisma.user.findMany({

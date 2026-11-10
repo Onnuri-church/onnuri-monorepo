@@ -558,31 +558,63 @@ describe('Auth (e2e)', () => {
       expect(next.user.id).not.toBe(current.user.id);
     });
 
+    // 배치는 공용 개발 DB의 모든 탈퇴 계정에 적용되므로, 미래 시각을 넘기지 않고 테스트 계정의
+    // 탈퇴일을 과거로 돌려서 확인한다 — 다른 계정에는 실제 배치와 같은 결과만 생긴다.
+    const daysAgo = (days: number) =>
+      new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
     it('탈퇴 30일이 지나면 프로필을 지우고 이름은 남긴다', async () => {
       const id = withdrawnUserIds[0];
+      const users = app.get(UsersService);
       await prisma.user.update({
         where: { id },
         data: {
+          withdrawnAt: daysAgo(29),
           phone: '010-0000-0000',
           birthDate: new Date('2000-01-01'),
           intro: '소개',
         },
       });
-      const users = app.get(UsersService);
 
       // 아직 30일 전이면 그대로
-      await users.purgeWithdrawnProfiles(new Date());
+      await users.purgeWithdrawnProfiles();
       expect((await prisma.user.findUnique({ where: { id } }))?.phone).toBe(
         '010-0000-0000',
       );
 
-      const after31Days = new Date(Date.now() + 31 * 24 * 60 * 60 * 1000);
-      await users.purgeWithdrawnProfiles(after31Days);
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(31) },
+      });
+      await users.purgeWithdrawnProfiles();
       const purged = await prisma.user.findUnique({ where: { id } });
       expect(purged?.phone).toBeNull();
       expect(purged?.birthDate).toBeNull();
       expect(purged?.intro).toBeNull();
       expect(purged?.name).toBe('탈퇴할사람');
+    });
+
+    it('탈퇴 1년이 지나면 이름을 익명 처리한다 (출석·글 행은 남는다)', async () => {
+      const id = withdrawnUserIds[0];
+      const users = app.get(UsersService);
+
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(300) },
+      });
+      await users.anonymizeWithdrawnNames();
+      expect((await prisma.user.findUnique({ where: { id } }))?.name).toBe(
+        '탈퇴할사람',
+      );
+
+      await prisma.user.update({
+        where: { id },
+        data: { withdrawnAt: daysAgo(366) },
+      });
+      await users.anonymizeWithdrawnNames();
+      expect((await prisma.user.findUnique({ where: { id } }))?.name).toBe(
+        '탈퇴한 회원',
+      );
     });
   });
 });
