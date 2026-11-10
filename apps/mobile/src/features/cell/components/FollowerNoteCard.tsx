@@ -42,7 +42,7 @@ interface FollowerNoteCardProps {
   onComposerFocus: () => void;
 }
 
-// 팔로워 노트 게시판의 카드. 접혀 있을 땐 날짜·작성자만 깔끔하게, 머리를 누르면 그 자리에서
+// 팔로워 노트 게시판의 카드. 접혀 있을 땐 날짜·작성자만 깔끔하게(화살표 없음), 머리를 누르면 그 자리에서
 // 3문항 내용 → 댓글 → 댓글 입력창이 카드 안에 펼쳐진다 (상세 화면 없음 — SCRUM-182).
 export function FollowerNoteCard({
   note,
@@ -94,9 +94,6 @@ export function FollowerNoteCard({
               <Icon name="more" size={24} color={colors.icon.normal} />
             </Pressable>
           )}
-          <View style={{ transform: [{ rotate: expanded ? "-90deg" : "90deg" }] }}>
-            <Icon name="expand-right" size={20} color={themeColors.icon.normal} />
-          </View>
         </View>
         <Text className="mt-1 text-caption-main text-text-neutral">
           {t("{{name}} 작성", { name: note.authorName })}

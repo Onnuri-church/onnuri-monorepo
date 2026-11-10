@@ -4,14 +4,16 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { FollowerNoteCommentInfo } from "@onnuri/shared";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
+import { FilterChip } from "../../shared/components/base/FilterChip";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
@@ -25,10 +27,9 @@ import {
 } from "./api";
 import { canWriteFollowerNote } from "./cellDetail";
 import { FollowerNoteCard, type MenuAnchor } from "./components/FollowerNoteCard";
-import { MonthPicker } from "./components/MonthPicker";
 
 // 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
-// "2026년 8월"을 누르면 월 달력이 펼쳐지고, 달이나 전체 기간을 고르면 목록이 걸러진다 (시안).
+// 위쪽 연·월 버튼(큐티나눔과 같은 PickerPill)으로 그 달 노트만 보고, 오른쪽 "전체 기간" 칩으로 전부 본다.
 // 상세 화면은 따로 두지 않는다 — 카드를 누르면 그 자리에서 내용·댓글·댓글 입력창이 펼쳐진다 (SCRUM-182).
 // 수정·삭제는 펼친 카드의 ⋮ 메뉴에만 둔다. 알림으로 들어오면(noteId) 그 노트를 펼쳐서 보여준다.
 export function FollowerNoteBoardScreen() {
@@ -48,9 +49,10 @@ export function FollowerNoteBoardScreen() {
   const addComment = useAddFollowerNoteComment(cellId);
   const updateComment = useUpdateFollowerNoteComment(cellId);
   const deleteComment = useDeleteFollowerNoteComment(cellId);
-  // null = 전체 기간
-  const [monthFilter, setMonthFilter] = useState<number | null>(new Date().getMonth() + 1);
-  const [calendarOpen, setCalendarOpen] = useState(false);
+  // 보고 있는 연·월과 전체 기간 여부 — 전체 기간을 켜도 연·월 버튼은 마지막 값을 그대로 보여준다.
+  const today = new Date();
+  const [pick, setPick] = useState({ year: today.getFullYear(), month: today.getMonth() + 1 });
+  const [showAll, setShowAll] = useState(false);
   const deleteDialogRef = useRef<AppDialogRef>(null);
   const deleteTargetId = useRef<string | null>(null);
 
@@ -71,10 +73,21 @@ export function FollowerNoteBoardScreen() {
   const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const pendingScrollId = useRef<string | null>(null);
 
-  const visibleNotes =
-    monthFilter === null
-      ? (notes ?? [])
-      : (notes ?? []).filter((note) => note.month === monthFilter);
+  const visibleNotes = showAll
+    ? (notes ?? [])
+    : (notes ?? []).filter((note) => note.year === pick.year && note.month === pick.month);
+  // 연도 선택지 — 노트가 있는 해 + 올해 (노트는 몇 년치만 쌓이므로 목록에서 바로 뽑는다).
+  const yearOptions = [...new Set([today.getFullYear(), ...(notes ?? []).map((note) => note.year)])]
+    .sort((a, b) => b - a)
+    .map((year) => ({ value: year, label: t("{{year}}년", { year }) }));
+  const monthOptions = Array.from({ length: 12 }, (_, index) => ({
+    value: index + 1,
+    label: t("{{month}}월", { month: index + 1 }),
+  }));
+  const handlePick = (next: { year: number; month: number }) => {
+    setPick(next);
+    setShowAll(false);
+  };
   const expandedNote = visibleNotes.find((note) => note.id === expandedId);
 
   const resetComposer = () => {
@@ -96,7 +109,8 @@ export function FollowerNoteBoardScreen() {
     handledTarget.current = true;
     const target = notes.find((note) => note.id === targetNoteId);
     if (!target) return;
-    setMonthFilter(target.month);
+    setPick({ year: target.year, month: target.month });
+    setShowAll(false);
     expand(target.id);
   }, [notes, targetNoteId]);
 
@@ -204,6 +218,24 @@ export function FollowerNoteBoardScreen() {
           {cell?.name ?? ""}
         </Text>
 
+        <View className="flex-row items-center justify-between px-5 pb-1 pt-4">
+          <View className="flex-row items-center gap-2">
+            <PickerPill
+              label={t("{{year}}년", { year: pick.year })}
+              options={yearOptions}
+              selected={pick.year}
+              onSelect={(year) => handlePick({ year, month: pick.month })}
+            />
+            <PickerPill
+              label={t("{{month}}월", { month: pick.month })}
+              options={monthOptions}
+              selected={pick.month}
+              onSelect={(month) => handlePick({ year: pick.year, month })}
+            />
+          </View>
+          <FilterChip label={t("전체 기간")} selected={showAll} onPress={() => setShowAll((prev) => !prev)} />
+        </View>
+
         <ScrollView
           ref={scrollRef}
           contentContainerClassName="px-5 pt-5"
@@ -219,34 +251,8 @@ export function FollowerNoteBoardScreen() {
           // 안전영역은 바깥 틀이 띄우므로 여기는 FAB에 마지막 카드가 가리지 않을 만큼만 둔다.
           contentContainerStyle={{ paddingBottom: 96 }}
         >
-          <Pressable
-            className="flex-row items-center gap-1 self-start"
-            onPress={() => setCalendarOpen((prev) => !prev)}
-          >
-            <Text className="text-heading-small text-text-normal">
-              {monthFilter === null ? t("전체 기간") : t("2026년 {{month}}월", { month: monthFilter })}
-            </Text>
-            <Icon name="arrow-drop-down" size={24} color={colors.icon.strong} />
-          </Pressable>
-
-          {calendarOpen && (
-            <View className="mt-4">
-              <MonthPicker
-                selectedMonth={monthFilter}
-                onSelectMonth={(month) => {
-                  setMonthFilter(month);
-                  setCalendarOpen(false);
-                }}
-                onSelectAll={() => {
-                  setMonthFilter(null);
-                  setCalendarOpen(false);
-                }}
-              />
-            </View>
-          )}
-
           <View
-            className="mt-6 gap-7"
+            className="gap-7"
             onLayout={(event) => {
               listY.current = event.nativeEvent.layout.y;
             }}
