@@ -35,6 +35,8 @@ import { CellNewsDetailScreen } from "../features/cell/CellNewsDetailScreen";
 import { CellNewsWriteScreen } from "../features/cell/CellNewsWriteScreen";
 import { FollowerNoteBoardScreen } from "../features/cell/FollowerNoteBoardScreen";
 import { FollowerNoteWriteScreen } from "../features/cell/FollowerNoteWriteScreen";
+import { TeamFollowerNoteBoardScreen } from "../features/follower-note/TeamFollowerNoteBoardScreen";
+import { TeamFollowerNoteWriteScreen } from "../features/follower-note/TeamFollowerNoteWriteScreen";
 import { useCell } from "../features/cell/api";
 import { canPostToCell } from "../features/cell/cellDetail";
 import { useMe } from "../features/profile/useMe";
@@ -402,7 +404,7 @@ export function RootNavigator() {
             component={TeamBoardScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title={t("팀 게시판")} rightAction="home" />,
+              header: () => <Header variant="sub" title={t("팀 활동 게시판")} rightAction="home" />,
             }}
           />
           <Stack.Screen
@@ -576,6 +578,29 @@ export function RootNavigator() {
                 <Header
                   variant="sub"
                   title={route.params?.noteId ? t("팔로워 노트 수정") : t("팔로워 노트 작성")}
+                  rightAction="none"
+                />
+              ),
+            })}
+          />
+          {/* 팀 팔로워 노트 (SCRUM-180) — 셀 노트와 같은 화면 구성 */}
+          <Stack.Screen
+            name="TeamFollowerNoteBoard"
+            component={TeamFollowerNoteBoardScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("팀 팔로워 노트")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="TeamFollowerNoteWrite"
+            component={TeamFollowerNoteWriteScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header
+                  variant="sub"
+                  title={route.params?.noteId ? t("팀 팔로워 노트 수정") : t("팀 팔로워 노트 작성")}
                   rightAction="none"
                 />
               ),

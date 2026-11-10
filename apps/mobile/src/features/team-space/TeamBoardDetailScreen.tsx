@@ -112,7 +112,7 @@ export function TeamBoardDetailScreen() {
       header: () => (
         <Header
           variant="sub"
-          title={t("팀 게시판")}
+          title={t("팀 활동 게시판")}
           rightAction={items.length > 0 ? "more" : "none"}
           menuItems={items}
         />

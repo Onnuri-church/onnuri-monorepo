@@ -23,7 +23,7 @@ export function TeamSpaceScreen() {
   return (
     <View className="flex-1 gap-4 bg-background-normal px-5 pt-6">
       <ManageLinkCard
-        title={t("팀 게시판")}
+        title={t("팀 활동 게시판")}
         description={t("팀원끼리 글·사진·파일을 나눠요")}
         onPress={() => navigation.navigate("TeamBoard", { teamId: params.teamId })}
         right={<UnreadBadge count={boardUnread ?? 0} />}
