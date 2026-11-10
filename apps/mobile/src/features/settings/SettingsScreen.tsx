@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation } from "@tanstack/react-query";
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { apiClient } from "../../shared/api/client";
@@ -19,7 +19,7 @@ import { useThemeStore } from "../../shared/store/useThemeStore";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { PRIVACY_POLICY_URL, submitConsent } from "../consent/api";
+import { submitConsent } from "../consent/api";
 import { BrightnessSlider } from "./components/BrightnessSlider";
 import { SettingRow } from "./components/SettingRow";
 
@@ -148,13 +148,19 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* 개인정보 — 처리방침 전문은 게스트도 볼 수 있다 */}
+        {/* 약관·개인정보 — 문서 전문은 게스트도 볼 수 있다 */}
         <View className="gap-2">
           <SectionLabel>{t("개인정보")}</SectionLabel>
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
+            {/* 문서 전문은 웹 대신 앱 안에서 보여준다 (SCRUM-184). */}
+            <SettingRow
+              title={t("서비스 이용약관")}
+              onPress={() => navigation.navigate("PolicyDocument", { kind: "terms" })}
+              right={<Icon name="expand-right" color={colors.primary.normal} />}
+            />
             <SettingRow
               title={t("개인정보 처리방침")}
-              onPress={() => void Linking.openURL(PRIVACY_POLICY_URL)}
+              onPress={() => navigation.navigate("PolicyDocument", { kind: "privacyPolicy" })}
               right={<Icon name="expand-right" color={colors.primary.normal} />}
             />
             {!isGuest && (

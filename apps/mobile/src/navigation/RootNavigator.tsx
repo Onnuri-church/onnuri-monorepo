@@ -59,6 +59,9 @@ import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
 import { ConsentScreen } from "../features/consent/ConsentScreen";
+import { PermissionGuideScreen } from "../features/consent/PermissionGuideScreen";
+import { PolicyDocumentScreen } from "../features/consent/PolicyDocumentScreen";
+import { POLICIES } from "../features/consent/policies";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrResultScreen } from "../features/qr/QrResultScreen";
 import { QrScreen } from "../features/qr/QrScreen";
@@ -93,6 +96,7 @@ import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
+import { usePermissionGuideStore } from "../shared/store/usePermissionGuideStore";
 import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
@@ -166,6 +170,7 @@ export function RootNavigator() {
   };
 
   useAppBootstrap();
+  const permissionGuideSeen = usePermissionGuideStore((state) => state.seen);
 
   // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
   // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
@@ -175,8 +180,12 @@ export function RootNavigator() {
     }
   }, [session.status]);
 
-  if (session.status === "loading") {
+  if (session.status === "loading" || permissionGuideSeen === null) {
     return <SplashScreen />;
+  }
+  // 이 기기에서 처음 연 경우 — 로그인·동의보다 먼저 앱 접근 권한 안내를 한 번 보여준다 (SCRUM-184).
+  if (!permissionGuideSeen) {
+    return <PermissionGuideScreen />;
   }
 
   // 현재 방침에 동의하지 않은 로그인 유저(신규 가입·기존 회원 모두)는 동의 화면만 본다 (SCRUM-175).
@@ -583,6 +592,17 @@ export function RootNavigator() {
               ),
             })}
           />
+          {/* 약관·개인정보 문서 전문 (SCRUM-184) — 설정에서 연다. 가입 전에는 AuthStack의 같은 화면을 쓴다. */}
+          <Stack.Screen
+            name="PolicyDocument"
+            component={PolicyDocumentScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+              ),
+            })}
+          />
           {/* 팀 팔로워 노트 (SCRUM-180) — 셀 노트와 같은 화면 구성 */}
           <Stack.Screen
             name="TeamFollowerNoteBoard"
@@ -807,7 +827,19 @@ export function RootNavigator() {
               남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
               ProfileSetupScreen이 같은 동작으로 처리한다.) */}
           {needsConsent ? (
-            <AuthStack.Screen name="Consent" component={ConsentScreen} />
+            <>
+              <AuthStack.Screen name="Consent" component={ConsentScreen} />
+              <AuthStack.Screen
+                name="PolicyDocument"
+                component={PolicyDocumentScreen}
+                options={({ route }) => ({
+                  headerShown: true,
+                  header: () => (
+                    <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+                  ),
+                })}
+              />
+            </>
           ) : session.status === "onboarding" ? (
             <AuthStack.Screen
               name="ProfileSetup"
