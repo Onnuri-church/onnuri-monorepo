@@ -4,6 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { View } from "react-native";
 
 import { AdminAttendanceScreen } from "../features/admin/AdminAttendanceScreen";
 import { AdminCellFormScreen } from "../features/admin/AdminCellFormScreen";
@@ -59,6 +60,9 @@ import { PrayerBoardScreen } from "../features/prayer-board/PrayerBoardScreen";
 import { PrayerDetailScreen } from "../features/prayer-board/PrayerDetailScreen";
 import { PrayerWriteScreen } from "../features/prayer-board/PrayerWriteScreen";
 import { ConsentScreen } from "../features/consent/ConsentScreen";
+import { PermissionGuideScreen } from "../features/consent/PermissionGuideScreen";
+import { PolicyDocumentScreen } from "../features/consent/PolicyDocumentScreen";
+import { POLICIES } from "../features/consent/policies";
 import { ProfileSetupScreen } from "../features/profile/ProfileSetupScreen";
 import { QrResultScreen } from "../features/qr/QrResultScreen";
 import { QrScreen } from "../features/qr/QrScreen";
@@ -93,6 +97,7 @@ import { signOut } from "../shared/api/session";
 import { Header } from "../shared/components/base/Header";
 import { useAppBootstrap } from "../shared/hooks/useAppBootstrap";
 import { useAuthStore } from "../shared/store/useAuthStore";
+import { usePermissionGuideStore } from "../shared/store/usePermissionGuideStore";
 import { useThemeColors } from "../shared/theme/useThemeColors";
 import type { AuthStackParamList, RootStackParamList } from "../shared/types/navigation";
 import { BottomTabNavigator } from "./BottomTabNavigator";
@@ -165,7 +170,9 @@ export function RootNavigator() {
     },
   };
 
-  useAppBootstrap();
+  const permissionGuideSeen = usePermissionGuideStore((state) => state.seen);
+  // 첫 실행이면 앱 접근 권한 안내 → (확인) → 스플래시 → 로그인/메인 순서다 — 안내를 보는 동안 세션 복원을 미룬다.
+  useAppBootstrap(permissionGuideSeen === true);
 
   // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
   // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
@@ -175,6 +182,14 @@ export function RootNavigator() {
     }
   }, [session.status]);
 
+  // 저장소를 읽는 아주 짧은 순간은 빈 화면 — 여기서 스플래시를 띄우면 첫 실행에 스플래시 → 안내 → 스플래시가 된다.
+  if (permissionGuideSeen === null) {
+    return <View className="flex-1 bg-background-normal" />;
+  }
+  // 이 기기에서 처음 연 경우 — 스플래시보다 먼저 앱 접근 권한 안내를 한 번 보여준다 (SCRUM-184).
+  if (!permissionGuideSeen) {
+    return <PermissionGuideScreen />;
+  }
   if (session.status === "loading") {
     return <SplashScreen />;
   }
@@ -583,6 +598,17 @@ export function RootNavigator() {
               ),
             })}
           />
+          {/* 약관·개인정보 문서 전문 (SCRUM-184) — 설정에서 연다. 가입 전에는 AuthStack의 같은 화면을 쓴다. */}
+          <Stack.Screen
+            name="PolicyDocument"
+            component={PolicyDocumentScreen}
+            options={({ route }) => ({
+              headerShown: true,
+              header: () => (
+                <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+              ),
+            })}
+          />
           {/* 팀 팔로워 노트 (SCRUM-180) — 셀 노트와 같은 화면 구성 */}
           <Stack.Screen
             name="TeamFollowerNoteBoard"
@@ -807,7 +833,19 @@ export function RootNavigator() {
               남아 있으면 트리 분기상 로그인 화면을 그릴 수 없다. (안드로이드 하드웨어 뒤로가기는
               ProfileSetupScreen이 같은 동작으로 처리한다.) */}
           {needsConsent ? (
-            <AuthStack.Screen name="Consent" component={ConsentScreen} />
+            <>
+              <AuthStack.Screen name="Consent" component={ConsentScreen} />
+              <AuthStack.Screen
+                name="PolicyDocument"
+                component={PolicyDocumentScreen}
+                options={({ route }) => ({
+                  headerShown: true,
+                  header: () => (
+                    <Header variant="sub" title={POLICIES[route.params.kind].title} rightAction="none" />
+                  ),
+                })}
+              />
+            </>
           ) : session.status === "onboarding" ? (
             <AuthStack.Screen
               name="ProfileSetup"

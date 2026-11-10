@@ -1,4 +1,5 @@
 import type { QrCheckInResponse } from "@onnuri/shared";
+import type { PolicyKind } from "../../features/consent/policies";
 
 export type RootTabParamList = {
   Home: undefined;
@@ -110,6 +111,7 @@ export type RootStackParamList = {
   // noteId: 알림 등에서 특정 노트를 펼친 채로 열 때 (상세 화면 없이 목록에서 펼친다 — SCRUM-182)
   FollowerNoteBoard: { cellId: string; noteId?: string };
   FollowerNoteWrite: { cellId: string; noteId?: string };
+  PolicyDocument: { kind: PolicyKind };
   // 팀 팔로워 노트 (SCRUM-180) — noteId: 알림에서 그 노트를 펼친 채로 열 때 / 수정할 때
   TeamFollowerNoteBoard: { teamId: string; noteId?: string };
   TeamFollowerNoteWrite: { teamId: string; noteId?: string };
@@ -156,6 +158,8 @@ export type RootStackParamList = {
 // onboarding이면 ProfileSetup (RootNavigator 참고).
 export type AuthStackParamList = {
   Consent: undefined;
+  // 약관·개인정보 문서 전문 (SCRUM-184) — 메인 Stack에도 같은 이름으로 있다.
+  PolicyDocument: { kind: PolicyKind };
   Login: undefined;
   ProfileSetup: undefined;
 };
