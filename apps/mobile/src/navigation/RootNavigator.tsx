@@ -398,7 +398,7 @@ export function RootNavigator() {
             component={TeamBoardScreen}
             options={{
               headerShown: true,
-              header: () => <Header variant="sub" title={t("팀 게시판")} rightAction="home" />,
+              header: () => <Header variant="sub" title={t("팀 활동 게시판")} rightAction="home" />,
             }}
           />
           <Stack.Screen

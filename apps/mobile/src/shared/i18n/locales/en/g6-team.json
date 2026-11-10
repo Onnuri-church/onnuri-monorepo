@@ -150,7 +150,6 @@
   "참여 중인 멤버 ({{count}})": "Members ({{count}})",
   "첫 댓글을 남겨보세요.": "Be the first to comment.",
   "추가할 팀원이 없어요.": "No members to add.",
-  "팀 게시판": "Team board",
   "팀 단톡방": "Team chat rooms",
   "팀원끼리 글·사진·파일을 나눠요": "Share posts, photos and files with your team",
   "팀원들과 나누고 싶은 이야기를 적어보세요": "Share something with your team",
@@ -236,5 +235,6 @@
   "다른 팀장이 먼저 수정했어요": "Another team leader edited this first",
   "최신 내용을 확인한 뒤 다시 수정해 주세요.": "Check the latest version, then edit again.",
   "팀원 케어 기록": "Member care notes",
-  "팀원들의 근황, 함께 기도할 부분, 목사님께 나누고 싶은 이야기": "Members' updates, things to pray about, anything to share with the pastor"
+  "팀원들의 근황, 함께 기도할 부분, 목사님께 나누고 싶은 이야기": "Members' updates, things to pray about, anything to share with the pastor",
+  "팀 활동 게시판": "Team activity board"
 }
