@@ -252,7 +252,7 @@ export function FollowerNoteBoardScreen() {
           contentContainerStyle={{ paddingBottom: 96 }}
         >
           <View
-            className="gap-7"
+            className="gap-3.5"
             onLayout={(event) => {
               listY.current = event.nativeEvent.layout.y;
             }}
