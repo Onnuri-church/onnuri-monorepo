@@ -3,7 +3,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { HomeBanner, NoticeInfo, NoticeListResponse } from '@onnuri/shared';
+import type {
+  HomeBanner,
+  NoticeInfo,
+  NoticeListResponse,
+} from '@onnuri/shared';
 
 import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -78,7 +82,10 @@ export class NoticesService {
     return rows.map((row) => this.toBanner(row));
   }
 
-  async createBanner(adminId: string, dto: CreateBannerDto): Promise<HomeBanner> {
+  async createBanner(
+    adminId: string,
+    dto: CreateBannerDto,
+  ): Promise<HomeBanner> {
     // 새 배너는 등록 즉시 홈에 표시된다 — 기존에 켜진 배너는 같은 트랜잭션에서 끈다.
     const [, row] = await this.prisma.$transaction([
       this.prisma.notice.updateMany({
@@ -164,7 +171,10 @@ export class NoticesService {
     limit?: number,
     monthly?: { month?: string; grouped?: boolean },
   ): Promise<NoticeListResponse> {
-    const take = Math.min(Math.max(Number.isFinite(limit) ? Math.floor(limit as number) : 20, 1), 50);
+    const take = Math.min(
+      Math.max(Number.isFinite(limit) ? Math.floor(limit as number) : 20, 1),
+      50,
+    );
     // 없는 커서는 Prisma가 500으로 던지므로 먼저 400으로 거른다.
     if (cursor) {
       const exists = await this.prisma.notice.findFirst({
@@ -201,7 +211,9 @@ export class NoticesService {
         label: `${value.slice(2, 4)}년 ${Number(value.slice(5, 7))}월`,
       }));
       selectedMonth =
-        monthly.month && values.includes(monthly.month) ? monthly.month : (values[0] ?? null);
+        monthly.month && values.includes(monthly.month)
+          ? monthly.month
+          : (values[0] ?? null);
       if (selectedMonth) {
         const [year, monthOfYear] = selectedMonth.split('.').map(Number);
         monthFilter = {
@@ -236,7 +248,10 @@ export class NoticesService {
     return this.toNotice(row);
   }
 
-  async createNotice(adminId: string, dto: CreateNoticeDto): Promise<NoticeInfo> {
+  async createNotice(
+    adminId: string,
+    dto: CreateNoticeDto,
+  ): Promise<NoticeInfo> {
     if (!dto.content && !dto.imageUrl) {
       throw new BadRequestException('내용이나 이미지 중 하나는 필요합니다.');
     }

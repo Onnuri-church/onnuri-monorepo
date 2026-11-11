@@ -4,7 +4,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { ChatMember, ChatRoomDetail, ChatRoomSummary } from '@onnuri/shared';
+import type {
+  ChatMember,
+  ChatRoomDetail,
+  ChatRoomSummary,
+} from '@onnuri/shared';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateChatRoomDto } from './dto/chat-room.dto';
@@ -32,7 +36,12 @@ export class ChatRoomsService {
         _count: { select: { members: true } },
         messages: {
           where: { deletedAt: null },
-          select: { content: true, imageUrls: true, videoUrls: true, createdAt: true },
+          select: {
+            content: true,
+            imageUrls: true,
+            videoUrls: true,
+            createdAt: true,
+          },
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
@@ -46,11 +55,17 @@ export class ChatRoomsService {
       where: { userId, scope: { in: scopes } },
       select: { scope: true, lastReadAt: true },
     });
-    const readAtByScope = new Map(states.map((state) => [state.scope, state.lastReadAt]));
+    const readAtByScope = new Map(
+      states.map((state) => [state.scope, state.lastReadAt]),
+    );
     const missing = scopes.filter((scope) => !readAtByScope.has(scope));
     if (missing.length > 0) {
       await this.prisma.chatReadState.createMany({
-        data: missing.map((scope) => ({ userId, scope, lastReadAt: new Date() })),
+        data: missing.map((scope) => ({
+          userId,
+          scope,
+          lastReadAt: new Date(),
+        })),
         skipDuplicates: true,
       });
     }
@@ -104,7 +119,9 @@ export class ChatRoomsService {
   ): Promise<ChatRoomDetail> {
     const access = await this.assertTeamAccess(userId, teamId);
     if (!access.canManage) {
-      throw new ForbiddenException('단톡방은 팀장 또는 관리자만 만들 수 있어요.');
+      throw new ForbiddenException(
+        '단톡방은 팀장 또는 관리자만 만들 수 있어요.',
+      );
     }
 
     // 만든 사람이 팀원이면 자동으로 넣는다 (관리자는 팀원이 아니어도 모든 방을 볼 수 있다).
@@ -140,9 +157,16 @@ export class ChatRoomsService {
     };
   }
 
-  async rename(userId: string, roomId: string, name: string): Promise<ChatRoomDetail> {
+  async rename(
+    userId: string,
+    roomId: string,
+    name: string,
+  ): Promise<ChatRoomDetail> {
     await this.assertCanManage(userId, roomId);
-    await this.prisma.chatRoom.update({ where: { id: roomId }, data: { name: name.trim() } });
+    await this.prisma.chatRoom.update({
+      where: { id: roomId },
+      data: { name: name.trim() },
+    });
     return this.findDetail(userId, roomId);
   }
 
@@ -173,7 +197,8 @@ export class ChatRoomsService {
     const removed = await this.prisma.chatRoomMember.deleteMany({
       where: { roomId, userId: memberId },
     });
-    if (removed.count === 0) throw new NotFoundException('이 방의 멤버가 아닙니다.');
+    if (removed.count === 0)
+      throw new NotFoundException('이 방의 멤버가 아닙니다.');
     return this.findDetail(userId, roomId);
   }
 
@@ -194,7 +219,9 @@ export class ChatRoomsService {
         teamId: true,
         name: true,
         members: {
-          select: { user: { select: { id: true, name: true, avatarUrl: true } } },
+          select: {
+            user: { select: { id: true, name: true, avatarUrl: true } },
+          },
         },
       },
     });
@@ -206,7 +233,9 @@ export class ChatRoomsService {
     const room = await this.findRoom(roomId);
     const access = await this.assertTeamAccess(userId, room.teamId);
     if (!access.canManage) {
-      throw new ForbiddenException('팀장 또는 관리자만 단톡방을 관리할 수 있어요.');
+      throw new ForbiddenException(
+        '팀장 또는 관리자만 단톡방을 관리할 수 있어요.',
+      );
     }
     return room;
   }
@@ -234,7 +263,8 @@ export class ChatRoomsService {
     if (!isAdmin && !isTeamMember) {
       throw new ForbiddenException('이 팀의 팀원만 볼 수 있습니다.');
     }
-    const isLeader = requester?.teamMemberships.some((m) => m.role === 'LEADER') ?? false;
+    const isLeader =
+      requester?.teamMemberships.some((m) => m.role === 'LEADER') ?? false;
     return { isAdmin, isTeamMember, canManage: isAdmin || isLeader };
   }
 
@@ -253,7 +283,11 @@ export class ChatRoomsService {
     users: { id: string; name: string; avatarUrl: string | null }[],
   ): ChatMember[] {
     return users
-      .map((user) => ({ id: user.id, name: user.name, avatarUrl: user.avatarUrl }))
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }
 }

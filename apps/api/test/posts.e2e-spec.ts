@@ -46,7 +46,9 @@ describe('Posts (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -64,7 +66,10 @@ describe('Posts (e2e)', () => {
     accessToken = loginBody.accessToken;
     userId = loginBody.user.id;
     // 큐티나눔 작성은 민감정보 동의가 필요하다 (SCRUM-175) — 동의 없는 경우는 작성 테스트에서 따로 본다.
-    await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: new Date() } });
+    await prisma.user.update({
+      where: { id: userId },
+      data: { sensitiveConsentAt: new Date() },
+    });
 
     // 픽스처는 시드(2026.03~05)와 안 겹치게 2025년으로 잡는다. 목록이 최신 달을 고르므로
     // 이 글들이 기본 조회에 잡히지 않아도 month를 지정해 검증한다.
@@ -164,9 +169,9 @@ describe('Posts (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`);
 
   describe('큐티나눔 목록 (GET /posts/qt-shares)', () => {
-    // 열람은 게스트도 된다 (README 기능 범위). 로그인이 필요한 건 좋아요 같은 동작뿐이다.
-    it('토큰 없이도 볼 수 있다', () =>
-      request(app.getHttpServer()).get('/posts/qt-shares').expect(200));
+    // 큐티나눔은 회원 전용 (SCRUM-168 — 로그인 필수 정책): 게스트는 목록부터 막힌다.
+    it('토큰 없이 보면 401', () =>
+      request(app.getHttpServer()).get('/posts/qt-shares').expect(401));
 
     it('잘못된 토큰이면 401', () =>
       request(app.getHttpServer())
@@ -174,7 +179,8 @@ describe('Posts (e2e)', () => {
         .set('Authorization', 'Bearer not-a-real-token')
         .expect(401));
 
-    it('month가 1~12가 아니면 400', () => getList('?year=2025&month=13').expect(400));
+    it('month가 1~12가 아니면 400', () =>
+      getList('?year=2025&month=13').expect(400));
 
     it('고른 달의 글만 준다 (다른 달이 섞이지 않는다)', async () => {
       const res = await getList('?year=2025&month=3').expect(200);
@@ -190,7 +196,9 @@ describe('Posts (e2e)', () => {
     it('삭제된 글은 목록에 없다', async () => {
       const res = await getList('?year=2025&month=3').expect(200);
 
-      const titles = (res.body as QtShareListResponse).items.map((i) => i.title);
+      const titles = (res.body as QtShareListResponse).items.map(
+        (i) => i.title,
+      );
       expect(titles).not.toContain(`${FIXTURE_PREFIX}삭제된글`);
     });
 
@@ -219,7 +227,9 @@ describe('Posts (e2e)', () => {
 
       const body = res.body as QtShareListResponse;
       // 시드(2026.03~05)가 픽스처(2025)보다 최신이므로 그쪽이 선택된다.
-      expect(body.selectedYear * 100 + body.selectedMonth).toBeGreaterThanOrEqual(202503);
+      expect(
+        body.selectedYear * 100 + body.selectedMonth,
+      ).toBeGreaterThanOrEqual(202503);
       expect(body.items.length).toBeGreaterThan(0);
     });
 
@@ -249,7 +259,9 @@ describe('Posts (e2e)', () => {
     });
 
     it('mine=true인데 토큰이 없으면 401', () =>
-      request(app.getHttpServer()).get('/posts/qt-shares?mine=true').expect(401));
+      request(app.getHttpServer())
+        .get('/posts/qt-shares?mine=true')
+        .expect(401));
   });
 
   // 좋아요 describe보다 먼저 둔다 — 거기서 marchPostId의 좋아요 상태를 바꾸므로,
@@ -260,20 +272,11 @@ describe('Posts (e2e)', () => {
         .get(`/posts/qt-shares/${id}`)
         .set('Authorization', `Bearer ${accessToken}`);
 
-    // 게스트에게는 "내" 상태가 없다. 픽스처의 3월글에는 내 좋아요가 1건 있는데,
-    // 그게 게스트 응답에서 likedByMe로 새어 나오면 안 된다 — Prisma가 where의
-    // undefined를 조건 없음으로 보기 때문에 그냥 넘기면 조용히 true가 된다.
-    it('토큰 없이도 볼 수 있고, likedByMe·isMine이 false다', async () => {
-      const res = await request(app.getHttpServer())
+    // 상세도 회원 전용 (SCRUM-168) — 게스트 응답 자체가 없으니 likedByMe가 새어 나갈 길도 없다.
+    it('토큰 없이 보면 401', () =>
+      request(app.getHttpServer())
         .get(`/posts/qt-shares/${marchPostId}`)
-        .expect(200);
-
-      const body = res.body as QtShareDetail;
-      expect(body.title).toBe(`${FIXTURE_PREFIX}3월글`);
-      expect(body.likeCount).toBe(1);
-      expect(body.likedByMe).toBe(false);
-      expect(body.isMine).toBe(false);
-    });
+        .expect(401));
 
     it('잘못된 토큰이면 401 (만료를 게스트로 조용히 넘기지 않는다)', () =>
       request(app.getHttpServer())
@@ -497,7 +500,9 @@ describe('Posts (e2e)', () => {
     beforeAll(async () => {
       // 팀은 시드가 넣는 실데이터를 쓴다(이름이 유니크라 픽스처로 또 만들 수 없다).
       const sns = await prisma.team.findUnique({ where: { name: 'SNS팀' } });
-      const praise = await prisma.team.findUnique({ where: { name: '찬양팀' } });
+      const praise = await prisma.team.findUnique({
+        where: { name: '찬양팀' },
+      });
       snsTeamId = sns!.id;
       praiseTeamId = praise!.id;
 
@@ -528,9 +533,12 @@ describe('Posts (e2e)', () => {
     const getActivities = (query = '') =>
       request(app.getHttpServer()).get(`/posts/team-activities${query}`);
 
-    const findFixture = async (query = '', title = `${FIXTURE_PREFIX}SNS활동`) => {
-      const { body } = await getActivities(query).expect(200);
-      const list = body as TeamActivityListResponse;
+    const findFixture = async (
+      query = '',
+      title = `${FIXTURE_PREFIX}SNS활동`,
+    ) => {
+      const res = await getActivities(query).expect(200);
+      const list = res.body as TeamActivityListResponse;
       return { list, item: list.items.find((post) => post.title === title) };
     };
 
@@ -549,8 +557,8 @@ describe('Posts (e2e)', () => {
     });
 
     it('teamId를 주면 그 팀 글만 남는다', async () => {
-      const { body } = await getActivities(`?teamId=${snsTeamId}`).expect(200);
-      const list = body as TeamActivityListResponse;
+      const res = await getActivities(`?teamId=${snsTeamId}`).expect(200);
+      const list = res.body as TeamActivityListResponse;
       expect(list.selectedTeamId).toBe(snsTeamId);
       const fixtures = list.items.filter((post) =>
         post.title.startsWith(FIXTURE_PREFIX),
@@ -561,8 +569,8 @@ describe('Posts (e2e)', () => {
     });
 
     it('없는 팀으로 거르면 빈 목록이 아니라 전체로 되돌린다', async () => {
-      const { body } = await getActivities('?teamId=no-such-team').expect(200);
-      const list = body as TeamActivityListResponse;
+      const res = await getActivities('?teamId=no-such-team').expect(200);
+      const list = res.body as TeamActivityListResponse;
       expect(list.selectedTeamId).toBeNull();
       expect(list.items.length).toBeGreaterThan(0);
     });
@@ -593,12 +601,12 @@ describe('Posts (e2e)', () => {
         .expect(401));
 
     it('댓글을 달면 상세에 보이고 isMine이 true다', async () => {
-      const { body } = await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .post(`/posts/${snsPostId}/comments`)
         .set('Authorization', `Bearer ${accessToken}`)
         .send({ content: '포스팅 가이드는 이전과 동일할까요?' })
         .expect(201);
-      rootCommentId = (body as { id: string }).id;
+      rootCommentId = (res.body as { id: string }).id;
 
       const detail = await request(app.getHttpServer())
         .get(`/posts/team-activities/${snsPostId}`)
@@ -611,10 +619,10 @@ describe('Posts (e2e)', () => {
     });
 
     it('게스트로 보면 남의 댓글이라 isMine이 false다', async () => {
-      const { body } = await request(app.getHttpServer())
+      const res = await request(app.getHttpServer())
         .get(`/posts/team-activities/${snsPostId}`)
         .expect(200);
-      expect((body as TeamActivityDetail).comments[0].isMine).toBe(false);
+      expect((res.body as TeamActivityDetail).comments[0].isMine).toBe(false);
     });
 
     it('대댓글은 부모 댓글의 replies에 들어가고, 댓글 수에는 안 들어간다', async () => {
@@ -800,7 +808,10 @@ describe('Posts (e2e)', () => {
         create({
           ...body,
           teamId: snsTeamId,
-          imageUrls: Array.from({ length: 6 }, (_, i) => `https://img.test/${i}.jpg`),
+          imageUrls: Array.from(
+            { length: 6 },
+            (_, i) => `https://img.test/${i}.jpg`,
+          ),
         }).expect(400));
 
       it('팀원이면 작성되고, 상세 모양 그대로 돌아온다 (사진은 보낸 순서)', async () => {
@@ -905,11 +916,17 @@ describe('Posts (e2e)', () => {
         .expect(401));
 
     it('민감정보 처리 동의가 없으면 403', async () => {
-      await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: null } });
+      await prisma.user.update({
+        where: { id: userId },
+        data: { sensitiveConsentAt: null },
+      });
       try {
         await create(body()).expect(403);
       } finally {
-        await prisma.user.update({ where: { id: userId }, data: { sensitiveConsentAt: new Date() } });
+        await prisma.user.update({
+          where: { id: userId },
+          data: { sensitiveConsentAt: new Date() },
+        });
       }
     });
 
@@ -948,7 +965,9 @@ describe('Posts (e2e)', () => {
     it('작성한 글이 그 달 목록에 보인다', async () => {
       const res = await getList('?year=2025&month=3').expect(200);
 
-      const titles = (res.body as QtShareListResponse).items.map((i) => i.title);
+      const titles = (res.body as QtShareListResponse).items.map(
+        (i) => i.title,
+      );
       expect(titles).toContain(`${FIXTURE_PREFIX}작성글`);
     });
   });
@@ -1059,6 +1078,7 @@ describe('Posts (e2e)', () => {
 
       await request(app.getHttpServer())
         .get(`/posts/qt-shares/${myPostId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
         .expect(404);
 
       const list = await getList('?year=2025&month=4').expect(200);

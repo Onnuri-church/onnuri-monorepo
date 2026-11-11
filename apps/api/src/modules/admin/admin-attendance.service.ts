@@ -16,7 +16,11 @@ import { PrismaService } from '../prisma/prisma.service';
 import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
 import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
 
-const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER: 2 };
+const ROLE_ORDER: Record<CellRole, number> = {
+  LEADER: 0,
+  SUB_LEADER: 1,
+  MEMBER: 2,
+};
 
 // 그 달의 일요일들 — @db.Date가 UTC 자정으로 저장되므로 UTC 기준으로 만든다
 // (조회 조건과 표 머리가 저장 값과 같은 기준이어야 하루씩 안 밀린다).
@@ -49,7 +53,8 @@ export class AdminAttendanceService {
 
   async find(dto: FindAdminAttendanceDto): Promise<AdminAttendanceResponse> {
     const now = new Date();
-    const month = dto.month ?? `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
+    const month =
+      dto.month ?? `${now.getFullYear()}-${pad(now.getMonth() + 1)}`;
     const [year, monthOfYear] = month.split('-').map(Number);
     const sundays = sundaysOfMonth(year, monthOfYear);
 
@@ -110,7 +115,9 @@ export class AdminAttendanceService {
       offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]),
     );
 
-    const toWeeks = (member: MemberInfo): [AdminAttendanceMark, AdminAttendanceMark][] =>
+    const toWeeks = (
+      member: MemberInfo,
+    ): [AdminAttendanceMark, AdminAttendanceMark][] =>
       sundays.map((sunday) => {
         const week = String(sunday.getTime());
         const offKind = offKindByWeek.get(week);
@@ -139,21 +146,17 @@ export class AdminAttendanceService {
       ),
       // 칸을 눌러 고칠 때 서버에 보내는 날짜 — dates와 같은 순서.
       dateKeys: sundays.map((sunday) => sunday.toISOString().slice(0, 10)),
-      groups: groups.map(
-        (group): AdminAttendanceGroup => ({
-          id: group.id,
-          name: group.name,
-          rows: group.members.map(
-            (member): AdminAttendanceRow => ({
-              id: member.id,
-              name: member.name,
-              role: member.role,
-              roleLabel: member.roleLabel,
-              weeks: toWeeks(member),
-            }),
-          ),
-        }),
-      ),
+      groups: groups.map((group): AdminAttendanceGroup => ({
+        id: group.id,
+        name: group.name,
+        rows: group.members.map((member): AdminAttendanceRow => ({
+          id: member.id,
+          name: member.name,
+          role: member.role,
+          roleLabel: member.roleLabel,
+          weeks: toWeeks(member),
+        })),
+      })),
     };
   }
 
@@ -165,7 +168,9 @@ export class AdminAttendanceService {
     dto: UpdateAdminAttendanceDto,
   ): Promise<{ worship: boolean; meeting: boolean }> {
     if (dto.worship === undefined && dto.meeting === undefined) {
-      throw new BadRequestException('worship 또는 meeting 중 하나는 필요합니다.');
+      throw new BadRequestException(
+        'worship 또는 meeting 중 하나는 필요합니다.',
+      );
     }
     const date = new Date(dto.date);
 
@@ -186,7 +191,8 @@ export class AdminAttendanceService {
       where: { date },
       select: { kind: true },
     });
-    const worshipOff = offDay?.kind === 'WORSHIP_OFF' || offDay?.kind === 'BOTH_OFF';
+    const worshipOff =
+      offDay?.kind === 'WORSHIP_OFF' || offDay?.kind === 'BOTH_OFF';
     const meetingOff =
       offDay?.kind === 'CELL_MEETING_OFF' || offDay?.kind === 'BOTH_OFF';
     if (dto.worship !== undefined && worshipOff) {
@@ -201,7 +207,9 @@ export class AdminAttendanceService {
         );
       }
       if (!cellId) {
-        throw new BadRequestException('소속 셀이 없는 회원은 셀모임 출석을 고칠 수 없어요.');
+        throw new BadRequestException(
+          '소속 셀이 없는 회원은 셀모임 출석을 고칠 수 없어요.',
+        );
       }
     }
 
@@ -212,7 +220,11 @@ export class AdminAttendanceService {
         update: {},
         create: { date, name: '주일예배' },
       });
-      const log = (kind: 'WORSHIP' | 'CELL_MEETING', before: boolean, after: boolean) =>
+      const log = (
+        kind: 'WORSHIP' | 'CELL_MEETING',
+        before: boolean,
+        after: boolean,
+      ) =>
         before === after
           ? undefined
           : tx.attendanceEditLog.create({
@@ -229,8 +241,14 @@ export class AdminAttendanceService {
         const before = worship;
         if (dto.worship) {
           await tx.worshipAttendance.upsert({
-            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
-            update: { attended: true, method: 'MANUAL', recordedById: editorId },
+            where: {
+              serviceId_userId: { serviceId: service.id, userId: user.id },
+            },
+            update: {
+              attended: true,
+              method: 'MANUAL',
+              recordedById: editorId,
+            },
             create: {
               serviceId: service.id,
               userId: user.id,
@@ -242,7 +260,9 @@ export class AdminAttendanceService {
         } else if (worshipRow) {
           // 행이 있을 때만 명시적 결석으로 정정한다 (행 없음 = 이미 결석).
           await tx.worshipAttendance.update({
-            where: { serviceId_userId: { serviceId: service.id, userId: user.id } },
+            where: {
+              serviceId_userId: { serviceId: service.id, userId: user.id },
+            },
             data: { attended: false, method: 'MANUAL', recordedById: editorId },
           });
         }
@@ -304,7 +324,9 @@ export class AdminAttendanceService {
     groupId?: string,
   ): Promise<{ id: string; name: string; members: MemberInfo[] }[]> {
     if (scope !== 'all' && !groupId) {
-      throw new BadRequestException('scope가 cell/team이면 groupId가 필요합니다.');
+      throw new BadRequestException(
+        'scope가 cell/team이면 groupId가 필요합니다.',
+      );
     }
 
     if (scope === 'team') {
@@ -334,15 +356,13 @@ export class AdminAttendanceService {
       if (!team) throw new NotFoundException('존재하지 않는 팀입니다.');
 
       const members = team.memberships
-        .map(
-          (m): MemberInfo => ({
-            id: m.user.id,
-            name: m.user.name,
-            role: m.role === 'LEADER' ? 'leader' : null,
-            roleLabel: m.role === 'LEADER' ? '팀장' : null,
-            cellId: m.user.cellMemberships[0]?.cellId ?? null,
-          }),
-        )
+        .map((m): MemberInfo => ({
+          id: m.user.id,
+          name: m.user.name,
+          role: m.role === 'LEADER' ? 'leader' : null,
+          roleLabel: m.role === 'LEADER' ? '팀장' : null,
+          cellId: m.user.cellMemberships[0]?.cellId ?? null,
+        }))
         .sort(
           (a, b) =>
             Number(b.role === 'leader') - Number(a.role === 'leader') ||
@@ -373,7 +393,9 @@ export class AdminAttendanceService {
         ? await this.prisma.user.findMany({
             where: {
               withdrawnAt: null,
-              cellMemberships: { none: { endedAt: null, cell: { deletedAt: null } } },
+              cellMemberships: {
+                none: { endedAt: null, cell: { deletedAt: null } },
+              },
             },
             select: { id: true, name: true },
           })
@@ -400,21 +422,23 @@ export class AdminAttendanceService {
       id: cell.id,
       name: cell.name,
       members: cell.memberships
-        .map(
-          (m): MemberInfo => ({
-            id: m.user.id,
-            name: m.user.name,
-            role:
-              m.role === 'LEADER'
-                ? 'leader'
-                : m.role === 'SUB_LEADER'
-                  ? 'viceLeader'
-                  : null,
-            roleLabel:
-              m.role === 'LEADER' ? '셀장' : m.role === 'SUB_LEADER' ? '부셀장' : null,
-            cellId: cell.id,
-          }),
-        )
+        .map((m): MemberInfo => ({
+          id: m.user.id,
+          name: m.user.name,
+          role:
+            m.role === 'LEADER'
+              ? 'leader'
+              : m.role === 'SUB_LEADER'
+                ? 'viceLeader'
+                : null,
+          roleLabel:
+            m.role === 'LEADER'
+              ? '셀장'
+              : m.role === 'SUB_LEADER'
+                ? '부셀장'
+                : null,
+          cellId: cell.id,
+        }))
         .sort((a, b) => {
           const order = (member: MemberInfo) =>
             ROLE_ORDER[

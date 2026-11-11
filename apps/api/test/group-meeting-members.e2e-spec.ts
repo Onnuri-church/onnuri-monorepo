@@ -21,8 +21,12 @@ describe('Group meeting members (e2e)', () => {
   const users: Record<string, { token: string; userId: string }> = {};
 
   const cleanup = async () => {
-    await prisma.post.deleteMany({ where: { board: 'HOBBY_GROUP', title: TITLE } });
-    await prisma.user.deleteMany({ where: { email: { endsWith: `@${EMAIL_DOMAIN}` } } });
+    await prisma.post.deleteMany({
+      where: { board: 'HOBBY_GROUP', title: TITLE },
+    });
+    await prisma.user.deleteMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+    });
   };
 
   const devLogin = async (name: string, role?: 'ADMIN') => {
@@ -35,11 +39,16 @@ describe('Group meeting members (e2e)', () => {
     return { token: body.accessToken, userId: body.user.id };
   };
 
-  const as = (name: string) => ({ Authorization: `Bearer ${users[name].token}` });
+  const as = (name: string) => ({
+    Authorization: `Bearer ${users[name].token}`,
+  });
   const server = () => app.getHttpServer();
 
   const join = (name: string) =>
-    request(server()).post(`/group-meetings/${groupId}/join`).set(as(name)).expect(201);
+    request(server())
+      .post(`/group-meetings/${groupId}/join`)
+      .set(as(name))
+      .expect(201);
   const approve = (by: string, target: string) =>
     request(server())
       .patch(`/group-meetings/${groupId}/members/${users[target].userId}`)
@@ -61,7 +70,9 @@ describe('Group meeting members (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     prisma = app.get(PrismaService);
     await cleanup();
@@ -97,7 +108,10 @@ describe('Group meeting members (e2e)', () => {
   it('생성 때 지정된 소그룹장들에게 임명 알림이 간다', async () => {
     for (const name of ['leaderA', 'leaderB']) {
       const count = await prisma.notification.count({
-        where: { userId: users[name].userId, body: { contains: '소그룹장으로 지정됐어요' } },
+        where: {
+          userId: users[name].userId,
+          body: { contains: '소그룹장으로 지정됐어요' },
+        },
       });
       expect(count).toBe(1);
     }
@@ -112,7 +126,10 @@ describe('Group meeting members (e2e)', () => {
     expect(detail.members.map((m) => m.id)).not.toContain(users.memberA.userId);
 
     const notified = await prisma.notification.count({
-      where: { userId: users.memberA.userId, body: { contains: '참여가 해제됐어요' } },
+      where: {
+        userId: users.memberA.userId,
+        body: { contains: '참여가 해제됐어요' },
+      },
     });
     expect(notified).toBe(1);
   });
@@ -155,24 +172,35 @@ describe('Group meeting members (e2e)', () => {
     expect(leaderB?.isLeader).toBe(false);
 
     const dismissed = await prisma.notification.count({
-      where: { userId: users.leaderB.userId, body: { contains: '소그룹장에서 해제됐어요' } },
+      where: {
+        userId: users.leaderB.userId,
+        body: { contains: '소그룹장에서 해제됐어요' },
+      },
     });
     const appointed = await prisma.notification.count({
-      where: { userId: users.memberB.userId, body: { contains: '소그룹장으로 지정됐어요' } },
+      where: {
+        userId: users.memberB.userId,
+        body: { contains: '소그룹장으로 지정됐어요' },
+      },
     });
     expect(dismissed).toBe(1);
     expect(appointed).toBe(1);
   });
 
   it('모임일은 생성 때 없어도 되고(미정), 수정으로 입력할 수 있다 (SCRUM-189)', async () => {
-    const before = await request(server()).get(`/group-meetings/${groupId}`).set(as('admin')).expect(200);
+    const before = await request(server())
+      .get(`/group-meetings/${groupId}`)
+      .set(as('admin'))
+      .expect(200);
     expect((before.body as GroupMeetingDetail).schedule).toBe('미정');
     const res = await request(server())
       .patch(`/group-meetings/${groupId}`)
       .set(as('leaderA'))
       .send({ schedule: '매주 토요일 오후 6시' })
       .expect(200);
-    expect((res.body as GroupMeetingDetail).schedule).toBe('매주 토요일 오후 6시');
+    expect((res.body as GroupMeetingDetail).schedule).toBe(
+      '매주 토요일 오후 6시',
+    );
     await request(server())
       .patch(`/group-meetings/${groupId}`)
       .set(as('leaderA'))

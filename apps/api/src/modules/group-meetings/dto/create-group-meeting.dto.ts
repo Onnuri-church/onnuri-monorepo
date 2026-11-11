@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /group-meetings 요청 본문 (관리자 전용) — 2026-09-21 생성 시안:

@@ -7,7 +7,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
-  } from 'class-validator';
+} from 'class-validator';
 
 import { QT_SHARE_MAX_IMAGES } from './create-qt-share.dto';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';

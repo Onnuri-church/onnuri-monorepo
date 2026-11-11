@@ -84,8 +84,12 @@ export class TeamBoardService {
       month && Number.isInteger(month) && month >= 1 && month <= 12
         ? month
         : kstNow.getUTCMonth() + 1;
-    const monthStart = new Date(Date.UTC(selectedYear, selectedMonth - 1, 1) - KST_OFFSET_MS);
-    const monthEnd = new Date(Date.UTC(selectedYear, selectedMonth, 1) - KST_OFFSET_MS);
+    const monthStart = new Date(
+      Date.UTC(selectedYear, selectedMonth - 1, 1) - KST_OFFSET_MS,
+    );
+    const monthEnd = new Date(
+      Date.UTC(selectedYear, selectedMonth, 1) - KST_OFFSET_MS,
+    );
 
     if (cursor) {
       const exists = await this.prisma.teamBoardPost.findFirst({
@@ -131,7 +135,8 @@ export class TeamBoardService {
       ? new Date(firstPost.createdAt.getTime() + KST_OFFSET_MS).getUTCFullYear()
       : currentYear;
     const years: number[] = [];
-    for (let y = currentYear; y >= Math.min(firstYear, selectedYear); y -= 1) years.push(y);
+    for (let y = currentYear; y >= Math.min(firstYear, selectedYear); y -= 1)
+      years.push(y);
     if (!years.includes(selectedYear)) years.push(selectedYear);
 
     return {
@@ -147,7 +152,10 @@ export class TeamBoardService {
   // 안 읽은(내가 아직 안 연) 새 글 수. 처음 확인하는 팀은 지금 시점을 기준선으로 잡고 0을 돌려준다
   // (이미 쌓인 글 전부가 새 글로 뜨지 않게). 기준선 이후에 다른 사람이 쓴 글 중 내가 상세를 안 연 글만 센다.
   // 기준선은 채팅 읽음 위치와 같은 테이블(ChatReadState)의 `board:<teamId>` 항목으로 둔다.
-  async unreadCount(userId: string, teamId: string): Promise<{ count: number }> {
+  async unreadCount(
+    userId: string,
+    teamId: string,
+  ): Promise<{ count: number }> {
     await this.assertAccess(userId, teamId);
     const scope = `board:${teamId}`;
     const state = await this.prisma.chatReadState.findUnique({
@@ -217,7 +225,9 @@ export class TeamBoardService {
       orderBy: { createdAt: 'asc' },
     });
 
-    const toComment = (comment: (typeof comments)[number]): TeamBoardCommentInfo => {
+    const toComment = (
+      comment: (typeof comments)[number],
+    ): TeamBoardCommentInfo => {
       const isMine = comment.authorId === userId;
       return {
         id: comment.id,
@@ -233,13 +243,22 @@ export class TeamBoardService {
         replies: [],
       };
     };
-    const top = comments.filter((comment) => comment.parentId === null).map(toComment);
+    const top = comments
+      .filter((comment) => comment.parentId === null)
+      .map(toComment);
     const byId = new Map(top.map((comment) => [comment.id, comment]));
-    for (const reply of comments.filter((comment) => comment.parentId !== null)) {
+    for (const reply of comments.filter(
+      (comment) => comment.parentId !== null,
+    )) {
       byId.get(reply.parentId as string)?.replies.push(toComment(reply));
     }
 
-    return { ...this.toPostInfo(row, userId, access), comments: top, reactors, readCount };
+    return {
+      ...this.toPostInfo(row, userId, access),
+      comments: top,
+      reactors,
+      readCount,
+    };
   }
 
   async create(
@@ -315,7 +334,8 @@ export class TeamBoardService {
         where: { id: dto.parentId, postId, deletedAt: null },
         select: { parentId: true },
       });
-      if (!parent) throw new BadRequestException('답글을 달 댓글을 찾을 수 없어요.');
+      if (!parent)
+        throw new BadRequestException('답글을 달 댓글을 찾을 수 없어요.');
       if (parent.parentId) {
         throw new BadRequestException('대댓글에는 답글을 달 수 없어요.');
       }
@@ -389,9 +409,13 @@ export class TeamBoardService {
       select: { id: true },
     });
     if (existing) {
-      await this.prisma.teamBoardReaction.delete({ where: { id: existing.id } });
+      await this.prisma.teamBoardReaction.delete({
+        where: { id: existing.id },
+      });
     } else {
-      await this.prisma.teamBoardReaction.create({ data: { postId, userId, emoji } });
+      await this.prisma.teamBoardReaction.create({
+        data: { postId, userId, emoji },
+      });
     }
     const row = await this.findPostRow(teamId, postId);
     return this.toPostInfo(row, userId, access);
@@ -445,7 +469,8 @@ export class TeamBoardService {
     }
     return {
       isAdmin,
-      isLeader: requester?.teamMemberships.some((m) => m.role === 'LEADER') ?? false,
+      isLeader:
+        requester?.teamMemberships.some((m) => m.role === 'LEADER') ?? false,
     };
   }
 
@@ -453,17 +478,26 @@ export class TeamBoardService {
     if (!Array.isArray(value)) return [];
     return value.flatMap((item) => {
       const file = item as Partial<ChatFile> | null;
-      return file && typeof file.url === 'string' && typeof file.name === 'string'
+      return file &&
+        typeof file.url === 'string' &&
+        typeof file.name === 'string'
         ? [{ url: file.url, name: file.name, size: Number(file.size) || 0 }]
         : [];
     });
   }
 
-  private toPostInfo(row: PostRow, userId: string, access: Access): TeamBoardPostInfo {
+  private toPostInfo(
+    row: PostRow,
+    userId: string,
+    access: Access,
+  ): TeamBoardPostInfo {
     const isMine = row.authorId === userId;
     const counts = new Map<string, { count: number; reactedByMe: boolean }>();
     for (const reaction of row.reactions) {
-      const current = counts.get(reaction.emoji) ?? { count: 0, reactedByMe: false };
+      const current = counts.get(reaction.emoji) ?? {
+        count: 0,
+        reactedByMe: false,
+      };
       counts.set(reaction.emoji, {
         count: current.count + 1,
         reactedByMe: current.reactedByMe || reaction.userId === userId,
@@ -479,7 +513,10 @@ export class TeamBoardService {
       imageUrls: row.imageUrls,
       links: row.links,
       files: this.toFiles(row.files),
-      reactions: [...counts.entries()].map(([emoji, value]) => ({ emoji, ...value })),
+      reactions: [...counts.entries()].map(([emoji, value]) => ({
+        emoji,
+        ...value,
+      })),
       commentCount: row._count.comments,
       isNotice: row.noticeAt !== null,
       createdAt: row.createdAt.toISOString(),

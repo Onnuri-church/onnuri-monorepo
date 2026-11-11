@@ -6,7 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import type { PrayerCategoryValue } from '@onnuri/shared';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 

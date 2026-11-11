@@ -124,7 +124,10 @@ type MessageRow = {
     options: {
       id: string;
       text: string;
-      votes: { userId: string; user: { name: string; avatarUrl: string | null } }[];
+      votes: {
+        userId: string;
+        user: { name: string; avatarUrl: string | null };
+      }[];
     }[];
   } | null;
 };
@@ -157,7 +160,10 @@ export class ChatService {
 
   // 안 읽은 메시지 수 — 읽음 위치 이후 다른 사람이 쓴 메시지. 읽음 기록이 아직 없는 방은
   // 지금까지의 대화를 전부 안 읽은 것으로 세지 않도록 "지금"을 읽음 위치로 잡고 0을 돌려준다.
-  async unreadCount(userId: string, room: ChatRoom): Promise<{ count: number }> {
+  async unreadCount(
+    userId: string,
+    room: ChatRoom,
+  ): Promise<{ count: number }> {
     await this.assertAccess(userId, room);
     const scope = this.readScope(room);
     const state = await this.prisma.chatReadState.findUnique({
@@ -194,13 +200,19 @@ export class ChatService {
         take: RECENT_LIMIT,
       }),
       this.prisma.chatMessage.findFirst({
-        where: { ...this.roomWhere(room), deletedAt: null, noticeAt: { not: null } },
+        where: {
+          ...this.roomWhere(room),
+          deletedAt: null,
+          noticeAt: { not: null },
+        },
         select: MESSAGE_SELECT,
         orderBy: { noticeAt: 'desc' },
       }),
     ]);
 
-    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    const memberNames = new Map(
+      access.members.map((member) => [member.id, member.name]),
+    );
     return {
       messages: recent
         .reverse()
@@ -233,7 +245,9 @@ export class ChatService {
       throw new BadRequestException('내용이나 첨부 중 하나는 필요합니다.');
     }
     if (dto.asNotice && !access.canNotice) {
-      throw new ForbiddenException('공지는 팀장·셀장·관리자만 등록할 수 있어요.');
+      throw new ForbiddenException(
+        '공지는 팀장·셀장·관리자만 등록할 수 있어요.',
+      );
     }
 
     if (dto.replyToId) {
@@ -241,7 +255,8 @@ export class ChatService {
         where: { id: dto.replyToId, ...this.roomWhere(room), deletedAt: null },
         select: { id: true },
       });
-      if (!target) throw new BadRequestException('답장할 메시지를 찾을 수 없어요.');
+      if (!target)
+        throw new BadRequestException('답장할 메시지를 찾을 수 없어요.');
     }
 
     // 언급은 이 방의 멤버만 남긴다 (본인은 제외).
@@ -271,7 +286,10 @@ export class ChatService {
               closesAt: poll.closesAt,
               createdById: userId,
               options: {
-                create: poll.options.map((text, index) => ({ text, sortOrder: index })),
+                create: poll.options.map((text, index) => ({
+                  text,
+                  sortOrder: index,
+                })),
               },
             },
           },
@@ -280,9 +298,17 @@ export class ChatService {
       select: MESSAGE_SELECT,
     });
 
-    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    const memberNames = new Map(
+      access.members.map((member) => [member.id, member.name]),
+    );
     const info = this.toInfo(row, userId, access, memberNames);
-    await this.notifyRoom(userId, info, access, mentionedUserIds, dto.asNotice === true);
+    await this.notifyRoom(
+      userId,
+      info,
+      access,
+      mentionedUserIds,
+      dto.asNotice === true,
+    );
     return info;
   }
 
@@ -295,7 +321,9 @@ export class ChatService {
   ): Promise<ChatMessageInfo> {
     const access = await this.assertAccess(userId, room);
     if (!access.canNotice) {
-      throw new ForbiddenException('공지는 팀장·셀장·관리자만 등록할 수 있어요.');
+      throw new ForbiddenException(
+        '공지는 팀장·셀장·관리자만 등록할 수 있어요.',
+      );
     }
     await this.assertMessage(room, messageId);
     const row = await this.prisma.chatMessage.update({
@@ -303,7 +331,9 @@ export class ChatService {
       data: { noticeAt: on ? new Date() : null },
       select: MESSAGE_SELECT,
     });
-    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    const memberNames = new Map(
+      access.members.map((member) => [member.id, member.name]),
+    );
     return this.toInfo(row, userId, access, memberNames);
   }
 
@@ -324,21 +354,29 @@ export class ChatService {
     if (existing) {
       await this.prisma.chatReaction.delete({ where: { id: existing.id } });
     } else {
-      await this.prisma.chatReaction.create({ data: { messageId, userId, emoji } });
+      await this.prisma.chatReaction.create({
+        data: { messageId, userId, emoji },
+      });
     }
 
     const row = await this.prisma.chatMessage.findUniqueOrThrow({
       where: { id: messageId },
       select: MESSAGE_SELECT,
     });
-    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    const memberNames = new Map(
+      access.members.map((member) => [member.id, member.name]),
+    );
     return this.toInfo(row, userId, access, memberNames);
   }
 
   // ---- 투표 ------------------------------------------------------------
 
   // 내 선택 전체를 교체한다 (빈 배열이면 투표 취소). 마감 후에는 못 바꾼다.
-  async votePoll(userId: string, pollId: string, optionIds: string[]): Promise<ChatMessageInfo> {
+  async votePoll(
+    userId: string,
+    pollId: string,
+    optionIds: string[],
+  ): Promise<ChatMessageInfo> {
     const { poll, access } = await this.loadPoll(userId, pollId);
     this.assertPollOpen(poll);
     const unique = Array.from(new Set(optionIds));
@@ -359,7 +397,11 @@ export class ChatService {
   }
 
   // 항목 추가 — 만든 사람이 허용한 투표에서, 마감 전에만. 같은 이름이 이미 있으면 그대로 둔다.
-  async addPollOption(userId: string, pollId: string, text: string): Promise<ChatMessageInfo> {
+  async addPollOption(
+    userId: string,
+    pollId: string,
+    text: string,
+  ): Promise<ChatMessageInfo> {
     const { poll, access } = await this.loadPoll(userId, pollId);
     this.assertPollOpen(poll);
     if (!poll.allowAddOptions && poll.createdById !== userId) {
@@ -476,7 +518,8 @@ export class ChatService {
         },
       },
     });
-    if (!poll || poll.message.deletedAt) throw new NotFoundException('투표를 찾을 수 없어요.');
+    if (!poll || poll.message.deletedAt)
+      throw new NotFoundException('투표를 찾을 수 없어요.');
     const { roomId, cellId, groupId, leaderRoomId } = poll.message;
     const room: ChatRoom = roomId
       ? { roomId }
@@ -489,9 +532,13 @@ export class ChatService {
     return { poll, access };
   }
 
-  private assertPollOpen(poll: { closedAt: Date | null; closesAt: Date | null }) {
+  private assertPollOpen(poll: {
+    closedAt: Date | null;
+    closesAt: Date | null;
+  }) {
     const closed =
-      poll.closedAt !== null || (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
+      poll.closedAt !== null ||
+      (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
     if (closed) throw new BadRequestException('마감된 투표예요.');
   }
 
@@ -504,12 +551,18 @@ export class ChatService {
       where: { id: messageId },
       select: MESSAGE_SELECT,
     });
-    const memberNames = new Map(access.members.map((member) => [member.id, member.name]));
+    const memberNames = new Map(
+      access.members.map((member) => [member.id, member.name]),
+    );
     return this.toInfo(row, userId, access, memberNames);
   }
 
   // 내 메시지 또는 관리자만 지울 수 있다 (soft delete).
-  async remove(userId: string, room: ChatRoom, messageId: string): Promise<void> {
+  async remove(
+    userId: string,
+    room: ChatRoom,
+    messageId: string,
+  ): Promise<void> {
     const access = await this.assertAccess(userId, room);
     const message = await this.assertMessage(room, messageId);
     if (message.authorId !== userId && !access.isAdmin) {
@@ -538,7 +591,10 @@ export class ChatService {
   }
 
   // 방이 있고 내가 그 방의 멤버(또는 관리자)인지 확인하고, 방 정보를 돌려준다.
-  private async assertAccess(userId: string, room: ChatRoom): Promise<RoomAccess> {
+  private async assertAccess(
+    userId: string,
+    room: ChatRoom,
+  ): Promise<RoomAccess> {
     const requester = await this.prisma.user.findUnique({
       where: { id: userId },
       select: { isAdmin: true },
@@ -560,12 +616,16 @@ export class ChatService {
             },
           },
           members: {
-            select: { user: { select: { id: true, name: true, avatarUrl: true } } },
+            select: {
+              user: { select: { id: true, name: true, avatarUrl: true } },
+            },
           },
         },
       });
       if (!chatRoom) throw new NotFoundException('존재하지 않는 단톡방입니다.');
-      const isLeader = chatRoom.team.memberships.some((m) => m.role === 'LEADER');
+      const isLeader = chatRoom.team.memberships.some(
+        (m) => m.role === 'LEADER',
+      );
       const isMember = chatRoom.members.some((m) => m.user.id === userId);
       if (!isAdmin && !isLeader && !isMember) {
         throw new ForbiddenException('이 단톡방의 멤버만 볼 수 있습니다.');
@@ -587,11 +647,14 @@ export class ChatService {
         select: {
           members: {
             where: { user: LEADER_USER_WHERE },
-            select: { user: { select: { id: true, name: true, avatarUrl: true } } },
+            select: {
+              user: { select: { id: true, name: true, avatarUrl: true } },
+            },
           },
         },
       });
-      if (!leaderRoom) throw new NotFoundException('존재하지 않는 단톡방입니다.');
+      if (!leaderRoom)
+        throw new NotFoundException('존재하지 않는 단톡방입니다.');
       const isMember = leaderRoom.members.some((m) => m.user.id === userId);
       if (!isAdmin && !isMember) {
         throw new ForbiddenException('이 단톡방의 멤버만 볼 수 있습니다.');
@@ -622,7 +685,9 @@ export class ChatService {
       if (!group) throw new NotFoundException('존재하지 않는 소그룹입니다.');
       const mine = group.members.find((m) => m.user.id === userId);
       if (!isAdmin && !mine) {
-        throw new ForbiddenException('이 소그룹에 참여 중인 사람만 볼 수 있습니다.');
+        throw new ForbiddenException(
+          '이 소그룹에 참여 중인 사람만 볼 수 있습니다.',
+        );
       }
       return {
         isAdmin,
@@ -661,7 +726,11 @@ export class ChatService {
     users: { id: string; name: string; avatarUrl: string | null }[],
   ): ChatMember[] {
     return users
-      .map((user) => ({ id: user.id, name: user.name, avatarUrl: user.avatarUrl }))
+      .map((user) => ({
+        id: user.id,
+        name: user.name,
+        avatarUrl: user.avatarUrl,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   }
 
@@ -675,7 +744,9 @@ export class ChatService {
     asNotice: boolean,
   ) {
     const snippet = this.snippet(info);
-    const others = access.members.map((m) => m.id).filter((id) => id !== authorId);
+    const others = access.members
+      .map((m) => m.id)
+      .filter((id) => id !== authorId);
 
     const mentionTargets = mentionedUserIds;
     if (mentionTargets.length > 0) {
@@ -715,7 +786,9 @@ export class ChatService {
       if (info.files.length > 0) return '파일을 보냈어요';
       return '사진을 보냈어요';
     }
-    return text.length > SNIPPET_LENGTH ? `${text.slice(0, SNIPPET_LENGTH)}…` : text;
+    return text.length > SNIPPET_LENGTH
+      ? `${text.slice(0, SNIPPET_LENGTH)}…`
+      : text;
   }
 
   // Json 컬럼은 타입이 없어서 모양을 확인해서 꺼낸다 (서버가 저장한 값이지만 방어적으로).
@@ -723,7 +796,9 @@ export class ChatService {
     if (!Array.isArray(value)) return [];
     return value.flatMap((item) => {
       const file = item as Partial<ChatFile> | null;
-      return file && typeof file.url === 'string' && typeof file.name === 'string'
+      return file &&
+        typeof file.url === 'string' &&
+        typeof file.name === 'string'
         ? [{ url: file.url, name: file.name, size: Number(file.size) || 0 }]
         : [];
     });
@@ -739,15 +814,23 @@ export class ChatService {
     closesAt?: string;
   }) {
     const title = input.title.trim();
-    const options = Array.from(new Set(input.options.map((text) => text.trim()).filter(Boolean)));
+    const options = Array.from(
+      new Set(input.options.map((text) => text.trim()).filter(Boolean)),
+    );
     if (!title) throw new BadRequestException('투표 제목을 입력해주세요.');
-    if (options.length < POLL_MIN_OPTIONS || options.length > POLL_MAX_OPTIONS) {
+    if (
+      options.length < POLL_MIN_OPTIONS ||
+      options.length > POLL_MAX_OPTIONS
+    ) {
       throw new BadRequestException('항목은 서로 다른 2~10개여야 해요.');
     }
     let closesAt: Date | null = null;
     if (input.closesAt) {
       closesAt = new Date(input.closesAt);
-      if (Number.isNaN(closesAt.getTime()) || closesAt.getTime() <= Date.now()) {
+      if (
+        Number.isNaN(closesAt.getTime()) ||
+        closesAt.getTime() <= Date.now()
+      ) {
         throw new BadRequestException('마감 시각은 지금보다 뒤여야 해요.');
       }
     }
@@ -785,7 +868,8 @@ export class ChatService {
       };
     });
     const closed =
-      poll.closedAt !== null || (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
+      poll.closedAt !== null ||
+      (poll.closesAt !== null && poll.closesAt.getTime() <= Date.now());
     return {
       id: poll.id,
       title: poll.title,
@@ -796,7 +880,11 @@ export class ChatService {
       closesAt: poll.closesAt?.toISOString() ?? null,
       closed,
       voterCount: voterIds.size,
-      canClose: !closed && (poll.createdById === requesterId || access.canNotice || access.isAdmin),
+      canClose:
+        !closed &&
+        (poll.createdById === requesterId ||
+          access.canNotice ||
+          access.isAdmin),
     };
   }
 
@@ -810,7 +898,10 @@ export class ChatService {
     const isMine = row.authorId === requesterId;
     const counts = new Map<string, { count: number; reactedByMe: boolean }>();
     for (const reaction of row.reactions) {
-      const current = counts.get(reaction.emoji) ?? { count: 0, reactedByMe: false };
+      const current = counts.get(reaction.emoji) ?? {
+        count: 0,
+        reactedByMe: false,
+      };
       counts.set(reaction.emoji, {
         count: current.count + 1,
         reactedByMe: current.reactedByMe || reaction.userId === requesterId,
@@ -841,7 +932,10 @@ export class ChatService {
         return name ? [{ id, name }] : [];
       }),
       isNotice: row.noticeAt !== null,
-      reactions: [...counts.entries()].map(([emoji, value]) => ({ emoji, ...value })),
+      reactions: [...counts.entries()].map(([emoji, value]) => ({
+        emoji,
+        ...value,
+      })),
       createdAt: row.createdAt.toISOString(),
       isMine,
       canDelete: isMine || isAdmin,

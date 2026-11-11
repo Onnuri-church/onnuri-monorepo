@@ -73,7 +73,9 @@ export class AdminController {
 
   // 엑셀 파일을 그대로 내려준다 — 앱이 파일로 저장한 뒤 공유 시트를 띄운다.
   @Get('download')
-  async download(@Query() query: FindAdminDownloadDto): Promise<StreamableFile> {
+  async download(
+    @Query() query: FindAdminDownloadDto,
+  ): Promise<StreamableFile> {
     const buffer = await this.adminDownloadService.build(query);
     return new StreamableFile(buffer, {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

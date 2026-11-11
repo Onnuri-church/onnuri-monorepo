@@ -15,9 +15,7 @@ export class AdminGuard implements CanActivate {
   constructor(private readonly prisma: PrismaService) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context
-      .switchToHttp()
-      .getRequest<{ user?: JwtPayload }>();
+    const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
     const userId = request.user?.sub;
     if (!userId) throw new ForbiddenException('관리자만 사용할 수 있습니다.');
 

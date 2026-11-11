@@ -42,19 +42,28 @@ export class SaveTeamBoardPostDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(BOARD_MAX_IMAGES, { message: '사진은 최대 5장까지 올릴 수 있어요.' })
+  @ArrayMaxSize(BOARD_MAX_IMAGES, {
+    message: '사진은 최대 5장까지 올릴 수 있어요.',
+  })
   @IsUrl({}, { each: true })
   imageUrls?: string[];
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(BOARD_MAX_LINKS, { message: '링크는 최대 5개까지 달 수 있어요.' })
-  @IsUrl({ protocols: ['http', 'https'], require_protocol: true }, { each: true })
+  @ArrayMaxSize(BOARD_MAX_LINKS, {
+    message: '링크는 최대 5개까지 달 수 있어요.',
+  })
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { each: true },
+  )
   links?: string[];
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(BOARD_MAX_FILES, { message: '파일은 최대 3개까지 올릴 수 있어요.' })
+  @ArrayMaxSize(BOARD_MAX_FILES, {
+    message: '파일은 최대 3개까지 올릴 수 있어요.',
+  })
   @ValidateNested({ each: true })
   @Type(() => BoardFileDto)
   files?: BoardFileDto[];

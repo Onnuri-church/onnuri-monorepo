@@ -18,8 +18,12 @@ describe('Dedupe create (e2e)', () => {
   let otherToken: string;
 
   const cleanup = async () => {
-    await prisma.post.deleteMany({ where: { title: { startsWith: TITLE_PREFIX } } });
-    await prisma.user.deleteMany({ where: { email: { endsWith: `@${EMAIL_DOMAIN}` } } });
+    await prisma.post.deleteMany({
+      where: { title: { startsWith: TITLE_PREFIX } },
+    });
+    await prisma.user.deleteMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+    });
   };
 
   const login = async (name: string) => {
@@ -57,7 +61,9 @@ describe('Dedupe create (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     prisma = app.get(PrismaService);
     await cleanup();
@@ -79,7 +85,9 @@ describe('Dedupe create (e2e)', () => {
     const title = `${TITLE_PREFIX}retry`;
     const first = await createPrayer(token, title).expect(201);
     const second = await createPrayer(token, title).expect(201);
-    expect((second.body as { id: string }).id).toBe((first.body as { id: string }).id);
+    expect((second.body as { id: string }).id).toBe(
+      (first.body as { id: string }).id,
+    );
     expect(await count(title)).toBe(1);
   });
 

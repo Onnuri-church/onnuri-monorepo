@@ -14,7 +14,6 @@ import {
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
-import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { FindPrayersDto } from './dto/find-prayers.dto';

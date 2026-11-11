@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /posts/team-activities 요청 본문 — 작성 시안(날짜/부서/사진 최대 5장/제목/내용).

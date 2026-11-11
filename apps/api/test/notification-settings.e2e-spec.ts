@@ -22,14 +22,18 @@ describe('Notification settings (e2e)', () => {
   const realFetch = global.fetch;
 
   const cleanup = () =>
-    prisma.user.deleteMany({ where: { email: { endsWith: `@${EMAIL_DOMAIN}` } } });
+    prisma.user.deleteMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+    });
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     prisma = app.get(PrismaService);
     notifications = app.get(NotificationsService);
@@ -53,7 +57,8 @@ describe('Notification settings (e2e)', () => {
       sentBodies.push(...messages.map((message) => message.body));
       return Promise.resolve({
         ok: true,
-        json: () => Promise.resolve({ data: messages.map(() => ({ status: 'ok' })) }),
+        json: () =>
+          Promise.resolve({ data: messages.map(() => ({ status: 'ok' })) }),
       });
     }) as unknown as typeof fetch;
   });
@@ -90,8 +95,16 @@ describe('Notification settings (e2e)', () => {
 
   it('꺼둔 종류는 푸시에서 빠지고, 켠 종류·알림센터는 그대로', async () => {
     sentBodies.length = 0;
-    await notifications.notify([userId], { type: 'NOTICE', title: '공지', body: 'n-off' });
-    await notifications.notify([userId], { type: 'BULLETIN', title: '주보', body: 'b-on' });
+    await notifications.notify([userId], {
+      type: 'NOTICE',
+      title: '공지',
+      body: 'n-off',
+    });
+    await notifications.notify([userId], {
+      type: 'BULLETIN',
+      title: '주보',
+      body: 'b-on',
+    });
     await notifications.pushOnly([userId], {
       type: 'CHAT',
       title: '단톡방',
@@ -99,7 +112,11 @@ describe('Notification settings (e2e)', () => {
       pref: 'notifyChat',
     });
     // 멘션처럼 pref 없는 CHAT은 항상 전달
-    await notifications.pushOnly([userId], { type: 'CHAT', title: '단톡방', body: 'mention' });
+    await notifications.pushOnly([userId], {
+      type: 'CHAT',
+      title: '단톡방',
+      body: 'mention',
+    });
 
     expect(sentBodies).toEqual(['b-on', 'mention']);
     const rows = await prisma.notification.findMany({ where: { userId } });
