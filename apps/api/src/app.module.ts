@@ -8,6 +8,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DedupeCreateInterceptor } from './common/interceptors/dedupe-create.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { StorageUrlInterceptor } from './modules/uploads/storage-url.interceptor';
 import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AdminModule } from './modules/admin/admin.module';
@@ -61,6 +62,9 @@ import { UsersModule } from './modules/users/users.module';
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
     // 요청 횟수 제한 (SCRUM-165) — 중복 방지보다 먼저 돌아서 넘친 요청은 바로 429로 끝낸다.
     { provide: APP_INTERCEPTOR, useClass: RateLimitInterceptor },
+    // 사진 링크 서명 (SCRUM-167) — 응답의 저장소 공개 주소 → 서명 링크, 요청의 서명 링크 → 공개 주소.
+    // 중복 방지보다 바깥에 둬서, 기억해 둔 응답도 다시 내보낼 때마다 새로 서명한다.
+    { provide: APP_INTERCEPTOR, useClass: StorageUrlInterceptor },
     // 만들기 POST의 재시도 중복 방지 (@DedupeCreate가 붙은 핸들러만 동작).
     { provide: APP_INTERCEPTOR, useClass: DedupeCreateInterceptor },
   ],
