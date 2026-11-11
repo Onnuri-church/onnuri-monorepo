@@ -4,3 +4,6 @@ import { DEV_LOGIN_SECRET } from './dev-login';
 // import하는 순간 실행되므로, 테스트 파일 상단이 아니라 그보다 먼저 도는 jest setupFiles에서 설정한다.
 process.env.AUTH_DEV_LOGIN = 'true';
 process.env.AUTH_DEV_LOGIN_SECRET = DEV_LOGIN_SECRET;
+
+// 요청 횟수 제한(SCRUM-165)은 끈다 — e2e는 한 IP에서 수백 번 요청한다. rate-limit 테스트만 다시 켠다.
+process.env.RATE_LIMIT_DISABLED = 'true';

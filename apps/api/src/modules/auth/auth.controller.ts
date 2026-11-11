@@ -7,12 +7,18 @@ import {
   Post,
 } from '@nestjs/common';
 
+import {
+  RATE_LIMITS,
+  RateLimit,
+} from '../../common/decorators/rate-limit.decorator';
 import { AuthService } from './auth.service';
 import { DevLoginDto } from './dto/dev-login.dto';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 
+// 로그인·토큰 갱신은 토큰 없이 들어와 IP 단위로 센다 (SCRUM-165).
+@RateLimit(RATE_LIMITS.auth)
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}

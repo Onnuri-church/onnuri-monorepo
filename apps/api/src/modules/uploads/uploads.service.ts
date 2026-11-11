@@ -10,6 +10,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 import { type AppConfig } from '../../config/configuration';
+import { detectImageType, matchesFileSignature } from './file-signature';
+
+const CONTENT_MISMATCH_MESSAGE =
+  '파일 내용이 형식과 맞지 않아요. 원본 파일을 다시 골라주세요.';
 
 // 업로드 종류별 허용 형식·크기. 목록에 없는 형식은 받지 않는다.
 // 사진은 폰 카메라 원본도 들어오게 10MB, 동영상은 50MB, 문서·악보 파일은 10MB.
@@ -54,7 +58,7 @@ const MAX_BYTES: Record<UploadKind, number> = {
 // 컨트롤러의 multer 한도 — 종류별 한도 중 가장 큰 값. 종류별 상세 검사는 서비스가 한다.
 export const MAX_UPLOAD_BYTES = 50 * MB;
 
-// 이미지 업로드 — 공용 Supabase의 Storage에 넣고 공개 URL을 돌려준다.
+// 이미지 업로드 — 공용 Supabase의 Storage(비공개 버킷)에 넣고 저장용 주소를 돌려준다 (앱에는 서명 링크로 바뀌어 나간다, SCRUM-167).
 // 파일은 서버를 경유시킨다: 인증·형식·크기 제한을 한 곳에서 걸기 위해서다 (앱이
 // 스토리지 키를 갖지 않게 하는 목적도 있다). 버킷이 없으면 public으로 자동 생성한다.
 @Injectable()
@@ -67,13 +71,6 @@ export class UploadsService {
   }
 
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
-    const { url, serviceRoleKey, bucket } = this.storage;
-    if (!url || !serviceRoleKey) {
-      throw new ServiceUnavailableException(
-        '이미지 스토리지가 아직 설정되지 않았어요. SUPABASE_SERVICE_ROLE_KEY를 채워주세요.',
-      );
-    }
-
     const allowed = ALLOWED[file.mimetype];
     if (!allowed) {
       throw new BadRequestException(
@@ -86,17 +83,36 @@ export class UploadsService {
         `이 종류의 파일은 ${limit}MB까지 올릴 수 있어요.`,
       );
     }
-    const extension = allowed.extension;
+    // 내용 검사 (SCRUM-173) — 형식 표기만 바꾼 다른 파일을 막는다. 사진은 사진끼리 표기 차이를
+    // 허용하고 실제 형식의 확장자로 저장한다.
+    let extension = allowed.extension;
+    let contentType = file.mimetype;
+    if (allowed.kind === 'images') {
+      const detected = detectImageType(file.buffer);
+      if (!detected) throw new BadRequestException(CONTENT_MISMATCH_MESSAGE);
+      extension = ALLOWED[detected].extension;
+      contentType = detected;
+    } else if (!matchesFileSignature(file.mimetype, file.buffer)) {
+      throw new BadRequestException(CONTENT_MISMATCH_MESSAGE);
+    }
+
+    // 형식 검사가 스토리지 설정보다 먼저 — 잘못된 파일은 설정과 상관없이 400으로 돌려보낸다.
+    const { url, serviceRoleKey, bucket } = this.storage;
+    if (!url || !serviceRoleKey) {
+      throw new ServiceUnavailableException(
+        '이미지 스토리지가 아직 설정되지 않았어요. SUPABASE_SERVICE_ROLE_KEY를 채워주세요.',
+      );
+    }
 
     const now = new Date();
     const path = `${allowed.kind}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${randomUUID()}.${extension}`;
 
-    let response = await this.putObject(path, file);
+    let response = await this.putObject(path, file, contentType);
     // 첫 업로드에서 버킷이 없으면 만들고 한 번 더 시도한다 — 팀원마다 버킷을 손으로
     // 만들지 않게 하려는 것 (이미 있으면 생성이 409로 떨어지므로 무시).
     if (response.status === 404 || response.status === 400) {
       await this.createBucket();
-      response = await this.putObject(path, file);
+      response = await this.putObject(path, file, contentType);
     }
     if (!response.ok) {
       this.logger.error(
@@ -138,11 +154,15 @@ export class UploadsService {
     }
   }
 
-  private putObject(path: string, file: Express.Multer.File) {
+  private putObject(
+    path: string,
+    file: Express.Multer.File,
+    contentType: string,
+  ) {
     const { url, bucket } = this.storage;
     return fetch(`${url}/storage/v1/object/${bucket}/${path}`, {
       method: 'POST',
-      headers: { ...this.authHeaders(), 'Content-Type': file.mimetype },
+      headers: { ...this.authHeaders(), 'Content-Type': contentType },
       body: new Uint8Array(file.buffer),
     });
   }
@@ -152,8 +172,8 @@ export class UploadsService {
     const response = await fetch(`${url}/storage/v1/bucket`, {
       method: 'POST',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-      // 공개 버킷 — 앱이 인증 없이 <public URL>로 사진을 그리는 구조라서다.
-      body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+      // 비공개 버킷 (SCRUM-167) — 앱에는 StorageUrlInterceptor가 서명 링크로 바꿔서 내보낸다.
+      body: JSON.stringify({ id: bucket, name: bucket, public: false }),
     });
     if (!response.ok && response.status !== 409) {
       this.logger.error(

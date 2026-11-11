@@ -8,11 +8,17 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 
+import {
+  RATE_LIMITS,
+  RateLimit,
+} from '../../common/decorators/rate-limit.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { MAX_UPLOAD_BYTES, UploadsService } from './uploads.service';
 
 // 파일 업로드 (로그인 필수) — 사진·동영상·문서. multipart 필드명은 "file" 하나. 응답 { url }의
 // 주소를 각 도메인 API(셀 커버·소식 사진·갤러리·소그룹 배경·단톡방)에 그대로 넘기는 2단계 구조다.
+// 업로드는 분당 30장까지 (SCRUM-165) — 저장소 용량을 지키는 몫.
+@RateLimit(RATE_LIMITS.upload)
 @Controller('uploads')
 export class UploadsController {
   constructor(private readonly uploadsService: UploadsService) {}

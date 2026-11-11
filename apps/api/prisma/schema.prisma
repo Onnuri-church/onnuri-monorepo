@@ -202,14 +202,20 @@ model SocialAccount {
 
 // 리프레시 토큰은 회전(rotation) 방식 — 사용 시 행을 지우고 새로 발급한다.
 model RefreshToken {
-  id        String   @id // 리프레시 JWT의 jti 클레임
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id // 리프레시 JWT의 jti 클레임
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
+  // 한 번의 로그인에서 회전으로 이어진 토큰들의 묶음 (= 기기 하나의 로그인 세션). 로그인 때 첫 토큰의
+  // jti로 정하고 회전해도 그대로 물려준다. 이미 쓴 토큰이 다시 오면(탈취 의심) 이 묶음을 통째로 끊는다 (SCRUM-166).
+  familyId  String
   tokenHash String // sha256(토큰 원문) — 원문은 저장하지 않는다
+  // 회전에 쓰인 시각. 쓴 토큰도 만료까지 남겨 둬야 재사용을 알아챌 수 있다 (지우면 "모르는 토큰"과 구분이 안 된다).
+  usedAt    DateTime?
   expiresAt DateTime
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId])
+  @@index([familyId])
 }
 
 // ---------------------------------------------------------------------
