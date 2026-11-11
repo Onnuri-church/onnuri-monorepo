@@ -2,6 +2,7 @@ import type { UpdateConsentRequest, User } from "@onnuri/shared";
 
 import { apiClient } from "../../shared/api/client";
 import { queryClient } from "../../shared/api/queryClient";
+import { clearPersistedQueryCache } from "../../shared/api/queryPersist";
 import { signOut } from "../../shared/api/session";
 import { clearTokens } from "../../shared/api/tokenStorage";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -34,4 +35,5 @@ export async function declineConsent(): Promise<void> {
   await clearTokens();
   useAuthStore.getState().clearSession();
   queryClient.clear();
+  clearPersistedQueryCache();
 }
