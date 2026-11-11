@@ -280,14 +280,15 @@ export class GroupMeetingsService {
           isLeader: m.role === 'LEADER',
         })),
       // Image 테이블에 캡션 컬럼이 없어 표시용 caption은 항상 null이다 (계약은 옛 시안 흔적).
-      photos: group.post.images.map((image) => ({
+      // 활동 사진·댓글도 회원에게만 (SCRUM-192) — 게스트에게는 비워서 내려준다.
+      photos: (isGuest ? [] : group.post.images).map((image) => ({
         id: image.id,
         url: image.url,
         caption: null,
         monthLabel: toPhotoMonthLabel(image.takenOn),
       })),
-      photoCount: group.post.images.length,
-      comments: group.post.comments.map((comment) => ({
+      photoCount: isGuest ? 0 : group.post.images.length,
+      comments: (isGuest ? [] : group.post.comments).map((comment) => ({
         id: comment.id,
         authorName: comment.author.name,
         authorAvatarUrl: comment.author.avatarUrl,

@@ -465,9 +465,15 @@ export function GroupMeetingDetailScreen() {
         )}
 
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+          {/* 게스트에게는 서버가 댓글을 내려주지 않는다 (SCRUM-192) — 개수 대신 안내만. */}
           <Text className="text-heading-small text-text-normal">
-            {t("댓글 {{count}}", { count: meeting.comments.length })}
+            {me ? t("댓글 {{count}}", { count: meeting.comments.length }) : t("댓글")}
           </Text>
+          {!me && (
+            <Text className="mt-2 text-body-small text-text-alternative">
+              {t("로그인하면 활동 사진과 댓글을 볼 수 있어요")}
+            </Text>
+          )}
           <View className="mt-2">
             {meeting.comments.map((item) => (
               <CommentItem

@@ -208,7 +208,7 @@ describe('Group meeting members (e2e)', () => {
       .expect(400);
   });
 
-  it('게스트에게는 참여자 명단·사진을 숨기고 인원수만 보여준다 (SCRUM-192)', async () => {
+  it('게스트에게는 참여자 명단·사진, 활동 사진, 댓글을 숨기고 인원수만 보여준다 (SCRUM-192)', async () => {
     const guest = (
       await request(server()).get(`/group-meetings/${groupId}`).expect(200)
     ).body as GroupMeetingDetail;
@@ -223,6 +223,9 @@ describe('Group meeting members (e2e)', () => {
     expect(guest.leaders).toEqual([]);
     expect(guest.participantAvatarUrls).toEqual([]);
     expect(guest.participantCount).toBe(member.participantCount);
+    expect(guest.photos).toEqual([]);
+    expect(guest.photoCount).toBe(0);
+    expect(guest.comments).toEqual([]);
 
     const list = (await request(server()).get('/group-meetings').expect(200))
       .body as {
