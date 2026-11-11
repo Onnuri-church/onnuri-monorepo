@@ -7,6 +7,7 @@ import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DedupeCreateInterceptor } from './common/interceptors/dedupe-create.interceptor';
+import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AdminModule } from './modules/admin/admin.module';
@@ -58,6 +59,8 @@ import { UsersModule } from './modules/users/users.module';
     AppService,
     // 예외를 Sentry로 보낸 뒤 Nest 기본 예외 처리에 그대로 위임한다 (응답 모양 불변).
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    // 요청 횟수 제한 (SCRUM-165) — 중복 방지보다 먼저 돌아서 넘친 요청은 바로 429로 끝낸다.
+    { provide: APP_INTERCEPTOR, useClass: RateLimitInterceptor },
     // 만들기 POST의 재시도 중복 방지 (@DedupeCreate가 붙은 핸들러만 동작).
     { provide: APP_INTERCEPTOR, useClass: DedupeCreateInterceptor },
   ],
