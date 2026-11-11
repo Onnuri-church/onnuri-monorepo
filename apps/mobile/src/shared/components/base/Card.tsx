@@ -44,7 +44,7 @@ export function Card({
   onPress,
 }: CardProps) {
   const containerClassName = [
-    "overflow-hidden rounded-2xl bg-background-normal shadow-card",
+    "overflow-hidden rounded-2xl border border-background-assistive bg-background-normal shadow-card",
     dimmed && "opacity-50",
     className,
   ]
