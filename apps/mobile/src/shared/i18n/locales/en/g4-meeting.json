@@ -124,5 +124,6 @@
   "마감된 모임이 없어요": "No closed groups",
   "변경은 관리자에게 요청해주세요": "Ask an admin to change",
   "{{name}}님을 소그룹에서 내보내시겠습니까?": "Remove {{name}} from this group?",
-  "단톡방과 활동 사진에도 더 이상 접근할 수 없어요.": "They will lose access to the group chat and photos."
+  "단톡방과 활동 사진에도 더 이상 접근할 수 없어요.": "They will lose access to the group chat and photos.",
+  "대기 중인 신청이 없어요": "No pending requests"
 }
