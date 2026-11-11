@@ -2,9 +2,10 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /group-meetings/:id 요청 본문 — 보낸 필드만 반영.
@@ -25,6 +26,11 @@ export class UpdateGroupMeetingDto {
   @IsOptional()
   @IsYmdDate()
   recruitEnd?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty({ message: '모임일을 입력해주세요.' })
+  schedule?: string;
 
   @IsOptional()
   @IsString()

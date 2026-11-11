@@ -60,7 +60,12 @@ export class ChatController {
     @Param('messageId') messageId: string,
     @Body() dto: ToggleChatReactionDto,
   ) {
-    return this.chatService.toggleReaction(user.sub, { roomId }, messageId, dto.emoji);
+    return this.chatService.toggleReaction(
+      user.sub,
+      { roomId },
+      messageId,
+      dto.emoji,
+    );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -88,7 +93,10 @@ export class ChatController {
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @Put('group-meetings/:groupId/read')
-  readGroup(@CurrentUser() user: JwtPayload, @Param('groupId') groupId: string) {
+  readGroup(
+    @CurrentUser() user: JwtPayload,
+    @Param('groupId') groupId: string,
+  ) {
     return this.chatService.markRead(user.sub, { groupId });
   }
 
@@ -99,7 +107,10 @@ export class ChatController {
   }
 
   @Get('group-meetings/:groupId/unread')
-  unreadGroup(@CurrentUser() user: JwtPayload, @Param('groupId') groupId: string) {
+  unreadGroup(
+    @CurrentUser() user: JwtPayload,
+    @Param('groupId') groupId: string,
+  ) {
     return this.chatService.unreadCount(user.sub, { groupId });
   }
 
@@ -135,7 +146,12 @@ export class ChatController {
     @Param('messageId') messageId: string,
     @Body() dto: ToggleChatReactionDto,
   ) {
-    return this.chatService.toggleReaction(user.sub, { cellId }, messageId, dto.emoji);
+    return this.chatService.toggleReaction(
+      user.sub,
+      { cellId },
+      messageId,
+      dto.emoji,
+    );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -150,7 +166,10 @@ export class ChatController {
 
   // ---- 취향소그룹 단톡방 ----
   @Get('group-meetings/:groupId/messages')
-  findGroup(@CurrentUser() user: JwtPayload, @Param('groupId') groupId: string) {
+  findGroup(
+    @CurrentUser() user: JwtPayload,
+    @Param('groupId') groupId: string,
+  ) {
     return this.chatService.find(user.sub, { groupId });
   }
 
@@ -180,7 +199,12 @@ export class ChatController {
     @Param('messageId') messageId: string,
     @Body() dto: ToggleChatReactionDto,
   ) {
-    return this.chatService.toggleReaction(user.sub, { groupId }, messageId, dto.emoji);
+    return this.chatService.toggleReaction(
+      user.sub,
+      { groupId },
+      messageId,
+      dto.emoji,
+    );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)

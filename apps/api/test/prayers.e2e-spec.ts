@@ -48,7 +48,9 @@ describe('Prayers (e2e)', () => {
     }).compile();
 
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
 
     prisma = app.get(PrismaService);
@@ -140,18 +142,14 @@ describe('Prayers (e2e)', () => {
     const findAnonymous = (items: PrayerListItem[]) =>
       items.find((item) => item.id === anonymousPostId);
 
-    it('게스트에게는 "익명"이다', async () => {
-      const res = await getList().expect(200);
-      expect(findAnonymous(findFixtures(res.body as PrayerListResponse))?.authorName).toBe(
-        '익명',
-      );
-    });
+    // 기도제목 게시판은 회원 전용 (SCRUM-168 — 로그인 필수 정책) — 게스트는 목록부터 막힌다.
+    it('게스트는 목록을 볼 수 없다 (401)', () => getList().expect(401));
 
     it('일반 유저에게도 "익명"이다 — 실명이 새면 안 된다', async () => {
       const res = await getList(otherToken).expect(200);
-      expect(findAnonymous(findFixtures(res.body as PrayerListResponse))?.authorName).toBe(
-        '익명',
-      );
+      expect(
+        findAnonymous(findFixtures(res.body as PrayerListResponse))?.authorName,
+      ).toBe('익명');
     });
 
     it('관리자에게는 "익명(실명)"으로 온다 (확정 스펙)', async () => {
@@ -162,7 +160,7 @@ describe('Prayers (e2e)', () => {
     });
 
     it('실명 글은 누구에게나 실명이다', async () => {
-      const res = await getList().expect(200);
+      const res = await getList(otherToken).expect(200);
       const named = findFixtures(res.body as PrayerListResponse).find(
         (item) => item.id === namedPostId,
       );
@@ -173,8 +171,10 @@ describe('Prayers (e2e)', () => {
 
   describe('공개기간', () => {
     it('기간이 지난 글은 게시판 목록에서 빠진다', async () => {
-      const res = await getList().expect(200);
-      const titles = findFixtures(res.body as PrayerListResponse).map((i) => i.title);
+      const res = await getList(otherToken).expect(200);
+      const titles = findFixtures(res.body as PrayerListResponse).map(
+        (i) => i.title,
+      );
       expect(titles).not.toContain(`${FIXTURE_PREFIX}기간지난글`);
     });
 
@@ -261,8 +261,10 @@ describe('Prayers (e2e)', () => {
         .set('Authorization', `Bearer ${adminToken}`)
         .expect(200);
 
-      const res = await getList().expect(200);
-      const titles = findFixtures(res.body as PrayerListResponse).map((i) => i.title);
+      const res = await getList(otherToken).expect(200);
+      const titles = findFixtures(res.body as PrayerListResponse).map(
+        (i) => i.title,
+      );
       expect(titles).not.toContain(`${FIXTURE_PREFIX}실명글`);
     });
   });

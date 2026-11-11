@@ -53,7 +53,9 @@ export class AttendanceService {
           name: '주일예배',
           // 스키마 주석의 계약대로 회차 생성 시 기본 시간창을 세팅한다.
           qrOpensAt: new Date(today.getTime() + DEFAULT_OPEN_UTC_HOURS * HOUR),
-          qrClosesAt: new Date(today.getTime() + DEFAULT_CLOSE_UTC_HOURS * HOUR),
+          qrClosesAt: new Date(
+            today.getTime() + DEFAULT_CLOSE_UTC_HOURS * HOUR,
+          ),
         },
         select: { id: true, name: true, qrOpensAt: true, qrClosesAt: true },
       });
@@ -61,14 +63,20 @@ export class AttendanceService {
 
     // 다른 경로(셀 출석 저장 등)로 만들어진 회차는 시간창이 비어 있을 수 있다 — 기본값으로 간주.
     const opensAt =
-      service.qrOpensAt ?? new Date(today.getTime() + DEFAULT_OPEN_UTC_HOURS * HOUR);
+      service.qrOpensAt ??
+      new Date(today.getTime() + DEFAULT_OPEN_UTC_HOURS * HOUR);
     const closesAt =
-      service.qrClosesAt ?? new Date(today.getTime() + DEFAULT_CLOSE_UTC_HOURS * HOUR);
+      service.qrClosesAt ??
+      new Date(today.getTime() + DEFAULT_CLOSE_UTC_HOURS * HOUR);
     if (now < opensAt) {
-      throw new BadRequestException('아직 출석 시간이 아니에요. 12시부터 스캔할 수 있어요.');
+      throw new BadRequestException(
+        '아직 출석 시간이 아니에요. 12시부터 스캔할 수 있어요.',
+      );
     }
     if (now > closesAt) {
-      throw new BadRequestException('출석 시간이 지났어요. QR 출석은 17시까지예요.');
+      throw new BadRequestException(
+        '출석 시간이 지났어요. QR 출석은 17시까지예요.',
+      );
     }
 
     const user = await this.prisma.user.findUnique({

@@ -49,7 +49,10 @@ export class AdminOffDaysService {
     };
   }
 
-  async set(dateString: string, dto: SetOffDayDto): Promise<{ kind: OffDayKind | null }> {
+  async set(
+    dateString: string,
+    dto: SetOffDayDto,
+  ): Promise<{ kind: OffDayKind | null }> {
     const date = new Date(dateString);
     if (
       !/^\d{4}-\d{2}-\d{2}$/.test(dateString) ||
@@ -57,7 +60,9 @@ export class AdminOffDaysService {
       toDateString(date) !== dateString ||
       date.getUTCDay() !== 0
     ) {
-      throw new BadRequestException('일요일 날짜(YYYY-MM-DD)만 지정할 수 있어요.');
+      throw new BadRequestException(
+        '일요일 날짜(YYYY-MM-DD)만 지정할 수 있어요.',
+      );
     }
     const kind = dto.kind ?? null;
 
@@ -74,10 +79,14 @@ export class AdminOffDaysService {
     // 지울 기록 수 — 결석(attended=false) 행은 정보가 없어서 세지 않지만 같이 정리한다.
     const [worshipCount, cellMeetingCount] = await Promise.all([
       clearsWorship
-        ? this.prisma.worshipAttendance.count({ where: { ...worshipWhere, attended: true } })
+        ? this.prisma.worshipAttendance.count({
+            where: { ...worshipWhere, attended: true },
+          })
         : 0,
       clearsCell
-        ? this.prisma.cellMeetingAttendance.count({ where: { ...cellWhere, attended: true } })
+        ? this.prisma.cellMeetingAttendance.count({
+            where: { ...cellWhere, attended: true },
+          })
         : 0,
     ]);
     if ((worshipCount > 0 || cellMeetingCount > 0) && !dto.confirm) {
@@ -90,8 +99,12 @@ export class AdminOffDaysService {
     }
 
     await this.prisma.$transaction([
-      ...(clearsWorship ? [this.prisma.worshipAttendance.deleteMany({ where: worshipWhere })] : []),
-      ...(clearsCell ? [this.prisma.cellMeetingAttendance.deleteMany({ where: cellWhere })] : []),
+      ...(clearsWorship
+        ? [this.prisma.worshipAttendance.deleteMany({ where: worshipWhere })]
+        : []),
+      ...(clearsCell
+        ? [this.prisma.cellMeetingAttendance.deleteMany({ where: cellWhere })]
+        : []),
       this.prisma.offDay.upsert({
         where: { date },
         update: { kind },

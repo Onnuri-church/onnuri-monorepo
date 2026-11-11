@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /posts/cell-news 요청 본문 — 글쓰기 시안(날짜/사진 최대 5장/제목/내용).

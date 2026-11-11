@@ -23,7 +23,13 @@ export class TeamGalleryService {
           { kind: 'POST_CONTENT', post: { teamId, deletedAt: null } },
         ],
       },
-      select: { id: true, url: true, kind: true, takenOn: true, createdAt: true },
+      select: {
+        id: true,
+        url: true,
+        kind: true,
+        takenOn: true,
+        createdAt: true,
+      },
       orderBy: [{ takenOn: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -94,7 +100,9 @@ export class TeamGalleryService {
       },
     });
     if (!user?.isAdmin && (user?.teamMemberships.length ?? 0) === 0) {
-      throw new ForbiddenException('팀장 또는 관리자만 사진을 관리할 수 있습니다.');
+      throw new ForbiddenException(
+        '팀장 또는 관리자만 사진을 관리할 수 있습니다.',
+      );
     }
   }
 

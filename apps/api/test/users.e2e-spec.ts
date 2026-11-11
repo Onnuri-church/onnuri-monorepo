@@ -168,30 +168,44 @@ describe('Users (e2e)', () => {
         .get('/users/me')
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
-      const body = res.body as UserBody & { privacyConsented: boolean; sensitiveConsented: boolean };
+      const body = res.body as UserBody & {
+        privacyConsented: boolean;
+        sensitiveConsented: boolean;
+      };
       expect(body.privacyConsented).toBe(false);
       expect(body.sensitiveConsented).toBe(false);
     });
 
     it('토큰 없이 401', () =>
-      request(app.getHttpServer()).patch('/users/me/consent').send({ privacy: true }).expect(401));
+      request(app.getHttpServer())
+        .patch('/users/me/consent')
+        .send({ privacy: true })
+        .expect(401));
 
     it('필수 동의를 false로 보내면 400 (철회는 회원탈퇴로)', () =>
       consent({ privacy: false }).expect(400));
 
     it('필수·민감정보 동의를 저장한다', async () => {
       const res = await consent({ privacy: true, sensitive: true }).expect(200);
-      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      const body = res.body as {
+        privacyConsented: boolean;
+        sensitiveConsented: boolean;
+      };
       expect(body.privacyConsented).toBe(true);
       expect(body.sensitiveConsented).toBe(true);
-      const row = await prisma.user.findUniqueOrThrow({ where: { id: userId } });
+      const row = await prisma.user.findUniqueOrThrow({
+        where: { id: userId },
+      });
       expect(row.privacyConsentAt).not.toBeNull();
       expect(row.privacyConsentVersion).not.toBeNull();
     });
 
     it('민감정보 동의만 철회할 수 있고 필수 동의는 남는다', async () => {
       const res = await consent({ sensitive: false }).expect(200);
-      const body = res.body as { privacyConsented: boolean; sensitiveConsented: boolean };
+      const body = res.body as {
+        privacyConsented: boolean;
+        sensitiveConsented: boolean;
+      };
       expect(body.privacyConsented).toBe(true);
       expect(body.sensitiveConsented).toBe(false);
     });
@@ -208,7 +222,9 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${body.accessToken}`)
         .expect(200);
       expect((res.body as { deleted: boolean }).deleted).toBe(true);
-      expect(await prisma.user.findUnique({ where: { id: body.user.id } })).toBeNull();
+      expect(
+        await prisma.user.findUnique({ where: { id: body.user.id } }),
+      ).toBeNull();
     });
 
     it('이미 동의한 회원은 나가기를 눌러도 지워지지 않는다', async () => {
@@ -217,7 +233,9 @@ describe('Users (e2e)', () => {
         .set('Authorization', `Bearer ${accessToken}`)
         .expect(200);
       expect((res.body as { deleted: boolean }).deleted).toBe(false);
-      expect(await prisma.user.findUnique({ where: { id: userId } })).not.toBeNull();
+      expect(
+        await prisma.user.findUnique({ where: { id: userId } }),
+      ).not.toBeNull();
     });
   });
 
@@ -264,7 +282,10 @@ describe('Users (e2e)', () => {
       return request(app.getHttpServer())
         .patch('/users/me')
         .set('Authorization', `Bearer ${accessToken}`)
-        .send({ ...validBody(), birthDate: tenYearsAgo.toISOString().slice(0, 10) })
+        .send({
+          ...validBody(),
+          birthDate: tenYearsAgo.toISOString().slice(0, 10),
+        })
         .expect(400);
     });
 

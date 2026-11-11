@@ -4,7 +4,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /group-meetings 요청 본문 (관리자 전용) — 2026-09-21 생성 시안:
@@ -23,6 +23,13 @@ export class CreateGroupMeetingDto {
 
   @IsYmdDate({ message: 'recruitEnd는 YYYY-MM-DD 형식이어야 합니다.' })
   recruitEnd!: string;
+
+  // 모임일 — 자유 글 ("매주 토요일 오후 6시"). 앱 폼은 필수로 받지만, 이 칸이 없던 구버전 앱의
+  // 생성 요청도 통과하도록 서버에서는 선택으로 둔다 (없으면 상세에 "미정").
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty({ message: '모임일을 입력해주세요.' })
+  schedule?: string;
 
   @IsString()
   @IsNotEmpty({ message: '장소를 입력해주세요.' })

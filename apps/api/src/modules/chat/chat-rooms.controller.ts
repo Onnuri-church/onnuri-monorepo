@@ -34,7 +34,6 @@ export class ChatRoomsController {
   }
 
   @DedupeCreate()
-
   @Post('teams/:teamId/chat-rooms')
   create(
     @CurrentUser() user: JwtPayload,

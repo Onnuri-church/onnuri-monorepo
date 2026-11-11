@@ -27,7 +27,9 @@ describe('Admin follower notes (e2e)', () => {
     await prisma.cell.deleteMany({ where: { name: { startsWith: PREFIX } } });
     await prisma.team.deleteMany({ where: { name: { startsWith: PREFIX } } });
     await prisma.worshipService.deleteMany({ where: { date: MEETING_DATE } });
-    await prisma.user.deleteMany({ where: { email: { endsWith: `@${EMAIL_DOMAIN}` } } });
+    await prisma.user.deleteMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+    });
   };
 
   const devLogin = async (name: string, role?: 'ADMIN') => {
@@ -57,7 +59,9 @@ describe('Admin follower notes (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     prisma = app.get(PrismaService);
     await cleanup();
@@ -70,13 +74,22 @@ describe('Admin follower notes (e2e)', () => {
 
     const startedAt = new Date('2026-01-01');
     const cell = await prisma.cell.create({
-      data: { name: `${PREFIX}셀`, startedAt, expiresAt: new Date('2099-12-31'), createdById: admin.userId },
+      data: {
+        name: `${PREFIX}셀`,
+        startedAt,
+        expiresAt: new Date('2099-12-31'),
+        createdById: admin.userId,
+      },
     });
     cellId = cell.id;
     const team = await prisma.team.create({ data: { name: `${PREFIX}팀` } });
     teamId = team.id;
-    await prisma.cellMembership.create({ data: { cellId, userId: leaderId, role: 'LEADER', startedAt } });
-    await prisma.teamMembership.create({ data: { teamId, userId: leaderId, role: 'LEADER', startedAt } });
+    await prisma.cellMembership.create({
+      data: { cellId, userId: leaderId, role: 'LEADER', startedAt },
+    });
+    await prisma.teamMembership.create({
+      data: { teamId, userId: leaderId, role: 'LEADER', startedAt },
+    });
   });
 
   afterAll(async () => {
@@ -98,11 +111,15 @@ describe('Admin follower notes (e2e)', () => {
   });
 
   it('팀장이 쓰면 새 노트로 잡히고, 관리자가 게시판을 열면 0이 된다', async () => {
-    const service = await prisma.worshipService.create({ data: { date: MEETING_DATE, name: '주일예배' } });
+    const service = await prisma.worshipService.create({
+      data: { date: MEETING_DATE, name: '주일예배' },
+    });
     const meeting = await prisma.cellMeeting.create({
       data: { cellId, serviceId: service.id, createdById: leaderId },
     });
-    await prisma.followerNote.create({ data: { meetingId: meeting.id, authorId: leaderId, answer1: '나눔' } });
+    await prisma.followerNote.create({
+      data: { meetingId: meeting.id, authorId: leaderId, answer1: '나눔' },
+    });
     await request(app.getHttpServer())
       .post(`/teams/${teamId}/follower-notes`)
       .set('Authorization', `Bearer ${leaderToken}`)

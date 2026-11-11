@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import type { AdminDownloadPreview } from '@onnuri/shared';
 import * as ExcelJS from 'exceljs';
 
@@ -27,7 +31,9 @@ function toPeriodLabel(startedAt: Date, endedAt: Date | null): string {
 
 const PREVIEW_ROWS = 10;
 
-type DownloadUser = Awaited<ReturnType<AdminDownloadService['findUsers']>>[number];
+type DownloadUser = Awaited<
+  ReturnType<AdminDownloadService['findUsers']>
+>[number];
 
 interface AttendanceRow {
   userId: string;
@@ -68,7 +74,10 @@ export class AdminDownloadService {
   private async resolveRange(dto: FindAdminDownloadDto) {
     const year = new Date().getFullYear();
     if (dto.period === 'thisYear' || dto.period === undefined) {
-      return { from: new Date(Date.UTC(year, 0, 1)), to: new Date(Date.UTC(year, 11, 31)) };
+      return {
+        from: new Date(Date.UTC(year, 0, 1)),
+        to: new Date(Date.UTC(year, 11, 31)),
+      };
     }
     if (dto.period === 'lastYear') {
       return {
@@ -78,11 +87,14 @@ export class AdminDownloadService {
     }
     if (dto.period === 'custom') {
       if (!dto.from || !dto.to) {
-        throw new BadRequestException('period=custom이면 from/to가 필요합니다.');
+        throw new BadRequestException(
+          'period=custom이면 from/to가 필요합니다.',
+        );
       }
       const from = new Date(dto.from);
       const to = new Date(dto.to);
-      if (from > to) throw new BadRequestException('시작일이 종료일보다 늦습니다.');
+      if (from > to)
+        throw new BadRequestException('시작일이 종료일보다 늦습니다.');
       return { from, to };
     }
     // 전체: 첫 예배 회차부터 오늘까지 (기록이 없으면 올해).
@@ -90,16 +102,24 @@ export class AdminDownloadService {
       orderBy: { date: 'asc' },
       select: { date: true },
     });
-    return { from: first?.date ?? new Date(Date.UTC(year, 0, 1)), to: new Date() };
+    return {
+      from: first?.date ?? new Date(Date.UTC(year, 0, 1)),
+      to: new Date(),
+    };
   }
 
   // 대상 회원 — 셀/팀 스코프는 기간과 겹치는 멤버십이 있던 사람들 (이력 포함).
   private async findUsers(dto: FindAdminDownloadDto, from: Date, to: Date) {
     const scope = dto.scope ?? 'all';
     if (scope !== 'all' && !dto.groupId) {
-      throw new BadRequestException('scope가 cell/team이면 groupId가 필요합니다.');
+      throw new BadRequestException(
+        'scope가 cell/team이면 groupId가 필요합니다.',
+      );
     }
-    const overlapping = { startedAt: { lte: to }, OR: [{ endedAt: null }, { endedAt: { gte: from } }] };
+    const overlapping = {
+      startedAt: { lte: to },
+      OR: [{ endedAt: null }, { endedAt: { gte: from } }],
+    };
 
     const users = await this.prisma.user.findMany({
       where: {
@@ -137,18 +157,21 @@ export class AdminDownloadService {
       // 그룹 자체가 없는지 확인해서 더 정확한 에러를 준다.
       const exists =
         scope === 'cell'
-          ? await this.prisma.cell.findUnique({ where: { id: dto.groupId }, select: { id: true } })
-          : await this.prisma.team.findUnique({ where: { id: dto.groupId }, select: { id: true } });
+          ? await this.prisma.cell.findUnique({
+              where: { id: dto.groupId },
+              select: { id: true },
+            })
+          : await this.prisma.team.findUnique({
+              where: { id: dto.groupId },
+              select: { id: true },
+            });
       if (!exists) throw new NotFoundException('존재하지 않는 셀/팀입니다.');
     }
     return users;
   }
 
   // 시트 1 — 유저 정보 (§4.2): 유저ID / 이름 / 생년월일(나이) / 성별 / 소속 팀.
-  private addMemberSheet(
-    workbook: ExcelJS.Workbook,
-    users: DownloadUser[],
-  ) {
+  private addMemberSheet(workbook: ExcelJS.Workbook, users: DownloadUser[]) {
     const sheet = workbook.addWorksheet('유저 정보');
     sheet.addRow(['유저ID', '이름', '생년월일(나이)', '성별', '소속 팀']);
     sheet.getRow(1).font = { bold: true };
@@ -161,7 +184,8 @@ export class AdminDownloadService {
         let age = today.getUTCFullYear() - birth.getUTCFullYear();
         const hadBirthday =
           today.getUTCMonth() > birth.getUTCMonth() ||
-          (today.getUTCMonth() === birth.getUTCMonth() && today.getUTCDate() >= birth.getUTCDate());
+          (today.getUTCMonth() === birth.getUTCMonth() &&
+            today.getUTCDate() >= birth.getUTCDate());
         if (!hadBirthday) age -= 1;
         birthLabel = `${birth.toISOString().slice(0, 10)} (${age})`;
       }
@@ -170,7 +194,9 @@ export class AdminDownloadService {
         user.name,
         birthLabel,
         user.gender ? (user.gender === 'MALE' ? '남' : '여') : '',
-        user.teamMemberships.map((membership) => membership.team.name).join(', '),
+        user.teamMemberships
+          .map((membership) => membership.team.name)
+          .join(', '),
       ]);
     }
   }
@@ -214,7 +240,11 @@ export class AdminDownloadService {
   }
 
   // 출석부 행 계산 — 엑셀 시트와 다운로드 전 미리보기가 같이 쓴다.
-  private async buildAttendanceRows(users: DownloadUser[], from: Date, to: Date) {
+  private async buildAttendanceRows(
+    users: DownloadUser[],
+    from: Date,
+    to: Date,
+  ) {
     const sundays = sundaysInRange(from, to);
     const userIds = users.map((user) => user.id);
     const [services, offDays] = await Promise.all([
@@ -245,12 +275,16 @@ export class AdminDownloadService {
     const meetingByKey = new Map<string, boolean>();
     for (const service of services) {
       const week = String(service.date.getTime());
-      for (const row of service.attendances) worshipByKey.set(`${week}:${row.userId}`, row.attended);
+      for (const row of service.attendances)
+        worshipByKey.set(`${week}:${row.userId}`, row.attended);
       for (const meeting of service.cellMeetings) {
-        for (const row of meeting.attendances) meetingByKey.set(`${week}:${row.userId}`, row.attended);
+        for (const row of meeting.attendances)
+          meetingByKey.set(`${week}:${row.userId}`, row.attended);
       }
     }
-    const offKindByWeek = new Map(offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]));
+    const offKindByWeek = new Map(
+      offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]),
+    );
 
     const rows: AttendanceRow[] = [];
     for (const user of users) {
@@ -297,7 +331,11 @@ export class AdminDownloadService {
             ? `${membership.cell.name} (삭제된 셀)`
             : membership.cell.name,
           roleLabel:
-            membership.role === 'LEADER' ? '셀장' : membership.role === 'SUB_LEADER' ? '부셀장' : '셀원',
+            membership.role === 'LEADER'
+              ? '셀장'
+              : membership.role === 'SUB_LEADER'
+                ? '부셀장'
+                : '셀원',
           periodLabel: toPeriodLabel(membership.startedAt, membership.endedAt),
           marks,
           worshipOnly,
@@ -329,9 +367,12 @@ export class AdminDownloadService {
           name: user.name,
           gender: user.gender ? (user.gender === 'MALE' ? '남' : '여') : null,
           age: user.birthDate ? this.ageOf(user.birthDate) : null,
-          team: user.teamMemberships.length > 0
-            ? user.teamMemberships.map((membership) => membership.team.name).join(', ')
-            : null,
+          team:
+            user.teamMemberships.length > 0
+              ? user.teamMemberships
+                  .map((membership) => membership.team.name)
+                  .join(', ')
+              : null,
           cell: user.cellMemberships.at(-1)?.cell.name ?? null,
         })),
       };
@@ -360,7 +401,8 @@ export class AdminDownloadService {
     let age = today.getUTCFullYear() - birth.getUTCFullYear();
     const hadBirthday =
       today.getUTCMonth() > birth.getUTCMonth() ||
-      (today.getUTCMonth() === birth.getUTCMonth() && today.getUTCDate() >= birth.getUTCDate());
+      (today.getUTCMonth() === birth.getUTCMonth() &&
+        today.getUTCDate() >= birth.getUTCDate());
     if (!hadBirthday) age -= 1;
     return age;
   }

@@ -91,7 +91,8 @@ export class TeamsService {
       where: { name: dto.name },
       select: { id: true },
     });
-    if (duplicated) throw new BadRequestException('같은 이름의 팀이 이미 있습니다.');
+    if (duplicated)
+      throw new BadRequestException('같은 이름의 팀이 이미 있습니다.');
 
     const team = await this.prisma.$transaction(async (tx) => {
       const created = await tx.team.create({
@@ -126,8 +127,12 @@ export class TeamsService {
           ...(dto.name !== undefined && { name: dto.name }),
           ...(dto.iconName !== undefined && { iconUrl: dto.iconName }),
           ...(dto.tagline !== undefined && { tagline: dto.tagline }),
-          ...(dto.description !== undefined && { description: dto.description }),
-          ...(dto.coverImageUrl !== undefined && { coverImageUrl: dto.coverImageUrl }),
+          ...(dto.description !== undefined && {
+            description: dto.description,
+          }),
+          ...(dto.coverImageUrl !== undefined && {
+            coverImageUrl: dto.coverImageUrl,
+          }),
           ...(dto.canUploadBulletin !== undefined && {
             canUploadBulletin: dto.canUploadBulletin,
           }),
@@ -164,7 +169,12 @@ export class TeamsService {
     leaderIds: string[],
   ) {
     await tx.teamMembership.updateMany({
-      where: { teamId, endedAt: null, role: 'LEADER', userId: { notIn: leaderIds } },
+      where: {
+        teamId,
+        endedAt: null,
+        role: 'LEADER',
+        userId: { notIn: leaderIds },
+      },
       data: { role: 'MEMBER' },
     });
 
@@ -174,11 +184,19 @@ export class TeamsService {
         select: { id: true },
       });
       if (mine) {
-        await tx.teamMembership.update({ where: { id: mine.id }, data: { role: 'LEADER' } });
+        await tx.teamMembership.update({
+          where: { id: mine.id },
+          data: { role: 'LEADER' },
+        });
         continue;
       }
       await tx.teamMembership.create({
-        data: { teamId, userId: leaderId, role: 'LEADER', startedAt: new Date() },
+        data: {
+          teamId,
+          userId: leaderId,
+          role: 'LEADER',
+          startedAt: new Date(),
+        },
       });
     }
   }
@@ -192,7 +210,9 @@ export class TeamsService {
   }
 
   private async assertUsersExist(userIds: string[]) {
-    const count = await this.prisma.user.count({ where: { id: { in: userIds } } });
+    const count = await this.prisma.user.count({
+      where: { id: { in: userIds } },
+    });
     if (count !== new Set(userIds).size) {
       throw new BadRequestException('존재하지 않는 유저입니다.');
     }

@@ -50,6 +50,7 @@ export type RootStackParamList = {
   GroupMeetingGallery: { meetingId: string };
   // 상세 "참여 멤버" 행 — 승인된 멤버 전체 명단.
   GroupMeetingMembers: { meetingId: string };
+  GroupMeetingPending: { meetingId: string };
   GroupMeetingForm: { meetingId?: string };
   PrayerBoard: undefined;
   // 게시판 ⋮ 메뉴에서 들어가는 내 북마크 목록. 게시판과 화면이 비슷하지만 라우트를 나눈다 —

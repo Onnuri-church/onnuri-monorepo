@@ -176,7 +176,9 @@ export class UsersService {
 
     return users.map((user) => {
       const cell = user.cellMemberships[0] ?? null;
-      const teamNames = user.teamMemberships.map((membership) => membership.team.name);
+      const teamNames = user.teamMemberships.map(
+        (membership) => membership.team.name,
+      );
       const isTeamLeader = user.teamMemberships.some(
         (membership) => membership.role === 'LEADER',
       );
@@ -245,7 +247,11 @@ export class UsersService {
       birthDateLabel: user.birthDate ? toDateLabel(user.birthDate) : null,
       birthDate: user.birthDate?.toISOString().slice(0, 10) ?? null,
       gender: user.gender,
-      genderLabel: user.gender ? (user.gender === 'MALE' ? '남성' : '여성') : null,
+      genderLabel: user.gender
+        ? user.gender === 'MALE'
+          ? '남성'
+          : '여성'
+        : null,
       phone: user.phone,
       cell: cell ? { id: cell.cell.id, name: cell.cell.name } : null,
       team: teams[0] ? { id: teams[0].id, name: teams[0].name } : null,
@@ -504,14 +510,20 @@ export class UsersService {
     }
     if (role === 'TEAM_LEADER') {
       if (teamMemberships.length === 0) {
-        throw new BadRequestException('소속 팀이 있어야 팀장으로 지정할 수 있습니다.');
+        throw new BadRequestException(
+          '소속 팀이 있어야 팀장으로 지정할 수 있습니다.',
+        );
       }
       // 여러 팀이면 팀장을 맡을 팀을 leaderTeamId로 받는다. 안 주면 첫 번째 팀이다.
       const target = leaderTeamId
-        ? teamMemberships.find((membership) => membership.teamId === leaderTeamId)
+        ? teamMemberships.find(
+            (membership) => membership.teamId === leaderTeamId,
+          )
         : teamMemberships[0];
       if (!target) {
-        throw new BadRequestException('팀장을 맡을 팀은 소속된 팀이어야 합니다.');
+        throw new BadRequestException(
+          '팀장을 맡을 팀은 소속된 팀이어야 합니다.',
+        );
       }
       await setTeamRole(target, 'LEADER');
       await setCellRole('MEMBER');
@@ -519,7 +531,9 @@ export class UsersService {
     }
     // CELL_LEADER(팔로워) — 셀장은 셀당 한 명이라 이미 다른 셀장이 있으면 셀 편집으로 안내.
     if (!cellMembership) {
-      throw new BadRequestException('소속 셀이 있어야 팔로워로 지정할 수 있습니다.');
+      throw new BadRequestException(
+        '소속 셀이 있어야 팔로워로 지정할 수 있습니다.',
+      );
     }
     const otherLeader = await tx.cellMembership.findFirst({
       where: {
@@ -669,10 +683,7 @@ export class UsersService {
   }
 
   // 동의 기록 — 필수 동의는 현재 방침 버전으로 남기고, 민감정보 동의는 켜고 끌 수 있다.
-  async updateConsent(
-    userId: string,
-    dto: UpdateConsentDto,
-  ): Promise<User> {
+  async updateConsent(userId: string, dto: UpdateConsentDto): Promise<User> {
     const now = new Date();
     await this.prisma.user.update({
       where: { id: userId },
@@ -698,10 +709,16 @@ export class UsersService {
   async declineConsent(userId: string): Promise<{ deleted: boolean }> {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { privacyConsentAt: true, birthDate: true, gender: true, phone: true },
+      select: {
+        privacyConsentAt: true,
+        birthDate: true,
+        gender: true,
+        phone: true,
+      },
     });
     if (!user || user.privacyConsentAt !== null) return { deleted: false };
-    const profileStarted = user.birthDate !== null || user.gender !== null || user.phone !== null;
+    const profileStarted =
+      user.birthDate !== null || user.gender !== null || user.phone !== null;
     if (profileStarted) return { deleted: false };
     try {
       await this.prisma.user.delete({ where: { id: userId } });
@@ -818,7 +835,11 @@ export class UsersService {
       where: { userId, endedAt: null },
       select: { id: true, teamId: true },
     });
-    if (teamId === null ? active.length === 0 : active.some((row) => row.teamId === teamId)) {
+    if (
+      teamId === null
+        ? active.length === 0
+        : active.some((row) => row.teamId === teamId)
+    ) {
       return;
     }
 

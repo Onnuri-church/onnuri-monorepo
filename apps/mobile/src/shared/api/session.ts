@@ -13,6 +13,7 @@ import {
 } from "./authApi";
 import { unregisterPushToken } from "./push";
 import { queryClient } from "./queryClient";
+import { clearPersistedQueryCache } from "./queryPersist";
 import { clearTokens, loadTokens, saveTokens } from "./tokenStorage";
 
 // 로그인 응답 → 토큰 저장 → 세션 시작. 프로필 설정을 마치지 않은 유저(신규 가입 포함, 서버가
@@ -78,6 +79,7 @@ export async function signOut(): Promise<void> {
   // 계정별 캐시(me·통계·알림 설정 등)를 비운다 — 남겨두면 staleTime(1분) 동안
   // 다음 계정 화면에 이전 계정 값이 그대로 보인다.
   queryClient.clear();
+  clearPersistedQueryCache();
   if (stored) {
     // 서버 쪽 무효화는 최선 노력 — 실패해도 로컬 세션은 이미 정리됐다.
     postLogout(stored.refreshToken).catch(() => undefined);

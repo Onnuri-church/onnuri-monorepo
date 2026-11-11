@@ -32,7 +32,10 @@ export class GroupMeetingsController {
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
   findAll(@Query() query: FindGroupMeetingsDto) {
-    return this.groupMeetingsService.findAll(query.status ?? 'open', query.cursor);
+    return this.groupMeetingsService.findAll(
+      query.status ?? 'open',
+      query.cursor,
+    );
   }
 
   // 내가 신청·참여 중인 모임 (마이페이지 "취향 소그룹"). ':id'보다 먼저 둔다 — 등록 순서 매칭.
@@ -114,6 +117,22 @@ export class GroupMeetingsController {
     @Param('userId') userId: string,
     @Body() dto: DecideMemberDto,
   ) {
-    return this.groupMeetingsService.decideMember(user.sub, id, userId, dto.status);
+    return this.groupMeetingsService.decideMember(
+      user.sub,
+      id,
+      userId,
+      dto.status,
+    );
+  }
+
+  // 참여 중인 멤버 내보내기 — 소그룹장·관리자
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/members/:userId')
+  removeMember(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.groupMeetingsService.removeMember(user.sub, id, userId);
   }
 }

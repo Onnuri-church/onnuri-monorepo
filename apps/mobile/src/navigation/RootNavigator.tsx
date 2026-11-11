@@ -54,6 +54,7 @@ import { GroupMeetingFormScreen } from "../features/group-meeting/GroupMeetingFo
 import { GroupMeetingScreen } from "../features/group-meeting/GroupMeetingScreen";
 import { GroupMeetingGalleryScreen } from "../features/group-meeting/GroupMeetingGalleryScreen";
 import { GroupMeetingMemberListScreen } from "../features/group-meeting/GroupMeetingMemberListScreen";
+import { GroupMeetingPendingScreen } from "../features/group-meeting/GroupMeetingPendingScreen";
 import { MyGroupMeetingScreen } from "../features/group-meeting/MyGroupMeetingScreen";
 import { MyPrayerScreen } from "../features/prayer-board/MyPrayerScreen";
 import { PrayerBookmarkScreen } from "../features/prayer-board/PrayerBookmarkScreen";
@@ -388,6 +389,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("참여멤버")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="GroupMeetingPending"
+            component={GroupMeetingPendingScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("신청 대기")} rightAction="home" />,
             }}
           />
           {/* 헤더 타이틀이 팀 이름이라 목업에서 찾아 쓴다. 팀 API가 생기면 화면에서

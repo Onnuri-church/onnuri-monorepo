@@ -246,9 +246,15 @@ describe('Follower note comments (e2e)', () => {
       return notes.find((n) => n.id === noteId)?.formVersion;
     };
     expect(await versionOf()).toBe(2);
-    await prisma.followerNote.update({ where: { id: noteId }, data: { formVersion: 1 } });
+    await prisma.followerNote.update({
+      where: { id: noteId },
+      data: { formVersion: 1 },
+    });
     expect(await versionOf()).toBe(1);
-    await prisma.followerNote.update({ where: { id: noteId }, data: { formVersion: 2 } });
+    await prisma.followerNote.update({
+      where: { id: noteId },
+      data: { formVersion: 2 },
+    });
   });
 
   it('답변 한 칸이 5000자를 넘으면 400', async () => {

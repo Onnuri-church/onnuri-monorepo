@@ -55,7 +55,6 @@ export class TeamBoardController {
   }
 
   @DedupeCreate()
-
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -115,7 +114,13 @@ export class TeamBoardController {
     @Param('commentId') commentId: string,
     @Body() dto: UpdateTeamBoardCommentDto,
   ) {
-    return this.teamBoardService.updateComment(user.sub, teamId, postId, commentId, dto);
+    return this.teamBoardService.updateComment(
+      user.sub,
+      teamId,
+      postId,
+      commentId,
+      dto,
+    );
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -126,7 +131,12 @@ export class TeamBoardController {
     @Param('postId') postId: string,
     @Param('commentId') commentId: string,
   ) {
-    return this.teamBoardService.removeComment(user.sub, teamId, postId, commentId);
+    return this.teamBoardService.removeComment(
+      user.sub,
+      teamId,
+      postId,
+      commentId,
+    );
   }
 
   @Put(':postId/reactions')
@@ -136,6 +146,11 @@ export class TeamBoardController {
     @Param('postId') postId: string,
     @Body() dto: ToggleTeamBoardReactionDto,
   ) {
-    return this.teamBoardService.toggleReaction(user.sub, teamId, postId, dto.emoji);
+    return this.teamBoardService.toggleReaction(
+      user.sub,
+      teamId,
+      postId,
+      dto.emoji,
+    );
   }
 }

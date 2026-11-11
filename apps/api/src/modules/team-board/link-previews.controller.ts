@@ -1,4 +1,10 @@
-import { BadRequestException, Controller, Get, Query, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { LinkPreviewsService } from './link-previews.service';

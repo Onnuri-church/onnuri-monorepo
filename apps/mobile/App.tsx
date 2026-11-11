@@ -3,12 +3,16 @@ import * as Sentry from "@sentry/react-native";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { useFonts } from "expo-font";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import "./global.css";
 import { queryClient } from "./src/shared/api/queryClient";
+import {
+  restoreQueryCache,
+  startQueryCachePersistence,
+} from "./src/shared/api/queryPersist";
 import { pretendardFonts } from "./src/shared/theme/fonts";
 import "./src/shared/i18n";
 import { restoreLanguage } from "./src/shared/store/useLanguageStore";
@@ -33,6 +37,17 @@ SplashScreen.preventAutoHideAsync();
 
 function App() {
   const [fontsLoaded] = useFonts(pretendardFonts);
+  // 저장된 목록 캐시를 먼저 채워야 첫 화면이 스켈레톤 대신 지난 데이터로 시작한다
+  const [cacheRestored, setCacheRestored] = useState(false);
+
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    void restoreQueryCache().finally(() => {
+      stop = startQueryCachePersistence();
+      setCacheRestored(true);
+    });
+    return () => stop?.();
+  }, []);
 
   useEffect(() => {
     void restoreThemeMode();
@@ -41,12 +56,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (fontsLoaded) {
+    if (fontsLoaded && cacheRestored) {
       SplashScreen.hideAsync();
     }
-  }, [fontsLoaded]);
+  }, [fontsLoaded, cacheRestored]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || !cacheRestored) {
     return null;
   }
 
