@@ -31,10 +31,15 @@ export class GroupMeetingsController {
 
   @UseGuards(OptionalJwtAuthGuard)
   @Get()
-  findAll(@Query() query: FindGroupMeetingsDto) {
+  findAll(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Query() query: FindGroupMeetingsDto,
+  ) {
     return this.groupMeetingsService.findAll(
       query.status ?? 'open',
       query.cursor,
+      undefined,
+      user?.sub,
     );
   }
 

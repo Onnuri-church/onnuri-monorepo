@@ -47,10 +47,12 @@ export class GroupMeetingsService {
 
   // 목록 — 모집중/마감 중 하나를 20개씩 끊어 준다 (마감이 계속 쌓이므로 한 번에 다 주지 않는다).
   // "마감"은 toStatus와 같은 기준이다: 상태가 CLOSED이거나 모집 종료일이 지난 모임.
+  // userId가 없으면(게스트) 참여자 사진을 내려주지 않는다 (SCRUM-192) — 인원수만 보인다.
   async findAll(
     status: 'open' | 'closed',
     cursor?: string,
     limit = LIST_PAGE_SIZE,
+    userId?: string,
   ): Promise<GroupMeetingListResponse> {
     const take = Math.min(Math.max(Math.floor(limit), 1), 50);
     const today = new Date();
@@ -95,7 +97,7 @@ export class GroupMeetingsService {
     const hasMore = rows.length > take;
     const page = hasMore ? rows.slice(0, take) : rows;
     return {
-      items: page.map((group) => this.toSummary(group)),
+      items: page.map((group) => this.toSummary(group, !userId)),
       nextCursor: hasMore ? page[page.length - 1].postId : null,
     };
   }
@@ -137,13 +139,16 @@ export class GroupMeetingsService {
   }
 
   // 목록 카드 공통 모양 (findAll·findMine이 같이 쓴다).
-  private toSummary(group: {
-    postId: string;
-    status: 'RECRUITING' | 'CLOSED';
-    recruitEnd: Date | null;
-    post: { title: string | null; coverImageUrl: string | null };
-    members: { user: { avatarUrl: string | null } }[];
-  }): GroupMeeting {
+  private toSummary(
+    group: {
+      postId: string;
+      status: 'RECRUITING' | 'CLOSED';
+      recruitEnd: Date | null;
+      post: { title: string | null; coverImageUrl: string | null };
+      members: { user: { avatarUrl: string | null } }[];
+    },
+    hideParticipants = false,
+  ): GroupMeeting {
     const status = this.toStatus(group);
     return {
       id: group.postId,
@@ -154,10 +159,12 @@ export class GroupMeetingsService {
       statusLabel: status === 'open' ? '모집중' : '마감',
       thumbnailUrl: group.post.coverImageUrl,
       participantCount: group.members.length,
-      participantAvatarUrls: group.members
-        .map((member) => member.user.avatarUrl)
-        .filter((url): url is string => url !== null)
-        .slice(0, 3),
+      participantAvatarUrls: hideParticipants
+        ? []
+        : group.members
+            .map((member) => member.user.avatarUrl)
+            .filter((url): url is string => url !== null)
+            .slice(0, 3),
     };
   }
 
@@ -233,6 +240,7 @@ export class GroupMeetingsService {
     const canManage = isAdmin || mine?.role === 'LEADER';
     const status = this.toStatus(group);
 
+    const isGuest = !userId;
     return {
       id: group.postId,
       title: group.post.title ?? '',
@@ -241,10 +249,13 @@ export class GroupMeetingsService {
       statusLabel: status === 'open' ? '모집중' : '마감',
       thumbnailUrl: group.post.coverImageUrl,
       participantCount: approved.length,
-      participantAvatarUrls: approved
-        .map((member) => member.user.avatarUrl)
-        .filter((url): url is string => url !== null)
-        .slice(0, 3),
+      // 게스트(로그인 안 함)에게는 누가 참여하는지 보이지 않는다 (SCRUM-192) — 인원수만 남긴다.
+      participantAvatarUrls: isGuest
+        ? []
+        : approved
+            .map((member) => member.user.avatarUrl)
+            .filter((url): url is string => url !== null)
+            .slice(0, 3),
       description: group.post.content,
       recruitStart: group.recruitStart?.toISOString().slice(0, 10) ?? null,
       periodLabel: toPeriodLabel(group.recruitStart, group.recruitEnd),
@@ -252,13 +263,13 @@ export class GroupMeetingsService {
       schedule: group.meetingSchedule ?? '미정',
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
-      leaders: leaders.map((m) => ({
+      leaders: (isGuest ? [] : leaders).map((m) => ({
         id: m.userId,
         name: m.user.name,
         avatarUrl: m.user.avatarUrl,
       })),
       // 참여멤버 보기 화면용 전체 명단 — 소그룹장 먼저(시안 첫 행), 그 안에서는 가입순.
-      members: [...approved]
+      members: (isGuest ? [] : [...approved])
         .sort(
           (a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'),
         )

@@ -208,6 +208,31 @@ describe('Group meeting members (e2e)', () => {
       .expect(400);
   });
 
+  it('게스트에게는 참여자 명단·사진을 숨기고 인원수만 보여준다 (SCRUM-192)', async () => {
+    const guest = (
+      await request(server()).get(`/group-meetings/${groupId}`).expect(200)
+    ).body as GroupMeetingDetail;
+    const member = (
+      await request(server())
+        .get(`/group-meetings/${groupId}`)
+        .set(as('memberA'))
+        .expect(200)
+    ).body as GroupMeetingDetail;
+    expect(member.members.length).toBeGreaterThan(0);
+    expect(guest.members).toEqual([]);
+    expect(guest.leaders).toEqual([]);
+    expect(guest.participantAvatarUrls).toEqual([]);
+    expect(guest.participantCount).toBe(member.participantCount);
+
+    const list = (await request(server()).get('/group-meetings').expect(200))
+      .body as {
+      items: { id: string; participantAvatarUrls: string[] }[];
+    };
+    expect(
+      list.items.every((item) => item.participantAvatarUrls.length === 0),
+    ).toBe(true);
+  });
+
   it('소그룹장은 0명이 될 수 없고, 없는 회원은 지정할 수 없다', async () => {
     await setLeaders('admin', []).expect(400);
     await request(server())

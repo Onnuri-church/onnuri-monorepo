@@ -274,8 +274,10 @@ export function GroupMeetingDetailScreen() {
         <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
           <Text className="text-heading-small text-text-normal">{t("참여 멤버")}</Text>
           {/* 행 전체가 참여멤버 명단으로 가는 버튼이다 (시안의 참여멤버 보기 화면). */}
+          {/* 게스트는 참여자 명단을 볼 수 없다 (SCRUM-192) — 인원수만 보이고 눌리지 않는다. */}
           <Pressable
             className="mt-3 flex-row items-center gap-3"
+            disabled={!me}
             onPress={() =>
               navigation.navigate("GroupMeetingMembers", { meetingId: params.id })
             }
@@ -313,9 +315,15 @@ export function GroupMeetingDetailScreen() {
             <Text className="text-body-small text-text-neutral">
               {t("총 {{count}}명", { count: meeting.participantCount })}
             </Text>
-            <View className="ml-auto">
-              <Icon name="expand-right" color={colors.icon.normal} />
-            </View>
+            {me ? (
+              <View className="ml-auto">
+                <Icon name="expand-right" color={colors.icon.normal} />
+              </View>
+            ) : (
+              <Text className="ml-auto text-caption-main text-text-alternative">
+                {t("로그인하면 볼 수 있어요")}
+              </Text>
+            )}
           </Pressable>
         </View>
 
