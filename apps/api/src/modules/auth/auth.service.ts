@@ -21,6 +21,9 @@ import { KakaoTokenVerifier } from './social/kakao-token.verifier';
 import type { SocialProfile } from './social/social-profile';
 import type { JwtPayload } from './strategies/jwt.strategy';
 
+// 이미 쓴 리프레시 토큰이 이 시간 안에 다시 오면 앱의 겹친 요청으로 보고 세션을 끊지 않는다.
+const REFRESH_REUSE_GRACE_MS = 30 * 1000;
+
 interface RefreshPayload {
   sub: string;
   jti: string;
@@ -208,25 +211,58 @@ export class AuthService {
     // MEMBER는 세팅할 것이 없다.
   }
 
-  // 리프레시 토큰 회전: 저장된 해시와 일치하는 행을 지우면서 소비한다.
-  // 이미 회전된 토큰의 재사용은 삭제 건수 0으로 걸러진다.
+  // 리프레시 토큰 회전 + 재사용 감지 (SCRUM-166).
+  // 쓴 토큰은 지우지 않고 usedAt만 찍어 만료까지 남긴다. 이미 쓴 토큰이 다시 오면 누군가 토큰을
+  // 복사해 쓰고 있다는 뜻일 수 있어서, 그 로그인 세션(familyId)의 토큰을 모두 지운다 — 진짜
+  // 주인과 훔친 쪽 모두 다시 로그인해야 하고, 훔친 쪽은 소셜 로그인을 못 하니 거기서 끊긴다.
   async refresh(refreshToken: string) {
     const payload = await this.verifyRefreshToken(refreshToken);
-    const consumed = await this.prisma.refreshToken.deleteMany({
-      where: { id: payload.jti, tokenHash: this.hash(refreshToken) },
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { id: payload.jti },
+      select: { tokenHash: true, familyId: true, usedAt: true },
     });
-    if (consumed.count === 0) {
+    if (!stored || stored.tokenHash !== this.hash(refreshToken)) {
       throw new UnauthorizedException(
         '이미 사용됐거나 무효화된 리프레시 토큰입니다.',
       );
     }
-    return this.issueTokenPair(payload.sub);
+
+    // 아직 안 쓴 토큰이면 "쓴 것"으로 바꾼다 — 조건부 갱신이라 동시에 두 번 와도 한쪽만 이긴다.
+    const consumed = await this.prisma.refreshToken.updateMany({
+      where: { id: payload.jti, usedAt: null },
+      data: { usedAt: new Date() },
+    });
+    if (consumed.count === 0) {
+      await this.handleReuse(payload.jti, stored.familyId);
+      throw new UnauthorizedException(
+        '이미 사용됐거나 무효화된 리프레시 토큰입니다.',
+      );
+    }
+    return this.issueTokenPair(payload.sub, stored.familyId);
   }
 
+  // 쓴 지 얼마 안 된 토큰의 재요청은 탈취보다 앱의 겹친 요청·재시도일 가능성이 커서 세션을 끊지 않는다
+  // (그 요청만 401 — 먼저 받은 새 토큰은 그대로 쓸 수 있다). 그보다 늦게 다시 오면 세션 전체를 끊는다.
+  private async handleReuse(jti: string, familyId: string) {
+    const token = await this.prisma.refreshToken.findUnique({
+      where: { id: jti },
+      select: { usedAt: true },
+    });
+    const usedAt = token?.usedAt?.getTime() ?? 0;
+    if (Date.now() - usedAt <= REFRESH_REUSE_GRACE_MS) return;
+    await this.prisma.refreshToken.deleteMany({ where: { familyId } });
+  }
+
+  // 로그아웃 — 그 기기의 로그인 세션(묶음)을 통째로 지운다. 다른 기기 로그인은 그대로.
   async logout(refreshToken: string) {
     const payload = await this.verifyRefreshToken(refreshToken);
+    const stored = await this.prisma.refreshToken.findUnique({
+      where: { id: payload.jti },
+      select: { tokenHash: true, familyId: true },
+    });
+    if (!stored || stored.tokenHash !== this.hash(refreshToken)) return;
     await this.prisma.refreshToken.deleteMany({
-      where: { id: payload.jti, tokenHash: this.hash(refreshToken) },
+      where: { familyId: stored.familyId },
     });
   }
 
@@ -324,7 +360,8 @@ export class AuthService {
     }
   }
 
-  private async issueTokenPair(userId: string) {
+  // familyId를 안 주면 새 로그인 — 첫 토큰의 jti가 묶음 이름이 된다.
+  private async issueTokenPair(userId: string, familyId?: string) {
     const payload: JwtPayload = { sub: userId };
     const accessToken = this.jwtService.sign(payload);
 
@@ -341,9 +378,14 @@ export class AuthService {
       data: {
         id: jti,
         userId,
+        familyId: familyId ?? jti,
         tokenHash: this.hash(refreshToken),
         expiresAt: new Date(exp * 1000),
       },
+    });
+    // 쓴 토큰을 남기게 되면서 행이 쌓인다 — 이 사람의 만료된 토큰은 발급 때마다 치운다.
+    await this.prisma.refreshToken.deleteMany({
+      where: { userId, expiresAt: { lt: new Date() } },
     });
     return { accessToken, refreshToken };
   }

@@ -478,6 +478,65 @@ describe('Auth (e2e)', () => {
     });
   });
 
+  describe('리프레시 토큰 재사용 감지 (SCRUM-166)', () => {
+    const devLogin = async () =>
+      (
+        await request(app.getHttpServer())
+          .post('/auth/login/dev')
+          .set(DEV_LOGIN_HEADER)
+          .send({ email: `reuse@${EMAIL_DOMAIN}` })
+          .expect(201)
+      ).body as LoginBody;
+    const refresh = (token: string) =>
+      request(app.getHttpServer())
+        .post('/auth/refresh')
+        .send({ refreshToken: token });
+    const jtiOf = (token: string) =>
+      (
+        JSON.parse(
+          Buffer.from(token.split('.')[1], 'base64url').toString(),
+        ) as { jti: string }
+      ).jti;
+
+    it('쓴 지 오래된 토큰이 다시 오면 그 로그인 세션의 토큰이 모두 무효가 되고, 다른 기기 로그인은 남는다', async () => {
+      const phone = await devLogin();
+      const tablet = await devLogin();
+
+      const rotated = (await refresh(phone.refreshToken).expect(201))
+        .body as TokenPairBody;
+      // 쓴 시각을 유예(30초)보다 이전으로 돌려, 훔친 토큰이 나중에 쓰이는 상황을 만든다.
+      await prisma.refreshToken.update({
+        where: { id: jtiOf(phone.refreshToken) },
+        data: { usedAt: new Date(Date.now() - 60 * 1000) },
+      });
+
+      await refresh(phone.refreshToken).expect(401);
+      // 같은 세션에서 새로 받은 토큰도 끊겼다 — 주인도 다시 로그인해야 한다.
+      await refresh(rotated.refreshToken).expect(401);
+      // 다른 기기(다른 세션)는 영향 없다.
+      await refresh(tablet.refreshToken).expect(201);
+    });
+
+    it('방금 쓴 토큰이 바로 다시 오면(앱의 겹친 요청) 그 요청만 401이고 세션은 유지된다', async () => {
+      const login = await devLogin();
+      const rotated = (await refresh(login.refreshToken).expect(201))
+        .body as TokenPairBody;
+      await refresh(login.refreshToken).expect(401);
+      await refresh(rotated.refreshToken).expect(201);
+    });
+
+    it('로그아웃하면 그 세션에서 이어진 토큰이 모두 무효가 된다', async () => {
+      const login = await devLogin();
+      const rotated = (await refresh(login.refreshToken).expect(201))
+        .body as TokenPairBody;
+      await request(app.getHttpServer())
+        .post('/auth/logout')
+        .send({ refreshToken: rotated.refreshToken })
+        .expect(204);
+      await refresh(rotated.refreshToken).expect(401);
+    });
+  });
+
   describe('탈퇴', () => {
     // 로그인이 필요한 아무 엔드포인트 — 토큰이 살아 있는지만 본다.
     const probe = (token: string) =>
