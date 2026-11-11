@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { DEV_LOGIN_HEADER } from './dev-login';
+import { img } from './storage-url';
 
 // 공용 개발 DB를 쓰므로(ARCHITECTURE.md Known Issues) 실데이터와 안 겹치는 날짜·도메인을 쓴다.
 // 회차(WorshipService)는 날짜가 unique라 테스트가 만든 회차만 지우려면 날짜가 겹치면 안 된다.
@@ -14,7 +15,7 @@ const EMAIL_DOMAIN = 'bulletins-e2e.test';
 const ADMIN_EMAIL = `admin@${EMAIL_DOMAIN}`;
 const MEMBER_EMAIL = `member@${EMAIL_DOMAIN}`;
 const FIXTURE_DATE = '2001-01-07';
-const IMAGE_URL = 'https://img.test/bulletins-e2e';
+const IMAGE_URL = img('bulletins-e2e');
 
 const body = {
   date: FIXTURE_DATE,

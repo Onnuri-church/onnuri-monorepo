@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMaxSize,
   IsArray,
@@ -7,6 +8,7 @@ import {
   IsOptional,
   IsString,
   IsUrl,
+  MaxLength,
   ValidateIf,
 } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
@@ -25,24 +27,29 @@ export class CreateQtShareDto {
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(100, { message: '제목은 100자까지 쓸 수 있어요.' })
   title!: string;
 
   @IsString()
   @IsNotEmpty()
+  @MaxLength(5000, { message: '내용은 5000자까지 쓸 수 있어요.' })
   content!: string;
 
   // 말씀 구절은 비워둘 수 있다 — 안 적었으면 null로 온다.
   @ValidateIf((_, value) => value !== null)
   @IsString()
+  @MaxLength(200, { message: '말씀 구절은 200자까지 쓸 수 있어요.' })
   passage!: string | null;
 
   @ValidateIf((_, value) => value !== null)
   @IsUrl()
+  @IsStorageUrl()
   coverImageUrl!: string | null;
 
   @IsArray()
   @ArrayMaxSize(QT_SHARE_MAX_IMAGES)
   @IsUrl({}, { each: true })
+  @IsStorageUrl({ each: true })
   imageUrls!: string[];
 
   // 익명으로 쓰기 — 생략하면 기명이다 (옛 앱 호환).

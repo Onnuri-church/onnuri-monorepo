@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { setStoragePublicPrefix } from '../../common/validators/is-storage-url';
 import { type AppConfig } from '../../config/configuration';
 
 // 서명 링크 유효 시간. 같은 사진은 남은 시간이 절반 아래로 떨어질 때까지 같은 링크를 다시 쓴다 —
@@ -27,6 +28,8 @@ export class StorageUrlService {
 
   constructor(config: ConfigService<AppConfig, true>) {
     this.storage = config.get('storage', { infer: true });
+    // 사진·파일 주소 칸 검증(@IsStorageUrl)이 허용할 접두어 (SCRUM-190)
+    setStoragePublicPrefix(this.enabled ? this.publicPrefix : null);
   }
 
   get enabled(): boolean {

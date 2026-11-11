@@ -1,9 +1,11 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMinSize,
   IsArray,
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
@@ -12,10 +14,12 @@ import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 export class CreateGroupMeetingDto {
   @IsString()
   @IsNotEmpty({ message: '소그룹 이름을 입력해주세요.' })
+  @MaxLength(100, { message: '제목은 100자까지 쓸 수 있어요.' })
   title!: string;
 
   @IsString()
   @IsNotEmpty({ message: '설명문을 입력해주세요.' })
+  @MaxLength(5000, { message: '설명은 5000자까지 쓸 수 있어요.' })
   description!: string;
 
   @IsYmdDate({ message: 'recruitStart는 YYYY-MM-DD 형식이어야 합니다.' })
@@ -29,14 +33,17 @@ export class CreateGroupMeetingDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty({ message: '모임일을 입력해주세요.' })
+  @MaxLength(100, { message: '모임일은 100자까지 쓸 수 있어요.' })
   schedule?: string;
 
   @IsString()
   @IsNotEmpty({ message: '장소를 입력해주세요.' })
+  @MaxLength(100, { message: '장소는 100자까지 쓸 수 있어요.' })
   place!: string;
 
   @IsString()
   @IsNotEmpty({ message: '비용을 입력해주세요.' })
+  @MaxLength(100, { message: '비용은 100자까지 쓸 수 있어요.' })
   cost!: string;
 
   @IsArray()
@@ -47,5 +54,6 @@ export class CreateGroupMeetingDto {
   // POST /uploads가 돌려준 주소 — 카드 썸네일·상세 히어로에 쓰인다.
   @IsOptional()
   @IsString()
+  @IsStorageUrl()
   coverImageUrl?: string | null;
 }

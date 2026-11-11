@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import { IsNotEmpty, IsString, ValidateIf } from 'class-validator';
 
 // PATCH /users/me/avatar 요청 본문 — 계약은 @onnuri/shared의 UpdateMyAvatarRequest.
@@ -6,5 +7,6 @@ export class UpdateMyAvatarDto {
   @ValidateIf((_, value) => value !== null)
   @IsString()
   @IsNotEmpty()
+  @IsStorageUrl()
   avatarUrl!: string | null;
 }
