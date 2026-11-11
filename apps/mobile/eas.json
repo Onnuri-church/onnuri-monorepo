@@ -1,4 +1,8 @@
 {
+  "cli": {
+    "version": ">= 23.0.0",
+    "appVersionSource": "remote"
+  },
   "build": {
     "development": {
       "developmentClient": true,
@@ -21,14 +25,18 @@
         "EXPO_PUBLIC_API_URL": "https://onnuri-api.onrender.com",
         "EXPO_PUBLIC_AUTH_DEV_LOGIN": "false",
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
-      }
+      },
+      "channel": "preview",
+      "autoIncrement": true
     },
     "production": {
       "env": {
         "EXPO_PUBLIC_API_URL": "https://onnuri-api.onrender.com",
         "EXPO_PUBLIC_AUTH_DEV_LOGIN": "false",
         "EXPO_PUBLIC_SENTRY_ENVIRONMENT": "production"
-      }
+      },
+      "channel": "production",
+      "autoIncrement": true
     }
   }
 }
