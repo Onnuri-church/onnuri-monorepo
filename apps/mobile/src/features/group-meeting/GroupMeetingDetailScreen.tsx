@@ -6,6 +6,7 @@ import {
   Alert,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -127,10 +128,22 @@ export function GroupMeetingDetailScreen() {
     data: meeting,
     isPending,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ["group-meetings", params.id],
     queryFn: () => fetchGroupMeetingDetail(params.id),
   });
+
+  // 당겨서 새로고침 — 직접 당겼을 때만 스피너를 보인다 (뒤에서 도는 갱신에는 안 뜨게).
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleCommentSubmit = () => {
     const content = comment.trim();
@@ -193,7 +206,10 @@ export function GroupMeetingDetailScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="pb-6">
+      <ScrollView
+        contentContainerClassName="pb-6"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+      >
         {meeting.heroImageUrl ? (
           <Image
             source={{ uri: meeting.heroImageUrl }}

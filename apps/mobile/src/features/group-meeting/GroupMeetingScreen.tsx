@@ -6,6 +6,7 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   Text,
   View,
@@ -92,13 +93,24 @@ export function GroupMeetingScreen() {
 
   // 선택한 상태(모집중/마감)의 모임을 20개씩 이어 받는다. 키가 ["group-meetings", ...]로 시작해서
   // 등록·삭제 뒤 접두어 무효화 한 번에 갱신된다.
-  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage, refetch } =
     useInfiniteQuery({
       queryKey: ["group-meetings", "list", filter],
       initialPageParam: undefined as string | undefined,
       queryFn: ({ pageParam }) => fetchGroupMeetings(filter, pageParam),
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
     });
+
+  // 당겨서 새로고침 — 직접 당겼을 때만 스피너를 보인다.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
   const meetings = (data?.pages ?? []).flatMap((page) => page.items);
 
   // 끝에서 400px 안쪽까지 내려오면 다음 쪽을 받는다.
@@ -182,6 +194,7 @@ export function GroupMeetingScreen() {
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={64}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
         contentContainerClassName="flex-row flex-wrap"
         contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING, paddingBottom: (isAdmin ? 120 : 24) + insets.bottom }}
       >
