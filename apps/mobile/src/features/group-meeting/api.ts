@@ -107,6 +107,21 @@ export function useDecideGroupMeetingMember(meetingId: string) {
   });
 }
 
+// 참여 중인 멤버 내보내기 — 소그룹장·관리자 (소그룹장은 내보낼 수 없음, 서버가 막는다).
+export function useRemoveGroupMeetingMember(meetingId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      apiClient
+        .delete<GroupMeetingDetail>(`/group-meetings/${meetingId}/members/${userId}`)
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["group-meetings", meetingId], detail);
+      void queryClient.invalidateQueries({ queryKey: ["group-meetings"], exact: true });
+    },
+  });
+}
+
 // 활동 사진 추가 — 승인된 참여자·소그룹장·관리자 (권한 검증은 서버).
 export function useAddGroupMeetingPhotos(meetingId: string) {
   const queryClient = useQueryClient();

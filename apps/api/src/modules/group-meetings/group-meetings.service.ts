@@ -325,6 +325,7 @@ export class GroupMeetingsService {
       },
       select: { id: true },
     });
+    await this.notifyLeaderChange(post.id, dto.title, leaderIds, [], adminId);
     return this.findOne(post.id, adminId);
   }
 
@@ -336,6 +337,32 @@ export class GroupMeetingsService {
     dto: UpdateGroupMeetingDto,
   ): Promise<GroupMeetingDetail> {
     await this.assertCanManage(requesterId, id);
+
+    // 소그룹장 임명·해제는 관리자만 한다. 소그룹장이 편집할 때 기존 명단을 그대로 보내는 건
+    // 허용한다 (구버전 앱은 편집 저장 때 항상 leaderIds를 함께 보낸다).
+    const currentLeaderIds = (
+      await this.prisma.hobbyGroupMember.findMany({
+        where: { postId: id, role: 'LEADER' },
+        select: { userId: true },
+      })
+    ).map((m) => m.userId);
+    const nextLeaderIds =
+      dto.leaderIds !== undefined ? [...new Set(dto.leaderIds)] : undefined;
+    const leadersChanged =
+      nextLeaderIds !== undefined &&
+      (nextLeaderIds.length !== currentLeaderIds.length ||
+        nextLeaderIds.some((leaderId) => !currentLeaderIds.includes(leaderId)));
+    if (leadersChanged && nextLeaderIds) {
+      if (!(await this.isAdmin(requesterId))) {
+        throw new ForbiddenException('소그룹장 임명·해제는 관리자만 할 수 있어요.');
+      }
+      const found = await this.prisma.user.count({
+        where: { id: { in: nextLeaderIds }, withdrawnAt: null },
+      });
+      if (found !== nextLeaderIds.length) {
+        throw new BadRequestException('존재하지 않는 회원이 소그룹장에 있습니다.');
+      }
+    }
 
     await this.prisma.$transaction(async (tx) => {
       if (
@@ -371,8 +398,8 @@ export class GroupMeetingsService {
         },
       });
 
-      if (dto.leaderIds !== undefined) {
-        const leaderIds = [...new Set(dto.leaderIds)];
+      if (leadersChanged && nextLeaderIds) {
+        const leaderIds = nextLeaderIds;
         await tx.hobbyGroupMember.updateMany({
           where: { postId: id, role: 'LEADER', userId: { notIn: leaderIds } },
           data: { role: 'MEMBER' },
@@ -386,6 +413,17 @@ export class GroupMeetingsService {
         }
       }
     });
+
+    if (leadersChanged && nextLeaderIds) {
+      const post = await this.prisma.post.findUnique({ where: { id }, select: { title: true } });
+      await this.notifyLeaderChange(
+        id,
+        post?.title ?? '소그룹',
+        nextLeaderIds.filter((leaderId) => !currentLeaderIds.includes(leaderId)),
+        currentLeaderIds.filter((leaderId) => !nextLeaderIds.includes(leaderId)),
+        requesterId,
+      );
+    }
 
     return this.findOne(id, requesterId);
   }
@@ -501,6 +539,76 @@ export class GroupMeetingsService {
     });
 
     return this.findOne(id, requesterId);
+  }
+
+  // 멤버 내보내기 — 관리자 또는 소그룹장. 참여 중(APPROVED)인 일반 멤버만 내보낼 수 있다
+  // (소그룹장은 관리자가 편집에서 해제한 뒤 내보낸다). 행을 지우므로 단톡방·사진 권한도 함께 사라지고,
+  // 모집 중이면 다시 신청할 수는 있다 (승인은 다시 소그룹장 몫).
+  async removeMember(
+    requesterId: string,
+    id: string,
+    targetUserId: string,
+  ): Promise<GroupMeetingDetail> {
+    await this.assertCanManage(requesterId, id);
+    const membership = await this.prisma.hobbyGroupMember.findUnique({
+      where: { postId_userId: { postId: id, userId: targetUserId } },
+      select: { role: true, status: true },
+    });
+    if (!membership || membership.status !== 'APPROVED') {
+      throw new NotFoundException('참여 중인 멤버가 아니에요.');
+    }
+    if (membership.role === 'LEADER') {
+      throw new BadRequestException('소그룹장은 내보낼 수 없어요. 관리자에게 해제를 요청해주세요.');
+    }
+    await this.prisma.hobbyGroupMember.delete({
+      where: { postId_userId: { postId: id, userId: targetUserId } },
+    });
+
+    const post = await this.prisma.post.findUnique({ where: { id }, select: { title: true } });
+    await this.notifications.notify([targetUserId], {
+      type: 'GROUP_MEETING',
+      title: '취향 소그룹',
+      body: `"${post?.title ?? '소그룹'}" 참여가 해제됐어요`,
+      linkUrl: `group-meeting/${id}`,
+    });
+
+    return this.findOne(id, requesterId);
+  }
+
+  // 소그룹장 임명·해제 알림 — 바꾼 본인(관리자)에게는 보내지 않는다.
+  private async notifyLeaderChange(
+    id: string,
+    title: string,
+    appointedIds: string[],
+    dismissedIds: string[],
+    actorId: string,
+  ) {
+    const appointed = appointedIds.filter((userId) => userId !== actorId);
+    const dismissed = dismissedIds.filter((userId) => userId !== actorId);
+    if (appointed.length > 0) {
+      await this.notifications.notify(appointed, {
+        type: 'GROUP_MEETING',
+        title: '취향 소그룹',
+        body: `"${title}" 소그룹장으로 지정됐어요`,
+        linkUrl: `group-meeting/${id}`,
+      });
+    }
+    if (dismissed.length > 0) {
+      await this.notifications.notify(dismissed, {
+        type: 'GROUP_MEETING',
+        title: '취향 소그룹',
+        body: `"${title}" 소그룹장에서 해제됐어요`,
+        linkUrl: `group-meeting/${id}`,
+      });
+    }
+  }
+
+  private async isAdmin(userId: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { isAdmin: true },
+    });
+    return user?.isAdmin ?? false;
   }
 
   // 모집 상태 — CLOSED로 마감했거나 모집 마감일이 지났으면 닫힘 (DB는 건드리지 않는다).
