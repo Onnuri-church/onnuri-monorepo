@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMaxSize,
   IsArray,
@@ -6,6 +7,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import type { PrayerCategoryValue } from '@onnuri/shared';
 
@@ -17,11 +19,13 @@ export class UpdatePrayerDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty({ message: '기도제목을 입력해주세요.' })
+  @MaxLength(100, { message: '제목은 100자까지 쓸 수 있어요.' })
   title?: string;
 
   @IsOptional()
   @IsString()
   @IsNotEmpty({ message: '내용을 입력해주세요.' })
+  @MaxLength(5000, { message: '내용은 5000자까지 쓸 수 있어요.' })
   content?: string;
 
   @IsOptional()
@@ -40,5 +44,6 @@ export class UpdatePrayerDto {
   @IsArray()
   @ArrayMaxSize(5, { message: '사진은 최대 5장까지 올릴 수 있어요.' })
   @IsString({ each: true })
+  @IsStorageUrl({ each: true })
   imageUrls?: string[];
 }

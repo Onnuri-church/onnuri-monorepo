@@ -12,6 +12,7 @@ import { App } from 'supertest/types';
 import { AppModule } from '../src/app.module';
 import { PrismaService } from '../src/modules/prisma/prisma.service';
 import { DEV_LOGIN_HEADER } from './dev-login';
+import { img } from './storage-url';
 
 // 테스트 데이터 식별용 접두사/도메인 — 시작/종료 시 이 값들로 만든 행을 정리한다.
 // 공용 개발 DB를 쓰므로(ARCHITECTURE.md Known Issues) 시드/실데이터와 안 겹치게 접두사를 붙인다.
@@ -80,20 +81,20 @@ describe('Posts (e2e)', () => {
         title: `${FIXTURE_PREFIX}3월글`,
         content: '3월 큐티 본문',
         eventDate: new Date('2025-03-11'),
-        coverImageUrl: 'https://img.test/cover.jpg',
+        coverImageUrl: img('cover.jpg'),
         qtShare: { create: { passage: '룻기 1:1-5' } },
         likes: { create: [{ userId }] },
         // sortOrder와 반대로 넣는다 — 상세가 넣은 순서대로 주면 순서 보장이 안 되는 걸 잡는다.
         images: {
           create: [
             {
-              url: 'https://img.test/body-2.jpg',
+              url: img('body-2.jpg'),
               kind: 'POST_CONTENT',
               sortOrder: 2,
               uploadedById: userId,
             },
             {
-              url: 'https://img.test/body-1.jpg',
+              url: img('body-1.jpg'),
               kind: 'POST_CONTENT',
               sortOrder: 1,
               uploadedById: userId,
@@ -317,11 +318,8 @@ describe('Posts (e2e)', () => {
       const res = await getDetail(marchPostId).expect(200);
 
       const body = res.body as QtShareDetail;
-      expect(body.coverImageUrl).toBe('https://img.test/cover.jpg');
-      expect(body.imageUrls).toEqual([
-        'https://img.test/body-1.jpg',
-        'https://img.test/body-2.jpg',
-      ]);
+      expect(body.coverImageUrl).toBe(img('cover.jpg'));
+      expect(body.imageUrls).toEqual([img('body-1.jpg'), img('body-2.jpg')]);
     });
 
     it('사진이 없는 글은 imageUrls가 빈 배열이다', async () => {
@@ -808,10 +806,7 @@ describe('Posts (e2e)', () => {
         create({
           ...body,
           teamId: snsTeamId,
-          imageUrls: Array.from(
-            { length: 6 },
-            (_, i) => `https://img.test/${i}.jpg`,
-          ),
+          imageUrls: Array.from({ length: 6 }, (_, i) => img(`${i}.jpg`)),
         }).expect(400));
 
       it('팀원이면 작성되고, 상세 모양 그대로 돌아온다 (사진은 보낸 순서)', async () => {
@@ -823,17 +818,14 @@ describe('Posts (e2e)', () => {
         const res = await create({
           ...body,
           teamId: snsTeamId,
-          imageUrls: ['https://img.test/a.jpg', 'https://img.test/b.jpg'],
+          imageUrls: [img('a.jpg'), img('b.jpg')],
         }).expect(201);
 
         const detail = res.body as TeamActivityDetail;
         expect(detail.teamName).toBe('SNS팀');
         expect(detail.department).toBe('sns');
         expect(detail.title).toBe(`${FIXTURE_PREFIX}작성한글`);
-        expect(detail.imageUrls).toEqual([
-          'https://img.test/a.jpg',
-          'https://img.test/b.jpg',
-        ]);
+        expect(detail.imageUrls).toEqual([img('a.jpg'), img('b.jpg')]);
         expect(detail.isMine).toBe(true);
         expect(detail.comments).toEqual([]);
       });
@@ -899,8 +891,8 @@ describe('Posts (e2e)', () => {
       title: `${FIXTURE_PREFIX}작성글`,
       content: '작성한 큐티 본문',
       passage: '룻기 2:1-7',
-      coverImageUrl: 'https://img.test/new-cover.jpg',
-      imageUrls: ['https://img.test/new-1.jpg', 'https://img.test/new-2.jpg'],
+      coverImageUrl: img('new-cover.jpg'),
+      imageUrls: [img('new-1.jpg'), img('new-2.jpg')],
     });
 
     const create = (data: Record<string, unknown>) =>
@@ -939,10 +931,7 @@ describe('Posts (e2e)', () => {
     it('본문사진이 5장을 넘으면 400 (작성 화면과 같은 상한)', () =>
       create({
         ...body(),
-        imageUrls: Array.from(
-          { length: 6 },
-          (_, i) => `https://img.test/over-${i}.jpg`,
-        ),
+        imageUrls: Array.from({ length: 6 }, (_, i) => img(`over-${i}.jpg`)),
       }).expect(400));
 
     it('작성하면 상세 모양 그대로 돌아오고, 본문사진은 보낸 순서를 지킨다', async () => {
@@ -951,11 +940,8 @@ describe('Posts (e2e)', () => {
       const created = res.body as QtShareDetail;
       expect(created.title).toBe(`${FIXTURE_PREFIX}작성글`);
       expect(created.passage).toBe('룻기 2:1-7');
-      expect(created.coverImageUrl).toBe('https://img.test/new-cover.jpg');
-      expect(created.imageUrls).toEqual([
-        'https://img.test/new-1.jpg',
-        'https://img.test/new-2.jpg',
-      ]);
+      expect(created.coverImageUrl).toBe(img('new-cover.jpg'));
+      expect(created.imageUrls).toEqual([img('new-1.jpg'), img('new-2.jpg')]);
       expect(created.isMine).toBe(true);
       expect(created.likeCount).toBe(0);
       // 저장할 때 로컬 타임존으로 날짜를 만들면 KST에서 하루 전으로 박힌다.
@@ -988,7 +974,7 @@ describe('Posts (e2e)', () => {
           images: {
             create: [
               {
-                url: 'https://img.test/old-1.jpg',
+                url: img('old-1.jpg'),
                 kind: 'POST_CONTENT',
                 sortOrder: 1,
                 uploadedById: userId,
@@ -1049,17 +1035,17 @@ describe('Posts (e2e)', () => {
       expect(updated.title).toBe(`${FIXTURE_PREFIX}수정됨`);
       expect(updated.content).toBe('수정 전 본문');
       expect(updated.passage).toBe('룻기 3:1-5');
-      expect(updated.imageUrls).toEqual(['https://img.test/old-1.jpg']);
+      expect(updated.imageUrls).toEqual([img('old-1.jpg')]);
     });
 
     it('imageUrls를 보내면 기존 본문사진을 통째로 바꾼다 (지운 장이 남지 않는다)', async () => {
       const res = await patch(myPostId, {
-        imageUrls: ['https://img.test/new-a.jpg', 'https://img.test/new-b.jpg'],
+        imageUrls: [img('new-a.jpg'), img('new-b.jpg')],
       }).expect(200);
 
       expect((res.body as QtShareDetail).imageUrls).toEqual([
-        'https://img.test/new-a.jpg',
-        'https://img.test/new-b.jpg',
+        img('new-a.jpg'),
+        img('new-b.jpg'),
       ]);
     });
 

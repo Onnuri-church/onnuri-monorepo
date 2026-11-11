@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -21,6 +22,7 @@ export const BOARD_MAX_FILES = 3;
 
 export class BoardFileDto {
   @IsUrl()
+  @IsStorageUrl()
   url!: string;
 
   @IsString()
@@ -46,6 +48,7 @@ export class SaveTeamBoardPostDto {
     message: '사진은 최대 5장까지 올릴 수 있어요.',
   })
   @IsUrl({}, { each: true })
+  @IsStorageUrl({ each: true })
   imageUrls?: string[];
 
   @IsOptional()

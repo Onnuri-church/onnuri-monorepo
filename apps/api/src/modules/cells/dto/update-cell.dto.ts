@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // PATCH /cells/:id 요청 본문 (관리자 전용) — 보낸 필드만 반영한다.
@@ -6,6 +7,7 @@ import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 export class UpdateCellDto {
   @IsOptional()
   @IsString()
+  @MaxLength(30, { message: '이름은 30자까지 쓸 수 있어요.' })
   name?: string;
 
   @IsOptional()
@@ -22,5 +24,6 @@ export class UpdateCellDto {
 
   @IsOptional()
   @IsString()
+  @IsStorageUrl()
   coverImageUrl?: string | null;
 }

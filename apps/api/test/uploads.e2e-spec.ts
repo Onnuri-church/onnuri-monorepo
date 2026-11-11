@@ -71,6 +71,13 @@ describe('Uploads content check (e2e)', () => {
     await app.get(UploadsService).deleteByUrl(canonical);
   });
 
+  it('프로필 사진에 외부 주소를 넣으면 400 (SCRUM-190)', () =>
+    request(app.getHttpServer())
+      .patch('/users/me/avatar')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ avatarUrl: 'https://evil.example/tracker.gif' })
+      .expect(400));
+
   it('사진이라고 보낸 HTML은 400', async () => {
     const res = await upload(
       Buffer.from('<!doctype html><script>alert(1)</script>'),
