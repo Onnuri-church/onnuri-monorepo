@@ -10,6 +10,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 
 import { type AppConfig } from '../../config/configuration';
+import { detectImageType, matchesFileSignature } from './file-signature';
+
+const CONTENT_MISMATCH_MESSAGE =
+  '파일 내용이 형식과 맞지 않아요. 원본 파일을 다시 골라주세요.';
 
 // 업로드 종류별 허용 형식·크기. 목록에 없는 형식은 받지 않는다.
 // 사진은 폰 카메라 원본도 들어오게 10MB, 동영상은 50MB, 문서·악보 파일은 10MB.
@@ -67,13 +71,6 @@ export class UploadsService {
   }
 
   async upload(file: Express.Multer.File): Promise<{ url: string }> {
-    const { url, serviceRoleKey, bucket } = this.storage;
-    if (!url || !serviceRoleKey) {
-      throw new ServiceUnavailableException(
-        '이미지 스토리지가 아직 설정되지 않았어요. SUPABASE_SERVICE_ROLE_KEY를 채워주세요.',
-      );
-    }
-
     const allowed = ALLOWED[file.mimetype];
     if (!allowed) {
       throw new BadRequestException(
@@ -86,17 +83,36 @@ export class UploadsService {
         `이 종류의 파일은 ${limit}MB까지 올릴 수 있어요.`,
       );
     }
-    const extension = allowed.extension;
+    // 내용 검사 (SCRUM-173) — 형식 표기만 바꾼 다른 파일을 막는다. 사진은 사진끼리 표기 차이를
+    // 허용하고 실제 형식의 확장자로 저장한다.
+    let extension = allowed.extension;
+    let contentType = file.mimetype;
+    if (allowed.kind === 'images') {
+      const detected = detectImageType(file.buffer);
+      if (!detected) throw new BadRequestException(CONTENT_MISMATCH_MESSAGE);
+      extension = ALLOWED[detected].extension;
+      contentType = detected;
+    } else if (!matchesFileSignature(file.mimetype, file.buffer)) {
+      throw new BadRequestException(CONTENT_MISMATCH_MESSAGE);
+    }
+
+    // 형식 검사가 스토리지 설정보다 먼저 — 잘못된 파일은 설정과 상관없이 400으로 돌려보낸다.
+    const { url, serviceRoleKey, bucket } = this.storage;
+    if (!url || !serviceRoleKey) {
+      throw new ServiceUnavailableException(
+        '이미지 스토리지가 아직 설정되지 않았어요. SUPABASE_SERVICE_ROLE_KEY를 채워주세요.',
+      );
+    }
 
     const now = new Date();
     const path = `${allowed.kind}/${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, '0')}/${randomUUID()}.${extension}`;
 
-    let response = await this.putObject(path, file);
+    let response = await this.putObject(path, file, contentType);
     // 첫 업로드에서 버킷이 없으면 만들고 한 번 더 시도한다 — 팀원마다 버킷을 손으로
     // 만들지 않게 하려는 것 (이미 있으면 생성이 409로 떨어지므로 무시).
     if (response.status === 404 || response.status === 400) {
       await this.createBucket();
-      response = await this.putObject(path, file);
+      response = await this.putObject(path, file, contentType);
     }
     if (!response.ok) {
       this.logger.error(
@@ -138,11 +154,15 @@ export class UploadsService {
     }
   }
 
-  private putObject(path: string, file: Express.Multer.File) {
+  private putObject(
+    path: string,
+    file: Express.Multer.File,
+    contentType: string,
+  ) {
     const { url, bucket } = this.storage;
     return fetch(`${url}/storage/v1/object/${bucket}/${path}`, {
       method: 'POST',
-      headers: { ...this.authHeaders(), 'Content-Type': file.mimetype },
+      headers: { ...this.authHeaders(), 'Content-Type': contentType },
       body: new Uint8Array(file.buffer),
     });
   }
