@@ -104,6 +104,8 @@ export interface CreateGroupMeetingRequest {
   /** YYYY-MM-DD */
   recruitStart: string;
   recruitEnd: string;
+  /** 모임일 — 자유 글 ("매주 토요일 오후 6시") */
+  schedule: string;
   place: string;
   cost: string;
   /** 소그룹장 — 한 명 이상, 다중 가능 (2026-09-21 확정). 자동으로 APPROVED가 된다 */
@@ -118,6 +120,7 @@ export interface UpdateGroupMeetingRequest {
   description?: string;
   recruitStart?: string;
   recruitEnd?: string;
+  schedule?: string;
   place?: string;
   cost?: string;
   status?: GroupMeetingStatus;

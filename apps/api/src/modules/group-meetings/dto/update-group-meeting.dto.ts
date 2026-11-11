@@ -2,6 +2,7 @@ import {
   ArrayMinSize,
   IsArray,
   IsIn,
+  IsNotEmpty,
   IsOptional,
   IsString,
   } from 'class-validator';
@@ -25,6 +26,11 @@ export class UpdateGroupMeetingDto {
   @IsOptional()
   @IsYmdDate()
   recruitEnd?: string;
+
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty({ message: '모임일을 입력해주세요.' })
+  schedule?: string;
 
   @IsOptional()
   @IsString()
