@@ -58,7 +58,7 @@ const MAX_BYTES: Record<UploadKind, number> = {
 // 컨트롤러의 multer 한도 — 종류별 한도 중 가장 큰 값. 종류별 상세 검사는 서비스가 한다.
 export const MAX_UPLOAD_BYTES = 50 * MB;
 
-// 이미지 업로드 — 공용 Supabase의 Storage에 넣고 공개 URL을 돌려준다.
+// 이미지 업로드 — 공용 Supabase의 Storage(비공개 버킷)에 넣고 저장용 주소를 돌려준다 (앱에는 서명 링크로 바뀌어 나간다, SCRUM-167).
 // 파일은 서버를 경유시킨다: 인증·형식·크기 제한을 한 곳에서 걸기 위해서다 (앱이
 // 스토리지 키를 갖지 않게 하는 목적도 있다). 버킷이 없으면 public으로 자동 생성한다.
 @Injectable()
@@ -172,8 +172,8 @@ export class UploadsService {
     const response = await fetch(`${url}/storage/v1/bucket`, {
       method: 'POST',
       headers: { ...this.authHeaders(), 'Content-Type': 'application/json' },
-      // 공개 버킷 — 앱이 인증 없이 <public URL>로 사진을 그리는 구조라서다.
-      body: JSON.stringify({ id: bucket, name: bucket, public: true }),
+      // 비공개 버킷 (SCRUM-167) — 앱에는 StorageUrlInterceptor가 서명 링크로 바꿔서 내보낸다.
+      body: JSON.stringify({ id: bucket, name: bucket, public: false }),
     });
     if (!response.ok && response.status !== 409) {
       this.logger.error(
