@@ -319,37 +319,49 @@ export function GroupMeetingDetailScreen() {
           </Pressable>
         </View>
 
-        {/* 신청 대기 — 소그룹장·관리자에게만. 참여 멤버와 같은 행 모양이고, 누르면 신청 대기
-            화면에서 승인/거절한다. */}
-        {meeting.canManage && meeting.pendingMembers.length > 0 && (
+        {/* 신청 대기 — 소그룹장·관리자에게만, 0명이어도 늘 같은 자리에 보인다 (어디서 확인하는지
+            헷갈리지 않게). 참여 멤버와 같은 행 모양이고, 1명 이상일 때만 눌러서 신청 대기 화면으로 간다. */}
+        {meeting.canManage && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
             <View className="flex-row items-center gap-1.5">
               <Text className="text-heading-small text-text-normal">{t("신청 대기")}</Text>
-              <Text className="text-heading-small text-primary-normal">
+              <Text
+                className={
+                  meeting.pendingMembers.length > 0
+                    ? "text-heading-small text-primary-normal"
+                    : "text-heading-small text-text-alternative"
+                }
+              >
                 {meeting.pendingMembers.length}
               </Text>
             </View>
-            <Pressable
-              className="mt-3 flex-row items-center gap-3"
-              onPress={() => navigation.navigate("GroupMeetingPending", { meetingId: params.id })}
-            >
-              <View className="flex-row">
-                {meeting.pendingMembers.slice(0, 3).map((member, index) => (
-                  <View
-                    key={member.id}
-                    className={index === 0 ? "" : "-ml-2 rounded-full border border-background-normal"}
-                  >
-                    <Avatar imageUrl={member.avatarUrl} size={32} />
-                  </View>
-                ))}
-              </View>
-              <Text className="text-body-small text-text-neutral">
-                {t("총 {{count}}명", { count: meeting.pendingMembers.length })}
+            {meeting.pendingMembers.length === 0 ? (
+              <Text className="mt-3 text-body-small text-text-alternative">
+                {t("대기 중인 신청이 없어요")}
               </Text>
-              <View className="ml-auto">
-                <Icon name="expand-right" color={colors.icon.normal} />
-              </View>
-            </Pressable>
+            ) : (
+              <Pressable
+                className="mt-3 flex-row items-center gap-3"
+                onPress={() => navigation.navigate("GroupMeetingPending", { meetingId: params.id })}
+              >
+                <View className="flex-row">
+                  {meeting.pendingMembers.slice(0, 3).map((member, index) => (
+                    <View
+                      key={member.id}
+                      className={index === 0 ? "" : "-ml-2 rounded-full border border-background-normal"}
+                    >
+                      <Avatar imageUrl={member.avatarUrl} size={32} />
+                    </View>
+                  ))}
+                </View>
+                <Text className="text-body-small text-text-neutral">
+                  {t("총 {{count}}명", { count: meeting.pendingMembers.length })}
+                </Text>
+                <View className="ml-auto">
+                  <Icon name="expand-right" color={colors.icon.normal} />
+                </View>
+              </Pressable>
+            )}
           </View>
         )}
 
