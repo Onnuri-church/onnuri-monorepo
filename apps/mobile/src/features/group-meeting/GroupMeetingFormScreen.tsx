@@ -59,13 +59,16 @@ export function GroupMeetingFormScreen() {
   const [description, setDescription] = useState(editing?.description ?? "");
   const [recruitStart, setRecruitStart] = useState<string | null>(editing?.recruitStart ?? null);
   const [recruitEnd, setRecruitEnd] = useState<string | null>(editing?.deadline ?? null);
+  const [schedule, setSchedule] = useState(
+    editing?.schedule === "미정" ? "" : (editing?.schedule ?? ""),
+  );
   const [place, setPlace] = useState(editing?.place === "미정" ? "" : (editing?.place ?? ""));
   const [cost, setCost] = useState(editing?.cost === "미정" ? "" : (editing?.cost ?? ""));
   const [leaders, setLeaders] = useState<LeaderPick[]>(editing?.leaders ?? []);
 
   // 입력하던 내용이 있는 채로 뒤로가기를 누르면 확인을 받는다. 저장에 성공해 화면이 닫힐 때는 막지 않는다(locked).
   // 편집 모드의 기존 값은 위 useState 초기값으로 이미 채워져 있어 첫 렌더 값이 처음 상태다.
-  const dirty = useFormDirty({ coverUri, title, description, recruitStart, recruitEnd, place, cost, leaders });
+  const dirty = useFormDirty({ coverUri, title, description, recruitStart, recruitEnd, schedule, place, cost, leaders });
   const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: meetingId ? "edit" : "create" });
 
   const canSubmit =
@@ -74,6 +77,7 @@ export function GroupMeetingFormScreen() {
     description.trim() !== "" &&
     recruitStart !== null &&
     recruitEnd !== null &&
+    schedule.trim() !== "" &&
     place.trim() !== "" &&
     cost.trim() !== "" &&
     leaders.length > 0;
@@ -114,6 +118,7 @@ export function GroupMeetingFormScreen() {
       description: description.trim(),
       recruitStart,
       recruitEnd,
+      schedule: schedule.trim(),
       place: place.trim(),
       cost: cost.trim(),
       leaderIds: leaders.map((leader) => leader.id),
@@ -178,6 +183,12 @@ export function GroupMeetingFormScreen() {
             onChange={setRecruitEnd}
           />
 
+          <TextField
+            label={t("모임일")}
+            placeholder={t("예) 매주 토요일 오후 6시")}
+            value={schedule}
+            onChangeText={setSchedule}
+          />
           <TextField label={t("장소")} placeholder={t("모임 장소를 입력하세요.")} value={place} onChangeText={setPlace} />
           <TextField label={t("비용")} placeholder={t("1인당 비용을 입력하세요.")} value={cost} onChangeText={setCost} />
 

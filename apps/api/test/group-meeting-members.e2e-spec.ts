@@ -164,6 +164,22 @@ describe('Group meeting members (e2e)', () => {
     expect(appointed).toBe(1);
   });
 
+  it('모임일은 생성 때 없어도 되고(미정), 수정으로 입력할 수 있다 (SCRUM-189)', async () => {
+    const before = await request(server()).get(`/group-meetings/${groupId}`).set(as('admin')).expect(200);
+    expect((before.body as GroupMeetingDetail).schedule).toBe('미정');
+    const res = await request(server())
+      .patch(`/group-meetings/${groupId}`)
+      .set(as('leaderA'))
+      .send({ schedule: '매주 토요일 오후 6시' })
+      .expect(200);
+    expect((res.body as GroupMeetingDetail).schedule).toBe('매주 토요일 오후 6시');
+    await request(server())
+      .patch(`/group-meetings/${groupId}`)
+      .set(as('leaderA'))
+      .send({ schedule: '' })
+      .expect(400);
+  });
+
   it('소그룹장은 0명이 될 수 없고, 없는 회원은 지정할 수 없다', async () => {
     await setLeaders('admin', []).expect(400);
     await request(server())

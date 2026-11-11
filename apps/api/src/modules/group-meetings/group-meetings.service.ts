@@ -311,6 +311,7 @@ export class GroupMeetingsService {
           create: {
             recruitStart: new Date(dto.recruitStart),
             recruitEnd: new Date(dto.recruitEnd),
+            meetingSchedule: dto.schedule ?? null,
             place: dto.place,
             cost: dto.cost,
             members: {
@@ -390,6 +391,7 @@ export class GroupMeetingsService {
           ...(dto.recruitEnd !== undefined && {
             recruitEnd: new Date(dto.recruitEnd),
           }),
+          ...(dto.schedule !== undefined && { meetingSchedule: dto.schedule }),
           ...(dto.place !== undefined && { place: dto.place }),
           ...(dto.cost !== undefined && { cost: dto.cost }),
           ...(dto.status !== undefined && {
