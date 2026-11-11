@@ -1,4 +1,10 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsNotEmpty, IsString } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
+  IsNotEmpty,
+  IsString,
+} from 'class-validator';
 
 // PATCH /bulletins/:id 요청 본문 — 날짜는 바꾸지 않고 이미지만 통째로 교체한다.
 // 계약은 @onnuri/shared의 UpdateBulletinRequest.

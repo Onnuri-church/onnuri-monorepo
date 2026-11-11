@@ -1,4 +1,10 @@
-import { ArrayMaxSize, IsArray, IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  IsArray,
+  IsNotEmpty,
+  IsString,
+  MaxLength,
+} from 'class-validator';
 
 // PUT /chat-polls/:pollId/votes 요청 본문 — 내 선택 전체를 교체한다 (빈 배열 = 투표 취소).
 export class VoteChatPollDto {

@@ -32,9 +32,7 @@ export class ContentManagerGuard implements CanActivate {
       REQUIRED_CONTENT_PERMISSION,
       context.getHandler(),
     );
-    const request = context
-      .switchToHttp()
-      .getRequest<{ user?: JwtPayload }>();
+    const request = context.switchToHttp().getRequest<{ user?: JwtPayload }>();
     const userId = request.user?.sub;
     if (!permission || !userId) {
       throw new ForbiddenException('권한이 없습니다.');
@@ -54,7 +52,9 @@ export class ContentManagerGuard implements CanActivate {
       },
     });
     if (granted === 0) {
-      throw new ForbiddenException('업로드 권한이 있는 팀의 팀원만 사용할 수 있습니다.');
+      throw new ForbiddenException(
+        '업로드 권한이 있는 팀의 팀원만 사용할 수 있습니다.',
+      );
     }
     return true;
   }

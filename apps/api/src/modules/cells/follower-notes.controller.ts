@@ -32,7 +32,6 @@ export class FollowerNotesController {
   }
 
   @DedupeCreate()
-
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -62,7 +61,6 @@ export class FollowerNotesController {
   }
 
   @DedupeCreate()
-
   @Post(':noteId/comments')
   addComment(
     @CurrentUser() user: JwtPayload,

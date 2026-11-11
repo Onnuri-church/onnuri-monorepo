@@ -116,7 +116,9 @@ export class GroupMeetingsService {
             postId: true,
             status: true,
             recruitEnd: true,
-            post: { select: { title: true, coverImageUrl: true, createdAt: true } },
+            post: {
+              select: { title: true, coverImageUrl: true, createdAt: true },
+            },
             members: {
               where: { status: 'APPROVED' },
               select: { user: { select: { avatarUrl: true } } },
@@ -250,10 +252,16 @@ export class GroupMeetingsService {
       schedule: group.meetingSchedule ?? '미정',
       place: group.place ?? '미정',
       cost: group.cost ?? '미정',
-      leaders: leaders.map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl })),
+      leaders: leaders.map((m) => ({
+        id: m.userId,
+        name: m.user.name,
+        avatarUrl: m.user.avatarUrl,
+      })),
       // 참여멤버 보기 화면용 전체 명단 — 소그룹장 먼저(시안 첫 행), 그 안에서는 가입순.
       members: [...approved]
-        .sort((a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'))
+        .sort(
+          (a, b) => Number(b.role === 'LEADER') - Number(a.role === 'LEADER'),
+        )
         .map((m) => ({
           id: m.userId,
           name: m.user.name,
@@ -281,7 +289,11 @@ export class GroupMeetingsService {
       pendingMembers: canManage
         ? group.members
             .filter((m) => m.status === 'PENDING')
-            .map((m) => ({ id: m.userId, name: m.user.name, avatarUrl: m.user.avatarUrl }))
+            .map((m) => ({
+              id: m.userId,
+              name: m.user.name,
+              avatarUrl: m.user.avatarUrl,
+            }))
         : [],
     };
   }
@@ -297,7 +309,9 @@ export class GroupMeetingsService {
       select: { id: true },
     });
     if (leaders.length !== leaderIds.length) {
-      throw new BadRequestException('존재하지 않는 회원이 소그룹장에 있습니다.');
+      throw new BadRequestException(
+        '존재하지 않는 회원이 소그룹장에 있습니다.',
+      );
     }
 
     const post = await this.prisma.post.create({
@@ -355,13 +369,17 @@ export class GroupMeetingsService {
         nextLeaderIds.some((leaderId) => !currentLeaderIds.includes(leaderId)));
     if (leadersChanged && nextLeaderIds) {
       if (!(await this.isAdmin(requesterId))) {
-        throw new ForbiddenException('소그룹장 임명·해제는 관리자만 할 수 있어요.');
+        throw new ForbiddenException(
+          '소그룹장 임명·해제는 관리자만 할 수 있어요.',
+        );
       }
       const found = await this.prisma.user.count({
         where: { id: { in: nextLeaderIds }, withdrawnAt: null },
       });
       if (found !== nextLeaderIds.length) {
-        throw new BadRequestException('존재하지 않는 회원이 소그룹장에 있습니다.');
+        throw new BadRequestException(
+          '존재하지 않는 회원이 소그룹장에 있습니다.',
+        );
       }
     }
 
@@ -417,12 +435,19 @@ export class GroupMeetingsService {
     });
 
     if (leadersChanged && nextLeaderIds) {
-      const post = await this.prisma.post.findUnique({ where: { id }, select: { title: true } });
+      const post = await this.prisma.post.findUnique({
+        where: { id },
+        select: { title: true },
+      });
       await this.notifyLeaderChange(
         id,
         post?.title ?? '소그룹',
-        nextLeaderIds.filter((leaderId) => !currentLeaderIds.includes(leaderId)),
-        currentLeaderIds.filter((leaderId) => !nextLeaderIds.includes(leaderId)),
+        nextLeaderIds.filter(
+          (leaderId) => !currentLeaderIds.includes(leaderId),
+        ),
+        currentLeaderIds.filter(
+          (leaderId) => !nextLeaderIds.includes(leaderId),
+        ),
         requesterId,
       );
     }
@@ -442,7 +467,11 @@ export class GroupMeetingsService {
   async join(userId: string, id: string): Promise<GroupMeetingDetail> {
     const group = await this.prisma.hobbyGroup.findFirst({
       where: { postId: id, post: { deletedAt: null } },
-      select: { status: true, recruitEnd: true, post: { select: { title: true } } },
+      select: {
+        status: true,
+        recruitEnd: true,
+        post: { select: { title: true } },
+      },
     });
     if (!group) throw new NotFoundException('모임을 찾을 수 없습니다.');
     if (this.toStatus(group) === 'closed') {
@@ -455,7 +484,9 @@ export class GroupMeetingsService {
     });
     if (existing && existing.status !== 'REJECTED') {
       throw new BadRequestException(
-        existing.status === 'PENDING' ? '이미 신청한 소그룹이에요.' : '이미 참여 중인 소그룹이에요.',
+        existing.status === 'PENDING'
+          ? '이미 신청한 소그룹이에요.'
+          : '이미 참여 중인 소그룹이에요.',
       );
     }
 
@@ -472,10 +503,15 @@ export class GroupMeetingsService {
         where: { postId: id, role: 'LEADER' },
         select: { userId: true },
       }),
-      this.prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      }),
     ]);
     await this.notifications.notify(
-      leaders.map((leader) => leader.userId).filter((leaderId) => leaderId !== userId),
+      leaders
+        .map((leader) => leader.userId)
+        .filter((leaderId) => leaderId !== userId),
       {
         type: 'GROUP_MEETING',
         title: '취향 소그룹',
@@ -560,13 +596,18 @@ export class GroupMeetingsService {
       throw new NotFoundException('참여 중인 멤버가 아니에요.');
     }
     if (membership.role === 'LEADER') {
-      throw new BadRequestException('소그룹장은 내보낼 수 없어요. 관리자에게 해제를 요청해주세요.');
+      throw new BadRequestException(
+        '소그룹장은 내보낼 수 없어요. 관리자에게 해제를 요청해주세요.',
+      );
     }
     await this.prisma.hobbyGroupMember.delete({
       where: { postId_userId: { postId: id, userId: targetUserId } },
     });
 
-    const post = await this.prisma.post.findUnique({ where: { id }, select: { title: true } });
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      select: { title: true },
+    });
     await this.notifications.notify([targetUserId], {
       type: 'GROUP_MEETING',
       title: '취향 소그룹',
@@ -651,7 +692,9 @@ export class GroupMeetingsService {
         select: { isAdmin: true },
       });
       if (!requester?.isAdmin) {
-        throw new ForbiddenException('참여 중인 멤버만 사진을 올릴 수 있습니다.');
+        throw new ForbiddenException(
+          '참여 중인 멤버만 사진을 올릴 수 있습니다.',
+        );
       }
     }
 
@@ -702,7 +745,9 @@ export class GroupMeetingsService {
       select: { isAdmin: true },
     });
     if (!requester?.isAdmin) {
-      throw new ForbiddenException('소그룹장 또는 관리자만 관리할 수 있습니다.');
+      throw new ForbiddenException(
+        '소그룹장 또는 관리자만 관리할 수 있습니다.',
+      );
     }
   }
 }

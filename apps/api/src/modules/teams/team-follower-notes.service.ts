@@ -35,10 +35,14 @@ export class TeamFollowerNotesService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async findAll(requesterId: string, teamId: string): Promise<TeamFollowerNoteInfo[]> {
+  async findAll(
+    requesterId: string,
+    teamId: string,
+  ): Promise<TeamFollowerNoteInfo[]> {
     const { isAdmin } = await this.assertCanView(requesterId, teamId);
     // 관리자가 연 시각을 남긴다 — 팔로워 노트 관리 목록의 "새 노트" 기준 (SCRUM-181).
-    if (isAdmin) await markFollowerNotesViewed(this.prisma, requesterId, { teamId });
+    if (isAdmin)
+      await markFollowerNotesViewed(this.prisma, requesterId, { teamId });
 
     const notes = await this.prisma.teamFollowerNote.findMany({
       where: { teamId },
@@ -110,8 +114,14 @@ export class TeamFollowerNotesService {
 
     // 관리자 알림 — 셀 노트와 같이 목사님(관리자)이 확인하는 보고라 수신자가 관리자다.
     const [author, team, admins] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: requesterId }, select: { name: true } }),
-      this.prisma.team.findUnique({ where: { id: teamId }, select: { name: true } }),
+      this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { name: true },
+      }),
+      this.prisma.team.findUnique({
+        where: { id: teamId },
+        select: { name: true },
+      }),
       this.prisma.user.findMany({
         where: { isAdmin: true, id: { not: requesterId }, withdrawnAt: null },
         select: { id: true },
@@ -232,7 +242,11 @@ export class TeamFollowerNotesService {
     return this.findAll(requesterId, teamId);
   }
 
-  private async findCommentInNote(commentId: string, noteId: string, teamId: string) {
+  private async findCommentInNote(
+    commentId: string,
+    noteId: string,
+    teamId: string,
+  ) {
     const note = await this.findNoteInTeam(noteId, teamId);
     const comment = await this.prisma.teamFollowerNoteComment.findFirst({
       where: { id: commentId, noteId: note.id },
@@ -273,7 +287,12 @@ export class TeamFollowerNotesService {
       select: {
         isAdmin: true,
         teamMemberships: {
-          where: { teamId, endedAt: null, role: 'LEADER', team: { deletedAt: null } },
+          where: {
+            teamId,
+            endedAt: null,
+            role: 'LEADER',
+            team: { deletedAt: null },
+          },
           select: { id: true },
         },
       },

@@ -23,7 +23,13 @@ export class CellGalleryService {
           { kind: 'POST_CONTENT', post: { cellId, deletedAt: null } },
         ],
       },
-      select: { id: true, url: true, kind: true, takenOn: true, createdAt: true },
+      select: {
+        id: true,
+        url: true,
+        kind: true,
+        takenOn: true,
+        createdAt: true,
+      },
       orderBy: [{ takenOn: 'desc' }, { createdAt: 'desc' }],
     });
 
@@ -94,7 +100,10 @@ export class CellGalleryService {
       where: { id: userId },
       select: {
         isAdmin: true,
-        cellMemberships: { where: { cellId, endedAt: null }, select: { id: true } },
+        cellMemberships: {
+          where: { cellId, endedAt: null },
+          select: { id: true },
+        },
       },
     });
     if (!user?.isAdmin && (user?.cellMemberships.length ?? 0) === 0) {
@@ -108,13 +117,19 @@ export class CellGalleryService {
       select: {
         isAdmin: true,
         cellMemberships: {
-          where: { cellId, endedAt: null, role: { in: ['LEADER', 'SUB_LEADER'] } },
+          where: {
+            cellId,
+            endedAt: null,
+            role: { in: ['LEADER', 'SUB_LEADER'] },
+          },
           select: { id: true },
         },
       },
     });
     if (!user?.isAdmin && (user?.cellMemberships.length ?? 0) === 0) {
-      throw new ForbiddenException('셀장 또는 관리자만 사진을 지울 수 있습니다.');
+      throw new ForbiddenException(
+        '셀장 또는 관리자만 사진을 지울 수 있습니다.',
+      );
     }
   }
 }

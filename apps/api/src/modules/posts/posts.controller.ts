@@ -167,10 +167,7 @@ export class PostsController {
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('team-activities/:id')
-  removeTeamActivity(
-    @CurrentUser() user: JwtPayload,
-    @Param('id') id: string,
-  ) {
+  removeTeamActivity(@CurrentUser() user: JwtPayload, @Param('id') id: string) {
     return this.postsService.removeTeamActivity(id, user.sub);
   }
 
@@ -182,7 +179,12 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: CreateCommentDto,
   ) {
-    return this.postsService.addComment(id, user.sub, dto.content, dto.parentId);
+    return this.postsService.addComment(
+      id,
+      user.sub,
+      dto.content,
+      dto.parentId,
+    );
   }
 
   // 댓글 수정 — 작성자와 관리자만 (검증은 서비스).
@@ -194,7 +196,12 @@ export class PostsController {
     @Param('commentId') commentId: string,
     @Body() dto: UpdateCommentDto,
   ) {
-    return this.postsService.updateComment(id, commentId, user.sub, dto.content);
+    return this.postsService.updateComment(
+      id,
+      commentId,
+      user.sub,
+      dto.content,
+    );
   }
 
   // 부서활동 글 이모지 반응 토글 — 다시 누르면 취소.
@@ -205,7 +212,11 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: TogglePostReactionDto,
   ) {
-    return this.postsService.toggleTeamActivityReaction(id, user.sub, dto.emoji);
+    return this.postsService.toggleTeamActivityReaction(
+      id,
+      user.sub,
+      dto.emoji,
+    );
   }
 
   // 댓글 삭제는 글이 아니라 댓글에 달리지만, 경로는 글 밑에 둔다 — 어떤 글의 댓글인지가

@@ -32,7 +32,9 @@ export class CreateChatPollDto {
 
   @IsArray()
   @ArrayMinSize(POLL_MIN_OPTIONS, { message: '항목은 2개 이상이어야 해요.' })
-  @ArrayMaxSize(POLL_MAX_OPTIONS, { message: '항목은 10개까지 만들 수 있어요.' })
+  @ArrayMaxSize(POLL_MAX_OPTIONS, {
+    message: '항목은 10개까지 만들 수 있어요.',
+  })
   @IsString({ each: true })
   @MaxLength(50, { each: true, message: '항목은 50자까지 쓸 수 있어요.' })
   options!: string[];
@@ -78,19 +80,25 @@ export class SendChatMessageDto {
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(CHAT_MAX_IMAGES, { message: '사진은 최대 5장까지 보낼 수 있어요.' })
+  @ArrayMaxSize(CHAT_MAX_IMAGES, {
+    message: '사진은 최대 5장까지 보낼 수 있어요.',
+  })
   @IsUrl({}, { each: true })
   imageUrls?: string[];
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(CHAT_MAX_VIDEOS, { message: '동영상은 최대 3개까지 보낼 수 있어요.' })
+  @ArrayMaxSize(CHAT_MAX_VIDEOS, {
+    message: '동영상은 최대 3개까지 보낼 수 있어요.',
+  })
   @IsUrl({}, { each: true })
   videoUrls?: string[];
 
   @IsOptional()
   @IsArray()
-  @ArrayMaxSize(CHAT_MAX_FILES, { message: '파일은 최대 3개까지 보낼 수 있어요.' })
+  @ArrayMaxSize(CHAT_MAX_FILES, {
+    message: '파일은 최대 3개까지 보낼 수 있어요.',
+  })
   @ValidateNested({ each: true })
   @Type(() => ChatFileDto)
   files?: ChatFileDto[];

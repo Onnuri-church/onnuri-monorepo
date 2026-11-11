@@ -38,10 +38,14 @@ export class FollowerNotesService {
     private readonly notifications: NotificationsService,
   ) {}
 
-  async findAll(requesterId: string, cellId: string): Promise<FollowerNoteInfo[]> {
+  async findAll(
+    requesterId: string,
+    cellId: string,
+  ): Promise<FollowerNoteInfo[]> {
     const { isAdmin } = await this.assertCanView(requesterId, cellId);
     // 관리자가 연 시각을 남긴다 — 팔로워 노트 관리 목록의 "새 노트" 기준 (SCRUM-181).
-    if (isAdmin) await markFollowerNotesViewed(this.prisma, requesterId, { cellId });
+    if (isAdmin)
+      await markFollowerNotesViewed(this.prisma, requesterId, { cellId });
 
     const notes = await this.prisma.followerNote.findMany({
       where: { meeting: { cellId } },
@@ -149,8 +153,14 @@ export class FollowerNotesService {
 
     // 관리자 알림 — 팔로워 노트는 관리자(목사님)가 확인하는 보고라 수신자가 관리자다.
     const [author, cell, admins] = await Promise.all([
-      this.prisma.user.findUnique({ where: { id: requesterId }, select: { name: true } }),
-      this.prisma.cell.findUnique({ where: { id: cellId }, select: { name: true } }),
+      this.prisma.user.findUnique({
+        where: { id: requesterId },
+        select: { name: true },
+      }),
+      this.prisma.cell.findUnique({
+        where: { id: cellId },
+        select: { name: true },
+      }),
       this.prisma.user.findMany({
         where: { isAdmin: true, id: { not: requesterId }, withdrawnAt: null },
         select: { id: true },

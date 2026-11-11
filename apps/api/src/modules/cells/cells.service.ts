@@ -12,7 +12,11 @@ import { CreateCellDto } from './dto/create-cell.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
 
 // 구성원 정렬: 셀장 → 부셀장 → 셀원(이름순). 화면(구성원 탭·셀원 관리)이 이 순서를 그대로 그린다.
-const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER: 2 };
+const ROLE_ORDER: Record<CellRole, number> = {
+  LEADER: 0,
+  SUB_LEADER: 1,
+  MEMBER: 2,
+};
 
 @Injectable()
 export class CellsService {
@@ -103,7 +107,10 @@ export class CellsService {
   }
 
   // 셀 생성 (관리자 전용) — 셀장은 필수, 부셀장은 선택 (부셀장 체크 해제 시안).
-  async create(adminId: string, dto: CreateCellDto): Promise<CellDetailResponse> {
+  async create(
+    adminId: string,
+    dto: CreateCellDto,
+  ): Promise<CellDetailResponse> {
     if (dto.viceLeaderId && dto.viceLeaderId === dto.leaderId) {
       throw new BadRequestException('셀장과 부셀장은 같은 사람일 수 없습니다.');
     }

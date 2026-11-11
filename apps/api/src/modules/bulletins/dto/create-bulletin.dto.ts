@@ -5,7 +5,7 @@ import {
   IsDateString,
   IsNotEmpty,
   IsString,
-  } from 'class-validator';
+} from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /bulletins 요청 본문 — 등록 시안(날짜 / 주보 2장 고정 / 나눔지 0~5장).

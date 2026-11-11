@@ -82,7 +82,9 @@ export class UploadsService {
     }
     if (file.size > MAX_BYTES[allowed.kind]) {
       const limit = MAX_BYTES[allowed.kind] / MB;
-      throw new BadRequestException(`이 종류의 파일은 ${limit}MB까지 올릴 수 있어요.`);
+      throw new BadRequestException(
+        `이 종류의 파일은 ${limit}MB까지 올릴 수 있어요.`,
+      );
     }
     const extension = allowed.extension;
 
@@ -97,8 +99,12 @@ export class UploadsService {
       response = await this.putObject(path, file);
     }
     if (!response.ok) {
-      this.logger.error(`storage upload failed: ${response.status} ${await response.text()}`);
-      throw new InternalServerErrorException('이미지 업로드에 실패했어요. 잠시 후 다시 시도해주세요.');
+      this.logger.error(
+        `storage upload failed: ${response.status} ${await response.text()}`,
+      );
+      throw new InternalServerErrorException(
+        '이미지 업로드에 실패했어요. 잠시 후 다시 시도해주세요.',
+      );
     }
 
     return { url: `${url}/storage/v1/object/public/${bucket}/${path}` };
@@ -115,12 +121,17 @@ export class UploadsService {
     if (!fileUrl.startsWith(publicPrefix)) return;
     const path = fileUrl.slice(publicPrefix.length);
     try {
-      const response = await fetch(`${url}/storage/v1/object/${bucket}/${path}`, {
-        method: 'DELETE',
-        headers: this.authHeaders(),
-      });
+      const response = await fetch(
+        `${url}/storage/v1/object/${bucket}/${path}`,
+        {
+          method: 'DELETE',
+          headers: this.authHeaders(),
+        },
+      );
       if (!response.ok && response.status !== 404) {
-        this.logger.warn(`storage delete failed: ${response.status} ${await response.text()}`);
+        this.logger.warn(
+          `storage delete failed: ${response.status} ${await response.text()}`,
+        );
       }
     } catch (error) {
       this.logger.warn(`storage delete failed: ${String(error)}`);
@@ -145,7 +156,9 @@ export class UploadsService {
       body: JSON.stringify({ id: bucket, name: bucket, public: true }),
     });
     if (!response.ok && response.status !== 409) {
-      this.logger.error(`bucket create failed: ${response.status} ${await response.text()}`);
+      this.logger.error(
+        `bucket create failed: ${response.status} ${await response.text()}`,
+      );
     }
   }
 

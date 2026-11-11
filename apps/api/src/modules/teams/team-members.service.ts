@@ -119,7 +119,9 @@ export class TeamMembersService {
       },
     });
     if (!requester?.isAdmin && (requester?.teamMemberships.length ?? 0) === 0) {
-      throw new ForbiddenException('팀장 또는 관리자만 팀원을 관리할 수 있습니다.');
+      throw new ForbiddenException(
+        '팀장 또는 관리자만 팀원을 관리할 수 있습니다.',
+      );
     }
   }
 }

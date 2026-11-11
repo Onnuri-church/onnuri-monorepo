@@ -10,7 +10,11 @@ import type { Prisma } from '../../../generated/prisma';
 import { PrismaService } from '../prisma/prisma.service';
 import { SaveCellAttendanceDto } from './dto/save-cell-attendance.dto';
 
-const ROLE_ORDER: Record<CellRole, number> = { LEADER: 0, SUB_LEADER: 1, MEMBER: 2 };
+const ROLE_ORDER: Record<CellRole, number> = {
+  LEADER: 0,
+  SUB_LEADER: 1,
+  MEMBER: 2,
+};
 
 // 셀 출석 관리 — 확정 스펙(2026-09-03, docs/attendance-data-model.md): QR은 예배 출석만
 // 자동 기록, 셀모임은 기본 결석이고 셀장이 온 사람만 체크한다. 이 화면의 저장은 수동
@@ -77,7 +81,9 @@ export class CellAttendanceService {
     const members = await this.findActiveMembers(cellId);
     const memberIds = new Set(members.map((member) => member.id));
     // 저장 직전에 셀을 나간 사람의 행이 섞여 들어오지 않게 현재 구성원 것만 반영한다.
-    const records = dto.records.filter((record) => memberIds.has(record.userId));
+    const records = dto.records.filter((record) =>
+      memberIds.has(record.userId),
+    );
 
     const meetingDate = new Date(dto.date);
     // 관리자가 지정한 모임 없는 날은 해당 쪽 기록을 받지 않는다 (둘 다 없으면 저장 자체를 거부).
@@ -86,7 +92,9 @@ export class CellAttendanceService {
       select: { kind: true },
     });
     if (offDay?.kind === 'BOTH_OFF') {
-      throw new BadRequestException('예배와 셀모임이 모두 없는 날이라 출석을 저장할 수 없어요.');
+      throw new BadRequestException(
+        '예배와 셀모임이 모두 없는 날이라 출석을 저장할 수 없어요.',
+      );
     }
     const skipWorship = offDay?.kind === 'WORSHIP_OFF';
     const skipMeeting = offDay?.kind === 'CELL_MEETING_OFF';
@@ -105,8 +113,10 @@ export class CellAttendanceService {
       });
 
       for (const record of records) {
-        if (!skipWorship) await this.applyWorship(tx, service.id, requesterId, record);
-        if (!skipMeeting) await this.applyMeeting(tx, meeting.id, requesterId, record);
+        if (!skipWorship)
+          await this.applyWorship(tx, service.id, requesterId, record);
+        if (!skipMeeting)
+          await this.applyMeeting(tx, meeting.id, requesterId, record);
       }
     });
 
@@ -179,14 +189,22 @@ export class CellAttendanceService {
       select: {
         memberships: {
           where: { endedAt: null },
-          select: { role: true, user: { select: { id: true, name: true, avatarUrl: true } } },
+          select: {
+            role: true,
+            user: { select: { id: true, name: true, avatarUrl: true } },
+          },
         },
       },
     });
     if (!cell) throw new NotFoundException('존재하지 않는 셀입니다.');
 
     return cell.memberships
-      .map((m) => ({ id: m.user.id, name: m.user.name, avatarUrl: m.user.avatarUrl, role: m.role }))
+      .map((m) => ({
+        id: m.user.id,
+        name: m.user.name,
+        avatarUrl: m.user.avatarUrl,
+        role: m.role,
+      }))
       .sort(
         (a, b) =>
           ROLE_ORDER[a.role] - ROLE_ORDER[b.role] ||
@@ -211,7 +229,9 @@ export class CellAttendanceService {
     });
     const isCellLeader = (requester?.cellMemberships.length ?? 0) > 0;
     if (!requester || (!requester.isAdmin && !isCellLeader)) {
-      throw new ForbiddenException('셀장 또는 관리자만 출석을 관리할 수 있습니다.');
+      throw new ForbiddenException(
+        '셀장 또는 관리자만 출석을 관리할 수 있습니다.',
+      );
     }
   }
 }

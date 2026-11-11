@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import type { AdminFollowerNoteOverview, FollowerNoteCounts } from '@onnuri/shared';
+import type {
+  AdminFollowerNoteOverview,
+  FollowerNoteCounts,
+} from '@onnuri/shared';
 
 import { kstToday } from '../../common/utils/date';
 import { PrismaService } from '../prisma/prisma.service';
@@ -40,7 +43,11 @@ export class AdminFollowerNotesService {
         orderBy: { name: 'asc' },
       }),
       this.prisma.followerNote.findMany({
-        select: { createdAt: true, authorId: true, meeting: { select: { cellId: true } } },
+        select: {
+          createdAt: true,
+          authorId: true,
+          meeting: { select: { cellId: true } },
+        },
       }),
       this.prisma.teamFollowerNote.findMany({
         select: { createdAt: true, authorId: true, teamId: true },
@@ -51,21 +58,28 @@ export class AdminFollowerNotesService {
       }),
     ]);
 
-    const cellViewed = new Map(views.filter((v) => v.cellId).map((v) => [v.cellId!, v.viewedAt]));
-    const teamViewed = new Map(views.filter((v) => v.teamId).map((v) => [v.teamId!, v.viewedAt]));
+    const cellViewed = new Map(
+      views.filter((v) => v.cellId).map((v) => [v.cellId!, v.viewedAt]),
+    );
+    const teamViewed = new Map(
+      views.filter((v) => v.teamId).map((v) => [v.teamId!, v.viewedAt]),
+    );
 
     const count = (
       notes: { createdAt: Date; authorId: string }[],
       viewedAt: Date | undefined,
     ): FollowerNoteCounts => {
       const last = notes.reduce<Date | null>(
-        (max, note) => (max === null || note.createdAt > max ? note.createdAt : max),
+        (max, note) =>
+          max === null || note.createdAt > max ? note.createdAt : max,
         null,
       );
       return {
         totalCount: notes.length,
         newCount: notes.filter(
-          (note) => note.authorId !== adminId && (!viewedAt || note.createdAt > viewedAt),
+          (note) =>
+            note.authorId !== adminId &&
+            (!viewedAt || note.createdAt > viewedAt),
         ).length,
         lastNoteAt: last?.toISOString() ?? null,
       };
@@ -74,7 +88,9 @@ export class AdminFollowerNotesService {
     return {
       cells: cells.map((cell) => {
         const leader = cell.memberships.find((m) => m.role === 'LEADER')?.user;
-        const vice = cell.memberships.find((m) => m.role === 'SUB_LEADER')?.user;
+        const vice = cell.memberships.find(
+          (m) => m.role === 'SUB_LEADER',
+        )?.user;
         return {
           id: cell.id,
           name: cell.name,

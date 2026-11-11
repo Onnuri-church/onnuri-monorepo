@@ -26,7 +26,9 @@ describe('Team follower notes (e2e)', () => {
   const cleanup = async () => {
     // 팀을 지우면 노트 → 댓글, 멤버십까지 cascade로 지워진다.
     await prisma.team.deleteMany({ where: { name: TEAM_NAME } });
-    await prisma.user.deleteMany({ where: { email: { endsWith: `@${EMAIL_DOMAIN}` } } });
+    await prisma.user.deleteMany({
+      where: { email: { endsWith: `@${EMAIL_DOMAIN}` } },
+    });
   };
 
   const devLogin = async (name: string, role?: 'ADMIN') => {
@@ -58,7 +60,9 @@ describe('Team follower notes (e2e)', () => {
       imports: [AppModule],
     }).compile();
     app = moduleFixture.createNestApplication();
-    app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+    app.useGlobalPipes(
+      new ValidationPipe({ whitelist: true, transform: true }),
+    );
     await app.init();
     prisma = app.get(PrismaService);
     await cleanup();
@@ -113,7 +117,9 @@ describe('Team follower notes (e2e)', () => {
       .set('Authorization', `Bearer ${leaderBToken}`)
       .send({ content: 'B가 고친 내용', updatedAt: note.updatedAt })
       .expect(200);
-    const updated = (res.body as TeamFollowerNoteInfo[]).find((n) => n.id === note.id)!;
+    const updated = (res.body as TeamFollowerNoteInfo[]).find(
+      (n) => n.id === note.id,
+    )!;
     expect(updated.content).toBe('B가 고친 내용');
     expect(updated.editedByName).not.toBeNull();
   });
@@ -135,7 +141,8 @@ describe('Team follower notes (e2e)', () => {
     expect(after.content).toBe('먼저 저장');
   });
 
-  it('본문이 5000자를 넘으면 400', () => create(leaderAToken, '가'.repeat(5001)).expect(400));
+  it('본문이 5000자를 넘으면 400', () =>
+    create(leaderAToken, '가'.repeat(5001)).expect(400));
 
   it('관리자 댓글 + 팀장 답글, 대댓글에 또 답글은 400', async () => {
     const [note] = await list(leaderAToken);
@@ -171,6 +178,8 @@ describe('Team follower notes (e2e)', () => {
       .delete(`${path()}/${note.id}`)
       .set('Authorization', `Bearer ${leaderBToken}`)
       .expect(200);
-    expect((await list(leaderAToken)).find((n) => n.id === note.id)).toBeUndefined();
+    expect(
+      (await list(leaderAToken)).find((n) => n.id === note.id),
+    ).toBeUndefined();
   });
 });

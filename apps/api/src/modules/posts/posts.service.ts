@@ -107,7 +107,11 @@ const HOME_QT_SHARE_COUNT = 3;
 
 // 큐티나눔 익명 글의 작성자 표기 — 일반 회원에겐 "익명", 관리자·작성자 본인에겐 "익명(실명)"
 // (기도제목과 같은 규칙: 본인은 자기 글을 알아볼 수 있어야 한다).
-function qtAuthorName(realName: string, isAnonymous: boolean, canSeeRealName: boolean): string {
+function qtAuthorName(
+  realName: string,
+  isAnonymous: boolean,
+  canSeeRealName: boolean,
+): string {
   if (!isAnonymous) return realName;
   return canSeeRealName ? `익명(${realName})` : '익명';
 }
@@ -160,20 +164,20 @@ export class PostsService {
     const admin = userId ? await this.isAdminUser(userId) : false;
     const [qtShares, teamActivities] = await Promise.all([
       !userId
-        ? Promise.resolve([])
+        ? undefined
         : this.prisma.post.findMany({
-        where: { board: 'QT_SHARE', deletedAt: null },
-        select: {
-          id: true,
-          title: true,
-          authorId: true,
-          author: { select: { name: true } },
-          qtShare: { select: { passage: true, isAnonymous: true } },
-        },
-        // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
-        orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
-        take: HOME_QT_SHARE_COUNT,
-      }),
+            where: { board: 'QT_SHARE', deletedAt: null },
+            select: {
+              id: true,
+              title: true,
+              authorId: true,
+              author: { select: { name: true } },
+              qtShare: { select: { passage: true, isAnonymous: true } },
+            },
+            // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
+            orderBy: [{ eventDate: 'desc' }, { createdAt: 'desc' }],
+            take: HOME_QT_SHARE_COUNT,
+          }),
       this.prisma.post.findMany({
         where: { board: 'TEAM_ACTIVITY', deletedAt: null },
         select: {
@@ -195,7 +199,7 @@ export class PostsService {
     ]);
 
     return {
-      qtShares: qtShares.map((post) => ({
+      qtShares: (qtShares ?? []).map((post) => ({
         id: post.id,
         authorName: qtAuthorName(
           post.author.name,
@@ -268,7 +272,8 @@ export class PostsService {
 
     const firstYear = first?.eventDate?.getUTCFullYear() ?? thisYear;
     const years: number[] = [];
-    for (let y = Math.max(thisYear, year); y >= Math.min(firstYear, year); y--) years.push(y);
+    for (let y = Math.max(thisYear, year); y >= Math.min(firstYear, year); y--)
+      years.push(y);
 
     const posts = await this.prisma.post.findMany({
       where: {
@@ -392,7 +397,10 @@ export class PostsService {
         eventDate: toEventDate(dto.eventDate),
         coverImageUrl: dto.coverImageUrl,
         qtShare: {
-          create: { passage: dto.passage, isAnonymous: dto.isAnonymous === true },
+          create: {
+            passage: dto.passage,
+            isAnonymous: dto.isAnonymous === true,
+          },
         },
         images: { create: toImageRows(dto.imageUrls, userId) },
       },
@@ -575,9 +583,7 @@ export class PostsService {
 
   // 부서활동 목록. 필터 칩에 쓸 팀 목록을 같이 내려준다 — 이 게시판은 게스트도 열람하는데
   // GET /teams는 로그인이 필요해서 앱이 팀 목록을 따로 받을 수 없다 (큐티나눔 월 목록과 같은 방식).
-  async findTeamActivities(
-    teamId?: string,
-  ): Promise<TeamActivityListResponse> {
+  async findTeamActivities(teamId?: string): Promise<TeamActivityListResponse> {
     // 필터 칩은 id·name만 쓰지만 계약 타입이 GET /teams와 같은 TeamSummary라
     // 아이콘·한 줄 소개도 같은 모양으로 채운다 (TeamsService.findAll과 동일).
     const rows = await this.prisma.team.findMany({
@@ -775,7 +781,9 @@ export class PostsService {
     if (existing) {
       await this.prisma.postReaction.delete({ where: { id: existing.id } });
     } else {
-      await this.prisma.postReaction.create({ data: { postId, userId, emoji } });
+      await this.prisma.postReaction.create({
+        data: { postId, userId, emoji },
+      });
     }
     const rows = await this.prisma.postReaction.findMany({
       where: { postId },
@@ -830,7 +838,10 @@ export class PostsService {
         },
       },
     });
-    return requester?.isAdmin === true || (requester?.teamMemberships.length ?? 0) > 0;
+    return (
+      requester?.isAdmin === true ||
+      (requester?.teamMemberships.length ?? 0) > 0
+    );
   }
 
   // 부서활동 작성 — 그 팀의 팀원 또는 관리자만 (셀 소식이 "그 셀 셀원만"인 것과 같은 기준,
@@ -950,7 +961,10 @@ export class PostsService {
     });
     if (!post) throw new NotFoundException('게시글을 찾을 수 없습니다.');
 
-    if (post.authorId !== userId && !(await this.isTeamManager(userId, post.teamId))) {
+    if (
+      post.authorId !== userId &&
+      !(await this.isTeamManager(userId, post.teamId))
+    ) {
       throw new ForbiddenException('수정·삭제 권한이 없습니다.');
     }
     return post;
@@ -1015,7 +1029,9 @@ export class PostsService {
         },
       });
       if (dto.imageUrls !== undefined) {
-        await tx.image.deleteMany({ where: { postId: id, kind: 'POST_CONTENT' } });
+        await tx.image.deleteMany({
+          where: { postId: id, kind: 'POST_CONTENT' },
+        });
         const takenOn = new Date(dto.eventDate ?? post.eventDate ?? new Date());
         await tx.image.createMany({
           data: dto.imageUrls.map((url, index) => ({

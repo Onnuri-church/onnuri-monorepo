@@ -42,7 +42,6 @@ export class LeaderRoomsController {
   }
 
   @DedupeCreate()
-
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateChatRoomDto) {
     return this.leaderRoomsService.create(user.sub, dto.name, dto.memberIds);

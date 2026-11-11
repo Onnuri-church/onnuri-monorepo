@@ -3,12 +3,20 @@ import type { LinkPreview } from '@onnuri/shared';
 
 // 링크 미리보기 — 유튜브 주소만 만든다. 유튜브가 공개하는 oEmbed 주소(고정 호스트)로 제목·썸네일을
 // 받아 온다. 임의 주소를 서버가 가져오는 방식(SSRF 위험)은 쓰지 않는다.
-const YOUTUBE_HOSTS = new Set(['youtube.com', 'www.youtube.com', 'm.youtube.com', 'youtu.be']);
+const YOUTUBE_HOSTS = new Set([
+  'youtube.com',
+  'www.youtube.com',
+  'm.youtube.com',
+  'youtu.be',
+]);
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 @Injectable()
 export class LinkPreviewsService {
-  private readonly cache = new Map<string, { at: number; value: LinkPreview | null }>();
+  private readonly cache = new Map<
+    string,
+    { at: number; value: LinkPreview | null }
+  >();
 
   async find(rawUrl: string): Promise<LinkPreview | null> {
     let parsed: URL;

@@ -21,8 +21,7 @@ const PUSH_PREF_COLUMN = {
 } as const satisfies Partial<Record<NotificationType, string>>;
 
 type PrefColumn =
-  | (typeof PUSH_PREF_COLUMN)[keyof typeof PUSH_PREF_COLUMN]
-  | 'notifyChat';
+  (typeof PUSH_PREF_COLUMN)[keyof typeof PUSH_PREF_COLUMN] | 'notifyChat';
 
 // 다른 모듈이 이벤트 시점에 부르는 알림 생성 입력.
 export interface NotifyInput {
@@ -103,7 +102,8 @@ export class NotificationsService {
     const deleted = await this.prisma.notification.deleteMany({
       where: { createdAt: { lt: cutoff } },
     });
-    if (deleted.count > 0) this.logger.log(`오래된 알림 ${deleted.count}건 정리`);
+    if (deleted.count > 0)
+      this.logger.log(`오래된 알림 ${deleted.count}건 정리`);
   }
 
   // 알림 생성 — 실패해도 본 동작(공지 등록 등)을 막으면 안 되므로 절대 던지지 않는다
@@ -181,7 +181,9 @@ export class NotificationsService {
         body: JSON.stringify(chunk),
       });
       if (!response.ok) {
-        this.logger.warn(`push send failed: ${response.status} ${await response.text()}`);
+        this.logger.warn(
+          `push send failed: ${response.status} ${await response.text()}`,
+        );
         continue;
       }
 
@@ -190,12 +192,15 @@ export class NotificationsService {
         data?: { status: string; details?: { error?: string } }[];
       };
       const deadTokens = (tickets ?? []).flatMap((ticket, index) =>
-        ticket.status === 'error' && ticket.details?.error === 'DeviceNotRegistered'
+        ticket.status === 'error' &&
+        ticket.details?.error === 'DeviceNotRegistered'
           ? [chunk[index].to]
           : [],
       );
       if (deadTokens.length > 0) {
-        await this.prisma.pushToken.deleteMany({ where: { token: { in: deadTokens } } });
+        await this.prisma.pushToken.deleteMany({
+          where: { token: { in: deadTokens } },
+        });
       }
     }
   }
