@@ -116,4 +116,15 @@ export class GroupMeetingsController {
   ) {
     return this.groupMeetingsService.decideMember(user.sub, id, userId, dto.status);
   }
+
+  // 참여 중인 멤버 내보내기 — 소그룹장·관리자
+  @UseGuards(JwtAuthGuard)
+  @Delete(':id/members/:userId')
+  removeMember(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.groupMeetingsService.removeMember(user.sub, id, userId);
+  }
 }

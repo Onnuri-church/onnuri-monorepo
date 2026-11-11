@@ -185,7 +185,9 @@ export function GroupMeetingFormScreen() {
           <View className="py-3">
             <View className="flex-row items-center gap-2">
               <Text className="text-body-main text-text-normal">{t("소그룹장")}</Text>
-              <Text className="text-caption-main text-text-alternative">{t("한 명 이상")}</Text>
+              <Text className="text-caption-main text-text-alternative">
+                {isAdmin ? t("한 명 이상") : t("변경은 관리자에게 요청해주세요")}
+              </Text>
             </View>
             <View className="mt-2">
               {leaders.map((leader) => (
@@ -194,14 +196,19 @@ export function GroupMeetingFormScreen() {
                   className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
                 >
                   <Text className="text-body-main text-text-normal">{leader.name}</Text>
-                  <Pressable
-                    onPress={() =>
-                      setLeaders((prev) => prev.filter((item) => item.id !== leader.id))
-                    }
-                    hitSlop={8}
-                  >
-                    <Icon name="close-square" size={18} color={colors.icon.normal} />
-                  </Pressable>
+                  {/* 임명·해제는 관리자만 (서버도 같은 규칙). 마지막 한 명은 뺄 수 없다 — 소그룹장은 항상 한 명 이상. */}
+                  {isAdmin && leaders.length > 1 && (
+                    <Pressable
+                      onPress={() =>
+                        setLeaders((prev) =>
+                          prev.length > 1 ? prev.filter((item) => item.id !== leader.id) : prev,
+                        )
+                      }
+                      hitSlop={8}
+                    >
+                      <Icon name="close-square" size={18} color={colors.icon.normal} />
+                    </Pressable>
+                  )}
                 </View>
               ))}
             </View>

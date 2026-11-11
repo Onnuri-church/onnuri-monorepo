@@ -1,12 +1,12 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import type { GroupMeetingMember } from "@onnuri/shared";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Image,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -24,12 +24,10 @@ import {
   useAddGroupMeetingComment,
   useAddGroupMeetingPhotos,
   useCancelGroupMeetingJoin,
-  useDecideGroupMeetingMember,
   useDeleteGroupMeetingComment,
   useJoinGroupMeeting,
 } from "./api";
 import { Avatar } from "../../shared/components/base/Avatar";
-import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { Button } from "../../shared/components/base/Button";
 import { Chip } from "../../shared/components/base/Chip";
 import { Icon } from "../../shared/components/base/Icon";
@@ -101,7 +99,6 @@ export function GroupMeetingDetailScreen() {
   const deleteComment = useDeleteGroupMeetingComment(params.id);
   const join = useJoinGroupMeeting(params.id);
   const cancelJoin = useCancelGroupMeetingJoin(params.id);
-  const decideMember = useDecideGroupMeetingMember(params.id);
   const addPhotos = useAddGroupMeetingPhotos(params.id);
   const [photoUploading, setPhotoUploading] = useState(false);
 
@@ -126,36 +123,27 @@ export function GroupMeetingDetailScreen() {
     }
   };
 
-  // 거절은 신청을 지우는 동작이라 다이얼로그로 한 번 확인한다 (셀원 삭제와 같은 패턴).
-  const rejectDialogRef = useRef<AppDialogRef>(null);
-  const [pendingReject, setPendingReject] = useState<GroupMeetingMember | null>(null);
-
-  const handleDecide = (userId: string, status: "APPROVED" | "REJECTED") => {
-    if (decideMember.isPending) return;
-    decideMember.mutate(
-      { userId, status },
-      { onError: () => Alert.alert(t("처리 실패"), t("잠시 후 다시 시도해주세요.")) },
-    );
-  };
-
-  const handleRejectPress = (member: GroupMeetingMember) => {
-    setPendingReject(member);
-    rejectDialogRef.current?.open();
-  };
-
-  const confirmReject = () => {
-    rejectDialogRef.current?.close();
-    if (pendingReject) handleDecide(pendingReject.id, "REJECTED");
-  };
 
   const {
     data: meeting,
     isPending,
     isError,
+    refetch,
   } = useQuery({
     queryKey: ["group-meetings", params.id],
     queryFn: () => fetchGroupMeetingDetail(params.id),
   });
+
+  // 당겨서 새로고침 — 직접 당겼을 때만 스피너를 보인다 (뒤에서 도는 갱신에는 안 뜨게).
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetch();
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleCommentSubmit = () => {
     const content = comment.trim();
@@ -218,7 +206,10 @@ export function GroupMeetingDetailScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="pb-6">
+      <ScrollView
+        contentContainerClassName="pb-6"
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+      >
         {meeting.heroImageUrl ? (
           <Image
             source={{ uri: meeting.heroImageUrl }}
@@ -328,45 +319,49 @@ export function GroupMeetingDetailScreen() {
           </Pressable>
         </View>
 
-        {/* 신청 대기 — 소그룹장·관리자에게만 보인다 (자체 디자인: 셀원 관리 행 패턴 + 알약 버튼,
-            시안이 나오면 그 형태로 교체). */}
-        {meeting.canManage && meeting.pendingMembers.length > 0 && (
+        {/* 신청 대기 — 소그룹장·관리자에게만, 0명이어도 늘 같은 자리에 보인다 (어디서 확인하는지
+            헷갈리지 않게). 참여 멤버와 같은 행 모양이고, 1명 이상일 때만 눌러서 신청 대기 화면으로 간다. */}
+        {meeting.canManage && (
           <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
             <View className="flex-row items-center gap-1.5">
               <Text className="text-heading-small text-text-normal">{t("신청 대기")}</Text>
-              <Text className="text-heading-small text-primary-normal">
+              <Text
+                className={
+                  meeting.pendingMembers.length > 0
+                    ? "text-heading-small text-primary-normal"
+                    : "text-heading-small text-text-alternative"
+                }
+              >
                 {meeting.pendingMembers.length}
               </Text>
             </View>
-            <View className="mt-1">
-              {meeting.pendingMembers.map((member) => (
-                <View
-                  key={member.id}
-                  className="flex-row items-center justify-between border-b border-background-assistive py-2.5"
-                >
-                  <View className="flex-row items-center gap-4">
-                    <Avatar imageUrl={member.avatarUrl} size={40} />
-                    <Text className="text-body-main text-text-normal">{member.name}</Text>
-                  </View>
-                  <View className="flex-row items-center gap-2">
-                    <Pressable
-                      className="h-8 items-center justify-center rounded-lg bg-primary-normal px-3"
-                      onPress={() => handleDecide(member.id, "APPROVED")}
-                      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+            {meeting.pendingMembers.length === 0 ? (
+              <Text className="mt-3 text-body-small text-text-alternative">
+                {t("대기 중인 신청이 없어요")}
+              </Text>
+            ) : (
+              <Pressable
+                className="mt-3 flex-row items-center gap-3"
+                onPress={() => navigation.navigate("GroupMeetingPending", { meetingId: params.id })}
+              >
+                <View className="flex-row">
+                  {meeting.pendingMembers.slice(0, 3).map((member, index) => (
+                    <View
+                      key={member.id}
+                      className={index === 0 ? "" : "-ml-2 rounded-full border border-background-normal"}
                     >
-                      <Text className="text-body-small text-text-disable">{t("승인")}</Text>
-                    </Pressable>
-                    <Pressable
-                      className="h-8 items-center justify-center rounded-lg border border-semantic-danger px-3"
-                      onPress={() => handleRejectPress(member)}
-                      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
-                    >
-                      <Text className="text-body-small text-semantic-danger">{t("거절")}</Text>
-                    </Pressable>
-                  </View>
+                      <Avatar imageUrl={member.avatarUrl} size={32} />
+                    </View>
+                  ))}
                 </View>
-              ))}
-            </View>
+                <Text className="text-body-small text-text-neutral">
+                  {t("총 {{count}}명", { count: meeting.pendingMembers.length })}
+                </Text>
+                <View className="ml-auto">
+                  <Icon name="expand-right" color={colors.icon.normal} />
+                </View>
+              </Pressable>
+            )}
           </View>
         )}
 
@@ -519,13 +514,6 @@ export function GroupMeetingDetailScreen() {
         <CommentInput value={comment} onChangeText={setComment} onSubmit={handleCommentSubmit} />
       </View>
 
-      <AppDialog
-        ref={rejectDialogRef}
-        title={t("{{name}}님의 신청을 거절하시겠습니까?", { name: pendingReject?.name ?? "" })}
-        confirmLabel={t("거절")}
-        cancelLabel={t("취소")}
-        onConfirm={confirmReject}
-      />
     </View>
   );
 }
