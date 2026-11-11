@@ -106,6 +106,8 @@ import { BottomTabNavigator } from "./BottomTabNavigator";
 import {QtBoardWriteScreen} from "../features/qt-board/QtBoardWriteScreen";
 import { DepartmentActivityMetaScreen } from "../features/department-activity/DepartmentActivityMetaScreen";
 import {DepartmentActivityWriteScreen} from "../features/department-activity/DepartmentActivityWriteScreen";
+import { UpdateRequiredScreen } from "../features/app-version/UpdateRequiredScreen";
+import { useUpdateRequired } from "../features/app-version/useUpdateRequired";
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -173,6 +175,8 @@ export function RootNavigator() {
   };
 
   const permissionGuideSeen = usePermissionGuideStore((state) => state.seen);
+  // 지원이 끝난 예전 앱이면 다른 화면 대신 업데이트 안내만 (SCRUM-193)
+  const updateCheck = useUpdateRequired();
   // 첫 실행이면 앱 접근 권한 안내 → (확인) → 스플래시 → 로그인/메인 순서다 — 안내를 보는 동안 세션 복원을 미룬다.
   useAppBootstrap(permissionGuideSeen === true);
 
@@ -183,6 +187,10 @@ export function RootNavigator() {
       queryClient.prefetchQuery({ queryKey: ["me"], queryFn: fetchMe });
     }
   }, [session.status]);
+
+  if (updateCheck.required) {
+    return <UpdateRequiredScreen policy={updateCheck.policy} />;
+  }
 
   // 저장소를 읽는 아주 짧은 순간은 빈 화면 — 여기서 스플래시를 띄우면 첫 실행에 스플래시 → 안내 → 스플래시가 된다.
   if (permissionGuideSeen === null) {

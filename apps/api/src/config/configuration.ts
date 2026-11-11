@@ -46,6 +46,11 @@ const configuration = () => {
           .map((id) => id.trim())
           .filter(Boolean) ?? [],
     },
+    appVersion: {
+      minVersion: e.APP_MIN_VERSION || null,
+      androidStoreUrl: e.APP_ANDROID_STORE_URL || null,
+      iosStoreUrl: e.APP_IOS_STORE_URL || null,
+    },
     youtube: {
       // 비어 있으면 설교영상 동기화를 건너뛴다
       apiKey: e.YOUTUBE_API_KEY || null,

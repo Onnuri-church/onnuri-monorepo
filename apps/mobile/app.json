@@ -3,6 +3,12 @@
     "name": "부산온누리교회",
     "slug": "onnuri-app",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f187ceb9-84e9-454e-afb9-cfd7f961721b"
+    },
     "scheme": "onnurichurch",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +20,9 @@
         "expo-build-properties",
         {
           "android": {
-            "extraMavenRepos": ["https://devrepo.kakao.com/nexus/content/groups/public/"]
+            "extraMavenRepos": [
+              "https://devrepo.kakao.com/nexus/content/groups/public/"
+            ]
           }
         }
       ]
