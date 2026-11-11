@@ -10,6 +10,8 @@ const YOUTUBE_HOSTS = new Set([
   'youtu.be',
 ]);
 const CACHE_TTL_MS = 60 * 60 * 1000;
+// 캐시가 끝없이 커지지 않게 (SCRUM-190) — 넘치면 가장 오래 넣은 것부터 버린다 (Map은 넣은 순서를 지킨다).
+const CACHE_MAX_ENTRIES = 500;
 
 @Injectable()
 export class LinkPreviewsService {
@@ -59,7 +61,12 @@ export class LinkPreviewsService {
     } catch {
       // 네트워크 실패는 "없음"으로 취급한다 — 미리보기는 있으면 좋은 덤이다.
     }
+    this.cache.delete(parsed.href);
     this.cache.set(parsed.href, { at: Date.now(), value });
+    for (const key of this.cache.keys()) {
+      if (this.cache.size <= CACHE_MAX_ENTRIES) break;
+      this.cache.delete(key);
+    }
     return value;
   }
 }

@@ -7,3 +7,41 @@ onlyBuiltDependencies:
   - "@prisma/engines"
   - "prisma"
   - "unrs-resolver"
+
+# 하위 의존성 보안 패치 (SCRUM-191) — pnpm audit에서 나온 취약 버전을 같은 메이저 안의 고쳐진 버전으로 올린다.
+# 메이저가 바뀌어야 고쳐지는 것(zod 3→4, image-size 1→2, uuid, glob 등)은 상위 패키지가 올라올 때까지 둔다 —
+# 대부분 빌드·테스트 도구(eas-cli, jest, nest cli) 안쪽이라 실제 서버·앱 실행 코드에는 들어가지 않는다.
+overrides:
+  # 서버 실행 경로 (express·업로드)
+  proxy-addr: ^2.0.8
+  body-parser@2: ^2.4.0
+  multer@2: ^2.5.0
+  qs@6: ^6.16.1
+  # 앱 실행 경로 (axios)
+  follow-redirects: ^1.16.2
+  # 빌드·테스트 도구
+  shell-quote: ^1.11.0
+  handlebars: ^4.7.10
+  js-yaml@3: ^3.15.2
+  js-yaml@4: ^4.3.2
+  brace-expansion@1: ^1.1.21
+  brace-expansion@2: ^2.1.7
+  brace-expansion@5: ^5.0.12
+  minimatch@5: ^5.1.8
+  fast-uri: ^3.1.9
+  nanoid@3: ^3.3.18
+  tar@7: ^7.5.21
+  browserslist: ^4.28.7
+  "@xmldom/xmldom@0.8": ^0.8.15
+  "@xmldom/xmldom@0.9": ^0.9.12
+  svgo@3: ^3.3.5
+  source-map-js: ^1.2.2
+  compression: ^1.8.2
+  node-forge: ^1.4.3
+  joi@17: ^17.13.9
+  postcss: ^8.5.23
+  postcss-selector-parser@6: ^6.1.5
+  ajv@8: ^8.18.0
+  yaml@2: ^2.8.3
+  moment: ^2.31.0
+  baseline-browser-mapping: ^2.11.0

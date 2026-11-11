@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMinSize,
   IsArray,
@@ -5,6 +6,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  MaxLength,
 } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
@@ -13,10 +15,12 @@ import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 export class UpdateGroupMeetingDto {
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: '제목은 100자까지 쓸 수 있어요.' })
   title?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(5000, { message: '설명은 5000자까지 쓸 수 있어요.' })
   description?: string;
 
   @IsOptional()
@@ -30,14 +34,17 @@ export class UpdateGroupMeetingDto {
   @IsOptional()
   @IsString()
   @IsNotEmpty({ message: '모임일을 입력해주세요.' })
+  @MaxLength(100, { message: '모임일은 100자까지 쓸 수 있어요.' })
   schedule?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: '장소는 100자까지 쓸 수 있어요.' })
   place?: string;
 
   @IsOptional()
   @IsString()
+  @MaxLength(100, { message: '비용은 100자까지 쓸 수 있어요.' })
   cost?: string;
 
   // 모집 상태 수동 전환 (모집중/마감 필터의 마감 처리)
@@ -54,5 +61,6 @@ export class UpdateGroupMeetingDto {
   // "생략 = 유지, null = 사진 제거"
   @IsOptional()
   @IsString()
+  @IsStorageUrl()
   coverImageUrl?: string | null;
 }

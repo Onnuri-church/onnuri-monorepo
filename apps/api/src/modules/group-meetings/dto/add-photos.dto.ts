@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -13,5 +14,6 @@ export class AddPhotosDto {
   @ArrayMaxSize(10, { message: '사진은 한 번에 10장까지 올릴 수 있어요.' })
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
+  @IsStorageUrl({ each: true })
   imageUrls!: string[];
 }

@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import {
   ArrayMaxSize,
   ArrayMinSize,
@@ -23,6 +24,7 @@ export class CreateBulletinDto {
   @ArrayMaxSize(2, { message: '주보는 2장을 올려주세요.' })
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
+  @IsStorageUrl({ each: true })
   bulletinImageUrls!: string[];
 
   // 나눔지는 없어도 된다 (주보만 올리는 주).
@@ -30,5 +32,6 @@ export class CreateBulletinDto {
   @ArrayMaxSize(5, { message: '나눔지는 최대 5장까지 올릴 수 있어요.' })
   @IsString({ each: true })
   @IsNotEmpty({ each: true })
+  @IsStorageUrl({ each: true })
   handoutImageUrls!: string[];
 }

@@ -1,3 +1,4 @@
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -59,6 +60,7 @@ export class CreateChatPollDto {
 // 첨부 파일 한 건 — 계약은 @onnuri/shared의 ChatFile.
 export class ChatFileDto {
   @IsUrl()
+  @IsStorageUrl()
   url!: string;
 
   @IsString()
@@ -84,6 +86,7 @@ export class SendChatMessageDto {
     message: '사진은 최대 5장까지 보낼 수 있어요.',
   })
   @IsUrl({}, { each: true })
+  @IsStorageUrl({ each: true })
   imageUrls?: string[];
 
   @IsOptional()
@@ -92,6 +95,7 @@ export class SendChatMessageDto {
     message: '동영상은 최대 3개까지 보낼 수 있어요.',
   })
   @IsUrl({}, { each: true })
+  @IsStorageUrl({ each: true })
   videoUrls?: string[];
 
   @IsOptional()

@@ -1,4 +1,5 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsStorageUrl } from '../../../common/validators/is-storage-url';
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 
 // POST /cells 요청 본문 (관리자 전용) — 셀 생성 폼(배경사진/셀장/부셀장/셀이름/활동기간).
@@ -6,6 +7,7 @@ import { IsYmdDate } from '../../../common/validators/is-ymd-date';
 export class CreateCellDto {
   @IsString()
   @IsNotEmpty({ message: '셀 이름을 입력해주세요.' })
+  @MaxLength(30, { message: '이름은 30자까지 쓸 수 있어요.' })
   name!: string;
 
   @IsString()
@@ -22,5 +24,6 @@ export class CreateCellDto {
 
   @IsOptional()
   @IsString()
+  @IsStorageUrl()
   coverImageUrl?: string | null;
 }

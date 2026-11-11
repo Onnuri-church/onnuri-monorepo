@@ -126,5 +126,7 @@
   "{{name}}님을 소그룹에서 내보내시겠습니까?": "Remove {{name}} from this group?",
   "단톡방과 활동 사진에도 더 이상 접근할 수 없어요.": "They will lose access to the group chat and photos.",
   "대기 중인 신청이 없어요": "No pending requests",
-  "예) 매주 토요일 오후 6시": "e.g. Every Saturday at 6 PM"
+  "예) 매주 토요일 오후 6시": "e.g. Every Saturday at 6 PM",
+  "로그인하면 볼 수 있어요": "Sign in to see",
+  "로그인하면 활동 사진과 댓글을 볼 수 있어요": "Sign in to see photos and comments"
 }
