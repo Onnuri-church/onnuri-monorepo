@@ -44,6 +44,7 @@ import { CommentItem } from "../../shared/components/composed/CommentItem";
 import { ManageLinkCard } from "../cell/components/ManageLinkCard";
 import { useMe } from "../profile/useMe";
 import { useBlockConfirm } from "../block/useBlockConfirm";
+import { useReport } from "../report/useReport";
 
 // 시안 확정값은 402pt 프레임 기준이다. 콘텐츠 폭 362 = 402 - 20*2 이므로
 // 폭을 박지 않고 좌우 여백 20만 주면 402에서 362가 그대로 나오고 다른 기기에도 맞는다.
@@ -84,6 +85,8 @@ export function GroupMeetingDetailScreen() {
   const { t } = useTranslation();
   // 남의 댓글 "차단" (SCRUM-198) — 차단하면 캐시를 다시 받아 그 사람 댓글이 빠진다.
   const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
+  // 남의 글·댓글 "신고" (SCRUM-199)
+  const { openReport, sheet: reportSheet } = useReport();
   const themeColors = useThemeColors();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -493,9 +496,15 @@ export function GroupMeetingDetailScreen() {
                     ? () => requestBlock({ userId: item.authorId, name: item.authorName })
                     : undefined
                 }
+                onReportPress={
+                  canBlock && !item.isMine
+                    ? () => openReport({ targetType: "COMMENT", targetId: item.id })
+                    : undefined
+                }
               />
             ))}
             {blockDialog}
+            {reportSheet}
           </View>
         </View>
 

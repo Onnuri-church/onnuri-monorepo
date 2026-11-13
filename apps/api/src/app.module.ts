@@ -21,6 +21,7 @@ import { AppVersionModule } from './modules/app-version/app-version.module';
 import { PublicPagesModule } from './modules/public-pages/public-pages.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BlocksModule } from './modules/blocks/blocks.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { BulletinsModule } from './modules/bulletins/bulletins.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
@@ -49,6 +50,7 @@ import { UsersModule } from './modules/users/users.module';
     PrismaModule,
     UsersModule,
     BlocksModule,
+    ReportsModule,
     AuthModule,
     CellsModule,
     TeamsModule,

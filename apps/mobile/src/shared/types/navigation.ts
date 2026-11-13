@@ -121,6 +121,7 @@ export type RootStackParamList = {
   // cellId가 있으면 편집 모드다.
   AdminCellManage: undefined;
   AdminFollowerNotes: undefined;
+  AdminReports: undefined;
   AdminCellForm: { cellId?: string } | undefined;
   AdminMemberList: undefined;
   AdminMemberDetail: { memberId: string };

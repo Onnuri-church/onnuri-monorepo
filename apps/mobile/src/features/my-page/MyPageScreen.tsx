@@ -53,6 +53,7 @@ interface RoleLinkHandlers {
   onQtManagePress?: () => void;
   onPrayerManagePress?: () => void;
   onBannerManagePress?: () => void;
+  onReportManagePress?: () => void;
 }
 
 function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers): MenuLink[] {
@@ -81,6 +82,8 @@ function getRoleLinks(role: UserRole, team: string, handlers: RoleLinkHandlers):
         { label: i18n.t("큐티나눔 관리"), onPress: handlers.onQtManagePress },
         { label: i18n.t("기도제목 관리"), onPress: handlers.onPrayerManagePress },
         { label: i18n.t("홈 배너 관리"), onPress: handlers.onBannerManagePress },
+        // 신고 관리 (SCRUM-199) — 신고가 오면 알림으로도 온다
+        { label: i18n.t("신고 관리"), onPress: handlers.onReportManagePress },
       ];
     case "member":
       return [];
@@ -162,6 +165,7 @@ export function MyPageScreen() {
     onQtManagePress: () => navigation.navigate("QtBoard"),
     onPrayerManagePress: () => navigation.navigate("PrayerBoard"),
     onBannerManagePress: () => navigation.navigate("AdminBannerManage"),
+    onReportManagePress: () => navigation.navigate("AdminReports"),
   });
   // 전체 리더 방 — 팀장·팔로워(셀장·부셀장)·관리자에게만 보이는 입구. 방에 안 읽은 메시지가 있으면 빨간 점을 단다.
   // 관리 카드의 첫 줄에 둬서 점이 바로 눈에 띄게 한다.

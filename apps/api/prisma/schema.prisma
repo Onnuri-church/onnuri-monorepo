@@ -107,6 +107,7 @@ enum NotificationType {
   GROUP_MEETING
   CHAT
   BULLETIN
+  REPORT // 관리자에게 — 새 신고 접수 (SCRUM-199)
 }
 
 // ---------------------------------------------------------------------
@@ -191,6 +192,8 @@ model User {
   notifications          Notification[]
   blocks                 UserBlock[]             @relation("Blocker")
   blockedBy              UserBlock[]             @relation("Blocked")
+  reportsMade            Report[]                @relation("Reporter")
+  reportsReceived        Report[]                @relation("ReportedAuthor")
 }
 
 // 사용자 차단 (SCRUM-198) — 차단한 사람에게만 상대의 글·댓글·채팅이 가려진다 (한쪽 방향, 상대는 모른다).
@@ -990,4 +993,52 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
+}
+
+// ---------------------------------------------------------------------
+// 신고 (SCRUM-199) — 앱스토어 UGC 요건. 신고는 관리자에게 알림이 가고, 관리자가 숨기거나 넘긴다.
+// ---------------------------------------------------------------------
+
+enum ReportTargetType {
+  POST // 큐티나눔·기도제목·부서활동·셀 소식·취향소그룹 (Post 테이블)
+  COMMENT
+  CHAT_MESSAGE
+  TEAM_BOARD_POST
+  TEAM_BOARD_COMMENT
+}
+
+enum ReportReason {
+  ABUSE // 욕설·비방
+  SEXUAL // 음란·선정
+  SPAM // 광고·도배
+  PRIVACY // 개인정보 노출
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  HIDDEN // 관리자가 신고된 글을 숨김
+  DISMISSED // 관리자가 문제없다고 넘김
+}
+
+model Report {
+  id             String           @id @default(cuid())
+  reporter       User             @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reporterId     String
+  targetType     ReportTargetType
+  targetId       String
+  // 신고된 글의 작성자 — 글이 지워져도 누구 글이었는지 남긴다
+  targetAuthor   User             @relation("ReportedAuthor", fields: [targetAuthorId], references: [id], onDelete: Cascade)
+  targetAuthorId String
+  reason         ReportReason
+  detail         String? // 기타 사유 (선택)
+  snapshot       String // 신고 시점의 내용 앞부분 — 작성자가 고치거나 지워도 관리자가 판단할 수 있게
+  status         ReportStatus     @default(OPEN)
+  handledAt      DateTime?
+  handledById    String?
+  createdAt      DateTime         @default(now())
+
+  @@unique([reporterId, targetType, targetId]) // 같은 사람이 같은 글을 여러 번 신고해도 한 건
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
 }
