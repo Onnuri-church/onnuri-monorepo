@@ -39,9 +39,12 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
+import { useBlockConfirm } from "../block/useBlockConfirm";
 
 export function DepartmentActivityDetailScreen() {
   const { t } = useTranslation();
+  // 남의 댓글 "차단" (SCRUM-198) — 차단하면 캐시를 다시 받아 그 사람 댓글이 빠진다.
+  const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { id } = useRoute<RouteProp<RootStackParamList, "DepartmentActivityDetail">>().params;
@@ -305,9 +308,15 @@ export function DepartmentActivityDetailScreen() {
                 }}
                 onEditPress={handleEditPress}
                 onDeletePress={handleDeletePress}
+                onBlockPress={
+                  canBlock
+                    ? (target) => requestBlock({ userId: target.authorId, name: target.authorName })
+                    : undefined
+                }
               />
             ))
           )}
+          {blockDialog}
         </View>
       </ScrollView>
       {/* 키보드가 올라오면 그 높이만큼 아래를 띄운다. 이때 내비게이션 바 인셋은 더하지

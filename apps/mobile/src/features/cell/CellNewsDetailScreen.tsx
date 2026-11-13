@@ -27,10 +27,13 @@ import {
   useToggleCellNewsLike,
 } from "./api";
 import { canManageCell } from "./cellDetail";
+import { useBlockConfirm } from "../block/useBlockConfirm";
 
 // 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
   const { t } = useTranslation();
+  // 남의 댓글 "차단" (SCRUM-198) — 차단하면 캐시를 다시 받아 그 사람 댓글이 빠진다.
+  const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
   const themeColors = useThemeColors();
   const route = useRoute<RouteProp<RootStackParamList, "CellNewsDetail">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
@@ -183,8 +186,14 @@ export function CellNewsDetailScreen() {
                     avatarUrl={comment.authorAvatarUrl}
                     timeAgo={toTimeAgo(comment.createdAt)}
                     content={comment.content}
+                    onBlockPress={
+                      canBlock && !comment.isMine
+                        ? () => requestBlock({ userId: comment.authorId, name: comment.authorName })
+                        : undefined
+                    }
                   />
                 ))}
+                {blockDialog}
               </View>
             )}
           </View>

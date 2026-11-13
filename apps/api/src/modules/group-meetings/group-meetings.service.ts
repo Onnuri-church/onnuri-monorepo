@@ -15,7 +15,7 @@ import { pad } from '../../common/utils/date';
 import { NotificationsService } from '../notifications/notifications.service';
 import {
   groupScopeWhere,
-  visibleUserWhere,
+  visibleAuthorWhere,
 } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
@@ -204,7 +204,7 @@ export class GroupMeetingsService {
               ],
             },
             comments: {
-              where: { deletedAt: null, author: visibleUserWhere() },
+              where: { deletedAt: null, author: visibleAuthorWhere() },
               select: {
                 id: true,
                 content: true,
@@ -295,6 +295,7 @@ export class GroupMeetingsService {
       photoCount: isGuest ? 0 : group.post.images.length,
       comments: (isGuest ? [] : group.post.comments).map((comment) => ({
         id: comment.id,
+        authorId: comment.authorId,
         authorName: comment.author.name,
         authorAvatarUrl: comment.author.avatarUrl,
         createdAt: comment.createdAt.toISOString(),

@@ -14,6 +14,7 @@ import {
 } from '../../common/utils/date';
 import { markFollowerNotesViewed } from '../admin/admin-follower-notes.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { visibleAuthorWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateFollowerNoteCommentDto } from './dto/create-follower-note-comment.dto';
 import { CreateFollowerNoteDto } from './dto/create-follower-note.dto';
@@ -60,6 +61,7 @@ export class FollowerNotesService {
         author: { select: { name: true, avatarUrl: true } },
         meeting: { select: { service: { select: { date: true } } } },
         comments: {
+          where: { author: visibleAuthorWhere() },
           select: {
             id: true,
             content: true,

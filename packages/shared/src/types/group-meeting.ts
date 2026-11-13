@@ -40,6 +40,8 @@ export interface GroupMeetingPhoto {
 
 export interface GroupMeetingComment {
   id: string;
+  /** 작성자 — "차단하기"가 쓴다 (SCRUM-198) */
+  authorId: string;
   authorName: string;
   authorAvatarUrl: string | null;
   /** 작성 시각(ISO) — "2분 전"은 앱이 계산한다 (캐시에 굳지 않게) */

@@ -72,6 +72,7 @@ import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { NotificationSettingsScreen } from "../features/settings/NotificationSettingsScreen";
+import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
@@ -656,6 +657,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("설정")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="BlockedUsers"
+            component={BlockedUsersScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("차단 목록")} rightAction="home" />,
             }}
           />
           <Stack.Screen

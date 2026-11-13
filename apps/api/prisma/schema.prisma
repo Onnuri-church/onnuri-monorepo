@@ -189,6 +189,22 @@ model User {
   uploadedImages         Image[]
   notices                Notice[]
   notifications          Notification[]
+  blocks                 UserBlock[]             @relation("Blocker")
+  blockedBy              UserBlock[]             @relation("Blocked")
+}
+
+// 사용자 차단 (SCRUM-198) — 차단한 사람에게만 상대의 글·댓글·채팅이 가려진다 (한쪽 방향, 상대는 모른다).
+// 같은 팀·셀·소그룹 소속은 그대로다 (교회 조직이라 차단으로 빠지지 않는다).
+model UserBlock {
+  id        String   @id @default(cuid())
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId String
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  blockedId String
+  createdAt DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
 }
 
 model SocialAccount {

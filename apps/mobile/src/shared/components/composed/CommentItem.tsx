@@ -15,6 +15,8 @@ interface CommentItemProps {
   onEditPress?: () => void;
   /** 주면 "삭제" 버튼이 붙는다. 내 댓글일 때만 넘긴다. */
   onDeletePress?: () => void;
+  /** 주면 "차단" 버튼이 붙는다. 남의 댓글일 때만 넘긴다 (SCRUM-198). */
+  onBlockPress?: () => void;
 }
 
 // 댓글 한 줄. 댓글에 작성자·시간이 있다는 걸 아는 조합 컴포넌트라 base가 아니라 composed에 둔다.
@@ -27,6 +29,7 @@ export function CommentItem({
   onReplyPress,
   onEditPress,
   onDeletePress,
+  onBlockPress,
 }: CommentItemProps) {
   const { t } = useTranslation();
   return (
@@ -39,7 +42,7 @@ export function CommentItem({
         </View>
         <Text className="mt-1 text-body-medium text-text-neutral">{content}</Text>
         {/* 답글·삭제는 콜백을 준 게시판에서만 나온다 — 시안에 버튼이 없는 화면은 그대로 유지된다. */}
-        {(onReplyPress || onEditPress || onDeletePress) && (
+        {(onReplyPress || onEditPress || onDeletePress || onBlockPress) && (
           <View className="mt-1 flex-row gap-3">
             {onReplyPress && (
               <PressableScale scaleTo={0.9} onPress={onReplyPress} hitSlop={8}>
@@ -54,6 +57,11 @@ export function CommentItem({
             {onDeletePress && (
               <PressableScale scaleTo={0.9} onPress={onDeletePress} hitSlop={8}>
                 <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
+              </PressableScale>
+            )}
+            {onBlockPress && (
+              <PressableScale scaleTo={0.9} onPress={onBlockPress} hitSlop={8}>
+                <Text className="text-body-small text-text-alternative">{t("차단")}</Text>
               </PressableScale>
             )}
           </View>

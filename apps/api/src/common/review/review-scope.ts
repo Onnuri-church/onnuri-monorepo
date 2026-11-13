@@ -11,13 +11,18 @@ import type { Prisma } from '../../../generated/prisma';
 // 서비스 메서드마다 인자로 넘기지 않아도 되게. 비로그인·크론처럼 값이 없으면 실제 성도와 같이 다룬다.
 interface ReviewContext {
   isReviewer: boolean;
+  /** 요청한 사람 — 차단 목록 필터(visibleAuthorWhere)가 쓴다 (SCRUM-198). 비로그인이면 없다. */
+  viewerId?: string;
 }
 
 export const reviewContext = new AsyncLocalStorage<ReviewContext>();
 
-export function markReviewer(): void {
+// JwtStrategy가 계정 확인 뒤에 부른다.
+export function setViewer(viewerId: string, isReviewer: boolean): void {
   const store = reviewContext.getStore();
-  if (store) store.isReviewer = true;
+  if (!store) return;
+  store.viewerId = viewerId;
+  store.isReviewer = isReviewer;
 }
 
 export function isReviewViewer(): boolean {
@@ -38,4 +43,14 @@ export function groupScopeWhere(): { isReviewOnly: boolean } {
 // 심사 계정은 전부 본다. 들어가거나 신청하는 목록에는 groupScopeWhere를 쓴다.
 export function visibleGroupWhere(): { isReviewOnly?: false } {
   return isReviewViewer() ? {} : { isReviewOnly: false };
+}
+
+// 글·댓글 작성자 조건 — 심사 계정 숨김(visibleUserWhere)에 더해, 요청한 사람이 차단한 사람의 글·댓글을
+// 뺀다 (SCRUM-198). 관리자 회원 목록처럼 "사람 목록"에는 쓰지 않는다 — 차단해도 같은 교회 성도다.
+export function visibleAuthorWhere(): Prisma.UserWhereInput {
+  const viewerId = reviewContext.getStore()?.viewerId;
+  return {
+    ...visibleUserWhere(),
+    ...(viewerId && { blockedBy: { none: { blockerId: viewerId } } }),
+  };
 }
