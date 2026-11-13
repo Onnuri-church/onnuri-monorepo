@@ -7,6 +7,7 @@ import type { CellDetailResponse, CellRole, CellSummary } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
 import { kstToday } from '../../common/utils/date';
+import { groupScopeWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellDto } from './dto/create-cell.dto';
 import { UpdateCellDto } from './dto/update-cell.dto';
@@ -27,7 +28,11 @@ export class CellsService {
   // 종료일 당일까지는 활동 중이다 — 한국 시간 자정에 넘어간다 (CellExpiryService와 같은 기준).
   async findAll(): Promise<CellSummary[]> {
     const cells = await this.prisma.cell.findMany({
-      where: { deletedAt: null, expiresAt: { gte: kstToday() } },
+      where: {
+        deletedAt: null,
+        expiresAt: { gte: kstToday() },
+        ...groupScopeWhere(),
+      },
       select: {
         id: true,
         name: true,

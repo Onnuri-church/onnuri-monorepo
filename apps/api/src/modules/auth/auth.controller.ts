@@ -15,6 +15,7 @@ import { AuthService } from './auth.service';
 import { DevLoginDto } from './dto/dev-login.dto';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ReviewLoginDto } from './dto/review-login.dto';
 import { SocialLoginDto } from './dto/social-login.dto';
 
 // 로그인·토큰 갱신은 토큰 없이 들어와 IP 단위로 센다 (SCRUM-165).
@@ -40,6 +41,12 @@ export class AuthController {
     @Headers('x-dev-login-secret') secret: string | undefined,
   ) {
     return this.authService.loginWithDev(dto.email, dto.role, secret);
+  }
+
+  // 스토어 심사용 (SCRUM-197) — REVIEW_LOGIN_ID/PASSWORD가 없는 환경에서는 404
+  @Post('login/review')
+  loginForReview(@Body() dto: ReviewLoginDto) {
+    return this.authService.loginForReview(dto.id, dto.password);
   }
 
   @Post('refresh')

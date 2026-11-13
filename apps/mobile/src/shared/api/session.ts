@@ -10,6 +10,7 @@ import {
   postKakaoLogin,
   postLogout,
   postRefresh,
+  postReviewLogin,
 } from "./authApi";
 import { unregisterPushToken } from "./push";
 import { queryClient } from "./queryClient";
@@ -52,6 +53,13 @@ export async function signInWithDev(
   role: DevLoginRole,
 ): Promise<{ isNewUser: boolean }> {
   return startSession(await postDevLogin(email, role));
+}
+
+export async function signInForReview(
+  id: string,
+  password: string,
+): Promise<{ isNewUser: boolean }> {
+  return startSession(await postReviewLogin(id, password));
 }
 
 // 앱 부팅 시 저장된 토큰으로 세션을 복원한다. 세션 확정(setSession/clearSession)은

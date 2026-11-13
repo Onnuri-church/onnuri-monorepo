@@ -30,6 +30,9 @@ const configuration = () => {
       // 개발용 로그인 — 명시적으로 켠 환경에서만 (기본 꺼짐, 운영 금지)
       devLoginEnabled: e.AUTH_DEV_LOGIN === 'true',
       devLoginSecret: e.AUTH_DEV_LOGIN_SECRET || null,
+      // 스토어 심사용 로그인 (SCRUM-197) — 둘 다 있어야 열린다. 비우면 404로 꺼진다.
+      reviewLoginId: e.REVIEW_LOGIN_ID || null,
+      reviewLoginPassword: e.REVIEW_LOGIN_PASSWORD || null,
     },
     storage: {
       url: e.SUPABASE_URL || deriveSupabaseUrl(e.DATABASE_URL),

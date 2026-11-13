@@ -1,4 +1,8 @@
-import { Module } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -6,6 +10,7 @@ import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ReviewContextMiddleware } from './common/review/review-context.middleware';
 import { DedupeCreateInterceptor } from './common/interceptors/dedupe-create.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { StorageUrlInterceptor } from './modules/uploads/storage-url.interceptor';
@@ -73,4 +78,9 @@ import { UsersModule } from './modules/users/users.module';
     { provide: APP_INTERCEPTOR, useClass: DedupeCreateInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // 심사 계정 구분 (SCRUM-197) — 가드(로그인 검증)보다 먼저 요청 컨텍스트를 연다.
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ReviewContextMiddleware).forRoutes('{*splat}');
+  }
+}

@@ -3,6 +3,7 @@ import { Cron } from '@nestjs/schedule';
 import type { NotificationInfo } from '@onnuri/shared';
 import type { NotificationType } from '../../../generated/prisma';
 
+import { isReviewViewer } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 설정 화면의 알림 토글과 1:1인 타입만 유저 설정으로 푸시를 거른다 — 여기 없는 타입
@@ -109,9 +110,11 @@ export class NotificationsService {
   // 알림 생성 — 실패해도 본 동작(공지 등록 등)을 막으면 안 되므로 절대 던지지 않는다
   // (UploadsService.deleteByUrl과 같은 취급). 알림센터 행을 쌓은 뒤 같은 내용으로
   // 기기 푸시도 발송한다.
-  async notify(userIds: string[], input: NotifyInput): Promise<void> {
-    if (userIds.length === 0) return;
+  async notify(recipientIds: string[], input: NotifyInput): Promise<void> {
+    if (recipientIds.length === 0) return;
     try {
+      const userIds = await this.excludeRealUsersForReviewer(recipientIds);
+      if (userIds.length === 0) return;
       await this.prisma.notification.createMany({
         data: userIds.map((userId) => ({
           userId,
@@ -129,13 +132,26 @@ export class NotificationsService {
 
   // 푸시만 보내고 알림센터에는 쌓지 않는다 — 단톡방 일반 메시지처럼 건수가 많아 센터를
   // 어지럽히는 알림용. notify와 같이 절대 던지지 않는다.
-  async pushOnly(userIds: string[], input: NotifyInput): Promise<void> {
-    if (userIds.length === 0) return;
+  async pushOnly(recipientIds: string[], input: NotifyInput): Promise<void> {
+    if (recipientIds.length === 0) return;
     try {
+      const userIds = await this.excludeRealUsersForReviewer(recipientIds);
+      if (userIds.length === 0) return;
       await this.sendPush(userIds, input);
     } catch (error) {
       this.logger.warn(`push send failed: ${String(error)}`);
     }
+  }
+
+  // 심사 계정이 한 행동(댓글·소그룹 신청 등)으로는 실제 성도에게 알림을 보내지 않는다 (SCRUM-197) —
+  // 심사 계정끼리만 받는다. 실제 성도가 한 행동은 그대로 모두에게 간다.
+  private async excludeRealUsersForReviewer(userIds: string[]) {
+    if (!isReviewViewer()) return userIds;
+    const reviewers = await this.prisma.user.findMany({
+      where: { id: { in: userIds }, isReviewAccount: true },
+      select: { id: true },
+    });
+    return reviewers.map((user) => user.id);
   }
 
   // Expo 푸시 발송. 수신자들의 기기 토큰을 모아 100개 단위로 Expo 푸시 서버에 보낸다

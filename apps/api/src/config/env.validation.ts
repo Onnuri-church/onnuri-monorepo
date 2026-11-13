@@ -73,6 +73,20 @@ export class EnvironmentVariables {
   })
   AUTH_DEV_LOGIN_SECRET?: string;
 
+  // 스토어 심사용 로그인(POST /auth/login/review) 아이디·비밀번호 (SCRUM-197).
+  // 앱스토어·플레이 콘솔 심사 정보에 적는 값. 아이디를 넣으면 비밀번호(12자 이상)가 필수다.
+  @IsOptional()
+  @IsString()
+  REVIEW_LOGIN_ID?: string;
+
+  @ValidateIf((e: EnvironmentVariables) => Boolean(e.REVIEW_LOGIN_ID))
+  @IsString()
+  @MinLength(12, {
+    message:
+      'REVIEW_LOGIN_PASSWORD는 12자 이상이어야 합니다 (REVIEW_LOGIN_ID를 넣었을 때 필수).',
+  })
+  REVIEW_LOGIN_PASSWORD?: string;
+
   // 쉼표 구분 목록 (Android/iOS 클라이언트 ID가 다르다).
   // 비어 있으면 구글 ID 토큰의 aud 검증을 건너뛴다 (로컬 개발용).
   @IsOptional()

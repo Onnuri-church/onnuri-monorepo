@@ -7,6 +7,7 @@ import { type TypedConfigService } from '../../config/configuration';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
+import { ReviewAccountService } from './review-account.service';
 import { GoogleTokenVerifier } from './social/google-token.verifier';
 import { KakaoTokenVerifier } from './social/kakao-token.verifier';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -29,6 +30,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    ReviewAccountService,
     JwtStrategy,
     KakaoTokenVerifier,
     GoogleTokenVerifier,
