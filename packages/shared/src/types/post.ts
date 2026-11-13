@@ -82,7 +82,7 @@ export interface QtShareDetail {
   likedByMe: boolean;
   /** 내가 쓴 글인지 */
   isMine: boolean;
-  /** 수정·삭제 메뉴를 띄울지 — 내 글이거나 관리자. 권한 판단은 서버가 한다 */
+  /** 삭제 메뉴를 띄울지 — 내 글이거나 관리자. 권한 판단은 서버가 한다 (수정은 isMine일 때만) */
   canManage: boolean;
   /** 익명으로 쓴 글인지 — 수정 화면 프리필용. 이름은 authorName이 이미 "익명"/"익명(실명)"으로 내려온다 */
   isAnonymous: boolean;

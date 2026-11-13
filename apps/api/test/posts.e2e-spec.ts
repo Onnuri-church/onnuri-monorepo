@@ -1027,6 +1027,58 @@ describe('Posts (e2e)', () => {
     it('없는 글을 수정하면 404', () =>
       patch('no-such-post', { title: '아무거나' }).expect(404));
 
+    // 관리자는 남의 글을 내리기만 하고 고치지는 않는다 (기도제목과 같은 규칙, SCRUM-203).
+    describe('관리자', () => {
+      let adminToken: string;
+
+      beforeAll(async () => {
+        await prisma.user.create({
+          data: {
+            email: `qtadmin@${EMAIL_DOMAIN}`,
+            name: '큐티관리자',
+            isAdmin: true,
+          },
+        });
+        const login = await request(app.getHttpServer())
+          .post('/auth/login/dev')
+          .set(DEV_LOGIN_HEADER)
+          .send({ email: `qtadmin@${EMAIL_DOMAIN}` })
+          .expect(201);
+        adminToken = (login.body as { accessToken: string }).accessToken;
+      });
+
+      it('남의 글 상세는 canManage가 true지만 isMine은 false다 (삭제만 보인다)', async () => {
+        const res = await request(app.getHttpServer())
+          .get(`/posts/qt-shares/${myPostId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .expect(200);
+        const body = res.body as QtShareDetail;
+        expect(body.canManage).toBe(true);
+        expect(body.isMine).toBe(false);
+      });
+
+      it('남의 글을 수정하면 403이고 내용이 그대로다', async () => {
+        await request(app.getHttpServer())
+          .patch(`/posts/qt-shares/${myPostId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .send({ title: '관리자수정' })
+          .expect(403);
+
+        const post = await prisma.post.findUnique({
+          where: { id: myPostId },
+          select: { title: true },
+        });
+        expect(post?.title).toBe(`${FIXTURE_PREFIX}수정대상`);
+      });
+
+      it('남의 글을 삭제할 수 있다', async () => {
+        await request(app.getHttpServer())
+          .delete(`/posts/qt-shares/${myPostId}`)
+          .set('Authorization', `Bearer ${adminToken}`)
+          .expect(204);
+      });
+    });
+
     it('보낸 항목만 바뀌고 나머지는 그대로다', async () => {
       const res = await patch(myPostId, { title: `${FIXTURE_PREFIX}수정됨` });
       expect(res.status).toBe(200);

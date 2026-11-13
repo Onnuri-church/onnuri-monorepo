@@ -69,7 +69,7 @@ export function QtBoardScreen() {
 
   const toggleLike = useToggleQtLike();
 
-  // 관리자에게만 카드마다 ⋮(수정·삭제)가 붙는다 — 본인 글은 상세에서 수정한다.
+  // 관리자에게만 카드마다 ⋮(삭제)가 붙는다 — 수정은 작성자만 상세에서 한다 (SCRUM-203).
   // 본인·타인 글이 섞인 목록에서 ⋮가 있고 없고 하면 보기 어색해서 관리자 전용으로 둔다.
   const isAdmin = useMe()?.isAdmin === true;
   const { width: windowWidth } = useWindowDimensions();
@@ -206,11 +206,6 @@ export function QtBoardScreen() {
         onClose={() => setMenu(null)}
         style={menu ? { top: menu.top, right: menu.right } : undefined}
         items={[
-          {
-            icon: "edit",
-            label: t("수정하기"),
-            onPress: () => menu && navigation.navigate("QtBoardWrite", { id: menu.id }),
-          },
           {
             icon: "trash-can",
             label: t("삭제하기"),
