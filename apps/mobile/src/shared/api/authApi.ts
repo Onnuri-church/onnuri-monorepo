@@ -20,6 +20,13 @@ export function postGoogleLogin(googleIdToken: string): Promise<LoginResponse> {
     .then((res) => res.data);
 }
 
+// Apple 로그인 (SCRUM-200) — 이름은 애플이 첫 로그인 때만 앱에 주므로 같이 보낸다.
+export function postAppleLogin(identityToken: string, name?: string): Promise<LoginResponse> {
+  return bareClient
+    .post<LoginResponse>("/auth/login/apple", { token: identityToken, name })
+    .then((res) => res.data);
+}
+
 // 개발용 로그인 — 백엔드가 AUTH_DEV_LOGIN=true인 환경에서만 응답한다 (아니면 404).
 // 백엔드 AUTH_DEV_LOGIN_SECRET과 같은 값을 헤더로 보내야 한다 (틀리면 401). EXPO_PUBLIC_ 값은
 // 번들에 그대로 박히므로 개발용 .env에만 넣고 preview/production 빌드에는 넣지 않는다.

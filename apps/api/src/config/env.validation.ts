@@ -93,6 +93,11 @@ export class EnvironmentVariables {
   @IsString()
   GOOGLE_CLIENT_IDS?: string;
 
+  // Apple 로그인 토큰의 aud로 받을 번들 ID (쉼표 구분). 비우면 운영·개발 앱 번들 ID 기본값.
+  @IsOptional()
+  @IsString()
+  APPLE_BUNDLE_IDS?: string;
+
   // Supabase Storage (이미지 업로드) — SERVICE_ROLE_KEY가 비어 있으면 업로드 API가
   // 503을 돌려준다 (나머지 기능은 정상). URL은 비워두면 DATABASE_URL의 프로젝트
   // ref(postgres.<ref>)에서 https://<ref>.supabase.co 를 만들어 쓴다.

@@ -44,6 +44,13 @@ const configuration = () => {
       kakaoAppId: e.KAKAO_APP_ID || null, // 빈 문자열도 미설정으로 취급
       kakaoRestApiKey: e.KAKAO_REST_API_KEY || null,
       kakaoClientSecret: e.KAKAO_CLIENT_SECRET || null,
+      // Apple ID 토큰의 aud = 앱 번들 ID. 개발용 앱은 번들 ID가 달라 둘 다 받는다 (SCRUM-200).
+      appleBundleIds: (
+        e.APPLE_BUNDLE_IDS || 'com.onnuri.mobile,com.onnuri.mobile.dev'
+      )
+        .split(',')
+        .map((id) => id.trim())
+        .filter(Boolean),
       googleClientIds:
         e.GOOGLE_CLIENT_IDS?.split(',')
           .map((id) => id.trim())
