@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
+import { PressableScale } from "../../../shared/components/base/PressableScale";
 import { colors } from "../../../shared/theme/tokens";
 
 type IconName = React.ComponentProps<typeof Icon>["name"];
@@ -20,8 +21,8 @@ interface TeamListItemProps {
 }
 
 // 팀 목록의 한 줄. 회색 원 안에 팀 아이콘, 오른쪽에 팀명과 한 줄 소개가 온다.
-// 시안 확정값: 행 높이 81(py-4 + 내용 49), 아이콘 원 48, 우측 화살표 28.
-// 팀명-소개 사이 간격은 시안이 5px인데 스케일에 없어서 4px(gap-1)로 뒀다 — 디자인 확인 대기.
+// 셀 목록(CellListRow)과 같은 크기로 맞췄다 (SCRUM-202): 높이 60 = 원 40 + 상하 10, 이름 옆에
+// 소개 한 줄(길면 말줄임), 연한 구분선. 예전 시안(높이 81, 원 48, 소개는 아래 줄)보다 한 화면에 더 보인다.
 export function TeamListItem({
   name,
   description,
@@ -31,16 +32,19 @@ export function TeamListItem({
   onDeletePress,
 }: TeamListItemProps) {
   const row = (
-    <Pressable
-      className="flex-row items-center gap-4 border-b border-text-assistive bg-background-normal py-4"
+    <PressableScale
+      scaleTo={0.98}
+      className="flex-row items-center border-b border-background-assistive bg-background-normal py-2.5"
       onPress={onPress}
     >
-      <View className="h-12 w-12 items-center justify-center rounded-full bg-text-assistive">
-        {icon && <Icon name={icon} size={24} color={colors.icon.strong} />}
+      <View className="h-10 w-10 items-center justify-center rounded-full bg-text-assistive">
+        {icon && <Icon name={icon} size={20} color={colors.icon.strong} />}
       </View>
-      <View className="flex-1 gap-1">
-        <Text className="text-heading-small text-text-normal">{name}</Text>
-        <Text className="text-body-small text-text-neutral">{description}</Text>
+      <View className="ml-2.5 flex-1 flex-row items-center gap-1">
+        <Text className="text-body-main text-text-normal">{name}</Text>
+        <Text className="flex-1 text-body-small text-text-alternative" numberOfLines={1}>
+          {description}
+        </Text>
       </View>
       {onEditPress || onDeletePress ? (
         <View className="flex-row items-center gap-5">
@@ -58,7 +62,7 @@ export function TeamListItem({
       ) : (
         <Icon name="expand-right" size={28} />
       )}
-    </Pressable>
+    </PressableScale>
   );
 
   return row;
