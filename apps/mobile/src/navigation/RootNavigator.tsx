@@ -12,6 +12,7 @@ import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
 import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
 import { AdminFollowerNotesScreen } from "../features/admin/AdminFollowerNotesScreen";
+import { AdminReportsScreen } from "../features/admin/AdminReportsScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
@@ -740,6 +741,15 @@ export function RootNavigator() {
                 />
               ),
             })}
+          />
+          {/* 신고 관리 (SCRUM-199) */}
+          <Stack.Screen
+            name="AdminReports"
+            component={AdminReportsScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("신고 관리")} />,
+            }}
           />
           {/* 팔로워 노트 관리 (SCRUM-181) — 셀·팀 노트 목록 → 각 게시판 */}
           <Stack.Screen

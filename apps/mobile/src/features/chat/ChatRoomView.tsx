@@ -38,6 +38,7 @@ import { MessageActionModal } from "./components/MessageActionModal";
 import { MentionText } from "./components/MentionText";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useBlockedUserIds } from "../block/api";
+import { useReport } from "../report/useReport";
 
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 3;
@@ -72,6 +73,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   // 끊기지 않게 서버에서 빼지 않고 앱에서 가린다.
   const blockedIds = useBlockedUserIds();
   const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
+  // 남의 글·댓글 "신고" (SCRUM-199)
+  const { openReport, sheet: reportSheet } = useReport();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
@@ -515,8 +518,18 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
               }
             : undefined
         }
+        onReport={
+          canBlock
+            ? () => {
+                const target = actionTarget;
+                closeActions();
+                if (target) openReport({ targetType: "CHAT_MESSAGE", targetId: target.id });
+              }
+            : undefined
+        }
       />
       {blockDialog}
+      {reportSheet}
 
       <ChatImageViewer
         urls={viewer?.urls ?? []}

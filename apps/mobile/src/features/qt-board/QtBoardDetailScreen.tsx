@@ -15,6 +15,8 @@ import {deleteQtShare, fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { ReportPostLink } from "../report/ReportPostLink";
+import { useReport } from "../report/useReport";
 
 // 본문사진 캐러셀의 좌우 여백. 아래 ScrollView의 mx-5(한 칸 4px × 5)와 같은 값이어야 한다 —
 // 사진 폭을 여기서 빼서 계산하므로 한쪽만 바꾸면 페이징이 어긋난다.
@@ -43,6 +45,8 @@ export function QtBoardDetailScreen() {
     // 수정·삭제 가능 여부(내 글 또는 관리자)는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다).
     // 아직 못 받았으면 없는 것으로 본다 — 남의 글에 ⋮가 잠깐 보였다 사라지는 편보다 낫다.
     const canManage = data?.canManage ?? false;
+    // 남의 글 신고 (SCRUM-199)
+    const { openReport, sheet: reportSheet, canReport } = useReport();
 
     const toggleLike = useToggleQtLike();
     const queryClient = useQueryClient();
@@ -166,6 +170,10 @@ export function QtBoardDetailScreen() {
                         )}
                     </View>
                     <Text className="mt-12 text-body-regular text-text-neutral">{data.content}</Text>
+                    {canReport && !data.isMine && (
+                        <ReportPostLink onPress={() => openReport({targetType: "POST", targetId: data.id})}/>
+                    )}
+                    {reportSheet}
                 </View>
 
                 {/* 본문사진(작성 화면에서 최대 5장)을 한 장씩 넘겨 본다.

@@ -166,6 +166,10 @@ export function NotificationScreen() {
       case "cell-news":
         if (second) navigation.navigate("CellNewsDetail", { cellId: first, newsId: second });
         break;
+      // 새 신고 (SCRUM-199) — 관리자에게만 온다
+      case "admin":
+        if (first === "reports") navigation.navigate("AdminReports");
+        break;
     }
   };
 
