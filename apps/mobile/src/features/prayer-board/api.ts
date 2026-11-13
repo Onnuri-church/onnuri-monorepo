@@ -133,6 +133,8 @@ export interface PrayerDetail extends PrayerRequest {
   visibleUntil: string;
   photoUrls: string[];
   isMine: boolean;
+  /** 작성자 차단용 (SCRUM-201) — 익명 글이면 null */
+  authorId: string | null;
 }
 
 export async function fetchPrayerDetail(id: string): Promise<PrayerDetail> {
@@ -148,6 +150,7 @@ export async function fetchPrayerDetail(id: string): Promise<PrayerDetail> {
     visibleUntil: data.visibleUntil,
     photoUrls: data.photoUrls,
     isMine: data.isMine,
+    authorId: data.authorId,
   };
 }
 

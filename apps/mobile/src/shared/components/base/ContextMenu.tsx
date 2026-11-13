@@ -9,6 +9,8 @@ export interface ContextMenuItem {
   icon: IconName;
   label: string;
   onPress: () => void;
+  /** 되돌리기 어려운 동작(차단 등) — 빨간색으로 그린다 */
+  danger?: boolean;
 }
 
 interface ContextMenuProps {
@@ -49,9 +51,17 @@ export function ContextMenu({ visible, onClose, items, style }: ContextMenuProps
                 item.onPress();
               }}
             >
-              <Icon name={item.icon} size={18} color={colors.icon.normal} />
+              <Icon
+                name={item.icon}
+                size={18}
+                color={item.danger ? colors.semantic.danger : colors.icon.normal}
+              />
               <Text
-                className="flex-1 text-center text-body-medium text-text-normal"
+                className={
+                  item.danger
+                    ? "flex-1 text-center text-body-medium text-semantic-danger"
+                    : "flex-1 text-center text-body-medium text-text-normal"
+                }
                 style={{ lineHeight: ITEM_LINE }}
               >
                 {item.label}

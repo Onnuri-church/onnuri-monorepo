@@ -371,6 +371,7 @@ export class PostsService {
     const canSeeRealName = isAdmin || post.authorId === userId;
     return {
       id: post.id,
+      authorId: isAnonymous ? null : post.authorId,
       authorName: qtAuthorName(post.author.name, isAnonymous, canSeeRealName),
       // 익명 글은 프로필 사진도 숨긴다 — 이름보다 식별력이 세다 (관리자에게도 숨김, 기도제목과 같음).
       authorAvatarUrl: isAnonymous ? null : post.author.avatarUrl,
@@ -758,6 +759,7 @@ export class PostsService {
       dateLabel: toDayLabel(toActivityDate(post)),
       eventDate: toDateValue(toActivityDate(post)),
       createdAt: post.createdAt.toISOString(),
+      authorId: post.authorId,
       authorName: post.author.name,
       authorAvatarUrl: post.author.avatarUrl,
       coverImageUrl: post.coverImageUrl,
