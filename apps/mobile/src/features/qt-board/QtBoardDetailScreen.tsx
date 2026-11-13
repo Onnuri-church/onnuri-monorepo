@@ -41,7 +41,8 @@ export function QtBoardDetailScreen() {
         queryFn: () => fetchQtDetails(id)
     })
 
-    // 수정·삭제 가능 여부(내 글 또는 관리자)는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다).
+    // 삭제 가능 여부(내 글 또는 관리자)는 서버가 판단해 내려준다(권한 판단을 앱에 두지 않는다).
+    // 수정은 작성자만 — 관리자에게는 남의 글에 삭제만 보인다 (기도제목과 같은 규칙, SCRUM-203).
     // 아직 못 받았으면 없는 것으로 본다 — 남의 글에 ⋮가 잠깐 보였다 사라지는 편보다 낫다.
     const canManage = data?.canManage ?? false;
     // 남의 글 ⋮ — 신고하기·작성자 차단하기 (SCRUM-201)
@@ -73,11 +74,15 @@ export function QtBoardDetailScreen() {
                     title={t("큐티나눔")}
                     rightAction={canManage || viewerItems.length > 0 ? "more" : "none"}
                     menuItems={canManage ? [
-                        {
-                            icon: "edit",
-                            label: t("수정하기"),
-                            onPress: () => navigation.navigate("QtBoardWrite", {id}),
-                        },
+                        ...(data?.isMine
+                            ? [
+                                {
+                                    icon: "edit" as const,
+                                    label: t("수정하기"),
+                                    onPress: () => navigation.navigate("QtBoardWrite", {id}),
+                                },
+                            ]
+                            : []),
                         {
                             icon: "trash-can",
                             label: t("삭제하기"),
@@ -87,7 +92,7 @@ export function QtBoardDetailScreen() {
                 />
             ),
         });
-    }, [navigation, canManage, id, t, viewerItems]);
+    }, [navigation, canManage, data?.isMine, id, t, viewerItems]);
 
     const confirmDelete = () => {
         dialogRef.current?.close();
