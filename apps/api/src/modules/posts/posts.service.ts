@@ -26,7 +26,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { assertSensitiveConsent } from '../../common/utils/consent';
 import {
   visibleGroupWhere,
-  visibleUserWhere,
+  visibleAuthorWhere,
 } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
@@ -141,6 +141,7 @@ function toPostComment(
 ): PostComment {
   return {
     id: comment.id,
+    authorId: comment.authorId,
     authorName: comment.author.name,
     authorAvatarUrl: comment.author.avatarUrl,
     createdAt: comment.createdAt.toISOString(),
@@ -173,7 +174,7 @@ export class PostsService {
             where: {
               board: 'QT_SHARE',
               deletedAt: null,
-              author: visibleUserWhere(),
+              author: visibleAuthorWhere(),
             },
             select: {
               id: true,
@@ -190,7 +191,7 @@ export class PostsService {
         where: {
           board: 'TEAM_ACTIVITY',
           deletedAt: null,
-          author: visibleUserWhere(),
+          author: visibleAuthorWhere(),
         },
         select: {
           id: true,
@@ -246,7 +247,7 @@ export class PostsService {
       board: 'QT_SHARE' as const,
       deletedAt: null,
       eventDate: { not: null },
-      author: visibleUserWhere(),
+      author: visibleAuthorWhere(),
       ...(query.mine && { authorId: userId }),
     };
     const admin = userId ? await this.isAdminUser(userId) : false;
@@ -259,7 +260,7 @@ export class PostsService {
           board: 'QT_SHARE',
           deletedAt: null,
           eventDate: { not: null },
-          author: visibleUserWhere(),
+          author: visibleAuthorWhere(),
         },
         orderBy: { eventDate: 'asc' },
         select: { eventDate: true },
@@ -557,7 +558,7 @@ export class PostsService {
         _count: { select: { likes: true } },
         likes: { where: myLikeFilter(userId), select: { id: true } },
         comments: {
-          where: { deletedAt: null, author: visibleUserWhere() },
+          where: { deletedAt: null, author: visibleAuthorWhere() },
           select: {
             id: true,
             content: true,
@@ -626,7 +627,7 @@ export class PostsService {
       where: {
         board: 'TEAM_ACTIVITY',
         deletedAt: null,
-        author: visibleUserWhere(),
+        author: visibleAuthorWhere(),
         ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
       },
       select: {
@@ -646,7 +647,7 @@ export class PostsService {
               where: {
                 deletedAt: null,
                 parentId: null,
-                author: visibleUserWhere(),
+                author: visibleAuthorWhere(),
               },
             },
           },
@@ -706,7 +707,7 @@ export class PostsService {
           where: {
             deletedAt: null,
             parentId: null,
-            author: visibleUserWhere(),
+            author: visibleAuthorWhere(),
           },
           select: {
             id: true,
@@ -715,7 +716,7 @@ export class PostsService {
             authorId: true,
             author: { select: { name: true, avatarUrl: true } },
             replies: {
-              where: { deletedAt: null, author: visibleUserWhere() },
+              where: { deletedAt: null, author: visibleAuthorWhere() },
               select: {
                 id: true,
                 content: true,

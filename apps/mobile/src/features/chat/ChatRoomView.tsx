@@ -36,6 +36,8 @@ import { AttachmentSheet } from "./components/AttachmentSheet";
 import { ChatImageViewer } from "./components/ChatImageViewer";
 import { MessageActionModal } from "./components/MessageActionModal";
 import { MentionText } from "./components/MentionText";
+import { useBlockConfirm } from "../block/useBlockConfirm";
+import { useBlockedUserIds } from "../block/api";
 
 const MAX_IMAGES = 5;
 const MAX_VIDEOS = 3;
@@ -66,6 +68,10 @@ interface ChatRoomViewProps {
 // 처리한다. 화면이 열려 있는 동안 몇 초마다 새 메시지를 받아오고, 새 메시지가 오면 맨 아래로 따라간다.
 export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const { t } = useTranslation();
+  // 차단 (SCRUM-198) — 차단한 사람의 메시지는 내용 대신 한 줄 안내로 접는다. 대화 흐름(답장 등)이
+  // 끊기지 않게 서버에서 빼지 않고 앱에서 가린다.
+  const blockedIds = useBlockedUserIds();
+  const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
@@ -307,7 +313,12 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             {t("아직 대화가 없어요. 첫 메시지를 남겨보세요.")}
           </Text>
         )}
-        {messages.map((message) => (
+        {messages.map((message) =>
+          !message.isMine && blockedIds.has(message.authorId) ? (
+            <Text key={message.id} className="text-body-small text-text-alternative">
+              {t("차단한 사용자의 메시지예요")}
+            </Text>
+          ) : (
           <ChatBubble
             key={message.id}
             message={message}
@@ -317,7 +328,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
             onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
           />
-        ))}
+          ),
+        )}
       </ScrollView>
 
       {/* 언급 후보 */}
@@ -494,7 +506,17 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           closeActions();
           if (target) handleDeletePress(target);
         }}
+        onBlock={
+          canBlock
+            ? () => {
+                const target = actionTarget;
+                closeActions();
+                if (target) requestBlock({ userId: target.authorId, name: target.authorName });
+              }
+            : undefined
+        }
       />
+      {blockDialog}
 
       <ChatImageViewer
         urls={viewer?.urls ?? []}
