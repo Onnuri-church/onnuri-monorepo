@@ -15,7 +15,6 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-secure-store",
-      "@react-native-google-signin/google-signin",
       [
         "expo-build-properties",
         {
@@ -28,7 +27,11 @@
       ]
     ],
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.onnuri.mobile",
+      "supportsTablet": false,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "package": "com.onnuri.mobile",

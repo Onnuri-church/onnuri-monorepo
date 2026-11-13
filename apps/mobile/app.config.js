@@ -13,6 +13,14 @@ const { colors } = require("./src/shared/theme/tokens");
 // (푸시까지 확인하려면 Firebase에 .dev 앱을 추가하고 받은 파일로 바꾼다).
 const IS_DEV_VARIANT = process.env.APP_VARIANT === "development";
 
+// 구글 로그인 iOS (SCRUM-195) — iOS OAuth 클라이언트 ID("<번호>-xxx.apps.googleusercontent.com")를
+// 뒤집은 URL 스킴이 Info.plist에 있어야 로그인 후 앱으로 돌아온다. ID가 없는 환경(안드로이드만 빌드)에서는
+// 플러그인을 옵션 없이 얹는다 — 안드로이드 빌드는 이 값을 쓰지 않는다.
+const GOOGLE_IOS_CLIENT_ID = process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID;
+const GOOGLE_IOS_URL_SCHEME = GOOGLE_IOS_CLIENT_ID
+  ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.replace(".apps.googleusercontent.com", "")}`
+  : null;
+
 module.exports = ({ config }) => ({
   ...config,
   ...(IS_DEV_VARIANT && {
@@ -23,9 +31,24 @@ module.exports = ({ config }) => ({
       package: "com.onnuri.mobile.dev",
       googleServicesFile: undefined,
     },
+    ios: {
+      ...config.ios,
+      bundleIdentifier: "com.onnuri.mobile.dev",
+    },
   }),
   plugins: [
     ...(config.plugins ?? []),
+    GOOGLE_IOS_URL_SCHEME
+      ? ["@react-native-google-signin/google-signin", { iosUrlScheme: GOOGLE_IOS_URL_SCHEME }]
+      : "@react-native-google-signin/google-signin",
+    // 사진 선택·촬영 — iOS 권한 문구 (없으면 심사 거절 사유, SCRUM-195)
+    [
+      "expo-image-picker",
+      {
+        photosPermission: "게시글·프로필에 올릴 사진을 고르려면 사진 접근 권한이 필요해요.",
+        cameraPermission: "게시글·프로필에 올릴 사진을 찍으려면 카메라 접근 권한이 필요해요.",
+      },
+    ],
     // 데이터 다운로드(엑셀)의 공유 시트용 — expo install이 동적 config라 자동 추가를 못 해 수동 등록.
     "expo-sharing",
     // QR 출석 스캔용 카메라 — iOS 권한 문구는 여기서 정한다 (없으면 심사 거절 사유).
