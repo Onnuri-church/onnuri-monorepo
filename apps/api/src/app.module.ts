@@ -13,6 +13,7 @@ import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AdminModule } from './modules/admin/admin.module';
 import { AppVersionModule } from './modules/app-version/app-version.module';
+import { PublicPagesModule } from './modules/public-pages/public-pages.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BulletinsModule } from './modules/bulletins/bulletins.module';
 import { CellsModule } from './modules/cells/cells.module';
@@ -56,6 +57,7 @@ import { UsersModule } from './modules/users/users.module';
     SermonsModule,
     BulletinsModule,
     AppVersionModule,
+    PublicPagesModule,
   ],
   controllers: [AppController],
   providers: [

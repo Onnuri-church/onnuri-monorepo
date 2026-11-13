@@ -17,3 +17,4 @@ export * from "./types/api";
 export * from "./constants";
 export * from "./utils/date";
 export * from "./types/app-version";
+export * from "./policies";
