@@ -84,5 +84,10 @@
   "청년부 소식을 놓치지 마세요!": "Don't miss youth group news!",
   "공지사항, 설교 영상, 라이브 예배, 댓글 소식을 알림으로 받아볼 수 있어요.": "Get notified about notices, sermon videos, live worship, and comments.",
   "(설정 > 알림 설정에서 바꿀 수 있어요)": "(You can change this in Settings > Notifications)",
-  "알림 보지 않기": "Don't show again"
+  "알림 보지 않기": "Don't show again",
+  "업데이트가 필요해요": "Update required",
+  "더 안정적인 서비스를 위해 앱을 최신 버전으로 업데이트해 주세요.": "Please update the app to the latest version.",
+  "현재 버전 {{version}}": "Current version {{version}}",
+  "업데이트하러 가기": "Update now",
+  "스토어에서 앱을 업데이트해 주세요.": "Please update the app from the store."
 }

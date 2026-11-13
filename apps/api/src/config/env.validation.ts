@@ -92,6 +92,26 @@ export class EnvironmentVariables {
   @IsString()
   SUPABASE_SERVICE_ROLE_KEY?: string;
 
+  // 앱 강제 업데이트 (SCRUM-193) — 이 버전보다 낮은 앱은 "업데이트가 필요해요" 화면만 본다.
+  // 비우면 강제하지 않는다. 스토어 주소는 그 화면의 버튼이 연다 (없으면 버튼 없이 안내만).
+  @IsOptional()
+  @Matches(/^\d+\.\d+\.\d+$/, {
+    message: "APP_MIN_VERSION은 '1.2.3' 형식이어야 합니다.",
+  })
+  APP_MIN_VERSION?: string;
+
+  @IsOptional()
+  @Matches(/^https:\/\//, {
+    message: 'APP_ANDROID_STORE_URL은 https:// 로 시작해야 합니다.',
+  })
+  APP_ANDROID_STORE_URL?: string;
+
+  @IsOptional()
+  @Matches(/^https:\/\//, {
+    message: 'APP_IOS_STORE_URL은 https:// 로 시작해야 합니다.',
+  })
+  APP_IOS_STORE_URL?: string;
+
   // 업로드 파일을 담을 버킷 이름 — 없으면 첫 업로드 때 public 버킷으로 자동 생성한다.
   @IsOptional()
   @IsString()
