@@ -12,6 +12,7 @@ import {
   RateLimit,
 } from '../../common/decorators/rate-limit.decorator';
 import { AuthService } from './auth.service';
+import { AppleLoginDto } from './dto/apple-login.dto';
 import { DevLoginDto } from './dto/dev-login.dto';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -32,6 +33,12 @@ export class AuthController {
   @Post('login/google')
   loginWithGoogle(@Body() dto: SocialLoginDto) {
     return this.authService.loginWithGoogle(dto.token);
+  }
+
+  // iOS — App Store 4.8: 다른 소셜 로그인이 있으면 Apple 로그인도 필수 (SCRUM-200)
+  @Post('login/apple')
+  loginWithApple(@Body() dto: AppleLoginDto) {
+    return this.authService.loginWithApple(dto.token, dto.name);
   }
 
   // 개발 환경 전용 (AUTH_DEV_LOGIN=true) — 꺼진 환경에서는 404, 비밀 헤더가 틀리면 401

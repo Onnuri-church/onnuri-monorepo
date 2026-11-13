@@ -58,6 +58,8 @@ export interface QtShareListResponse {
 /** 큐티나눔 상세 (GET /posts/qt-shares/:id). */
 export interface QtShareDetail {
   id: string;
+  /** 작성자 id — "작성자 차단하기"용 (SCRUM-201). 익명 글이면 null (차단 목록에 실명이 드러나지 않게) */
+  authorId: string | null;
   authorName: string;
   authorAvatarUrl: string | null;
   /** 큐티 날짜 — "05월 27일". 목록의 dateLabel("2026.05.07")과 형식이 다르다 (상세 화면 문구) */
@@ -231,6 +233,8 @@ export interface TeamActivityDetail {
   /** 활동 날짜 원본 (YYYY-MM-DD) — 수정 화면 프리필용 */
   eventDate: string;
   createdAt: string;
+  /** 작성자 id — "작성자 차단하기"용 (SCRUM-201). 익명 글이면 null (차단 목록에 실명이 드러나지 않게) */
+  authorId: string | null;
   authorName: string;
   authorAvatarUrl: string | null;
   /** 상단 이미지 — 작성 화면에서 받지 않는 값이라 시드로 넣은 글에만 있다. imageUrls가 비었을 때만 쓴다 */

@@ -17,6 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
 import { ReviewAccountService } from './review-account.service';
+import { AppleTokenVerifier } from './social/apple-token.verifier';
 import { GoogleTokenVerifier } from './social/google-token.verifier';
 import { KakaoTokenVerifier } from './social/kakao-token.verifier';
 import type { SocialProfile } from './social/social-profile';
@@ -54,6 +55,7 @@ export class AuthService {
     private readonly googleVerifier: GoogleTokenVerifier,
     private readonly config: ConfigService<AppConfig, true>,
     private readonly reviewAccounts: ReviewAccountService,
+    private readonly appleVerifier: AppleTokenVerifier,
   ) {}
 
   async loginWithKakao(input: KakaoLoginDto) {
@@ -79,6 +81,11 @@ export class AuthService {
   async loginWithGoogle(idToken: string) {
     const profile = await this.googleVerifier.verify(idToken);
     return this.login(SocialProvider.GOOGLE, profile);
+  }
+
+  async loginWithApple(identityToken: string, name?: string) {
+    const profile = await this.appleVerifier.verify(identityToken, name);
+    return this.login(SocialProvider.APPLE, profile);
   }
 
   // 개발용: 소셜 SDK가 없는 웹·Expo Go에서 유저 기반 기능을 개발할 수 있게 이메일만으로

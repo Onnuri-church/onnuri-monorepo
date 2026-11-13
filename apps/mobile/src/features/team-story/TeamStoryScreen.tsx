@@ -92,9 +92,9 @@ export function TeamStoryScreen() {
             그대로 남아야 첫 팀을 만들거나 다시 불러올 수 있다. */}
         {isPending && (
           <>
-            <Skeleton className="h-20 rounded-xl" />
-            <Skeleton className="h-20 rounded-xl" />
-            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-14 rounded-xl" />
+            <Skeleton className="h-14 rounded-xl" />
+            <Skeleton className="h-14 rounded-xl" />
           </>
         )}
         {isError && !teams && (
@@ -107,6 +107,8 @@ export function TeamStoryScreen() {
             {t("등록된 팀이 없어요")}
           </Text>
         )}
+        {/* 행끼리는 구분선만으로 나눈다 — 셀 목록과 같은 간격 (SCRUM-202) */}
+        <View>
         {(teams ?? []).map((team) => (
           <TeamListItem
             key={team.id}
@@ -124,6 +126,7 @@ export function TeamStoryScreen() {
             onDeletePress={canManage && editing ? () => handleDeletePress(team.id) : undefined}
           />
         ))}
+        </View>
 
         {/* 새 팀 만들기. 파라미터 없이 열면 폼이 생성 모드가 된다. */}
         {canManage && (

@@ -217,6 +217,8 @@ export class PrayersService {
     const anonymous = row.prayerRequest!.isAnonymous;
     return {
       ...this.toItem(row, userId, admin),
+      // 익명 글은 작성자 id도 내리지 않는다 — 차단 목록에 실명이 뜨면 익명이 깨진다 (SCRUM-201)
+      authorId: anonymous ? null : row.authorId,
       // 익명 글은 사진도 노출하지 않는다 — 이름과 달리 관리자에게도 숨긴다 (사진은 식별력이 세다).
       authorAvatarUrl: anonymous ? null : row.author.avatarUrl,
       content: row.content,

@@ -1,4 +1,4 @@
-import { signInWithSocial } from "../../shared/api/session";
+import { signInWithApple, signInWithSocial } from "../../shared/api/session";
 
 // 카카오/구글 SDK로 제공자 토큰을 받아 백엔드 로그인(signInWithSocial)까지 잇는다.
 // 두 SDK 다 네이티브 모듈이라 dev build에서만 동작한다 — Expo Go·웹에서는 모듈 로드 자체가
@@ -64,6 +64,31 @@ export async function loginWithGoogleSdk(): Promise<{ isNewUser: boolean } | nul
     throw new Error("구글 응답에 ID 토큰이 없습니다. 웹 클라이언트 ID 설정을 확인하세요.");
   }
   return signInWithSocial("google", idToken);
+}
+
+// Apple 로그인 (SCRUM-200, iOS 전용). 이름은 첫 로그인 때만 오고 이후엔 비어 있다 —
+// 서버는 기존 계정이면 이름을 덮어쓰지 않는다. 한국식으로 성+이름을 붙인다.
+export async function loginWithAppleSdk(): Promise<{ isNewUser: boolean } | null> {
+  const AppleAuthentication = await import("expo-apple-authentication");
+  let credential: Awaited<ReturnType<typeof AppleAuthentication.signInAsync>>;
+  try {
+    credential = await AppleAuthentication.signInAsync({
+      requestedScopes: [
+        AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+        AppleAuthentication.AppleAuthenticationScope.EMAIL,
+      ],
+    });
+  } catch (error) {
+    if ((error as { code?: string }).code === "ERR_REQUEST_CANCELED") return null;
+    throw error;
+  }
+  if (!credential.identityToken) {
+    throw new Error("Apple 응답에 ID 토큰이 없습니다.");
+  }
+  const name = [credential.fullName?.familyName, credential.fullName?.givenName]
+    .filter(Boolean)
+    .join("");
+  return signInWithApple(credential.identityToken, name || undefined);
 }
 
 // SDK마다 취소 에러의 모양이 제각각이라 메시지로 판별한다 (카카오는 취소 시 reject).
