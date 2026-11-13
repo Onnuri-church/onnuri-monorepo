@@ -12,7 +12,15 @@ describe('AuthService.loginWithDev 게이트', () => {
       get: () => devLoginEnabled,
     } as unknown as ConfigService<AppConfig, true>;
     const unused = undefined as unknown as never;
-    return new AuthService(unused, unused, unused, unused, unused, config);
+    return new AuthService(
+      unused,
+      unused,
+      unused,
+      unused,
+      unused,
+      config,
+      unused,
+    );
   };
 
   it('AUTH_DEV_LOGIN이 꺼져 있으면 NotFoundException(404)', async () => {

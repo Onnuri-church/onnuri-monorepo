@@ -16,6 +16,7 @@ import { type AppConfig } from '../../config/configuration';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
+import { ReviewAccountService } from './review-account.service';
 import { GoogleTokenVerifier } from './social/google-token.verifier';
 import { KakaoTokenVerifier } from './social/kakao-token.verifier';
 import type { SocialProfile } from './social/social-profile';
@@ -52,6 +53,7 @@ export class AuthService {
     private readonly kakaoVerifier: KakaoTokenVerifier,
     private readonly googleVerifier: GoogleTokenVerifier,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly reviewAccounts: ReviewAccountService,
   ) {}
 
   async loginWithKakao(input: KakaoLoginDto) {
@@ -122,13 +124,40 @@ export class AuthService {
     return this.buildLoginResponse(user.id, !existing);
   }
 
+  // 스토어 심사용 로그인 (SCRUM-197). 소셜 로그인만 있으면 심사자가 들어올 수 없어서, 심사 정보에
+  // 적어 둔 아이디·비밀번호로 심사 전용 계정에 들어가게 한다. 이 계정과 심사용 팀·셀·소그룹은 실제
+  // 성도에게 보이지 않는다 (common/review/review-scope.ts). 환경변수가 없으면 404로 존재를 숨긴다.
+  async loginForReview(id: string, password: string) {
+    const expectedId = this.config.get('auth.reviewLoginId', { infer: true });
+    const expectedPassword = this.config.get('auth.reviewLoginPassword', {
+      infer: true,
+    });
+    if (!expectedId || !expectedPassword) throw new NotFoundException();
+    // 둘 다 끝까지 비교한다 — 아이디만 먼저 틀렸다고 빨리 끝나면 아이디를 추측할 단서가 된다.
+    const idOk = this.safeEqual(id, expectedId);
+    const passwordOk = this.safeEqual(password, expectedPassword);
+    if (!idOk || !passwordOk) {
+      throw new UnauthorizedException(
+        '아이디 또는 비밀번호가 올바르지 않습니다.',
+      );
+    }
+
+    const user = await this.reviewAccounts.findOrCreateReviewer();
+    await this.reviewAccounts.provision(user.id);
+    return this.buildLoginResponse(user.id, false);
+  }
+
   // 길이가 달라도 비교 시간이 같도록 해시끼리 비교한다 (timingSafeEqual은 길이가 다르면 throw).
   private isDevLoginSecretValid(secret: string | undefined) {
     const expected = this.config.get('auth.devLoginSecret', { infer: true });
     if (!expected || !secret) return false;
-    const digest = (value: string) =>
-      createHash('sha256').update(value).digest();
-    return timingSafeEqual(digest(secret), digest(expected));
+    return this.safeEqual(secret, expected);
+  }
+
+  private safeEqual(value: string, expected: string) {
+    const digest = (input: string) =>
+      createHash('sha256').update(input).digest();
+    return timingSafeEqual(digest(value), digest(expected));
   }
 
   // 개발용 역할 세팅 — 등급의 실체는 isAdmin·멤버십이므로 역할별로 그 상태를 만들어준다.

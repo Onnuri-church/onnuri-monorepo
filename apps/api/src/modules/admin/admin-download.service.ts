@@ -7,6 +7,7 @@ import type { AdminDownloadPreview } from '@onnuri/shared';
 import * as ExcelJS from 'exceljs';
 
 import { pad } from '../../common/utils/date';
+import { visibleUserWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { FindAdminDownloadDto } from './dto/find-admin-download.dto';
 
@@ -124,6 +125,7 @@ export class AdminDownloadService {
     const users = await this.prisma.user.findMany({
       where: {
         withdrawnAt: null,
+        ...visibleUserWhere(),
         ...(scope === 'cell' && {
           cellMemberships: { some: { cellId: dto.groupId, ...overlapping } },
         }),

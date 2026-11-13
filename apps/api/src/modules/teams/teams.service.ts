@@ -6,6 +6,7 @@ import {
 import type { TeamDetailResponse, TeamRole, TeamSummary } from '@onnuri/shared';
 
 import type { Prisma } from '../../../generated/prisma';
+import { groupScopeWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
@@ -20,7 +21,7 @@ export class TeamsService {
   // 프로필 설정의 소속 팀 선택지 + 팀스토리 목록. 선택지 쪽은 id·name만 읽는다.
   async findAll(): Promise<TeamSummary[]> {
     const teams = await this.prisma.team.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...groupScopeWhere() },
       select: { id: true, name: true, iconUrl: true, tagline: true },
       orderBy: { name: 'asc' },
     });
@@ -37,7 +38,7 @@ export class TeamsService {
   // 팀스토리 상세와 팀원 리스트가 같이 쓴다. 사진은 갤러리 조회가 따로 내려준다.
   async findOne(id: string): Promise<TeamDetailResponse | null> {
     const team = await this.prisma.team.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...groupScopeWhere() },
       select: {
         id: true,
         name: true,
@@ -203,7 +204,7 @@ export class TeamsService {
 
   private async assertTeamExists(id: string) {
     const team = await this.prisma.team.findFirst({
-      where: { id, deletedAt: null },
+      where: { id, deletedAt: null, ...groupScopeWhere() },
       select: { id: true },
     });
     if (!team) throw new NotFoundException('존재하지 않는 팀입니다.');

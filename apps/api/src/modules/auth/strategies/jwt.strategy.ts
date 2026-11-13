@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 
+import { markReviewer } from '../../../common/review/review-scope';
 import { type AppConfig } from '../../../config/configuration';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -28,11 +29,12 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   async validate(payload: JwtPayload): Promise<JwtPayload> {
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { withdrawnAt: true },
+      select: { withdrawnAt: true, isReviewAccount: true },
     });
     if (!user || user.withdrawnAt) {
       throw new UnauthorizedException('탈퇴했거나 없는 계정입니다.');
     }
+    if (user.isReviewAccount) markReviewer();
     return payload;
   }
 }

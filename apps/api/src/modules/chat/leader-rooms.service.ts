@@ -12,6 +12,7 @@ import type {
   LeaderRoomSummary,
 } from '@onnuri/shared';
 
+import { visibleUserWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { LEADER_USER_WHERE } from './leader-grade';
 
@@ -116,7 +117,7 @@ export class LeaderRoomsService {
   async findCandidates(userId: string): Promise<LeaderRoomCandidate[]> {
     await this.assertAdmin(userId);
     const users = await this.prisma.user.findMany({
-      where: LEADER_USER_WHERE,
+      where: { ...LEADER_USER_WHERE, ...visibleUserWhere() },
       select: {
         id: true,
         name: true,
