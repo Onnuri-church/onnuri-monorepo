@@ -10,6 +10,7 @@ import type { TeamFollowerNoteInfo } from '@onnuri/shared';
 import { pad, toDateLabel, toKstDate } from '../../common/utils/date';
 import { markFollowerNotesViewed } from '../admin/admin-follower-notes.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { visibleAuthorWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateTeamFollowerNoteCommentDto,
@@ -56,6 +57,7 @@ export class TeamFollowerNotesService {
         author: { select: { name: true, avatarUrl: true } },
         editedBy: { select: { name: true } },
         comments: {
+          where: { author: visibleAuthorWhere() },
           select: {
             id: true,
             content: true,

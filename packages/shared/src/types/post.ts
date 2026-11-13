@@ -117,6 +117,8 @@ export interface UpdatePostCommentRequest {
 /** 게시글 댓글 — Comment 테이블은 게시판 공용이라 셀 소식 전용이 아니다. */
 export interface PostComment {
   id: string;
+  /** 작성자 — "차단하기"가 쓴다 (SCRUM-198) */
+  authorId: string;
   authorName: string;
   authorAvatarUrl: string | null;
   createdAt: string;

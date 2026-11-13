@@ -12,6 +12,7 @@ import type {
 
 import { toKstDate } from '../../common/utils/date';
 import { assertSensitiveConsent } from '../../common/utils/consent';
+import { visibleAuthorWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
@@ -111,6 +112,7 @@ export class PrayersService {
     const visible = {
       board: 'PRAYER' as const,
       deletedAt: null,
+      author: visibleAuthorWhere(),
       prayerRequest: { visibleUntil: { gte: startOfToday() } },
     };
     const [admin, totalCount, rows] = await Promise.all([

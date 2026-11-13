@@ -12,6 +12,7 @@ import { AdminBannerFormScreen } from "../features/admin/AdminBannerFormScreen";
 import { AdminBannerManageScreen } from "../features/admin/AdminBannerManageScreen";
 import { AdminCellManageScreen } from "../features/admin/AdminCellManageScreen";
 import { AdminFollowerNotesScreen } from "../features/admin/AdminFollowerNotesScreen";
+import { AdminReportsScreen } from "../features/admin/AdminReportsScreen";
 import { AdminDataDownloadScreen } from "../features/admin/AdminDataDownloadScreen";
 import { AdminDataPreviewScreen } from "../features/admin/AdminDataPreviewScreen";
 import { AdminMemberDetailScreen } from "../features/admin/AdminMemberDetailScreen";
@@ -72,6 +73,7 @@ import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { NotificationSettingsScreen } from "../features/settings/NotificationSettingsScreen";
+import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
@@ -659,6 +661,14 @@ export function RootNavigator() {
             }}
           />
           <Stack.Screen
+            name="BlockedUsers"
+            component={BlockedUsersScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("차단 목록")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
             name="NotificationSettings"
             component={NotificationSettingsScreen}
             options={{
@@ -731,6 +741,15 @@ export function RootNavigator() {
                 />
               ),
             })}
+          />
+          {/* 신고 관리 (SCRUM-199) */}
+          <Stack.Screen
+            name="AdminReports"
+            component={AdminReportsScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("신고 관리")} />,
+            }}
           />
           {/* 팔로워 노트 관리 (SCRUM-181) — 셀·팀 노트 목록 → 각 게시판 */}
           <Stack.Screen

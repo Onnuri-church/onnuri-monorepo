@@ -1,5 +1,5 @@
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, BackHandler, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInWithDev } from "../../shared/api/session";
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
+import { ReviewLoginModal } from "./components/ReviewLoginModal";
 import { SocialLoginButton } from "./components/SocialLoginButton";
 import {
   type LastLoginProvider,
@@ -30,6 +31,10 @@ const DEV_ACCOUNTS = [
 // 번들에 넣고 빌드 시점에 상수로 치환하므로, .env를 바꾸면 Metro를 다시 시작해야 반영된다.
 const DEV_LOGIN_ENABLED = process.env.EXPO_PUBLIC_AUTH_DEV_LOGIN === "true";
 
+// 스토어 심사용 로그인 (SCRUM-197) — 로고를 3초 안에 5번 누르면 열린다. 심사 정보에 안내한다.
+const REVIEW_TAP_COUNT = 5;
+const REVIEW_TAP_WINDOW_MS = 3000;
+
 // 시안은 402×874 고정 프레임의 절대 좌표지만 실기기 높이는 제각각이라, 로고 블록이 남는 공간을
 // 차지하고(flex-1) 버튼 그룹은 아래에 붙는 구조로 옮겼다 — 화면이 작아지면 여백부터 줄어든다.
 export function LoginScreen() {
@@ -50,6 +55,18 @@ export function LoginScreen() {
     return () => subscription.remove();
   }, [fromGuest, startGuestSession]);
   const [submitting, setSubmitting] = useState(false);
+  const [reviewLoginOpen, setReviewLoginOpen] = useState(false);
+  const logoTaps = useRef<number[]>([]);
+  const handleLogoPress = () => {
+    const now = Date.now();
+    logoTaps.current = [...logoTaps.current, now].filter(
+      (time) => now - time < REVIEW_TAP_WINDOW_MS,
+    );
+    if (logoTaps.current.length >= REVIEW_TAP_COUNT) {
+      logoTaps.current = [];
+      setReviewLoginOpen(true);
+    }
+  };
   // 마지막으로 성공한 소셜 로그인 수단 — 그 버튼 위에 "최근 로그인" 말풍선을 띄운다.
   const [lastProvider, setLastProvider] = useState<LastLoginProvider | null>(null);
   useEffect(() => {
@@ -95,7 +112,9 @@ export function LoginScreen() {
       {/* safe area는 위 View가 style로, 시안 여백은 여기서 클래스로 — 두 값을 한 곳에 섞지 않는다 */}
       <View className="flex-1 px-11 pb-12">
         <View className="flex-1 items-center justify-center">
-          <Logo variant="symbol" />
+          <Pressable onPress={handleLogoPress} accessible={false}>
+            <Logo variant="symbol" />
+          </Pressable>
           <Text className="text-body-medium text-text-neutral">{t("2026 부산온누리교회")}</Text>
           {/* 타이틀 SVG가 글자에 딱 맞게 잘려 있어서 시안의 행간 여백이 없다 — 8px로 대신한다 */}
           <View className="mt-2">
@@ -140,6 +159,8 @@ export function LoginScreen() {
           </View>
         )}
       </View>
+
+      <ReviewLoginModal visible={reviewLoginOpen} onClose={() => setReviewLoginOpen(false)} />
     </View>
   );
 }

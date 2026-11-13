@@ -12,6 +12,10 @@ import type {
 } from '@onnuri/shared';
 
 import { pad } from '../../common/utils/date';
+import {
+  visibleGroupWhere,
+  visibleUserWhere,
+} from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { FindAdminAttendanceDto } from './dto/find-admin-attendance.dto';
 import { UpdateAdminAttendanceDto } from './dto/update-admin-attendance.dto';
@@ -372,7 +376,11 @@ export class AdminAttendanceService {
     }
 
     const cells = await this.prisma.cell.findMany({
-      where: { deletedAt: null, ...(scope === 'cell' && { id: groupId }) },
+      where: {
+        deletedAt: null,
+        ...visibleGroupWhere(),
+        ...(scope === 'cell' && { id: groupId }),
+      },
       select: {
         id: true,
         name: true,
@@ -393,6 +401,7 @@ export class AdminAttendanceService {
         ? await this.prisma.user.findMany({
             where: {
               withdrawnAt: null,
+              ...visibleUserWhere(),
               cellMemberships: {
                 none: { endedAt: null, cell: { deletedAt: null } },
               },

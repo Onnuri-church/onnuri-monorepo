@@ -24,6 +24,10 @@ import { toDateLabel, toDayLabel, toKstDate } from '../../common/utils/date';
 import { CellAccessService } from '../cells/cell-access.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { assertSensitiveConsent } from '../../common/utils/consent';
+import {
+  visibleGroupWhere,
+  visibleAuthorWhere,
+} from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCellNewsDto } from './dto/create-cell-news.dto';
 import { CreateQtShareDto } from './dto/create-qt-share.dto';
@@ -137,6 +141,7 @@ function toPostComment(
 ): PostComment {
   return {
     id: comment.id,
+    authorId: comment.authorId,
     authorName: comment.author.name,
     authorAvatarUrl: comment.author.avatarUrl,
     createdAt: comment.createdAt.toISOString(),
@@ -166,7 +171,11 @@ export class PostsService {
       !userId
         ? undefined
         : this.prisma.post.findMany({
-            where: { board: 'QT_SHARE', deletedAt: null },
+            where: {
+              board: 'QT_SHARE',
+              deletedAt: null,
+              author: visibleAuthorWhere(),
+            },
             select: {
               id: true,
               title: true,
@@ -179,7 +188,11 @@ export class PostsService {
             take: HOME_QT_SHARE_COUNT,
           }),
       this.prisma.post.findMany({
-        where: { board: 'TEAM_ACTIVITY', deletedAt: null },
+        where: {
+          board: 'TEAM_ACTIVITY',
+          deletedAt: null,
+          author: visibleAuthorWhere(),
+        },
         select: {
           id: true,
           title: true,
@@ -234,6 +247,7 @@ export class PostsService {
       board: 'QT_SHARE' as const,
       deletedAt: null,
       eventDate: { not: null },
+      author: visibleAuthorWhere(),
       ...(query.mine && { authorId: userId }),
     };
     const admin = userId ? await this.isAdminUser(userId) : false;
@@ -242,7 +256,12 @@ export class PostsService {
     const hasPick = query.year !== undefined && query.month !== undefined;
     const [first, latest] = await Promise.all([
       this.prisma.post.findFirst({
-        where: { board: 'QT_SHARE', deletedAt: null, eventDate: { not: null } },
+        where: {
+          board: 'QT_SHARE',
+          deletedAt: null,
+          eventDate: { not: null },
+          author: visibleAuthorWhere(),
+        },
         orderBy: { eventDate: 'asc' },
         select: { eventDate: true },
       }),
@@ -539,7 +558,7 @@ export class PostsService {
         _count: { select: { likes: true } },
         likes: { where: myLikeFilter(userId), select: { id: true } },
         comments: {
-          where: { deletedAt: null },
+          where: { deletedAt: null, author: visibleAuthorWhere() },
           select: {
             id: true,
             content: true,
@@ -587,7 +606,7 @@ export class PostsService {
     // 필터 칩은 id·name만 쓰지만 계약 타입이 GET /teams와 같은 TeamSummary라
     // 아이콘·한 줄 소개도 같은 모양으로 채운다 (TeamsService.findAll과 동일).
     const rows = await this.prisma.team.findMany({
-      where: { deletedAt: null },
+      where: { deletedAt: null, ...visibleGroupWhere() },
       select: { id: true, name: true, iconUrl: true, tagline: true },
       orderBy: { name: 'asc' },
     });
@@ -608,6 +627,7 @@ export class PostsService {
       where: {
         board: 'TEAM_ACTIVITY',
         deletedAt: null,
+        author: visibleAuthorWhere(),
         ...(selectedTeamId ? { teamId: selectedTeamId } : {}),
       },
       select: {
@@ -623,7 +643,13 @@ export class PostsService {
           select: {
             reactions: true,
             // 카드의 댓글 수는 최상위 댓글만 센다 (시안: 댓글 3줄에 "댓글 2").
-            comments: { where: { deletedAt: null, parentId: null } },
+            comments: {
+              where: {
+                deletedAt: null,
+                parentId: null,
+                author: visibleAuthorWhere(),
+              },
+            },
           },
         },
       },
@@ -678,7 +704,11 @@ export class PostsService {
         // 최상위 댓글만 받고 대댓글은 그 안에 담는다 — 깊이가 1단계뿐이라 평탄화해서
         // 앱이 다시 묶는 것보다 이 모양이 화면과 그대로 맞는다.
         comments: {
-          where: { deletedAt: null, parentId: null },
+          where: {
+            deletedAt: null,
+            parentId: null,
+            author: visibleAuthorWhere(),
+          },
           select: {
             id: true,
             content: true,
@@ -686,7 +716,7 @@ export class PostsService {
             authorId: true,
             author: { select: { name: true, avatarUrl: true } },
             replies: {
-              where: { deletedAt: null },
+              where: { deletedAt: null, author: visibleAuthorWhere() },
               select: {
                 id: true,
                 content: true,

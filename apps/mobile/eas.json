@@ -16,6 +16,12 @@
         "EXPO_PUBLIC_AUTH_DEV_LOGIN": "true"
       }
     },
+    "development-simulator": {
+      "extends": "development",
+      "ios": {
+        "simulator": true
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {

@@ -18,6 +18,8 @@ import { useMe } from "../profile/useMe";
 import { deletePrayer, fetchPrayerDetail } from "./api";
 import { CategoryBadge } from "./components/CategoryBadge";
 import { useToggleBookmark } from "./useToggleBookmark";
+import { ReportPostLink } from "../report/ReportPostLink";
+import { useReport } from "../report/useReport";
 
 // 시안 확정값(402pt 프레임). 세로 간격이 4px 스케일에 안 맞는 값들이라 클래스 대신 상수로 둔다 —
 // 이 화면에서만 쓰는 리듬이라 전역 spacing 토큰으로 올리지 않았다.
@@ -55,6 +57,8 @@ export function PrayerDetailScreen() {
 
   // 수정은 작성자만, 삭제는 작성자와 관리자 (서버도 같은 규칙으로 막는다). 둘 다 못 하면 ⋮ 대신 북마크.
   const canEdit = data?.isMine === true;
+  // 남의 글 신고 (SCRUM-199)
+  const { openReport, sheet: reportSheet, canReport } = useReport();
   const canDelete = canEdit || (data !== undefined && isAdmin);
 
   const { mutate: remove } = useMutation({
@@ -180,6 +184,10 @@ export function PrayerDetailScreen() {
             >
               {data.content}
             </Text>
+            {canReport && !data.isMine && (
+              <ReportPostLink onPress={() => openReport({ targetType: "POST", targetId: id })} />
+            )}
+            {reportSheet}
 
             {/* 첨부 사진 — 없으면 영역을 그리지 않는다. 시안은 각진 모서리라 기본 라운드를 끈다. */}
             {data.photoUrl !== null && (

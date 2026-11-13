@@ -9,6 +9,10 @@ interface CommentThreadProps {
   onReplyPress: (comment: PostComment) => void;
   onEditPress: (comment: PostComment) => void;
   onDeletePress: (comment: PostComment) => void;
+  /** 남의 댓글에 "차단" 버튼 — 게스트면 넘기지 않는다 (SCRUM-198) */
+  onBlockPress?: (comment: PostComment) => void;
+  /** 남의 댓글에 "신고" 버튼 — 게스트면 넘기지 않는다 (SCRUM-199) */
+  onReportPress?: (comment: PostComment) => void;
 }
 
 // 댓글 한 덩어리 = 최상위 댓글 + 그 대댓글들. 깊이가 1단계뿐이라 재귀로 만들지 않는다.
@@ -18,7 +22,13 @@ export function CommentThread({
   onReplyPress,
   onEditPress,
   onDeletePress,
+  onBlockPress,
+  onReportPress,
 }: CommentThreadProps) {
+  const reportHandler = (target: PostComment) =>
+    onReportPress && !target.isMine ? () => onReportPress(target) : undefined;
+  const blockHandler = (target: PostComment) =>
+    onBlockPress && !target.isMine ? () => onBlockPress(target) : undefined;
   return (
     <View>
       <CommentItem
@@ -29,6 +39,8 @@ export function CommentThread({
         onReplyPress={() => onReplyPress(comment)}
         onEditPress={comment.canEdit ? () => onEditPress(comment) : undefined}
         onDeletePress={comment.canDelete ? () => onDeletePress(comment) : undefined}
+        onBlockPress={blockHandler(comment)}
+        onReportPress={reportHandler(comment)}
       />
       {comment.replies.map((reply) => (
         <View
@@ -43,6 +55,8 @@ export function CommentThread({
             content={reply.content}
             onEditPress={reply.canEdit ? () => onEditPress(reply) : undefined}
             onDeletePress={reply.canDelete ? () => onDeletePress(reply) : undefined}
+            onBlockPress={blockHandler(reply)}
+            onReportPress={reportHandler(reply)}
           />
         </View>
       ))}

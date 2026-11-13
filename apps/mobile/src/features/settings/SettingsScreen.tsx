@@ -165,6 +165,13 @@ export function SettingsScreen() {
             />
             {!isGuest && (
               <SettingRow
+                title={t("차단 목록")}
+                onPress={() => requireLogin() && navigation.navigate("BlockedUsers")}
+                right={<Icon name="expand-right" color={colors.primary.normal} />}
+              />
+            )}
+            {!isGuest && (
+              <SettingRow
                 title={t("민감정보 처리 동의")}
                 subtitle={t("큐티나눔·기도제목 글쓰기에 필요해요")}
                 right={

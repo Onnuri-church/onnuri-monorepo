@@ -33,6 +33,13 @@ export function postDevLogin(email: string, role: DevLoginRole): Promise<LoginRe
     .then((res) => res.data);
 }
 
+// 스토어 심사용 로그인 (SCRUM-197) — 서버에 심사용 아이디·비밀번호가 없으면 404.
+export function postReviewLogin(id: string, password: string): Promise<LoginResponse> {
+  return bareClient
+    .post<LoginResponse>("/auth/login/review", { id, password })
+    .then((res) => res.data);
+}
+
 export function postRefresh(refreshToken: string): Promise<AuthTokens> {
   return bareClient.post<AuthTokens>("/auth/refresh", { refreshToken }).then((res) => res.data);
 }

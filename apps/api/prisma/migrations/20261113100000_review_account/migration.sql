@@ -1,0 +1,5 @@
+-- 스토어 심사용 계정과 심사용 팀·셀·소그룹 (SCRUM-197)
+ALTER TABLE "User" ADD COLUMN "isReviewAccount" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Team" ADD COLUMN "isReviewOnly" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "Cell" ADD COLUMN "isReviewOnly" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "HobbyGroup" ADD COLUMN "isReviewOnly" BOOLEAN NOT NULL DEFAULT false;

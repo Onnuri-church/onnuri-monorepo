@@ -39,9 +39,16 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
+import { useBlockConfirm } from "../block/useBlockConfirm";
+import { useReport } from "../report/useReport";
+import { ReportPostLink } from "../report/ReportPostLink";
 
 export function DepartmentActivityDetailScreen() {
   const { t } = useTranslation();
+  // 남의 댓글 "차단" (SCRUM-198) — 차단하면 캐시를 다시 받아 그 사람 댓글이 빠진다.
+  const { requestBlock, dialog: blockDialog, canBlock } = useBlockConfirm();
+  // 남의 글·댓글 "신고" (SCRUM-199)
+  const { openReport, sheet: reportSheet } = useReport();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const { id } = useRoute<RouteProp<RootStackParamList, "DepartmentActivityDetail">>().params;
@@ -284,6 +291,9 @@ export function DepartmentActivityDetailScreen() {
           <Text className="mt-2 text-body-medium text-text-neutral">
             {data.content}
           </Text>
+          {canBlock && !data.isMine && (
+            <ReportPostLink onPress={() => openReport({ targetType: "POST", targetId: data.id })} />
+          )}
           {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
           <ReactionBar reactions={data.reactions} onReact={(emoji) => react(emoji)} />
         </View>
@@ -305,9 +315,21 @@ export function DepartmentActivityDetailScreen() {
                 }}
                 onEditPress={handleEditPress}
                 onDeletePress={handleDeletePress}
+                onBlockPress={
+                  canBlock
+                    ? (target) => requestBlock({ userId: target.authorId, name: target.authorName })
+                    : undefined
+                }
+                onReportPress={
+                  canBlock
+                    ? (target) => openReport({ targetType: "COMMENT", targetId: target.id })
+                    : undefined
+                }
               />
             ))
           )}
+          {blockDialog}
+          {reportSheet}
         </View>
       </ScrollView>
       {/* 키보드가 올라오면 그 높이만큼 아래를 띄운다. 이때 내비게이션 바 인셋은 더하지

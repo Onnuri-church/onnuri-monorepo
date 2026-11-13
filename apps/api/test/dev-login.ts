@@ -15,3 +15,10 @@ export const DEV_LOGIN_SECRET =
   fromEnvFile || 'e2e-dev-login-secret-0123456789abcdef';
 
 export const DEV_LOGIN_HEADER = { 'X-Dev-Login-Secret': DEV_LOGIN_SECRET };
+
+// 스토어 심사용 로그인 (SCRUM-197) — 개발용 로그인 비밀과 같은 규칙으로 .env 값이 있으면 그 값을 쓴다.
+const envFile = existsSync(envPath) ? parse(readFileSync(envPath)) : {};
+export const REVIEW_LOGIN = {
+  id: envFile.REVIEW_LOGIN_ID || 'e2e-review',
+  password: envFile.REVIEW_LOGIN_PASSWORD || 'e2e-review-password-0123',
+};

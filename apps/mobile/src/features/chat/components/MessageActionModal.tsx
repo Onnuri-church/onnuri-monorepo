@@ -11,6 +11,10 @@ interface MessageActionModalProps {
   onReply: () => void;
   onToggleNotice: () => void;
   onDelete: () => void;
+  /** 남의 메시지에 "차단하기" — 게스트·내 메시지면 넘기지 않는다 (SCRUM-198) */
+  onBlock?: () => void;
+  /** 남의 메시지에 "신고하기" (SCRUM-199) */
+  onReport?: () => void;
 }
 
 // 메시지를 길게 눌렀을 때 아래에서 올라오는 메뉴 — 이모지 반응 줄 + 답장·공지·삭제.
@@ -22,6 +26,8 @@ export function MessageActionModal({
   onReply,
   onToggleNotice,
   onDelete,
+  onBlock,
+  onReport,
 }: MessageActionModalProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -36,6 +42,12 @@ export function MessageActionModal({
       });
     }
     if (message.canDelete) rows.push({ label: t("삭제"), onPress: onDelete, danger: true });
+    if (onReport && !message.isMine) {
+      rows.push({ label: t("신고하기"), onPress: onReport, danger: true });
+    }
+    if (onBlock && !message.isMine) {
+      rows.push({ label: t("차단하기"), onPress: onBlock, danger: true });
+    }
   }
 
   return (

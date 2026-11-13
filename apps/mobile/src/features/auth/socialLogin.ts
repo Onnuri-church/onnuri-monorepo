@@ -47,7 +47,11 @@ export async function loginWithGoogleSdk(): Promise<{ isNewUser: boolean } | nul
 
   if (!googleConfigured) {
     // ID 토큰의 aud가 이 웹 클라이언트 ID로 발급된다 — 백엔드 GOOGLE_CLIENT_IDS와 맞아야 한다.
-    GoogleSignin.configure({ webClientId: GOOGLE_WEB_CLIENT_ID });
+    // iOS는 iOS용 OAuth 클라이언트 ID가 따로 필요하다 (SCRUM-195). 안드로이드는 무시한다.
+    GoogleSignin.configure({
+      webClientId: GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || undefined,
+    });
     googleConfigured = true;
   }
 

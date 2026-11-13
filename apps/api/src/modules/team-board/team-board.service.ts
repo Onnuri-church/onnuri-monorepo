@@ -13,6 +13,7 @@ import type {
   TeamBoardReactor,
 } from '@onnuri/shared';
 
+import { visibleAuthorWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   CreateTeamBoardCommentDto,
@@ -105,6 +106,7 @@ export class TeamBoardService {
           deletedAt: null,
           noticeAt: null,
           createdAt: { gte: monthStart, lt: monthEnd },
+          author: visibleAuthorWhere(),
         },
         select: POST_SELECT,
         orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
@@ -115,7 +117,12 @@ export class TeamBoardService {
       cursor
         ? Promise.resolve([] as PostRow[])
         : this.prisma.teamBoardPost.findMany({
-            where: { teamId, deletedAt: null, noticeAt: { not: null } },
+            where: {
+              teamId,
+              deletedAt: null,
+              noticeAt: { not: null },
+              author: visibleAuthorWhere(),
+            },
             select: POST_SELECT,
             orderBy: { noticeAt: 'desc' },
             take: 10,
@@ -213,7 +220,7 @@ export class TeamBoardService {
       emoji: reaction.emoji,
     }));
     const comments = await this.prisma.teamBoardComment.findMany({
-      where: { postId, deletedAt: null },
+      where: { postId, deletedAt: null, author: visibleAuthorWhere() },
       select: {
         id: true,
         authorId: true,

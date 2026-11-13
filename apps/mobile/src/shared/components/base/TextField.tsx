@@ -8,11 +8,13 @@ interface TextFieldProps {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
+  /** 비밀번호 입력 — 글자를 가리고, 자동 대문자·자동 완성을 끈다. */
+  secure?: boolean;
 }
 
 // 라벨 + 밑줄 한 줄 입력. 입력줄은 시안 확정값(높이 48 / 좌우 8 / 아래 구분선)으로
 // DateField의 트리거 줄과 같은 스타일이다.
-export function TextField({ label, placeholder, value, onChangeText }: TextFieldProps) {
+export function TextField({ label, placeholder, value, onChangeText, secure }: TextFieldProps) {
   const themeColors = useThemeColors();
   return (
     <Field label={label}>
@@ -22,6 +24,9 @@ export function TextField({ label, placeholder, value, onChangeText }: TextField
         onChangeText={onChangeText}
         placeholder={placeholder}
         placeholderTextColor={themeColors.text.assistive}
+        secureTextEntry={secure}
+        autoCapitalize={secure ? "none" : undefined}
+        autoCorrect={secure ? false : undefined}
       />
     </Field>
   );

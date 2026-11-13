@@ -5,6 +5,7 @@ import type {
 } from '@onnuri/shared';
 
 import { kstToday } from '../../common/utils/date';
+import { visibleGroupWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 
 // 관리자 팔로워 노트 관리 (SCRUM-181) — 마이페이지 > 팔로워 노트 관리의 셀·팀 목록.
@@ -20,6 +21,7 @@ export class AdminFollowerNotesService {
       this.prisma.cell.findMany({
         where: {
           deletedAt: null,
+          ...visibleGroupWhere(),
           OR: [
             { expiresAt: { gte: kstToday() } },
             { meetings: { some: { followerNote: { isNot: null } } } },
@@ -38,7 +40,7 @@ export class AdminFollowerNotesService {
         orderBy: { name: 'asc' },
       }),
       this.prisma.team.findMany({
-        where: { deletedAt: null },
+        where: { deletedAt: null, ...visibleGroupWhere() },
         select: { id: true, name: true, iconUrl: true, tagline: true },
         orderBy: { name: 'asc' },
       }),

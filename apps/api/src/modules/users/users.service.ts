@@ -17,6 +17,10 @@ import type {
 
 import type { Prisma } from '../../../generated/prisma';
 import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
+import {
+  groupScopeWhere,
+  visibleUserWhere,
+} from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
@@ -156,7 +160,7 @@ export class UsersService {
   // 탈퇴 회원은 제외. 뱃지는 관리자 > 팀장 > 셀장(부셀장 포함) 우선순위로 하나만 단다.
   async findAllForAdmin(): Promise<AdminMemberSummary[]> {
     const users = await this.prisma.user.findMany({
-      where: { withdrawnAt: null },
+      where: { withdrawnAt: null, ...visibleUserWhere() },
       select: {
         id: true,
         name: true,
@@ -291,7 +295,7 @@ export class UsersService {
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({
-          where: { id: dto.cellId, deletedAt: null },
+          where: { id: dto.cellId, deletedAt: null, ...groupScopeWhere() },
           select: { id: true },
         });
         if (!cell) throw new BadRequestException('존재하지 않는 셀입니다.');
@@ -308,7 +312,11 @@ export class UsersService {
       const teamIdsToCheck = dto.teamIds ?? (dto.teamId ? [dto.teamId] : []);
       if (teamIdsToCheck.length > 0) {
         const found = await tx.team.count({
-          where: { id: { in: teamIdsToCheck }, deletedAt: null },
+          where: {
+            id: { in: teamIdsToCheck },
+            deletedAt: null,
+            ...groupScopeWhere(),
+          },
         });
         if (found !== teamIdsToCheck.length) {
           throw new BadRequestException('존재하지 않는 팀입니다.');
@@ -740,14 +748,18 @@ export class UsersService {
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({
-          where: { id: dto.cellId, deletedAt: null },
+          where: { id: dto.cellId, deletedAt: null, ...groupScopeWhere() },
           select: { id: true },
         });
         if (!cell) throw new BadRequestException('존재하지 않는 셀입니다.');
       }
       if (dto.teamIds.length > 0) {
         const found = await tx.team.count({
-          where: { id: { in: dto.teamIds }, deletedAt: null },
+          where: {
+            id: { in: dto.teamIds },
+            deletedAt: null,
+            ...groupScopeWhere(),
+          },
         });
         if (found !== dto.teamIds.length) {
           throw new BadRequestException('존재하지 않는 팀입니다.');

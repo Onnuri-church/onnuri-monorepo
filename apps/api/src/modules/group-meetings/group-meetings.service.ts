@@ -13,6 +13,10 @@ import type {
 
 import { pad } from '../../common/utils/date';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  groupScopeWhere,
+  visibleAuthorWhere,
+} from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { AddPhotosDto } from './dto/add-photos.dto';
@@ -78,6 +82,7 @@ export class GroupMeetingsService {
     const rows = await this.prisma.hobbyGroup.findMany({
       where: {
         post: { deletedAt: null },
+        ...groupScopeWhere(),
         ...(status === 'open' ? openWhere : closedWhere),
       },
       select: {
@@ -173,7 +178,7 @@ export class GroupMeetingsService {
     userId: string | undefined,
   ): Promise<GroupMeetingDetail> {
     const group = await this.prisma.hobbyGroup.findFirst({
-      where: { postId: id, post: { deletedAt: null } },
+      where: { postId: id, post: { deletedAt: null }, ...groupScopeWhere() },
       select: {
         postId: true,
         status: true,
@@ -199,7 +204,7 @@ export class GroupMeetingsService {
               ],
             },
             comments: {
-              where: { deletedAt: null },
+              where: { deletedAt: null, author: visibleAuthorWhere() },
               select: {
                 id: true,
                 content: true,
@@ -290,6 +295,7 @@ export class GroupMeetingsService {
       photoCount: isGuest ? 0 : group.post.images.length,
       comments: (isGuest ? [] : group.post.comments).map((comment) => ({
         id: comment.id,
+        authorId: comment.authorId,
         authorName: comment.author.name,
         authorAvatarUrl: comment.author.avatarUrl,
         createdAt: comment.createdAt.toISOString(),
@@ -478,7 +484,7 @@ export class GroupMeetingsService {
   // 참여 신청 — 모집중일 때만. 거절됐던 사람은 다시 신청하면 PENDING으로 돌아간다.
   async join(userId: string, id: string): Promise<GroupMeetingDetail> {
     const group = await this.prisma.hobbyGroup.findFirst({
-      where: { postId: id, post: { deletedAt: null } },
+      where: { postId: id, post: { deletedAt: null }, ...groupScopeWhere() },
       select: {
         status: true,
         recruitEnd: true,

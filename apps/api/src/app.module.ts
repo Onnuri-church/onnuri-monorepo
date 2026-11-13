@@ -1,4 +1,8 @@
-import { Module } from '@nestjs/common';
+import {
+  type MiddlewareConsumer,
+  Module,
+  type NestModule,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
@@ -6,6 +10,7 @@ import { SentryGlobalFilter, SentryModule } from '@sentry/nestjs/setup';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ReviewContextMiddleware } from './common/review/review-context.middleware';
 import { DedupeCreateInterceptor } from './common/interceptors/dedupe-create.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
 import { StorageUrlInterceptor } from './modules/uploads/storage-url.interceptor';
@@ -13,7 +18,10 @@ import { validate } from './config/env.validation';
 import configuration from './config/configuration';
 import { AdminModule } from './modules/admin/admin.module';
 import { AppVersionModule } from './modules/app-version/app-version.module';
+import { PublicPagesModule } from './modules/public-pages/public-pages.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BlocksModule } from './modules/blocks/blocks.module';
+import { ReportsModule } from './modules/reports/reports.module';
 import { BulletinsModule } from './modules/bulletins/bulletins.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
@@ -41,6 +49,8 @@ import { UsersModule } from './modules/users/users.module';
     ScheduleModule.forRoot(),
     PrismaModule,
     UsersModule,
+    BlocksModule,
+    ReportsModule,
     AuthModule,
     CellsModule,
     TeamsModule,
@@ -56,6 +66,7 @@ import { UsersModule } from './modules/users/users.module';
     SermonsModule,
     BulletinsModule,
     AppVersionModule,
+    PublicPagesModule,
   ],
   controllers: [AppController],
   providers: [
@@ -71,4 +82,9 @@ import { UsersModule } from './modules/users/users.module';
     { provide: APP_INTERCEPTOR, useClass: DedupeCreateInterceptor },
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  // 심사 계정 구분 (SCRUM-197) — 가드(로그인 검증)보다 먼저 요청 컨텍스트를 연다.
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(ReviewContextMiddleware).forRoutes('{*splat}');
+  }
+}
