@@ -52,7 +52,7 @@ interface SubHeaderProps {
    * 기본값은 더보기(⋮) — 단, 누를 수 없는 아이콘은 그리지 않는다: ⋮는 menuItems가,
    * 공유는 onPressShare가 있을 때만 나온다 (안 넘기고 등록한 화면에 죽은 버튼이 떠 있었다).
    */
-  rightAction?: "more" | "home" | "export" | "bookmark" | "text" | "none";
+  rightAction?: "more" | "home" | "export" | "bookmark" | "bookmark-more" | "text" | "none";
   /** rightAction이 "text"일 때 그릴 문구 (예: "완료", "편집"). */
   rightLabel?: string;
   /** 우측 문구 버튼 동작 (rightAction이 "text"일 때). */
@@ -188,7 +188,15 @@ export function Header(props: HeaderProps) {
         ) : (
             <>
               {/* 오른쪽에 아이콘이 둘이면 왼쪽도 같은 폭(28+12+28)으로 잡아 타이틀을 가운데에 둔다. */}
-              <View style={{ width: props.rightAction === "home" && props.extraRightAction ? 68 : undefined }}>
+              <View
+                style={{
+                  width:
+                    (props.rightAction === "home" && props.extraRightAction) ||
+                    props.rightAction === "bookmark-more"
+                      ? 68
+                      : undefined,
+                }}
+              >
                 {props.hideBack ? (
                   <View style={{ width: 28, height: 28 }} />
                 ) : (
@@ -232,6 +240,24 @@ export function Header(props: HeaderProps) {
                   ) : (
                       <View className="w-7" />
                   )
+              ) : props.rightAction === "bookmark-more" ? (
+                  // 기도제목 남의 글 (SCRUM-201) — 자주 쓰는 저장은 밖에, 가끔 쓰는 신고·차단은 ⋮ 안에.
+                  <View className="flex-row items-center gap-3">
+                    <PressableScale scaleTo={0.85} onPress={props.onPressBookmark} hitSlop={8}>
+                      <Icon
+                          name={props.bookmarked ? "bookmark-active" : "bookmark"}
+                          size={28}
+                          color={props.bookmarked ? themeColors.primary.normal : themeColors.icon.strong}
+                      />
+                    </PressableScale>
+                    {props.menuItems?.length ? (
+                      <Pressable ref={moreButtonRef} onPress={openMenu} hitSlop={8}>
+                        <Icon name="more" size={28} color={colors.icon.strong} />
+                      </Pressable>
+                    ) : (
+                      <View className="w-7" />
+                    )}
+                  </View>
               ) : props.rightAction === "bookmark" ? (
                   <PressableScale scaleTo={0.85} onPress={props.onPressBookmark} hitSlop={8}>
                     <Icon

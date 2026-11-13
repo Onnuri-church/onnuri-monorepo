@@ -39,6 +39,8 @@ export interface PrayerListResponse {
 
 /** GET /posts/prayers/:id 응답 */
 export interface PrayerDetailResponse extends PrayerListItem {
+  /** 작성자 id — "작성자 차단하기"용 (SCRUM-201). 익명 글이면 null (차단 목록에 실명이 드러나지 않게) */
+  authorId: string | null;
   /** 작성자 프로필 사진 — 익명 글은 항상 null (관리자에게도 사진은 숨긴다) */
   authorAvatarUrl: string | null;
   content: string;

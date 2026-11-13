@@ -41,7 +41,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
-import { ReportPostLink } from "../report/ReportPostLink";
+import { usePostViewerMenu } from "../report/usePostViewerMenu";
 
 export function DepartmentActivityDetailScreen() {
   const { t } = useTranslation();
@@ -146,14 +146,16 @@ export function DepartmentActivityDetailScreen() {
   // ⋮는 관리 권한(작성자·그 팀 팀장·관리자)일 때만 보이고 항목이 화면 데이터에 의존하므로,
   // 등록부(RootNavigator)가 아니라 화면이 헤더를 단독 등록한다 (큐티나눔 상세와 같은 방식).
   const canManage = data?.canManage ?? false;
+  // 남의 글 ⋮ — 신고하기·작성자 차단하기 (SCRUM-201)
+  const { items: viewerItems, sheets: viewerSheets } = usePostViewerMenu(data);
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <Header
           variant="sub"
           title={t("부서활동 게시판")}
-          rightAction={canManage ? "more" : "none"}
-          menuItems={[
+          rightAction={canManage || viewerItems.length > 0 ? "more" : "none"}
+          menuItems={!canManage ? viewerItems : [
             {
               icon: "edit",
               label: t("수정하기"),
@@ -168,7 +170,7 @@ export function DepartmentActivityDetailScreen() {
         />
       ),
     });
-  }, [navigation, canManage, id, t]);
+  }, [navigation, canManage, id, t, viewerItems]);
 
   const confirmDelete = () => {
     dialogRef.current?.close();
@@ -291,9 +293,6 @@ export function DepartmentActivityDetailScreen() {
           <Text className="mt-2 text-body-medium text-text-neutral">
             {data.content}
           </Text>
-          {canBlock && !data.isMine && (
-            <ReportPostLink onPress={() => openReport({ targetType: "POST", targetId: data.id })} />
-          )}
           {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
           <ReactionBar reactions={data.reactions} onReact={(emoji) => react(emoji)} />
         </View>
@@ -330,6 +329,7 @@ export function DepartmentActivityDetailScreen() {
           )}
           {blockDialog}
           {reportSheet}
+          {viewerSheets}
         </View>
       </ScrollView>
       {/* 키보드가 올라오면 그 높이만큼 아래를 띄운다. 이때 내비게이션 바 인셋은 더하지

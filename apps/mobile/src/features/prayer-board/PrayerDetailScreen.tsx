@@ -18,8 +18,7 @@ import { useMe } from "../profile/useMe";
 import { deletePrayer, fetchPrayerDetail } from "./api";
 import { CategoryBadge } from "./components/CategoryBadge";
 import { useToggleBookmark } from "./useToggleBookmark";
-import { ReportPostLink } from "../report/ReportPostLink";
-import { useReport } from "../report/useReport";
+import { usePostViewerMenu } from "../report/usePostViewerMenu";
 
 // 시안 확정값(402pt 프레임). 세로 간격이 4px 스케일에 안 맞는 값들이라 클래스 대신 상수로 둔다 —
 // 이 화면에서만 쓰는 리듬이라 전역 spacing 토큰으로 올리지 않았다.
@@ -57,8 +56,8 @@ export function PrayerDetailScreen() {
 
   // 수정은 작성자만, 삭제는 작성자와 관리자 (서버도 같은 규칙으로 막는다). 둘 다 못 하면 ⋮ 대신 북마크.
   const canEdit = data?.isMine === true;
-  // 남의 글 신고 (SCRUM-199)
-  const { openReport, sheet: reportSheet, canReport } = useReport();
+  // 남의 글 ⋮ — 신고하기·작성자 차단하기 (SCRUM-201). 저장(북마크)은 자주 쓰니 ⋮ 옆에 그대로 둔다.
+  const { items: viewerItems, sheets: viewerSheets } = usePostViewerMenu(data);
   const canDelete = canEdit || (data !== undefined && isAdmin);
 
   const { mutate: remove } = useMutation({
@@ -79,8 +78,8 @@ export function PrayerDetailScreen() {
         <Header
           variant="sub"
           title={t("기도제목")}
-          rightAction={canDelete ? "more" : "bookmark"}
-          menuItems={[
+          rightAction={canDelete ? "more" : viewerItems.length > 0 ? "bookmark-more" : "bookmark"}
+          menuItems={!canDelete ? viewerItems : [
             ...(canEdit
               ? [
                   {
@@ -101,7 +100,7 @@ export function PrayerDetailScreen() {
         />
       ),
     });
-  }, [navigation, id, data?.bookmarked, toggleBookmark, canEdit, canDelete, t]);
+  }, [navigation, id, data?.bookmarked, toggleBookmark, canEdit, canDelete, t, viewerItems]);
 
   if (isError) {
     return (
@@ -184,10 +183,7 @@ export function PrayerDetailScreen() {
             >
               {data.content}
             </Text>
-            {canReport && !data.isMine && (
-              <ReportPostLink onPress={() => openReport({ targetType: "POST", targetId: id })} />
-            )}
-            {reportSheet}
+            {viewerSheets}
 
             {/* 첨부 사진 — 없으면 영역을 그리지 않는다. 시안은 각진 모서리라 기본 라운드를 끈다. */}
             {data.photoUrl !== null && (
