@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { signInWithDev } from "../../shared/api/session";
 import { Logo } from "../../shared/components/base/Logo";
 import { useAuthStore } from "../../shared/store/useAuthStore";
+import { AppleLoginButton } from "./components/AppleLoginButton";
 import { ReviewLoginModal } from "./components/ReviewLoginModal";
 import { SocialLoginButton } from "./components/SocialLoginButton";
 import {
@@ -14,7 +15,7 @@ import {
   loadLastLoginProvider,
   saveLastLoginProvider,
 } from "./lastLogin";
-import { loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
+import { loginWithAppleSdk, loginWithGoogleSdk, loginWithKakaoSdk } from "./socialLogin";
 
 // 개발용 로그인이 만드는 역할별 고정 계정. 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을
 // 확인하기 위한 것. 역할(관리자 플래그·멤버십)이 유저 레코드에 계속 남으므로, 한 계정으로 role만
@@ -98,6 +99,7 @@ export function LoginScreen() {
 
   const handleKakaoPress = () => void runSocialLogin(loginWithKakaoSdk, "kakao");
   const handleGooglePress = () => void runSocialLogin(loginWithGoogleSdk, "google");
+  const handleApplePress = () => void runSocialLogin(loginWithAppleSdk);
   const handleDevPress = (account: (typeof DEV_ACCOUNTS)[number]) =>
     void runSocialLogin(() => signInWithDev(account.email, account.role));
 
@@ -123,6 +125,8 @@ export function LoginScreen() {
         </View>
 
         <View className="gap-4">
+          {/* iOS에서만 보인다 — 다른 소셜 로그인이 있으면 Apple 로그인도 같은 크기로 있어야 한다 (App Store 4.8) */}
+          <AppleLoginButton onPress={handleApplePress} />
           <SocialLoginButton
             provider="kakao"
             onPress={handleKakaoPress}

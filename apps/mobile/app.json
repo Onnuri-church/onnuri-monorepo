@@ -15,6 +15,7 @@
     "userInterfaceStyle": "light",
     "plugins": [
       "expo-secure-store",
+      "expo-apple-authentication",
       [
         "expo-build-properties",
         {
@@ -29,6 +30,7 @@
     "ios": {
       "bundleIdentifier": "com.onnuri.mobile",
       "supportsTablet": false,
+      "usesAppleSignIn": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
