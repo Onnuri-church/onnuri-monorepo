@@ -12,6 +12,14 @@ export function reviewEmail(localPart: string) {
 }
 
 const REVIEWER_LOCAL_PART = 'app-review';
+
+// 심사자가 프로필 설정(생년월일·전화·성별 필수)에 막히지 않게 미리 채운다 — 가짜 값이다.
+const REVIEWER_PROFILE = {
+  name: '심사용 계정',
+  birthDate: new Date('2000-01-01'),
+  gender: 'MALE' as const,
+  phone: '01000000000',
+};
 const REVIEW_TEAM_NAME = '심사용 팀';
 const REVIEW_CELL_NAME = '심사용 셀';
 const REVIEW_GROUP_TITLE = '[심사용] 주말 보드게임 모임';
@@ -35,17 +43,26 @@ export class ReviewAccountService {
     const email = reviewEmail(REVIEWER_LOCAL_PART);
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
-      if (existing.withdrawnAt) {
-        // 심사자가 탈퇴 기능을 눌러봤으면 되살린다 — 다음 심사에도 같은 계정을 써야 한다.
+      // 심사자가 탈퇴를 눌러봤거나 프로필을 지웠어도 되살린다 — 다음 심사에도 같은 계정을 쓴다.
+      if (
+        existing.withdrawnAt ||
+        !existing.birthDate ||
+        !existing.gender ||
+        !existing.phone
+      ) {
         return this.prisma.user.update({
           where: { id: existing.id },
-          data: { withdrawnAt: null, isReviewAccount: true },
+          data: {
+            ...REVIEWER_PROFILE,
+            withdrawnAt: null,
+            isReviewAccount: true,
+          },
         });
       }
       return existing;
     }
     return this.prisma.user.create({
-      data: { email, name: '심사용 계정', isReviewAccount: true },
+      data: { email, ...REVIEWER_PROFILE, isReviewAccount: true },
     });
   }
 

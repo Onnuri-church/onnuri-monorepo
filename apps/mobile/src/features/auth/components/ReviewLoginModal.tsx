@@ -41,10 +41,11 @@ export function ReviewLoginModal({ visible, onClose }: ReviewLoginModalProps) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
       <KeyboardAvoidingView
-        className="flex-1 items-center justify-center bg-background-dark/50 px-6"
+        // 위쪽에 붙인다 — 안드로이드 모달은 키보드가 올라와도 창이 줄지 않아 가운데 두면 버튼이 가려진다.
+        className="flex-1 items-center bg-background-dark/50 px-6 pt-16"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="w-full gap-5 rounded-2xl bg-background-normal p-6">
+        <View className="w-full gap-4 rounded-2xl bg-background-normal p-5">
           <Text className="text-heading-small text-text-normal">{t("심사용 로그인")}</Text>
           <TextField label={t("아이디")} placeholder={t("아이디")} value={id} onChangeText={setId} />
           <TextField
