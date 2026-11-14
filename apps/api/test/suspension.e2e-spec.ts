@@ -193,5 +193,6 @@ describe('Suspension (e2e)', () => {
     );
     expect(item?.targetAuthorId).toBe(ids.member);
     expect(item?.targetAuthorSuspended).toBe(true);
+    expect(item?.targetAuthorIsAdmin).toBe(false);
   });
 });

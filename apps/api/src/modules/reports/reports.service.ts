@@ -110,7 +110,7 @@ export class ReportsService {
         createdAt: true,
         reporter: { select: { name: true } },
         targetAuthor: {
-          select: { id: true, name: true, suspendedUntil: true },
+          select: { id: true, name: true, suspendedUntil: true, isAdmin: true },
         },
       },
       orderBy: status === 'open' ? { createdAt: 'asc' } : { handledAt: 'desc' },
@@ -136,6 +136,7 @@ export class ReportsService {
       targetAuthorId: row.targetAuthor.id,
       targetAuthorName: row.targetAuthor.name,
       targetAuthorSuspended: isSuspended(row.targetAuthor.suspendedUntil),
+      targetAuthorIsAdmin: row.targetAuthor.isAdmin,
       reporterName: row.reporter.name,
       openCountForTarget: countOf(row.targetType, row.targetId),
       status: row.status,

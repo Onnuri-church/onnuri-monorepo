@@ -124,7 +124,7 @@ export function AdminReportsScreen() {
             ) : (
               <Text className="text-body-small text-primary-normal">{t(STATUS_LABELS[report.status])}</Text>
             )}
-            {report.targetAuthorSuspended ? (
+            {report.targetAuthorIsAdmin ? null : report.targetAuthorSuspended ? (
               <Text className="text-body-small text-semantic-danger">{t("작성자 이용 정지 중")}</Text>
             ) : (
               <PressableScale
