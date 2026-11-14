@@ -2,7 +2,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Alert, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -10,7 +10,13 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
-import { useAdminMember, useDeleteAdminMember } from "./api";
+import {
+  useAdminMember,
+  useDeleteAdminMember,
+  useLiftMemberSuspension,
+  useSuspendMember,
+} from "./api";
+import { openSuspendPicker } from "./openSuspendPicker";
 import { MemberBadge } from "./components/MemberBadge";
 
 // 마이페이지 관리자 메뉴 > 회원 관리 > 회원 상세 — GET /users/:id 실데이터.
@@ -24,6 +30,8 @@ export function AdminMemberDetailScreen() {
   const { data: member, isLoading } = useAdminMember(route.params.memberId);
 
   const deleteMember = useDeleteAdminMember();
+  const suspendMember = useSuspendMember();
+  const liftSuspension = useLiftMemberSuspension();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
 
   if (!member) {
@@ -47,8 +55,34 @@ export function AdminMemberDetailScreen() {
       value: member.teams.length > 0 ? member.teams.map((team) => team.name).join(", ") : t("무소속"),
     },
     { label: t("권한"), value: member.roleLabel },
+    {
+      label: t("이용 상태"),
+      value: member.suspensionLabel
+        ? t("이용 정지 ({{label}})", { label: member.suspensionLabel })
+        : t("정상"),
+    },
     { label: t("가입일"), value: member.joinedAtLabel },
   ];
+
+  // 이용 정지·해제 (SCRUM-204) — 관리자는 정지할 수 없어 버튼을 감춘다.
+  const showSuspendError = () =>
+    Alert.alert(t("처리하지 못했어요"), t("잠시 후 다시 시도해 주세요."));
+  const handleSuspendPress = () => {
+    if (suspendMember.isPending || liftSuspension.isPending) return;
+    if (member.suspensionLabel) {
+      Alert.alert(t("이용 정지를 해제할까요?"), t("바로 글·댓글·채팅을 다시 쓸 수 있어요."), [
+        { text: t("취소"), style: "cancel" },
+        {
+          text: t("해제"),
+          onPress: () => liftSuspension.mutate(member.id, { onError: showSuspendError }),
+        },
+      ]);
+      return;
+    }
+    openSuspendPicker(t, member.name, (days) =>
+      suspendMember.mutate({ memberId: member.id, days }, { onError: showSuspendError }),
+    );
+  };
 
   const handleDeleteConfirmPress = () => {
     setDeleteModalVisible(false);
@@ -86,6 +120,19 @@ export function AdminMemberDetailScreen() {
           </View>
         ))}
       </View>
+
+      {/* 이용 정지·해제 (SCRUM-204) */}
+      {member.badge !== "admin" && (
+        <Pressable
+          className="mt-4 h-12 flex-row items-center justify-center gap-2 rounded-5 border border-background-assistive bg-background-normal"
+          onPress={handleSuspendPress}
+          style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+        >
+          <Text className="text-body-regular text-text-normal">
+            {member.suspensionLabel ? t("이용 정지 해제") : t("이용 정지")}
+          </Text>
+        </Pressable>
+      )}
 
       {/* 회원 삭제 — 시안: 흰 배경 + danger 테두리·글자 */}
       <Pressable

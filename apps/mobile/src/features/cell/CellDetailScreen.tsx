@@ -15,6 +15,7 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { uploadImage } from "../../shared/api/upload";
 import { useMe } from "../profile/useMe";
+import { ensureNotSuspended } from "../profile/ensureNotSuspended";
 import {
   toCellMemberRole,
   useAddGalleryPhoto,
@@ -355,7 +356,9 @@ export function CellDetailScreen() {
 
       {/* 소식 글쓰기 진입 플로팅 버튼 (2026-08-27 시안에 정식 반영됨 — 그 셀 소속 유저만). */}
       {activeTab === "news" && canPost && (
-        <FloatingButton onPress={() => navigation.navigate("CellNewsWrite", { cellId })}>
+        <FloatingButton
+          onPress={() => ensureNotSuspended(t, () => navigation.navigate("CellNewsWrite", { cellId }))}
+        >
           <Icon name="write" size={24} color={colors.icon.disable} />
         </FloatingButton>
       )}

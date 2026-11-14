@@ -38,7 +38,13 @@ export interface AdminReportItem {
   detail: string | null;
   /** 신고 시점 내용 앞부분 */
   snapshot: string;
+  /** 신고된 글 작성자 — "작성자 이용 정지"용 (SCRUM-204) */
+  targetAuthorId: string;
   targetAuthorName: string;
+  /** 작성자가 지금 이용 정지 중인지 */
+  targetAuthorSuspended: boolean;
+  /** 작성자가 관리자인지 — 관리자는 이용 정지할 수 없어 버튼을 감춘다 */
+  targetAuthorIsAdmin: boolean;
   reporterName: string;
   /** 같은 글에 들어온 처리 전 신고 수 */
   openCountForTarget: number;

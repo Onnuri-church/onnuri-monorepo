@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   UseGuards,
 } from '@nestjs/common';
 
@@ -16,6 +17,7 @@ import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { RegisterPushTokenDto } from './dto/register-push-token.dto';
+import { SuspendUserDto } from './dto/suspend-user.dto';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
 import { UpdateNotificationSettingsDto } from './dto/update-notification-settings.dto';
 import { UpdateMyAvatarDto } from './dto/update-my-avatar.dto';
@@ -144,5 +146,22 @@ export class UsersController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.withdrawByAdmin(id);
+  }
+
+  // 이용 정지·해제 (SCRUM-204) — 회원 상세와 신고 관리의 "작성자 이용 정지"가 부른다.
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Put(':id/suspension')
+  suspend(
+    @CurrentUser() user: JwtPayload,
+    @Param('id') id: string,
+    @Body() dto: SuspendUserDto,
+  ) {
+    return this.usersService.suspendByAdmin(user.sub, id, dto.days);
+  }
+
+  @UseGuards(JwtAuthGuard, AdminGuard)
+  @Delete(':id/suspension')
+  liftSuspension(@Param('id') id: string) {
+    return this.usersService.liftSuspensionByAdmin(id);
   }
 }

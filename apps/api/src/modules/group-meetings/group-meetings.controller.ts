@@ -10,6 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
@@ -61,12 +62,14 @@ export class GroupMeetingsController {
 
   @UseGuards(JwtAuthGuard, AdminGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreateGroupMeetingDto) {
     return this.groupMeetingsService.create(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch(':id')
   update(
     @CurrentUser() user: JwtPayload,
@@ -95,6 +98,7 @@ export class GroupMeetingsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Post(':id/photos')
   addPhotos(
     @CurrentUser() user: JwtPayload,

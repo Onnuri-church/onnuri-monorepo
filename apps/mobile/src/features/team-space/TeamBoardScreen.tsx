@@ -3,6 +3,7 @@ import { useNavigation, useRoute, type RouteProp } from "@react-navigation/nativ
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { ensureNotSuspended } from "../profile/ensureNotSuspended";
 import {
   ActivityIndicator,
   FlatList,
@@ -148,7 +149,11 @@ export function TeamBoardScreen() {
         ListFooterComponent={isFetchingNextPage ? <ActivityIndicator className="mt-4" /> : null}
       />
 
-      <FloatingButton onPress={() => navigation.navigate("TeamBoardWrite", { teamId: params.teamId })}>
+      <FloatingButton
+        onPress={() =>
+          ensureNotSuspended(t, () => navigation.navigate("TeamBoardWrite", { teamId: params.teamId }))
+        }
+      >
         <Icon name="write" size={24} color={colors.icon.disable} />
       </FloatingButton>
     </View>
