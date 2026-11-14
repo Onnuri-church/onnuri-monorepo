@@ -9,6 +9,8 @@ import { PressableScale } from "../../shared/components/base/PressableScale";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useAdminReports, useHandleReport } from "../report/api";
+import { useSuspendMember } from "./api";
+import { openSuspendPicker } from "./openSuspendPicker";
 
 const TARGET_LABELS: Record<AdminReportItem["targetType"], string> = {
   POST: "게시글",
@@ -33,6 +35,19 @@ export function AdminReportsScreen() {
   const [status, setStatus] = useState<"open" | "done">("open");
   const { data: reports, isPending, refetch, isRefetching } = useAdminReports(status);
   const { mutate: handle, isPending: handling } = useHandleReport();
+  const { mutate: suspend, isPending: suspending } = useSuspendMember();
+
+  // 작성자 이용 정지 (SCRUM-204) — 글 숨기기와 따로 고른다. 해제는 회원 관리 > 회원 상세에서 한다.
+  const confirmSuspend = (report: AdminReportItem) =>
+    openSuspendPicker(t, report.targetAuthorName, (days) =>
+      suspend(
+        { memberId: report.targetAuthorId, days },
+        {
+          onError: () =>
+            Alert.alert(t("이용 정지하지 못했어요"), t("잠시 후 다시 시도해 주세요.")),
+        },
+      ),
+    );
 
   const confirmHide = (report: AdminReportItem) =>
     Alert.alert(t("이 글을 숨길까요?"), t("작성자와 모든 사람에게서 글이 내려가요."), [
@@ -108,6 +123,18 @@ export function AdminReportsScreen() {
               </View>
             ) : (
               <Text className="text-body-small text-primary-normal">{t(STATUS_LABELS[report.status])}</Text>
+            )}
+            {report.targetAuthorSuspended ? (
+              <Text className="text-body-small text-semantic-danger">{t("작성자 이용 정지 중")}</Text>
+            ) : (
+              <PressableScale
+                scaleTo={0.97}
+                disabled={suspending}
+                className="items-center rounded-xl border border-semantic-danger py-2"
+                onPress={() => confirmSuspend(report)}
+              >
+                <Text className="text-body-small text-semantic-danger">{t("작성자 이용 정지")}</Text>
+              </PressableScale>
             )}
           </View>
         ))

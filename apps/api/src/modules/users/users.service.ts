@@ -18,6 +18,11 @@ import type {
 import type { Prisma } from '../../../generated/prisma';
 import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import {
+  INDEFINITE_SUSPENSION,
+  isSuspended,
+  suspensionLabel,
+} from '../../common/utils/suspension';
+import {
   groupScopeWhere,
   visibleUserWhere,
 } from '../../common/review/review-scope';
@@ -104,33 +109,39 @@ export class UsersService {
     const user = await this.findById(id);
     if (!user) return null;
 
-    const [cellMembership, teamMemberships, grantedTeam] = await Promise.all([
-      // 활동기간이 끝난 셀은 소속 종료 작업(CellExpiryService)이 돌기 전이라도 현재 소속으로
-      // 치지 않는다 — 셀 목록(/cells)과 같은 기준이어야 마이페이지와 셀 탭이 같은 셀을 본다.
-      this.prisma.cellMembership.findFirst({
-        where: {
-          userId: id,
-          endedAt: null,
-          cell: { deletedAt: null, expiresAt: { gte: kstToday() } },
-        },
-        select: { role: true, cell: { select: { id: true, name: true } } },
-        orderBy: { startedAt: 'desc' },
-      }),
-      this.prisma.teamMembership.findMany({
-        where: { userId: id, endedAt: null, team: { deletedAt: null } },
-        select: { role: true, team: { select: { id: true, name: true } } },
-        orderBy: { startedAt: 'asc' },
-      }),
-      // 소속 팀 중 콘텐츠 업로드 권한이 켜진 팀 — 앱이 주보 등록·배너 관리 진입점을 띄우는 기준.
-      this.prisma.team.findMany({
-        where: {
-          deletedAt: null,
-          memberships: { some: { userId: id, endedAt: null } },
-          OR: [{ canUploadBulletin: true }, { canManageBanner: true }],
-        },
-        select: { canUploadBulletin: true, canManageBanner: true },
-      }),
-    ]);
+    const [cellMembership, teamMemberships, grantedTeam, suspension] =
+      await Promise.all([
+        // 활동기간이 끝난 셀은 소속 종료 작업(CellExpiryService)이 돌기 전이라도 현재 소속으로
+        // 치지 않는다 — 셀 목록(/cells)과 같은 기준이어야 마이페이지와 셀 탭이 같은 셀을 본다.
+        this.prisma.cellMembership.findFirst({
+          where: {
+            userId: id,
+            endedAt: null,
+            cell: { deletedAt: null, expiresAt: { gte: kstToday() } },
+          },
+          select: { role: true, cell: { select: { id: true, name: true } } },
+          orderBy: { startedAt: 'desc' },
+        }),
+        this.prisma.teamMembership.findMany({
+          where: { userId: id, endedAt: null, team: { deletedAt: null } },
+          select: { role: true, team: { select: { id: true, name: true } } },
+          orderBy: { startedAt: 'asc' },
+        }),
+        // 소속 팀 중 콘텐츠 업로드 권한이 켜진 팀 — 앱이 주보 등록·배너 관리 진입점을 띄우는 기준.
+        this.prisma.team.findMany({
+          where: {
+            deletedAt: null,
+            memberships: { some: { userId: id, endedAt: null } },
+            OR: [{ canUploadBulletin: true }, { canManageBanner: true }],
+          },
+          select: { canUploadBulletin: true, canManageBanner: true },
+        }),
+        this.prisma.user.findUnique({
+          where: { id },
+          select: { suspendedUntil: true },
+        }),
+      ]);
+    const suspendedUntil = suspension?.suspendedUntil;
     const teams = teamMemberships.map((membership) => ({
       ...membership.team,
       role: membership.role,
@@ -153,6 +164,13 @@ export class UsersService {
         teams.some((team) => team.role === 'LEADER') ||
         cellMembership?.role === 'LEADER' ||
         cellMembership?.role === 'SUB_LEADER',
+      // 이용 정지 중이면 끝나는 날 — 앱이 글쓰기 진입 전에 미리 안내한다 (SCRUM-204)
+      suspension: isSuspended(suspendedUntil)
+        ? {
+            until: suspendedUntil.toISOString(),
+            label: suspensionLabel(suspendedUntil),
+          }
+        : null,
     };
   }
 
@@ -217,6 +235,7 @@ export class UsersService {
         phone: true,
         isAdmin: true,
         createdAt: true,
+        suspendedUntil: true,
         cellMemberships: {
           where: { endedAt: null, cell: { deletedAt: null } },
           select: { role: true, cell: { select: { id: true, name: true } } },
@@ -276,7 +295,53 @@ export class UsersService {
             ? 'cellLeader'
             : null,
       joinedAtLabel: toDateLabel(toKstDate(user.createdAt)),
+      suspensionLabel: isSuspended(user.suspendedUntil)
+        ? suspensionLabel(user.suspendedUntil)
+        : null,
     };
+  }
+
+  // 이용 정지 (관리자 전용, SCRUM-204) — 정지된 사람은 글·댓글·채팅·사진을 새로 쓰거나 고칠 수 없다.
+  // days가 없으면 해제할 때까지. 관리자와 본인은 정지할 수 없다 (실수로 관리 권한을 잃지 않게).
+  async suspendByAdmin(
+    adminId: string,
+    id: string,
+    days: 7 | 30 | null | undefined,
+  ): Promise<AdminMemberDetail> {
+    const target = await this.prisma.user.findFirst({
+      where: { id, withdrawnAt: null },
+      select: { isAdmin: true },
+    });
+    if (!target) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    if (id === adminId) {
+      throw new BadRequestException('본인은 이용 정지할 수 없어요.');
+    }
+    if (target.isAdmin) {
+      throw new BadRequestException('관리자는 이용 정지할 수 없어요.');
+    }
+
+    const until = days
+      ? new Date(Date.now() + days * 24 * 60 * 60 * 1000)
+      : INDEFINITE_SUSPENSION;
+    await this.prisma.user.update({
+      where: { id },
+      data: { suspendedUntil: until },
+    });
+    return this.findDetailForAdmin(id);
+  }
+
+  // 이용 정지 해제 (관리자 전용) — 이미 풀린 사람이어도 오류 없이 그대로 돌려준다.
+  async liftSuspensionByAdmin(id: string): Promise<AdminMemberDetail> {
+    const target = await this.prisma.user.findFirst({
+      where: { id, withdrawnAt: null },
+      select: { id: true },
+    });
+    if (!target) throw new NotFoundException('회원을 찾을 수 없습니다.');
+    await this.prisma.user.update({
+      where: { id },
+      data: { suspendedUntil: null },
+    });
+    return this.findDetailForAdmin(id);
   }
 
   // 회원 편집 (관리자 전용) — 보낸 필드만 반영. 권한(role)은 등급 컬럼이 아니라 소속

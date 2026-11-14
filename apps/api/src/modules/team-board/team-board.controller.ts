@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -55,6 +56,7 @@ export class TeamBoardController {
   }
 
   @DedupeCreate()
+  @BlockSuspended()
   @Post()
   create(
     @CurrentUser() user: JwtPayload,
@@ -73,6 +75,7 @@ export class TeamBoardController {
     return this.teamBoardService.findPost(user.sub, teamId, postId);
   }
 
+  @BlockSuspended()
   @Patch(':postId')
   update(
     @CurrentUser() user: JwtPayload,
@@ -95,6 +98,7 @@ export class TeamBoardController {
 
   @HttpCode(HttpStatus.NO_CONTENT)
   @DedupeCreate()
+  @BlockSuspended()
   @Post(':postId/comments')
   addComment(
     @CurrentUser() user: JwtPayload,
@@ -106,6 +110,7 @@ export class TeamBoardController {
   }
 
   @HttpCode(HttpStatus.NO_CONTENT)
+  @BlockSuspended()
   @Patch(':postId/comments/:commentId')
   updateComment(
     @CurrentUser() user: JwtPayload,

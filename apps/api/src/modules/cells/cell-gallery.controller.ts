@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -37,6 +38,7 @@ export class CellGalleryController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Post()
   add(
     @CurrentUser() user: JwtPayload,

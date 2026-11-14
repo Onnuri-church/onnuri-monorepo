@@ -10,6 +10,7 @@ import type {
 } from '@onnuri/shared';
 
 import { NotificationsService } from '../notifications/notifications.service';
+import { isSuspended } from '../../common/utils/suspension';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateReportDto } from './dto/create-report.dto';
 
@@ -108,7 +109,9 @@ export class ReportsService {
         status: true,
         createdAt: true,
         reporter: { select: { name: true } },
-        targetAuthor: { select: { name: true } },
+        targetAuthor: {
+          select: { id: true, name: true, suspendedUntil: true },
+        },
       },
       orderBy: status === 'open' ? { createdAt: 'asc' } : { handledAt: 'desc' },
       take: 100,
@@ -130,7 +133,9 @@ export class ReportsService {
       reason: row.reason,
       detail: row.detail,
       snapshot: row.snapshot,
+      targetAuthorId: row.targetAuthor.id,
       targetAuthorName: row.targetAuthor.name,
+      targetAuthorSuspended: isSuspended(row.targetAuthor.suspendedUntil),
       reporterName: row.reporter.name,
       openCountForTarget: countOf(row.targetType, row.targetId),
       status: row.status,

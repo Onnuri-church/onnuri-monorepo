@@ -13,6 +13,7 @@ import { AppService } from './app.service';
 import { ReviewContextMiddleware } from './common/review/review-context.middleware';
 import { DedupeCreateInterceptor } from './common/interceptors/dedupe-create.interceptor';
 import { RateLimitInterceptor } from './common/interceptors/rate-limit.interceptor';
+import { SuspensionInterceptor } from './common/interceptors/suspension.interceptor';
 import { StorageUrlInterceptor } from './modules/uploads/storage-url.interceptor';
 import { validate } from './config/env.validation';
 import configuration from './config/configuration';
@@ -79,6 +80,8 @@ import { UsersModule } from './modules/users/users.module';
     // 중복 방지보다 바깥에 둬서, 기억해 둔 응답도 다시 내보낼 때마다 새로 서명한다.
     { provide: APP_INTERCEPTOR, useClass: StorageUrlInterceptor },
     // 만들기 POST의 재시도 중복 방지 (@DedupeCreate가 붙은 핸들러만 동작).
+    // 이용 정지된 사람의 글쓰기 차단 (@BlockSuspended가 붙은 핸들러만, SCRUM-204). 중복 방지보다 먼저 막는다.
+    { provide: APP_INTERCEPTOR, useClass: SuspensionInterceptor },
     { provide: APP_INTERCEPTOR, useClass: DedupeCreateInterceptor },
   ],
 })

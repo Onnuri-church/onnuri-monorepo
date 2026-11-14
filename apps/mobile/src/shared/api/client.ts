@@ -3,6 +3,7 @@ import { Alert } from "react-native";
 
 import { i18n } from "../i18n";
 import { useAuthStore } from "../store/useAuthStore";
+import { queryClient } from "./queryClient";
 import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 import { clearTokens } from "./tokenStorage";
 import { refreshSession } from "./session";
@@ -25,6 +26,14 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   async (error: AxiosError) => {
+    // 이용 정지 (SCRUM-204) — 글쓰기 진입 전에 미리 막지만, 쓰는 도중 정지된 경우를 위해 여기서도 안내한다.
+    const body = error.response?.data as { code?: string; message?: string } | undefined;
+    if (error.response?.status === 403 && body?.code === "USER_SUSPENDED") {
+      Alert.alert(i18n.t("이용이 제한된 계정이에요"), body.message ?? "");
+      void queryClient.invalidateQueries({ queryKey: ["me"] });
+      return Promise.reject(error);
+    }
+
     const { session } = useAuthStore.getState();
     const hasSession = session.status === "authenticated" || session.status === "onboarding";
     if (error.response?.status !== 401 || !hasSession) {

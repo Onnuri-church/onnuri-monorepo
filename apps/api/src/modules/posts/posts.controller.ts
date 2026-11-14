@@ -13,6 +13,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
@@ -81,6 +82,7 @@ export class PostsController {
 
   @UseGuards(JwtAuthGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post('cell-news')
   createCellNews(
     @CurrentUser() user: JwtPayload,
@@ -90,6 +92,7 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch('cell-news/:id')
   updateCellNews(
     @CurrentUser() user: JwtPayload,
@@ -124,6 +127,7 @@ export class PostsController {
   // 작성은 그 팀의 팀원·관리자만 (권한 검증은 서비스).
   @UseGuards(JwtAuthGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post('team-activities')
   createTeamActivity(
     @CurrentUser() user: JwtPayload,
@@ -134,6 +138,7 @@ export class PostsController {
 
   // 수정은 내 글만 (권한 검증은 서비스).
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch('team-activities/:id')
   updateTeamActivity(
     @CurrentUser() user: JwtPayload,
@@ -146,6 +151,7 @@ export class PostsController {
   // 작성·수정·삭제는 로그인이 필요하다. 수정·삭제 권한(내 글인지)은 서비스가 본다.
   @UseGuards(JwtAuthGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post('qt-shares')
   createQtShare(
     @CurrentUser() user: JwtPayload,
@@ -155,6 +161,7 @@ export class PostsController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch('qt-shares/:id')
   updateQtShare(
     @CurrentUser() user: JwtPayload,
@@ -173,6 +180,7 @@ export class PostsController {
 
   @UseGuards(JwtAuthGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post(':id/comments')
   addComment(
     @CurrentUser() user: JwtPayload,
@@ -189,6 +197,7 @@ export class PostsController {
 
   // 댓글 수정 — 작성자와 관리자만 (검증은 서비스).
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch(':id/comments/:commentId')
   updateComment(
     @CurrentUser() user: JwtPayload,

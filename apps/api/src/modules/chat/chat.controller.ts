@@ -11,6 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -34,6 +35,7 @@ export class ChatController {
     return this.chatService.find(user.sub, { roomId });
   }
 
+  @BlockSuspended()
   @Post('chat-rooms/:roomId/messages')
   sendTeam(
     @CurrentUser() user: JwtPayload,
@@ -120,6 +122,7 @@ export class ChatController {
     return this.chatService.find(user.sub, { cellId });
   }
 
+  @BlockSuspended()
   @Post('cells/:cellId/messages')
   sendCell(
     @CurrentUser() user: JwtPayload,
@@ -173,6 +176,7 @@ export class ChatController {
     return this.chatService.find(user.sub, { groupId });
   }
 
+  @BlockSuspended()
   @Post('group-meetings/:groupId/messages')
   sendGroup(
     @CurrentUser() user: JwtPayload,
@@ -223,6 +227,7 @@ export class ChatController {
     return this.chatService.find(user.sub, { leaderRoomId: roomId });
   }
 
+  @BlockSuspended()
   @Post('leader-rooms/:roomId/messages')
   sendLeader(
     @CurrentUser() user: JwtPayload,
@@ -292,6 +297,7 @@ export class ChatController {
     return this.chatService.votePoll(user.sub, pollId, dto.optionIds);
   }
 
+  @BlockSuspended()
   @Post('chat-polls/:pollId/options')
   addPollOption(
     @CurrentUser() user: JwtPayload,

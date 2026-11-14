@@ -8,6 +8,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
@@ -28,6 +29,7 @@ export class TeamGalleryController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Post()
   add(
     @CurrentUser() user: JwtPayload,

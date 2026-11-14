@@ -27,6 +27,7 @@ import { Skeleton } from "../../shared/components/base/Skeleton";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
+import { ensureNotSuspended } from "../profile/ensureNotSuspended";
 import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -251,7 +252,7 @@ export function GroupMeetingScreen() {
 
       {/* 소그룹 생성 — 다른 게시판의 글쓰기 버튼처럼 오른쪽 아래 초록 버튼 (관리자에게만 보인다) */}
       {isAdmin && (
-        <FloatingButton onPress={() => navigation.navigate("GroupMeetingForm", {})}>
+        <FloatingButton onPress={() => ensureNotSuspended(t, () => navigation.navigate("GroupMeetingForm", {}))}>
           <Icon name="plus" size={24} color={colors.icon.disable} />
         </FloatingButton>
       )}
