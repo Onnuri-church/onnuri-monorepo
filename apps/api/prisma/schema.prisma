@@ -126,6 +126,8 @@ model User {
   avatarUrl String?
   intro     String? // 한 줄 소개
   isAdmin   Boolean   @default(false) // 관리자(임원) — 임원이 수동 지정
+  // 이용 정지 끝나는 시각 (SCRUM-204) — 지나면 자동으로 풀린다. "해제할 때까지"는 9999년으로 둔다
+  suspendedUntil DateTime?
   // 스토어 심사용 계정 (SCRUM-197) — 숨은 심사용 로그인으로만 만들어진다. 실제 성도에게는 이 계정이
   // 쓴 글·댓글과 이름이 보이지 않고, 이 계정은 심사용 팀·셀·소그룹에만 들어간다.
   isReviewAccount Boolean @default(false)

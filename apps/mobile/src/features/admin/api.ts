@@ -298,3 +298,31 @@ export function useAdminFollowerNoteOverview() {
       apiClient.get<AdminFollowerNoteOverview>("/admin/follower-notes").then((res) => res.data),
   });
 }
+
+// 이용 정지·해제 (관리자 전용, SCRUM-204) — 회원 상세와 신고 관리가 같이 쓴다.
+// 신고 목록의 "작성자 정지 중" 표시도 바뀌므로 신고 캐시도 다시 받는다.
+export function useSuspendMember() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ memberId, days }: { memberId: string; days: 7 | 30 | null }) =>
+      apiClient
+        .put<AdminMemberDetail>(`/users/${memberId}/suspension`, days ? { days } : {})
+        .then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["admin", "members", detail.id], detail);
+      void queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
+    },
+  });
+}
+
+export function useLiftMemberSuspension() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (memberId: string) =>
+      apiClient.delete<AdminMemberDetail>(`/users/${memberId}/suspension`).then((res) => res.data),
+    onSuccess: (detail) => {
+      queryClient.setQueryData(["admin", "members", detail.id], detail);
+      void queryClient.invalidateQueries({ queryKey: ["admin-reports"] });
+    },
+  });
+}

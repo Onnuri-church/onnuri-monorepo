@@ -12,6 +12,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { BlockSuspended } from '../../common/decorators/block-suspended.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -58,12 +59,14 @@ export class PrayersController {
 
   @UseGuards(JwtAuthGuard)
   @DedupeCreate()
+  @BlockSuspended()
   @Post()
   create(@CurrentUser() user: JwtPayload, @Body() dto: CreatePrayerDto) {
     return this.prayersService.create(user.sub, dto);
   }
 
   @UseGuards(JwtAuthGuard)
+  @BlockSuspended()
   @Patch(':id')
   update(
     @CurrentUser() user: JwtPayload,

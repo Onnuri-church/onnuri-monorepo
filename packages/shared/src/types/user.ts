@@ -57,6 +57,8 @@ export interface MeResponse extends User {
   canManageBanner: boolean;
   /** 전체 리더 방 진입 가능 — 관리자, 팀장(어느 팀이든), 셀장·부셀장 */
   canUseLeaderRooms: boolean;
+  /** 이용 정지 중이면 정보, 아니면 null (SCRUM-204) — 정지 중에는 글·댓글·채팅·사진을 쓸 수 없다 */
+  suspension: { until: string; label: string } | null;
 }
 
 /** GET /cells 응답 항목 — 프로필 설정의 소속 셀 선택지와 전체 셀 목록이 같이 쓴다 */
@@ -120,6 +122,13 @@ export interface AdminMemberDetail {
   badge: AdminMemberBadge | null;
   /** "2026.01.12" */
   joinedAtLabel: string;
+  /** 이용 정지 중이면 "2026.11.21까지" / "해제할 때까지", 아니면 null (SCRUM-204) */
+  suspensionLabel: string | null;
+}
+
+/** PUT /users/:id/suspension 요청 (관리자 전용) — days가 없거나 null이면 해제할 때까지 */
+export interface SuspendUserRequest {
+  days?: 7 | 30 | null;
 }
 
 /** PATCH /users/me/avatar 요청 본문 (응답은 MeResponse) — null이면 사진 제거 */
