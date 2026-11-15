@@ -220,6 +220,9 @@ model SocialAccount {
   provider    SocialProvider
   providerUid String // 카카오/구글이 발급한 사용자 식별자
   createdAt   DateTime       @default(now())
+  // Apple 로그인만 (SCRUM-205) — 탈퇴 때 철회할 리프레시 토큰과 발급 대상 번들 ID(client_id)
+  appleRefreshToken String?
+  appleClientId     String?
 
   @@unique([provider, providerUid])
   @@index([userId])

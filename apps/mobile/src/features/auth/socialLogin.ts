@@ -88,7 +88,12 @@ export async function loginWithAppleSdk(): Promise<{ isNewUser: boolean } | null
   const name = [credential.fullName?.familyName, credential.fullName?.givenName]
     .filter(Boolean)
     .join("");
-  return signInWithApple(credential.identityToken, name || undefined);
+  // authorizationCode는 서버가 탈퇴 때 Apple 토큰을 철회하는 데 쓴다 (SCRUM-205).
+  return signInWithApple(
+    credential.identityToken,
+    name || undefined,
+    credential.authorizationCode ?? undefined,
+  );
 }
 
 // SDK마다 취소 에러의 모양이 제각각이라 메시지로 판별한다 (카카오는 취소 시 reject).

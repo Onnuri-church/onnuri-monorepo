@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -13,6 +14,7 @@ import type { DevLoginRole } from '@onnuri/shared';
 
 import { CellRole, SocialProvider, TeamRole } from '../../../generated/prisma';
 import { type AppConfig } from '../../config/configuration';
+import { AppleSignInClient } from '../apple-sign-in/apple-sign-in.client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { KakaoLoginDto } from './dto/kakao-login.dto';
@@ -47,6 +49,8 @@ function placeholderEmail(provider: SocialProvider, providerUid: string) {
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly usersService: UsersService,
@@ -56,6 +60,7 @@ export class AuthService {
     private readonly config: ConfigService<AppConfig, true>,
     private readonly reviewAccounts: ReviewAccountService,
     private readonly appleVerifier: AppleTokenVerifier,
+    private readonly appleSignIn: AppleSignInClient,
   ) {}
 
   async loginWithKakao(input: KakaoLoginDto) {
@@ -83,9 +88,46 @@ export class AuthService {
     return this.login(SocialProvider.GOOGLE, profile);
   }
 
-  async loginWithApple(identityToken: string, name?: string) {
-    const profile = await this.appleVerifier.verify(identityToken, name);
-    return this.login(SocialProvider.APPLE, profile);
+  async loginWithApple(
+    identityToken: string,
+    name?: string,
+    authorizationCode?: string,
+  ) {
+    const { clientId, ...profile } = await this.appleVerifier.verify(
+      identityToken,
+      name,
+    );
+    const response = await this.login(SocialProvider.APPLE, profile);
+    if (authorizationCode) {
+      await this.storeAppleRefreshToken(
+        profile.providerUid,
+        authorizationCode,
+        clientId,
+      );
+    }
+    return response;
+  }
+
+  // 탈퇴 때 철회할 Apple 리프레시 토큰을 받아 둔다 (SCRUM-205). 실패해도 로그인은 그대로 진행한다 —
+  // 다음 로그인 때 다시 받는다. 키가 없는 환경(개발·키 발급 전)에서는 exchangeCode가 null이라 건너뛴다.
+  private async storeAppleRefreshToken(
+    providerUid: string,
+    authorizationCode: string,
+    clientId: string,
+  ) {
+    try {
+      const refreshToken = await this.appleSignIn.exchangeCode(
+        authorizationCode,
+        clientId,
+      );
+      if (!refreshToken) return;
+      await this.prisma.socialAccount.updateMany({
+        where: { provider: SocialProvider.APPLE, providerUid },
+        data: { appleRefreshToken: refreshToken, appleClientId: clientId },
+      });
+    } catch (error) {
+      this.logger.error(`Apple 리프레시 토큰 저장 실패: ${String(error)}`);
+    }
   }
 
   // 개발용: 소셜 SDK가 없는 웹·Expo Go에서 유저 기반 기능을 개발할 수 있게 이메일만으로

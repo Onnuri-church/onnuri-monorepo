@@ -15,7 +15,7 @@ import type {
   User,
 } from '@onnuri/shared';
 
-import type { Prisma } from '../../../generated/prisma';
+import { type Prisma, SocialProvider } from '../../../generated/prisma';
 import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import {
   INDEFINITE_SUSPENSION,
@@ -26,6 +26,7 @@ import {
   groupScopeWhere,
   visibleUserWhere,
 } from '../../common/review/review-scope';
+import { AppleSignInClient } from '../apple-sign-in/apple-sign-in.client';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
@@ -67,6 +68,7 @@ export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
+    private readonly appleSignIn: AppleSignInClient,
   ) {}
 
   // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
@@ -428,7 +430,7 @@ export class UsersService {
       throw new BadRequestException('관리자 계정은 여기서 삭제할 수 없습니다.');
     }
 
-    await this.prisma.$transaction(this.withdrawOps(id, new Date()));
+    await this.withdraw(id);
     return { id };
   }
 
@@ -438,6 +440,30 @@ export class UsersService {
   // 수 없고, 로그인이 이메일로 예전 계정을 다시 찾아 연결해 버린다). 세션·푸시 토큰도 지워
   // 탈퇴 즉시 로그아웃되게 한다. 나머지 프로필(생년월일·성별·연락처·사진·소개)은 30일 뒤,
   // 이름은 1년 뒤 배치가 정리한다 (보관 정책은 docs/erd.md).
+  // Apple 로그인 연결은 withdrawOps가 지우기 전에 토큰을 읽어 두고, 탈퇴가 끝난 뒤 애플에 철회한다
+  // (SCRUM-205, App Store 5.1.1(v)). 철회 실패는 기록만 남긴다 — 탈퇴는 이미 끝났고, 애플 쪽
+  // 연결은 사용자가 설정 > Apple ID에서도 끊을 수 있다.
+  private async withdraw(userId: string) {
+    const appleAccounts = await this.prisma.socialAccount.findMany({
+      where: {
+        userId,
+        provider: SocialProvider.APPLE,
+        appleRefreshToken: { not: null },
+        appleClientId: { not: null },
+      },
+      select: { appleRefreshToken: true, appleClientId: true },
+    });
+    await this.prisma.$transaction(this.withdrawOps(userId, new Date()));
+    await Promise.all(
+      appleAccounts.map((account) =>
+        this.appleSignIn.revokeQuietly(
+          account.appleRefreshToken!,
+          account.appleClientId!,
+        ),
+      ),
+    );
+  }
+
   private withdrawOps(userId: string, now: Date) {
     return [
       this.prisma.user.update({
@@ -665,7 +691,7 @@ export class UsersService {
       );
     }
 
-    await this.prisma.$transaction(this.withdrawOps(userId, new Date()));
+    await this.withdraw(userId);
   }
 
   // 마이페이지 통계 카드 3종. 출석주수는 출석 행 수를 그대로 쓴다 — 예배 회차가 주 1회라

@@ -4,6 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 
 import { type TypedConfigService } from '../../config/configuration';
+import { AppleSignInModule } from '../apple-sign-in/apple-sign-in.module';
 import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -16,6 +17,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
 @Module({
   imports: [
     UsersModule,
+    AppleSignInModule,
     PassportModule,
     // 기본 서명 옵션은 액세스 토큰 기준 — 리프레시 토큰은 AuthService가 서명 옵션을 직접 지정한다.
     JwtModule.registerAsync({

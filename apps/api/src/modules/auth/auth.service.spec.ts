@@ -21,6 +21,7 @@ describe('AuthService.loginWithDev 게이트', () => {
       config,
       unused,
       unused,
+      unused,
     );
   };
 

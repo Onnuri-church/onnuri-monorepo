@@ -98,6 +98,19 @@ export class EnvironmentVariables {
   @IsString()
   APPLE_BUNDLE_IDS?: string;
 
+  // Sign in with Apple 서버 API 키 (SCRUM-205) — 회원탈퇴 때 Apple 토큰 철회에 쓴다. 비우면 건너뛴다.
+  @IsOptional()
+  @IsString()
+  APPLE_TEAM_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  APPLE_KEY_ID?: string;
+
+  @IsOptional()
+  @IsString()
+  APPLE_PRIVATE_KEY?: string;
+
   // Supabase Storage (이미지 업로드) — SERVICE_ROLE_KEY가 비어 있으면 업로드 API가
   // 503을 돌려준다 (나머지 기능은 정상). URL은 비워두면 DATABASE_URL의 프로젝트
   // ref(postgres.<ref>)에서 https://<ref>.supabase.co 를 만들어 쓴다.

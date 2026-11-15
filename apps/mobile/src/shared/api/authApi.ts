@@ -21,9 +21,13 @@ export function postGoogleLogin(googleIdToken: string): Promise<LoginResponse> {
 }
 
 // Apple 로그인 (SCRUM-200) — 이름은 애플이 첫 로그인 때만 앱에 주므로 같이 보낸다.
-export function postAppleLogin(identityToken: string, name?: string): Promise<LoginResponse> {
+export function postAppleLogin(
+  identityToken: string,
+  name?: string,
+  authorizationCode?: string,
+): Promise<LoginResponse> {
   return bareClient
-    .post<LoginResponse>("/auth/login/apple", { token: identityToken, name })
+    .post<LoginResponse>("/auth/login/apple", { token: identityToken, name, authorizationCode })
     .then((res) => res.data);
 }
 
