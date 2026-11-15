@@ -33,7 +33,11 @@ export class AppleTokenVerifier {
     this.bundleIds = config.get('oauth.appleBundleIds', { infer: true });
   }
 
-  async verify(idToken: string, name?: string): Promise<SocialProfile> {
+  // clientId = 토큰의 aud(운영·개발 앱 중 어느 번들 ID로 받았는지) — 토큰 철회 때 같은 값을 써야 한다 (SCRUM-205).
+  async verify(
+    idToken: string,
+    name?: string,
+  ): Promise<SocialProfile & { clientId: string }> {
     try {
       const kid = this.readKid(idToken);
       const keys = await this.getKeys(!this.keys[kid]);
@@ -51,6 +55,7 @@ export class AppleTokenVerifier {
         email: payload.email ?? null,
         name: name?.trim() || null,
         avatarUrl: null,
+        clientId: String(payload.aud),
       };
     } catch {
       throw new UnauthorizedException('Apple 토큰 검증에 실패했습니다.');

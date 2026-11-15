@@ -56,6 +56,13 @@ const configuration = () => {
           .map((id) => id.trim())
           .filter(Boolean) ?? [],
     },
+    // Sign in with Apple 서버 API 키 (SCRUM-205) — 셋 다 있어야 켜진다. 비우면 토큰 저장·철회를 건너뛴다.
+    // APPLE_PRIVATE_KEY는 .p8 파일 내용 (줄바꿈은 \n으로 넣어도 된다).
+    appleSignIn: {
+      teamId: e.APPLE_TEAM_ID || null,
+      keyId: e.APPLE_KEY_ID || null,
+      privateKey: e.APPLE_PRIVATE_KEY?.replace(/\\n/g, '\n') || null,
+    },
     appVersion: {
       minVersion: e.APP_MIN_VERSION || null,
       androidStoreUrl: e.APP_ANDROID_STORE_URL || null,
