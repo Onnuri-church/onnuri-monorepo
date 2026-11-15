@@ -50,8 +50,9 @@ export async function signInWithSocial(
 export async function signInWithApple(
   identityToken: string,
   name?: string,
+  authorizationCode?: string,
 ): Promise<{ isNewUser: boolean }> {
-  return startSession(await postAppleLogin(identityToken, name));
+  return startSession(await postAppleLogin(identityToken, name, authorizationCode));
 }
 
 // 개발용 로그인 — 소셜 SDK가 없는 웹/Expo Go에서 유저 기반 기능을 확인하기 위한 것.
