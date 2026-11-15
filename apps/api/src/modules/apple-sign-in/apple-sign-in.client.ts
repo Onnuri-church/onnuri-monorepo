@@ -35,8 +35,15 @@ export class AppleSignInClient {
     return !!(this.teamId && this.keyId && this.privateKey);
   }
 
-  /** authorization code → 리프레시 토큰. 키가 없으면 null. */
-  async exchangeCode(code: string, clientId: string): Promise<string | null> {
+  /**
+   * authorization code → 리프레시 토큰과 그 주인(sub). 키가 없으면 null.
+   * sub는 같이 오는 id_token에서 읽는다 — 애플에 직접 TLS로 받은 응답이라 서명 검증은 생략한다.
+   * 호출부는 sub가 로그인한 사람과 같은지 확인해야 한다 (남의 코드를 끼워 넣는 것 방지).
+   */
+  async exchangeCode(
+    code: string,
+    clientId: string,
+  ): Promise<{ refreshToken: string; subject: string | null } | null> {
     if (!this.enabled) return null;
     const body = await this.post(TOKEN_URL, {
       client_id: clientId,
@@ -44,10 +51,11 @@ export class AppleSignInClient {
       code,
       grant_type: 'authorization_code',
     });
-    const { refresh_token: refreshToken } = JSON.parse(body) as {
-      refresh_token?: string;
-    };
-    return refreshToken ?? null;
+    const { refresh_token: refreshToken, id_token: idToken } = JSON.parse(
+      body,
+    ) as { refresh_token?: string; id_token?: string };
+    if (!refreshToken) return null;
+    return { refreshToken, subject: readSubject(idToken) };
   }
 
   /** 리프레시 토큰 철회. 키가 없으면 false. 이미 철회된 토큰도 애플은 200을 준다. */
@@ -103,5 +111,16 @@ export class AppleSignInClient {
       throw new Error(`${url} ${response.status} ${text.slice(0, 200)}`);
     }
     return text;
+  }
+}
+
+function readSubject(idToken: string | undefined): string | null {
+  try {
+    const payload = JSON.parse(
+      Buffer.from(idToken?.split('.')[1] ?? '', 'base64url').toString(),
+    ) as { sub?: unknown };
+    return typeof payload.sub === 'string' ? payload.sub : null;
+  } catch {
+    return null;
   }
 }

@@ -23,6 +23,7 @@ const profiles: Record<string, { providerUid: string; name: string }> = {
   'apple-a': { providerUid: 'apple-revoke-uid-a', name: '애플일' },
   'apple-b': { providerUid: 'apple-revoke-uid-b', name: '애플이' },
   'apple-c': { providerUid: 'apple-revoke-uid-c', name: '애플삼' },
+  'apple-d': { providerUid: 'apple-revoke-uid-d', name: '애플사' },
 };
 
 describe('Apple token revoke (e2e)', () => {
@@ -31,8 +32,12 @@ describe('Apple token revoke (e2e)', () => {
   const userIds: string[] = [];
 
   const appleClient = {
+    // 코드 'code-<글자>'의 주인은 apple-revoke-uid-<글자>
     exchangeCode: jest.fn((code: string) =>
-      Promise.resolve(code === 'bad-code' ? null : `refresh-for-${code}`),
+      Promise.resolve({
+        refreshToken: `refresh-for-${code}`,
+        subject: `apple-revoke-uid-${code.split('-')[1]}`,
+      }),
     ),
     revokeQuietly: jest.fn(() => Promise.resolve()),
   };
@@ -134,6 +139,15 @@ describe('Apple token revoke (e2e)', () => {
   it('코드 교환이 실패해도 로그인은 된다', async () => {
     appleClient.exchangeCode.mockRejectedValueOnce(new Error('apple down'));
     const { user } = await login('apple-c', 'code-c');
+    const account = await prisma.socialAccount.findFirst({
+      where: { userId: user.id },
+    });
+    expect(account?.appleRefreshToken).toBeNull();
+  });
+
+  it('남의 authorization code면 토큰을 저장하지 않는다', async () => {
+    // apple-d로 로그인하면서 apple-a의 코드를 끼워 넣은 상황
+    const { user } = await login('apple-d', 'code-a');
     const account = await prisma.socialAccount.findFirst({
       where: { userId: user.id },
     });

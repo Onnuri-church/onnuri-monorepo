@@ -62,14 +62,19 @@ describe('AppleSignInClient', () => {
     const fetchSpy = jest
       .spyOn(global, 'fetch')
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ refresh_token: 'r-token' })),
+        new Response(
+          JSON.stringify({
+            refresh_token: 'r-token',
+            id_token: `h.${Buffer.from(JSON.stringify({ sub: 'apple-uid' })).toString('base64url')}.s`,
+          }),
+        ),
       )
       .mockResolvedValueOnce(new Response(''));
     const client = build(true);
 
-    await expect(client.exchangeCode('c-1', 'com.onnuri.mobile')).resolves.toBe(
-      'r-token',
-    );
+    await expect(
+      client.exchangeCode('c-1', 'com.onnuri.mobile'),
+    ).resolves.toEqual({ refreshToken: 'r-token', subject: 'apple-uid' });
     await expect(client.revoke('r-token', 'com.onnuri.mobile')).resolves.toBe(
       true,
     );

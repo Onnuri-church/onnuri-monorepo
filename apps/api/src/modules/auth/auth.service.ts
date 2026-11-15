@@ -116,14 +116,25 @@ export class AuthService {
     clientId: string,
   ) {
     try {
-      const refreshToken = await this.appleSignIn.exchangeCode(
+      const exchanged = await this.appleSignIn.exchangeCode(
         authorizationCode,
         clientId,
       );
-      if (!refreshToken) return;
+      if (!exchanged) return;
+      // 코드의 주인이 로그인한 사람과 다르면 저장하지 않는다 — 남의 코드를 끼워 넣어 그 사람의
+      // 토큰을 내 계정에 붙여 두고, 내가 탈퇴하면서 그 사람의 Apple 연결을 끊는 걸 막는다.
+      if (exchanged.subject !== providerUid) {
+        this.logger.warn(
+          'Apple authorization code의 주인이 로그인 사용자와 다릅니다.',
+        );
+        return;
+      }
       await this.prisma.socialAccount.updateMany({
         where: { provider: SocialProvider.APPLE, providerUid },
-        data: { appleRefreshToken: refreshToken, appleClientId: clientId },
+        data: {
+          appleRefreshToken: exchanged.refreshToken,
+          appleClientId: clientId,
+        },
       });
     } catch (error) {
       this.logger.error(`Apple 리프레시 토큰 저장 실패: ${String(error)}`);
