@@ -44,5 +44,13 @@
       "channel": "production",
       "autoIncrement": true
     }
+  },
+  "submit": {
+    "production": {
+      "ios": {
+        "ascAppId": "6835381404",
+        "appleTeamId": "GP8M43YUZC"
+      }
+    }
   }
 }

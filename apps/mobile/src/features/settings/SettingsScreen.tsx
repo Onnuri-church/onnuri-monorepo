@@ -81,7 +81,12 @@ export function SettingsScreen() {
     mutationFn: () => apiClient.delete("/users/me"),
     // 서버가 세션·푸시 토큰을 지웠어도 로컬 토큰·캐시는 남는다 — signOut으로 마저 정리.
     onSuccess: () => void signOut(),
-    onError: () => Alert.alert(t("탈퇴하지 못했어요"), t("잠시 후 다시 시도해주세요.")),
+    // 서버가 막은 이유(예: 관리자 계정은 탈퇴 불가)가 있으면 그대로 보여준다 — 없으면 일반 안내.
+    onError: (error) => {
+      const message = (error as { response?: { data?: { message?: string } } }).response?.data
+        ?.message;
+      Alert.alert(t("탈퇴하지 못했어요"), message ?? t("잠시 후 다시 시도해주세요."));
+    },
   });
 
   const handleWithdrawConfirm = () => {
