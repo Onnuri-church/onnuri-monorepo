@@ -11,6 +11,7 @@ import {
 } from 'class-validator';
 
 // POST /teams 요청 본문 (관리자 전용) — 팀 생성 폼(팀 이름/팀장/아이콘/배경사진/한 줄 소개/팀 소개).
+// 필수는 팀 이름·팀장·아이콘이고 나머지는 비워도 된다 (SCRUM-210).
 export class CreateTeamDto {
   @IsString()
   @IsNotEmpty({ message: '팀 이름을 입력해주세요.' })
@@ -25,10 +26,10 @@ export class CreateTeamDto {
   @IsNotEmpty({ each: true })
   leaderIds!: string[];
 
-  // 앱 Icon 에셋의 이름 — 모르는 값이 와도 앱이 회색 원으로 처리해서 따로 검증하지 않는다.
-  @IsOptional()
-  @IsString()
-  iconName?: string | null;
+  // 앱 Icon 에셋의 이름 — 모르는 값이 와도 앱이 회색 원으로 처리해서 이름 목록까지는 검증하지 않는다.
+  @IsString({ message: '팀 아이콘을 골라주세요.' })
+  @IsNotEmpty({ message: '팀 아이콘을 골라주세요.' })
+  iconName!: string;
 
   @IsOptional()
   @IsString()
