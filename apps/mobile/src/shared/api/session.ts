@@ -71,18 +71,36 @@ export async function signInForReview(
   return startSession(await postReviewLogin(id, password));
 }
 
-// 앱 부팅 시 저장된 토큰으로 세션을 복원한다. 세션 확정(setSession/clearSession)은
-// useAppBootstrap이 스플래시 최소 노출 시간과 맞춰서 하므로 여기서는 결과만 돌려준다.
-export async function restoreSession(): Promise<{ user: User; tokens: AuthTokens } | null> {
-  const tokens = await refreshSession();
-  if (!tokens) return null;
+// 서버가 토큰을 "거절"한 것(만료·회수·탈퇴)과 서버에 "닿지 못한" 것(네트워크 끊김·타임아웃·
+// 서버가 잠에서 깨는 중의 5xx)을 구분한다 (SCRUM-209). 로그아웃은 거절일 때만 한다 —
+// 닿지 못했다고 로그인 화면으로 보내면, 서버가 잠깐 느렸을 뿐인데 사용자는 로그아웃된 것처럼 느낀다.
+export type RestoreResult =
+  | { kind: "restored"; user: User; tokens: AuthTokens }
+  | { kind: "signed-out" }
+  | { kind: "unreachable" };
+
+// 응답이 없거나(네트워크·타임아웃) 서버 쪽 오류(5xx·429)면 "닿지 못함" — 토큰 문제가 아니다.
+function isUnreachable(error: unknown): boolean {
+  if (!axios.isAxiosError(error) || !error.response) return true;
+  const { status } = error.response;
+  return status >= 500 || status === 429;
+}
+
+// 앱 부팅 시 저장된 토큰으로 세션을 복원한다. 세션 확정(setSession/clearSession)과 재시도는
+// useAppBootstrap이 스플래시와 맞춰서 하므로 여기서는 결과만 돌려준다.
+export async function restoreSession(): Promise<RestoreResult> {
+  const refreshed = await refreshSessionDetailed();
+  if (refreshed.kind === "none" || refreshed.kind === "rejected") return { kind: "signed-out" };
+  if (refreshed.kind === "unreachable") return { kind: "unreachable" };
 
   try {
-    const user = await getMe(tokens.accessToken);
-    return { user, tokens };
-  } catch {
-    // 일시적 실패(네트워크 등)일 수 있으므로 저장된 토큰은 지우지 않는다 — 다음 부팅에 재시도된다.
-    return null;
+    const user = await getMe(refreshed.tokens.accessToken);
+    return { kind: "restored", user, tokens: refreshed.tokens };
+  } catch (error) {
+    if (isUnreachable(error)) return { kind: "unreachable" };
+    // 방금 갱신한 토큰을 서버가 거절했다(탈퇴 등) — 저장된 토큰을 지우고 로그인 화면으로.
+    await clearTokens();
+    return { kind: "signed-out" };
   }
 }
 
@@ -103,19 +121,30 @@ export async function signOut(): Promise<void> {
   }
 }
 
-// 리프레시 토큰은 한 번 쓰면 회전되므로, 동시에 여러 401이 나도 refresh는 한 번만 나가야 한다.
-let refreshInFlight: Promise<AuthTokens | null> | null = null;
+export type RefreshResult =
+  | { kind: "ok"; tokens: AuthTokens }
+  | { kind: "none" } // 저장된 토큰 없음
+  | { kind: "rejected" } // 서버가 거절 — 토큰을 지웠다
+  | { kind: "unreachable" }; // 서버에 닿지 못함 — 토큰은 남겨 둔다
 
-export function refreshSession(): Promise<AuthTokens | null> {
+// 리프레시 토큰은 한 번 쓰면 회전되므로, 동시에 여러 401이 나도 refresh는 한 번만 나가야 한다.
+let refreshInFlight: Promise<RefreshResult> | null = null;
+
+export function refreshSessionDetailed(): Promise<RefreshResult> {
   refreshInFlight ??= doRefresh().finally(() => {
     refreshInFlight = null;
   });
   return refreshInFlight;
 }
 
-async function doRefresh(): Promise<AuthTokens | null> {
+export async function refreshSession(): Promise<AuthTokens | null> {
+  const result = await refreshSessionDetailed();
+  return result.kind === "ok" ? result.tokens : null;
+}
+
+async function doRefresh(): Promise<RefreshResult> {
   const stored = await loadTokens();
-  if (!stored) return null;
+  if (!stored) return { kind: "none" };
 
   try {
     const tokens = await postRefresh(stored.refreshToken);
@@ -128,13 +157,12 @@ async function doRefresh(): Promise<AuthTokens | null> {
     } else if (session.status === "onboarding") {
       startOnboarding(session.user, tokens);
     }
-    return tokens;
+    return { kind: "ok", tokens };
   } catch (error) {
-    // 서버가 거절한 경우(만료·회수된 리프레시 토큰)만 지운다. 응답 자체가 없는 네트워크 오류·타임아웃은
-    // 토큰 문제가 아니므로 남겨둔다 — 지우면 서버가 잠깐 느렸을 뿐인데 다음 부팅에도 다시 로그인해야 한다.
-    if (axios.isAxiosError(error) && error.response) {
-      await clearTokens();
-    }
-    return null;
+    // 서버가 거절한 경우(만료·회수된 리프레시 토큰)만 지운다. 네트워크 오류·타임아웃·5xx(서버가 잠에서
+    // 깨는 중 등)는 토큰 문제가 아니므로 남겨둔다 — 지우면 서버가 잠깐 느렸을 뿐인데 다시 로그인해야 한다.
+    if (isUnreachable(error)) return { kind: "unreachable" };
+    await clearTokens();
+    return { kind: "rejected" };
   }
 }

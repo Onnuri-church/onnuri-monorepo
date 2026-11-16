@@ -6,7 +6,7 @@ import { useAuthStore } from "../store/useAuthStore";
 import { queryClient } from "./queryClient";
 import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 import { clearTokens } from "./tokenStorage";
-import { refreshSession } from "./session";
+import { refreshSessionDetailed } from "./session";
 
 export const apiClient = axios.create({ baseURL: API_BASE_URL, timeout: API_TIMEOUT_MS });
 
@@ -45,11 +45,14 @@ apiClient.interceptors.response.use(
       | undefined;
     if (config && !config.retriedAfterRefresh) {
       config.retriedAfterRefresh = true;
-      const tokens = await refreshSession();
-      if (tokens) {
-        config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+      const refreshed = await refreshSessionDetailed();
+      if (refreshed.kind === "ok") {
+        config.headers.Authorization = `Bearer ${refreshed.tokens.accessToken}`;
         return apiClient(config);
       }
+      // 갱신 요청이 서버에 닿지 못했을 뿐이면(네트워크·서버 깨는 중) 로그아웃시키지 않는다 —
+      // 이번 요청만 실패로 돌려주고, 다음 요청 때 다시 갱신을 시도한다 (SCRUM-209).
+      if (refreshed.kind === "unreachable") return Promise.reject(error);
     }
 
     await clearTokens();

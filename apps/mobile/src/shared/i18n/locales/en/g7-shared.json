@@ -89,5 +89,9 @@
   "더 안정적인 서비스를 위해 앱을 최신 버전으로 업데이트해 주세요.": "Please update the app to the latest version.",
   "현재 버전 {{version}}": "Current version {{version}}",
   "업데이트하러 가기": "Update now",
-  "스토어에서 앱을 업데이트해 주세요.": "Please update the app from the store."
+  "스토어에서 앱을 업데이트해 주세요.": "Please update the app from the store.",
+  "서버에 연결하지 못했어요": "Couldn't connect to the server",
+  "인터넷 연결을 확인하고 다시 시도해주세요.": "Check your internet connection and try again.",
+  "서버에 연결하고 있어요…": "Connecting to the server…",
+  "다시 시도": "Try again"
 }
