@@ -17,6 +17,8 @@ interface KakaoMe {
   id: number;
   kakao_account?: {
     email?: string;
+    is_email_valid?: boolean;
+    is_email_verified?: boolean;
     profile?: { nickname?: string; profile_image_url?: string };
   };
 }
@@ -108,9 +110,13 @@ export class KakaoTokenVerifier {
       'https://kapi.kakao.com/v2/user/me',
       headers,
     );
+    const account = me.kakao_account;
+    // 카카오는 인증 안 된 이메일이나 다른 계정에 다시 쓰인(유효하지 않은) 이메일도 내려줄 수 있다 (SCRUM-208).
+    const emailTrusted =
+      account?.is_email_valid === true && account?.is_email_verified === true;
     return {
       providerUid: String(me.id),
-      email: me.kakao_account?.email ?? null,
+      email: emailTrusted ? (account?.email ?? null) : null,
       name: me.kakao_account?.profile?.nickname ?? null,
       avatarUrl: me.kakao_account?.profile?.profile_image_url ?? null,
     };

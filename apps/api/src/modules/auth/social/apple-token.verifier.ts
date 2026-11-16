@@ -55,7 +55,13 @@ export class AppleTokenVerifier {
       return {
         providerUid: payload.sub,
         // "이메일 가리기"를 고르면 앱 전용 중계 주소(…@privaterelay.appleid.com)가 온다 — 그대로 쓴다.
-        email: payload.email ?? null,
+        // 인증된 이메일만 계정 연결에 쓴다 (SCRUM-208). 애플은 true 또는 "true"로 준다.
+        // 중계 주소도 애플이 인증한 주소다.
+        email:
+          String((payload as { email_verified?: unknown }).email_verified) ===
+          'true'
+            ? (payload.email ?? null)
+            : null,
         name: name?.trim() || null,
         avatarUrl: null,
         clientId: String(payload.aud),
