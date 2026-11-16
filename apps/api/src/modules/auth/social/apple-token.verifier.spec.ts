@@ -32,6 +32,7 @@ describe('AppleTokenVerifier', () => {
       aud: 'com.onnuri.mobile',
       sub: 'apple-user-1',
       email: 'relay@privaterelay.appleid.com',
+      email_verified: 'true',
       iat: now,
       exp: now + 600,
       ...payload,
@@ -86,5 +87,11 @@ describe('AppleTokenVerifier', () => {
     await expect(
       verifier.verify(token({ iss: 'https://evil.example.com' })),
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('인증 안 된 이메일은 버린다 (계정 연결에 쓰지 않음)', async () => {
+    await expect(
+      verifier.verify(token({ email_verified: false })),
+    ).resolves.toMatchObject({ email: null });
   });
 });

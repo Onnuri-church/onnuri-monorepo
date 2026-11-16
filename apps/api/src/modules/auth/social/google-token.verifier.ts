@@ -31,7 +31,8 @@ export class GoogleTokenVerifier {
       if (!payload) throw new Error('payload가 비어 있습니다.');
       return {
         providerUid: payload.sub,
-        email: payload.email ?? null,
+        // 인증된 이메일만 계정 연결에 쓴다 (SCRUM-208).
+        email: payload.email_verified ? (payload.email ?? null) : null,
         name: payload.name ?? null,
         avatarUrl: payload.picture ?? null,
       };
