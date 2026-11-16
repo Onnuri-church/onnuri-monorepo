@@ -1,5 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { createPublicKey } from 'crypto';
 import { OAuth2Client } from 'google-auth-library';
 
 import { type AppConfig } from '../../../config/configuration';
@@ -20,13 +21,15 @@ interface AppleJwk {
 }
 
 // 앱(expo-apple-authentication)이 받은 Apple ID 토큰을 애플 공개키로 검증한다 (SCRUM-200).
-// 서명 검증은 이미 쓰는 google-auth-library의 범용 JWT 검증(JWK 지원)을 그대로 쓴다 — 라이브러리를 늘리지 않게.
+// 서명 검증은 이미 쓰는 google-auth-library의 범용 JWT 검증을 그대로 쓴다 — 라이브러리를 늘리지 않게.
+// 단 Node에서는 JWK 객체를 그대로 못 쓴다 (crypto.verify가 "key.key" 에러) — 받아 올 때 PEM으로 바꿔 둔다.
 // 이름은 토큰에 없고 첫 로그인 때만 앱이 받아 따로 보낸다 (애플 정책).
 @Injectable()
 export class AppleTokenVerifier {
+  private readonly logger = new Logger(AppleTokenVerifier.name);
   private readonly client = new OAuth2Client();
   private readonly bundleIds: string[];
-  private keys: Record<string, AppleJwk> = {};
+  private keys: Record<string, string> = {}; // kid → PEM 공개키
   private keysFetchedAt = 0;
 
   constructor(config: ConfigService<AppConfig, true>) {
@@ -57,7 +60,9 @@ export class AppleTokenVerifier {
         avatarUrl: null,
         clientId: String(payload.aud),
       };
-    } catch {
+    } catch (error) {
+      // 원인을 남긴다 — 토큰 자체는 찍지 않는다.
+      this.logger.warn(`Apple 토큰 검증 실패: ${String(error)}`);
       throw new UnauthorizedException('Apple 토큰 검증에 실패했습니다.');
     }
   }
@@ -77,7 +82,14 @@ export class AppleTokenVerifier {
     const response = await fetch(APPLE_KEYS_URL);
     if (!response.ok) throw new Error(`apple keys ${response.status}`);
     const { keys } = (await response.json()) as { keys: AppleJwk[] };
-    this.keys = Object.fromEntries(keys.map((key) => [key.kid, key]));
+    this.keys = Object.fromEntries(
+      keys.map((key) => [
+        key.kid,
+        createPublicKey({ key: { ...key }, format: 'jwk' })
+          .export({ type: 'spki', format: 'pem' })
+          .toString(),
+      ]),
+    );
     this.keysFetchedAt = Date.now();
     return this.keys;
   }
