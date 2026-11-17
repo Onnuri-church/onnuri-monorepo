@@ -115,12 +115,54 @@ export function useToggleChatReaction(kind: ChatKind, id: string) {
 }
 
 // 투표 — 내 선택 전체를 교체 / 항목 추가 / 마감. 방 종류와 무관한 주소를 쓴다.
+// 투표는 누르자마자 화면에 반영하고(낙관적 갱신), 서버 저장이 실패하면 되돌린다 (SCRUM-218).
+// 누가 투표했는지(voters)는 뒤이어 방을 다시 받아 맞춘다.
 export function useVoteChatPoll(kind: ChatKind, id: string) {
-  return useRoomMutation(kind, id, (input: { pollId: string; optionIds: string[] }) =>
-    apiClient.put(`/chat-polls/${input.pollId}/votes`, {
-      optionIds: input.optionIds,
-    } satisfies VoteChatPollRequest),
-  );
+  const queryClient = useQueryClient();
+  const queryKey = ["chat", kind, id];
+  return useMutation({
+    mutationFn: (input: { pollId: string; optionIds: string[] }) =>
+      apiClient.put(`/chat-polls/${input.pollId}/votes`, {
+        optionIds: input.optionIds,
+      } satisfies VoteChatPollRequest),
+    onMutate: async (input) => {
+      // 진행 중인 4초 새로고침이 낙관적 값을 덮어쓰지 않게 멈춘다.
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ChatRoomResponse>(queryKey);
+      if (previous) {
+        queryClient.setQueryData<ChatRoomResponse>(queryKey, {
+          ...previous,
+          messages: previous.messages.map((message) => {
+            const poll = message.poll;
+            if (!poll || poll.id !== input.pollId) return message;
+            const hadVote = poll.options.some((option) => option.votedByMe);
+            const hasVote = input.optionIds.length > 0;
+            return {
+              ...message,
+              poll: {
+                ...poll,
+                voterCount: poll.voterCount + (hasVote ? 1 : 0) - (hadVote ? 1 : 0),
+                options: poll.options.map((option) => {
+                  const on = input.optionIds.includes(option.id);
+                  if (on === option.votedByMe) return option;
+                  return {
+                    ...option,
+                    votedByMe: on,
+                    count: Math.max(0, option.count + (on ? 1 : -1)),
+                  };
+                }),
+              },
+            };
+          }),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+  });
 }
 
 export function useAddChatPollOption(kind: ChatKind, id: string) {
