@@ -3,14 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
@@ -30,6 +23,7 @@ import { useToggleBookmark } from "./useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./components/PrayerCard";
 import { PrayerMenu } from "./components/PrayerMenu";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 시안 확정값(402pt 프레임): 콘텐츠 폭 362 = 402 - 20*2.
 const CONTENT_PADDING = 20;
@@ -56,11 +50,12 @@ export function PrayerBoardScreen() {
   // 익명 글의 실명 노출은 서버가 요청자 기준으로 판단한다 — 여기서는 화면 분기만 한다.
   const isAdmin = useMe()?.isAdmin === true;
 
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     // isAdmin이 로그인 정보 로딩 후 뒤늦게 true가 되면 실명 붙은 목록으로 다시 받는다.
     queryKey: ["prayers", "board", category, isAdmin],
     queryFn: () => fetchPrayers(category),
   });
+  const pullRefresh = usePullToRefresh(refetch);
 
   // 검색은 받아온 목록을 제목으로 거른다 — 목록이 전체 응답이라 서버 왕복이 필요 없고,
   // 익명 글이 있어 작성자 이름은 검색 대상에 넣지 않는다.
@@ -85,14 +80,18 @@ export function PrayerBoardScreen() {
     dialogRef.current?.open();
   };
 
+  // 확인을 누르면 팝업을 먼저 닫고 대상을 비운다 — 요청 중에 확인이 한 번 더 눌려 같은 글을
+  // 두 번 지우려다 "삭제 실패"가 뜨지 않게.
   const handleDeleteConfirm = async () => {
+    const target = pendingDelete;
+    dialogRef.current?.close();
+    setPendingDelete(null);
+    if (!target) return;
     try {
-      if (pendingDelete) await deletePrayer(pendingDelete.id);
+      await deletePrayer(target.id);
     } catch {
       Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
     }
-    dialogRef.current?.close();
-    setPendingDelete(null);
     // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
     await queryClient.invalidateQueries({ queryKey: ["prayers"] });
   };
@@ -110,9 +109,7 @@ export function PrayerBoardScreen() {
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-        }
+        refreshControl={<RefreshControl {...pullRefresh} />}
       >
         {isAdmin ? (
           // 시안: Body/Small 13px, Semantic/Warning, 자물쇠 12·간격 3(기본 스케일에 없어 4로 넣었다).

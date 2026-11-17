@@ -4,14 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ensureNotSuspended } from "../profile/ensureNotSuspended";
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  RefreshControl,
-  Text,
-  View,
-} from "react-native";
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -21,6 +14,7 @@ import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useTeamBoard } from "./api";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // "2026-10-12T05:30:00Z" → "2026.10.12" (KST 기준 날짜)
 function toDateLabel(iso: string): string {
@@ -41,8 +35,11 @@ export function TeamBoardScreen() {
   const insets = useSafeAreaInsets();
   // 처음엔 고르지 않고 보낸다 — 서버가 이번 달을 골라 준다.
   const [pick, setPick] = useState<{ year: number; month: number }>();
-  const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
-    useTeamBoard(params.teamId, pick);
+  const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } = useTeamBoard(
+    params.teamId,
+    pick,
+  );
+  const pullRefresh = usePullToRefresh(refetch);
 
   const first = data?.pages[0];
   const notices = first?.notices ?? [];
@@ -70,7 +67,9 @@ export function TeamBoardScreen() {
           <Text className="text-body-main text-text-normal">{post.authorName}</Text>
         </View>
         {/* 올린 날짜 — 작게 */}
-        <Text className="text-caption-main text-text-alternative">{toDateLabel(post.createdAt)}</Text>
+        <Text className="text-caption-main text-text-alternative">
+          {toDateLabel(post.createdAt)}
+        </Text>
       </View>
       {post.content !== "" && (
         <Text className="text-body-medium text-text-neutral" numberOfLines={3}>
@@ -132,12 +131,14 @@ export function TeamBoardScreen() {
         keyExtractor={(post) => post.id}
         contentContainerClassName="gap-4 px-5 pt-3"
         contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl {...pullRefresh} />}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
         }}
         onEndReachedThreshold={0.5}
-        ListHeaderComponent={notices.length > 0 ? <View className="gap-4">{notices.map(renderPost)}</View> : null}
+        ListHeaderComponent={
+          notices.length > 0 ? <View className="gap-4">{notices.map(renderPost)}</View> : null
+        }
         renderItem={({ item: post }) => renderPost(post)}
         ListEmptyComponent={
           isLoading ? null : (
@@ -151,7 +152,9 @@ export function TeamBoardScreen() {
 
       <FloatingButton
         onPress={() =>
-          ensureNotSuspended(t, () => navigation.navigate("TeamBoardWrite", { teamId: params.teamId }))
+          ensureNotSuspended(t, () =>
+            navigation.navigate("TeamBoardWrite", { teamId: params.teamId }),
+          )
         }
       >
         <Icon name="write" size={24} color={colors.icon.disable} />

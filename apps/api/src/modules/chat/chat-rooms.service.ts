@@ -81,6 +81,7 @@ export class ChatRoomsService {
           where: {
             roomId: room.id,
             deletedAt: null,
+            isSystem: false,
             authorId: { not: userId },
             createdAt: { gt: readAt },
           },
@@ -183,6 +184,7 @@ export class ChatRoomsService {
       await this.prisma.chatRoomMember.createMany({
         data: fresh.map((id) => ({ roomId, userId: id })),
       });
+      await this.postSystemMessage({ roomId }, userId, fresh, 'invite');
     }
     return this.findDetail(userId, roomId);
   }
@@ -199,7 +201,56 @@ export class ChatRoomsService {
     });
     if (removed.count === 0)
       throw new NotFoundException('이 방의 멤버가 아닙니다.');
+    // 관리 화면에서 자기 자신을 내보내면 "나갔어요"로 남긴다
+    if (memberId === userId) {
+      await this.postSystemMessage({ roomId }, userId, [], 'leave');
+    } else {
+      await this.postSystemMessage({ roomId }, userId, [memberId], 'remove');
+    }
     return this.findDetail(userId, roomId);
+  }
+
+  // 입장·퇴장 안내 메시지 — 초대·추방한 사람을 작성자로 남기고, 앱은 가운데 회색 글씨로 그린다 (SCRUM-217).
+  private async postSystemMessage(
+    room: { roomId: string },
+    actorId: string,
+    targetIds: string[],
+    verb: 'invite' | 'remove' | 'leave',
+  ): Promise<void> {
+    if (verb !== 'leave' && targetIds.length === 0) return;
+    const users = await this.prisma.user.findMany({
+      where: { id: { in: [actorId, ...targetIds] } },
+      select: { id: true, name: true },
+    });
+    const nameOf = new Map(users.map((user) => [user.id, user.name]));
+    const targets = targetIds
+      .map((id) => `${nameOf.get(id) ?? '알 수 없음'}님`)
+      .join(', ');
+    const actor = `${nameOf.get(actorId) ?? '관리자'}님`;
+    await this.prisma.chatMessage.create({
+      data: {
+        ...room,
+        authorId: actorId,
+        isSystem: true,
+        content:
+          verb === 'invite'
+            ? `${actor}이 ${targets}을 초대했어요.`
+            : verb === 'remove'
+              ? `${actor}이 ${targets}을 내보냈어요.`
+              : `${actor}이 나갔어요.`,
+      },
+    });
+  }
+
+  // 스스로 나가기 — 방 멤버 누구나. 다시 들어오려면 팀장·관리자가 초대해야 한다 (SCRUM-223).
+  async leave(userId: string, roomId: string): Promise<void> {
+    await this.findRoom(roomId);
+    const removed = await this.prisma.chatRoomMember.deleteMany({
+      where: { roomId, userId },
+    });
+    if (removed.count === 0)
+      throw new BadRequestException('이 방의 멤버가 아니에요.');
+    await this.postSystemMessage({ roomId }, userId, [], 'leave');
   }
 
   // 방 삭제 — 메시지는 보존하되 방 목록에서 사라진다 (soft delete).

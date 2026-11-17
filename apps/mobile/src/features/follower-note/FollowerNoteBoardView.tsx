@@ -40,6 +40,7 @@ export interface FollowerNoteBoardViewProps<N extends BoardNote> {
   caption: string;
   notes: N[] | undefined;
   isLoading: boolean;
+  /** 사용자가 당겨서 새로고침하는 중인지 — 백그라운드 갱신에는 스피너를 띄우지 않는다 */
   isRefetching: boolean;
   onRefresh: () => void;
   /** 알림 등에서 이 노트를 펼친 채로 연다 */

@@ -12,6 +12,7 @@ import { colors } from "../../../shared/theme/tokens";
 import type { RootStackParamList } from "../../../shared/types/navigation";
 import { useCells } from "../../cell/api";
 import { useDeleteCell } from "../api";
+import { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
 
 interface CellManageListProps {
   /** 편집 모드 — 켜면 행마다 수정·삭제 아이콘이 나온다 (헤더 ⋮ > 편집하기로 부모가 켠다). */
@@ -25,12 +26,17 @@ interface CellManageListProps {
 // 셀 관리 목록 — 검색바 + 편집 모드에서 행마다 편집(연필)·삭제(휴지통), 행 탭은 그 셀 페이지로,
 // 생성은 목록 끝의 점선 "+ 셀 생성" 행 (2026-09-21 A안 시안 — 헤더 생성 버튼에서 이동).
 // 관리자 마이페이지의 셀 관리 화면과, 관리자용 하단 탭 "셀 페이지"가 같이 쓴다.
-export function CellManageList({ editing = false, bottomInset = 0, onScroll }: CellManageListProps) {
+export function CellManageList({
+  editing = false,
+  bottomInset = 0,
+  onScroll,
+}: CellManageListProps) {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 목록은 서버(전체 셀)에서 온다. 삭제는 DELETE /cells/:id (soft delete) — 성공하면
   // 셀 캐시가 무효화돼 목록에서 빠진다.
-  const { data, refetch, isRefetching } = useCells();
+  const { data, refetch } = useCells();
+  const pullRefresh = usePullToRefresh(refetch);
   const [query, setQuery] = useState("");
   const cells = (data ?? []).filter((cell) =>
     query.trim() ? cell.name.includes(query.trim()) : true,
@@ -65,7 +71,7 @@ export function CellManageList({ editing = false, bottomInset = 0, onScroll }: C
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
       scrollEventThrottle={16}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+      refreshControl={<RefreshControl {...pullRefresh} />}
     >
       <View className="px-5 pb-2">
         <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀 이름으로 검색")} />
@@ -83,7 +89,9 @@ export function CellManageList({ editing = false, bottomInset = 0, onScroll }: C
               <Text className="text-body-main text-text-normal">{cell.name}</Text>
               <Text className="mt-1 text-caption-main text-text-alternative">
                 {t("셀장 {{name}}", { name: cell.leaderName ?? t("미지정") })}
-                {cell.viceLeaderName ? ` · ${t("부셀장 {{name}}", { name: cell.viceLeaderName })}` : ""}
+                {cell.viceLeaderName
+                  ? ` · ${t("부셀장 {{name}}", { name: cell.viceLeaderName })}`
+                  : ""}
               </Text>
             </View>
             {editing && (

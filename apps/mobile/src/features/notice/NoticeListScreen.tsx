@@ -24,6 +24,7 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import { toNoticeDateLabel, useDeleteNotice, useNoticeList } from "./api";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 마이페이지 > 공지사항 (자체 디자인 — 시안 없음, 홈 배너 관리 목록과 같은 결).
 // 열람은 누구나, 등록(헤더 오른쪽 버튼)·수정·삭제(⋮ 메뉴)는 관리자에게만 보인다.
@@ -33,8 +34,9 @@ export function NoticeListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 처음엔 달을 고르지 않고 보낸다 — 공지가 있는 가장 최근 달을 서버가 골라 준다.
   const [month, setMonth] = useState<string>();
-  const { data, isLoading, refetch, isRefetching, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isLoading, refetch, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useNoticeList(month);
+  const pullRefresh = usePullToRefresh(refetch);
   const notices = (data?.pages ?? []).flatMap((page) => page.items);
   const months = data?.pages[0]?.months ?? [];
   const selectedMonth = data?.pages[0]?.selectedMonth ?? null;
@@ -43,9 +45,7 @@ export function NoticeListScreen() {
   const { width: windowWidth } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   // ⋮ 메뉴 — 누른 버튼의 화면 좌표 아래에 붙인다 (기도제목 게시판과 같은 방식).
-  const [menu, setMenu] = useState<{ notice: NoticeInfo; top: number; right: number } | null>(
-    null,
-  );
+  const [menu, setMenu] = useState<{ notice: NoticeInfo; top: number; right: number } | null>(null);
 
   const [pendingDelete, setPendingDelete] = useState<NoticeInfo | null>(null);
   const dialogRef = useRef<AppDialogRef>(null);
@@ -100,7 +100,7 @@ export function NoticeListScreen() {
         contentContainerClassName="pt-2"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 공지가 가리지 않게.
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl {...pullRefresh} />}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         renderItem={({ item: notice }) => (
@@ -139,9 +139,7 @@ export function NoticeListScreen() {
             </Text>
           )
         }
-        ListFooterComponent={
-          isFetchingNextPage ? <ActivityIndicator className="mt-4" /> : null
-        }
+        ListFooterComponent={isFetchingNextPage ? <ActivityIndicator className="mt-4" /> : null}
       />
 
       <ContextMenu
@@ -164,7 +162,7 @@ export function NoticeListScreen() {
 
       <AppDialog
         ref={dialogRef}
-        title={t("\"{{title}}\" 공지를 삭제하시겠습니까?", { title: pendingDelete?.title ?? "" })}
+        title={t('"{{title}}" 공지를 삭제하시겠습니까?', { title: pendingDelete?.title ?? "" })}
         description={t("삭제된 공지는 복구할 수 없습니다.")}
         confirmLabel={t("삭제")}
         cancelLabel={t("취소")}

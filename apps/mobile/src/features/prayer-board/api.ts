@@ -110,9 +110,7 @@ export async function fetchMyPrayers(category: PrayerCategory): Promise<PrayerRe
   return data.map(toCard);
 }
 
-export async function fetchBookmarkedPrayers(
-  category: PrayerCategory,
-): Promise<PrayerRequest[]> {
+export async function fetchBookmarkedPrayers(category: PrayerCategory): Promise<PrayerRequest[]> {
   const { data } = await apiClient.get<PrayerListItem[]>(
     `/posts/prayers/bookmarked${categoryQuery(category)}`,
   );
@@ -162,8 +160,15 @@ export async function updatePrayer(id: string, body: UpdatePrayerRequest): Promi
   await apiClient.patch(`/posts/prayers/${id}`, body);
 }
 
+// 이미 지워진 글(404)은 성공으로 본다 — 확인 버튼이 두 번 눌려 두 번째 요청이 404가 나면
+// 글은 지워졌는데 "삭제 실패"가 뜨던 문제가 있었다.
 export async function deletePrayer(id: string): Promise<void> {
-  await apiClient.delete(`/posts/prayers/${id}`);
+  try {
+    await apiClient.delete(`/posts/prayers/${id}`);
+  } catch (error) {
+    if ((error as { response?: { status?: number } }).response?.status === 404) return;
+    throw error;
+  }
 }
 
 export async function toggleBookmark(id: string, bookmarked: boolean): Promise<void> {

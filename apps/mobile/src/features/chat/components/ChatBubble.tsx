@@ -40,6 +40,25 @@ export function ChatBubble({
   const { t } = useTranslation();
   const mine = message.isMine;
 
+  // 입장·퇴장 안내는 말풍선 없이 가운데 회색 글씨로 (SCRUM-217)
+  if (message.isSystem) {
+    return (
+      <View className="items-center py-1">
+        <Text className="rounded-full bg-background-muted px-3 py-1 text-caption-main text-text-alternative">
+          {message.content}
+        </Text>
+      </View>
+    );
+  }
+
+  // 아직 안 읽은 멤버 수 — 카카오톡의 "1"처럼 다 읽으면 사라진다 (SCRUM-219)
+  const unread =
+    message.unreadCount > 0 ? (
+      <Text className="text-caption-main font-semibold text-semantic-warning">
+        {message.unreadCount}
+      </Text>
+    ) : null;
+
   // 투표 메시지는 말풍선 대신 투표 카드로 그린다.
   const body = message.poll ? (
     <PollCard poll={message.poll} kind={kind} id={roomId} onLongPress={onLongPress} />
@@ -62,15 +81,25 @@ export function ChatBubble({
         </Text>
       )}
       {message.replyTo && (
-        <View className={mine ? "border-l-2 border-text-onImage pl-2" : "border-l-2 border-primary-normal pl-2"}>
+        <View
+          className={
+            mine ? "border-l-2 border-text-onImage pl-2" : "border-l-2 border-primary-normal pl-2"
+          }
+        >
           <Text
-            className={mine ? "text-caption-main text-text-onImage" : "text-caption-main text-text-neutral"}
+            className={
+              mine ? "text-caption-main text-text-onImage" : "text-caption-main text-text-neutral"
+            }
             numberOfLines={1}
           >
             {message.replyTo.authorName}
           </Text>
           <Text
-            className={mine ? "text-caption-main text-text-onImage" : "text-caption-main text-text-alternative"}
+            className={
+              mine
+                ? "text-caption-main text-text-onImage"
+                : "text-caption-main text-text-alternative"
+            }
             numberOfLines={2}
           >
             {message.replyTo.content || t("사진")}
@@ -125,8 +154,14 @@ export function ChatBubble({
       {message.content !== "" && (
         <MentionText
           message={message}
-          className={mine ? "text-body-medium text-text-onImage" : "text-body-medium text-text-normal"}
-          mentionClassName={mine ? "font-pretendard-semibold underline" : "font-pretendard-semibold text-primary-normal"}
+          className={
+            mine ? "text-body-medium text-text-onImage" : "text-body-medium text-text-normal"
+          }
+          mentionClassName={
+            mine
+              ? "font-pretendard-semibold underline"
+              : "font-pretendard-semibold text-primary-normal"
+          }
         />
       )}
     </Pressable>
@@ -157,9 +192,12 @@ export function ChatBubble({
         <View className="max-w-[78%] items-end">
           {body}
           {reactions}
-          <Text className="mt-1 text-caption-main text-text-alternative">
-            {toTimeAgo(message.createdAt)}
-          </Text>
+          <View className="mt-1 flex-row items-center gap-1.5">
+            {unread}
+            <Text className="text-caption-main text-text-alternative">
+              {toTimeAgo(message.createdAt)}
+            </Text>
+          </View>
         </View>
       </View>
     );
@@ -172,9 +210,12 @@ export function ChatBubble({
         <Text className="text-body-small text-text-neutral">{message.authorName}</Text>
         <View className="mt-1">{body}</View>
         {reactions}
-        <Text className="mt-1 text-caption-main text-text-alternative">
-          {toTimeAgo(message.createdAt)}
-        </Text>
+        <View className="mt-1 flex-row items-center gap-1.5">
+          <Text className="text-caption-main text-text-alternative">
+            {toTimeAgo(message.createdAt)}
+          </Text>
+          {unread}
+        </View>
       </View>
     </View>
   );

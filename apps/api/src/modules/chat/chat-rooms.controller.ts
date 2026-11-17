@@ -75,6 +75,13 @@ export class ChatRoomsController {
     return this.chatRoomsService.removeMember(user.sub, roomId, memberId);
   }
 
+  // 스스로 나가기 (SCRUM-223)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Post('chat-rooms/:roomId/leave')
+  leave(@CurrentUser() user: JwtPayload, @Param('roomId') roomId: string) {
+    return this.chatRoomsService.leave(user.sub, roomId);
+  }
+
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete('chat-rooms/:roomId')
   remove(@CurrentUser() user: JwtPayload, @Param('roomId') roomId: string) {

@@ -20,7 +20,6 @@ import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { submitConsent } from "../consent/api";
-import { BrightnessSlider } from "./components/BrightnessSlider";
 import { SettingRow } from "./components/SettingRow";
 
 // 섹션 제목 시안 스타일(14px/600)과 버전정보(14px/400 #555555)는 등록된 텍스트 스타일·토큰에
@@ -101,16 +100,12 @@ export function SettingsScreen() {
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
     >
       <View className="gap-7.5">
-        {/* 디스플레이 — 다크모드는 2026-10-07에 되살렸다 (팔레트는 tokens.js darkColors).
+        {/* 디스플레이 — 밝기 조절은 휴대폰 자체 기능과 겹쳐서 뺐다.
+            다크모드는 2026-10-07에 되살렸다 (팔레트는 tokens.js darkColors).
             언어 선택(한국어/English)은 i18n(react-i18next, 번역 키 = 한국어 원문)을 붙이면서 되살렸다. */}
         <View className="gap-2">
           <SectionLabel>{t("디스플레이")}</SectionLabel>
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
-            <View className="flex-row items-center gap-5">
-              {/* TODO(에셋): 밝기 아이콘 SVG 미제공 — 회색 원으로 임시 대체 */}
-              <View className="h-6 w-6 rounded-full bg-background-assistive" />
-              <BrightnessSlider />
-            </View>
             <SettingRow
               title={t("다크모드")}
               subtitle={t("어두운 테마로 전환")}
@@ -133,7 +128,9 @@ export function SettingsScreen() {
               onPress={() => languageSheetRef.current?.open()}
               right={
                 <View className="flex-row items-center gap-1">
-                  <Text className="text-body-small text-text-alternative">{currentLanguageLabel}</Text>
+                  <Text className="text-body-small text-text-alternative">
+                    {currentLanguageLabel}
+                  </Text>
                   <Icon name="arrow-drop-down" color={colors.icon.accent} />
                 </View>
               }
@@ -244,7 +241,9 @@ export function SettingsScreen() {
               className="pt-4"
               style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
             >
-              <Text className="text-center text-body-medium text-text-alternative">{t("취소")}</Text>
+              <Text className="text-center text-body-medium text-text-alternative">
+                {t("취소")}
+              </Text>
             </Pressable>
           </View>
         }
@@ -281,7 +280,6 @@ export function SettingsScreen() {
         cancelLabel={t("취소")}
         onConfirm={handleWithdrawConfirm}
       />
-
     </ScrollView>
   );
 }

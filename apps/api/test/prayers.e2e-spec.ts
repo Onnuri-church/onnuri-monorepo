@@ -1,6 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { PrayerListItem, PrayerListResponse } from '@onnuri/shared';
+import type {
+  PrayerDetailResponse,
+  PrayerListItem,
+  PrayerListResponse,
+} from '@onnuri/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -157,6 +161,27 @@ describe('Prayers (e2e)', () => {
       expect(
         findAnonymous(findFixtures(res.body as PrayerListResponse))?.authorName,
       ).toMatch(/^익명\(.+\)$/);
+    });
+
+    it('익명 글 프로필 사진은 작성자 본인에게만 보인다', async () => {
+      await prisma.user.updateMany({
+        where: { email: `author@${EMAIL_DOMAIN}` },
+        data: { avatarUrl: 'https://example.com/author.png' },
+      });
+      const mine = await request(app.getHttpServer())
+        .get(`/posts/prayers/${anonymousPostId}`)
+        .set('Authorization', `Bearer ${authorToken}`)
+        .expect(200);
+      expect((mine.body as PrayerDetailResponse).authorAvatarUrl).toBe(
+        'https://example.com/author.png',
+      );
+      for (const token of [otherToken, adminToken]) {
+        const res = await request(app.getHttpServer())
+          .get(`/posts/prayers/${anonymousPostId}`)
+          .set('Authorization', `Bearer ${token}`)
+          .expect(200);
+        expect((res.body as PrayerDetailResponse).authorAvatarUrl).toBeNull();
+      }
     });
 
     it('실명 글은 누구에게나 실명이다', async () => {

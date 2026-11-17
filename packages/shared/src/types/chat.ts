@@ -109,6 +109,10 @@ export interface ChatMessageInfo {
   isMine: boolean;
   /** 삭제 버튼 노출 기준 — 내 메시지이거나 관리자 */
   canDelete: boolean;
+  /** 입장·퇴장 안내 메시지 — 말풍선 대신 가운데 회색 글씨로 그린다 */
+  isSystem: boolean;
+  /** 이 메시지를 아직 안 읽은 방 멤버 수 (보낸 사람 제외). 0이면 숫자를 숨긴다 */
+  unreadCount: number;
 }
 
 export interface ChatMember {
