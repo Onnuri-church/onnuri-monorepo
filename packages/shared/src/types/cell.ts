@@ -81,6 +81,8 @@ export interface SaveCellAttendanceRequest {
 export interface FollowerNoteCommentInfo {
   id: string;
   authorName: string;
+  /** 작성자 프로필 사진 — 없으면 기본 이미지 */
+  authorAvatarUrl: string | null;
   /** 작성일 — "08.17" */
   dateLabel: string;
   content: string;

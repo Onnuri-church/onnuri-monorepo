@@ -85,6 +85,8 @@ export function FollowerNoteCard({
   const renderComment = (comment: FollowerNoteCommentInfo) => (
     <CommentItem
       authorName={comment.authorName}
+      // 작성자 사진 — 예전 서버 응답에는 없을 수 있어 null(기본 이미지)로 둔다
+      avatarUrl={comment.authorAvatarUrl ?? null}
       timeAgo={comment.dateLabel}
       content={comment.content}
       // 답글은 원댓글에만 단다 — 깊이가 1단계까지라 서버가 400을 준다.
