@@ -64,7 +64,7 @@ export class TeamFollowerNotesService {
             createdAt: true,
             parentId: true,
             authorId: true,
-            author: { select: { name: true, isAdmin: true } },
+            author: { select: { name: true, avatarUrl: true, isAdmin: true } },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -93,6 +93,7 @@ export class TeamFollowerNotesService {
           authorName: comment.author.name,
           dateLabel: toShortDateLabel(comment.createdAt),
           content: comment.content,
+          authorAvatarUrl: comment.author.avatarUrl,
           isPastor: comment.author.isAdmin,
           parentId: comment.parentId,
           // 수정은 본인만, 삭제는 본인 + 관리자 (셀 노트와 같은 규칙).
