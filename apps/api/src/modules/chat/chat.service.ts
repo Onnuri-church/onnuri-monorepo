@@ -54,6 +54,7 @@ const MESSAGE_SELECT = {
   files: true,
   mentionedUserIds: true,
   noticeAt: true,
+  isSystem: true,
   createdAt: true,
   author: { select: { name: true, avatarUrl: true } },
   replyTo: {
@@ -102,6 +103,7 @@ type MessageRow = {
   files: unknown;
   mentionedUserIds: string[];
   noticeAt: Date | null;
+  isSystem: boolean;
   createdAt: Date;
   author: { name: string; avatarUrl: string | null };
   replyTo: {
@@ -182,6 +184,7 @@ export class ChatService {
       where: {
         ...this.roomWhere(room),
         deletedAt: null,
+        isSystem: false,
         authorId: { not: userId },
         createdAt: { gt: state.lastReadAt },
       },
@@ -213,10 +216,13 @@ export class ChatService {
     const memberNames = new Map(
       access.members.map((member) => [member.id, member.name]),
     );
+    const unreadOf = await this.unreadCounter(room, access.members);
     return {
       messages: recent
         .reverse()
-        .map((row) => this.toInfo(row, userId, access, memberNames)),
+        .map((row) =>
+          this.toInfo(row, userId, access, memberNames, unreadOf(row)),
+        ),
       notice: latestNotice
         ? this.toInfo(latestNotice, userId, access, memberNames)
         : null,
@@ -301,7 +307,8 @@ export class ChatService {
     const memberNames = new Map(
       access.members.map((member) => [member.id, member.name]),
     );
-    const info = this.toInfo(row, userId, access, memberNames);
+    const unreadOf = await this.unreadCounter(room, access.members);
+    const info = this.toInfo(row, userId, access, memberNames, unreadOf(row));
     await this.notifyRoom(
       userId,
       info,
@@ -893,6 +900,7 @@ export class ChatService {
     requesterId: string,
     access: { isAdmin: boolean; canNotice: boolean },
     memberNames: Map<string, string>,
+    unreadCount = 0,
   ): ChatMessageInfo {
     const isAdmin = access.isAdmin;
     const isMine = row.authorId === requesterId;
@@ -938,7 +946,60 @@ export class ChatService {
       })),
       createdAt: row.createdAt.toISOString(),
       isMine,
-      canDelete: isMine || isAdmin,
+      // 입장·퇴장 안내는 지우지 않는다
+      canDelete: !row.isSystem && (isMine || isAdmin),
+      isSystem: row.isSystem,
+      unreadCount,
+    };
+  }
+
+  // 메시지별 안 읽은 사람 수 계산기 — 카카오톡의 "1"처럼. 방 멤버마다 마지막으로 읽은 시각(ChatReadState)을
+  // 메시지 시각과 비교해, 그 뒤로 아직 방을 안 연 멤버를 센다. 보낸 사람과 안내 메시지는 빼고,
+  // 팀 단톡방·리더 방은 들어오기 전 메시지를 그 사람 몫으로 세지 않는다. 한 번도 안 연 멤버는 안 읽은 것으로 본다.
+  private async unreadCounter(
+    room: ChatRoom,
+    members: ChatMember[],
+  ): Promise<
+    (row: { authorId: string; createdAt: Date; isSystem: boolean }) => number
+  > {
+    const memberIds = members.map((member) => member.id);
+    if (memberIds.length === 0) return () => 0;
+    const joinedQuery: Promise<{ userId: string; joinedAt: Date }[]> =
+      'roomId' in room
+        ? this.prisma.chatRoomMember.findMany({
+            where: { roomId: room.roomId },
+            select: { userId: true, joinedAt: true },
+          })
+        : 'leaderRoomId' in room
+          ? this.prisma.leaderRoomMember.findMany({
+              where: { roomId: room.leaderRoomId },
+              select: { userId: true, joinedAt: true },
+            })
+          : Promise.resolve([]);
+    const [states, joined] = await Promise.all([
+      this.prisma.chatReadState.findMany({
+        where: { scope: this.readScope(room), userId: { in: memberIds } },
+        select: { userId: true, lastReadAt: true },
+      }),
+      joinedQuery,
+    ]);
+    const readAt = new Map(
+      states.map((state) => [state.userId, state.lastReadAt]),
+    );
+    const joinedAt = new Map(
+      joined.map((member) => [member.userId, member.joinedAt]),
+    );
+    return (row) => {
+      if (row.isSystem) return 0;
+      let count = 0;
+      for (const memberId of memberIds) {
+        if (memberId === row.authorId) continue;
+        const joinedTime = joinedAt.get(memberId);
+        if (joinedTime && row.createdAt < joinedTime) continue;
+        const read = readAt.get(memberId);
+        if (!read || read < row.createdAt) count += 1;
+      }
+      return count;
     };
   }
 }
