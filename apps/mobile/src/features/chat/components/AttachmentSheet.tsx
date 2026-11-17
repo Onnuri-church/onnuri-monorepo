@@ -7,6 +7,8 @@ import { Icon, type IconName } from "../../../shared/components/base/Icon";
 interface AttachmentSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** 닫힘 애니메이션까지 끝났을 때 (iOS) — 이때부터 사진·파일 선택창을 띄울 수 있다 */
+  onDismiss?: () => void;
   /** 앨범에서 사진·동영상 고르기 */
   onPickMedia: () => void;
   /** 파일(악보·문서) 고르기 */
@@ -28,6 +30,7 @@ interface AttachmentRow {
 export function AttachmentSheet({
   visible,
   onClose,
+  onDismiss,
   onPickMedia,
   onPickFile,
   onPickPoll,
@@ -42,7 +45,13 @@ export function AttachmentSheet({
   ];
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      onDismiss={onDismiss}
+    >
       <Pressable className="flex-1 justify-end bg-background-dark/50" onPress={onClose}>
         <Pressable
           className="rounded-t-3xl bg-background-normal pt-3"
@@ -53,9 +62,7 @@ export function AttachmentSheet({
           {groups.map((rows, groupIndex) => (
             <View
               key={groupIndex}
-              className={
-                groupIndex > 0 ? "border-t border-background-assistive" : undefined
-              }
+              className={groupIndex > 0 ? "border-t border-background-assistive" : undefined}
             >
               {rows.map((row) => (
                 <Pressable

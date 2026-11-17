@@ -5,7 +5,7 @@ import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadAttachment, uploadImage } from "../../shared/api/upload";
@@ -139,9 +139,27 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     setMentioned((prev) => (prev.some((item) => item.id === member.id) ? prev : [...prev, member]));
   };
 
+  // iOS는 시트(Modal)가 다 닫히기 전에 사진·파일 선택창을 띄우면 아무 반응 없이 무시된다.
+  // 그래서 시트를 닫고, 닫힘이 끝난 뒤(onDismiss)에 선택창을 연다. onDismiss가 안 오는 경우를 대비해
+  // 잠시 뒤에도 한 번 시도하고, 둘 중 먼저 오는 쪽에서 한 번만 실행한다.
+  const pendingPickRef = useRef<(() => void) | null>(null);
+  const runPendingPick = () => {
+    const action = pendingPickRef.current;
+    pendingPickRef.current = null;
+    action?.();
+  };
+  const pickAfterSheetClosed = (action: () => Promise<void>) => {
+    pendingPickRef.current = () => {
+      action().catch(() => {
+        Alert.alert(t("열 수 없어요"), t("사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요."));
+      });
+    };
+    setAttachmentSheetOpen(false);
+    setTimeout(runPendingPick, Platform.OS === "ios" ? 700 : 0);
+  };
+
   // 앨범에서 사진·동영상을 함께 고른다. 사진은 5장, 동영상은 3개·50MB까지다.
   const handlePickMedia = async () => {
-    setAttachmentSheetOpen(false);
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images", "videos"],
       allowsMultipleSelection: true,
@@ -181,7 +199,6 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   // 파일(악보·문서)은 expo-document-picker로 고른다. 이 모듈은 앱을 새로 빌드해야 들어 있어서,
   // 아직 반영되지 않은 빌드에서는 오류 대신 안내를 보여준다.
   const handlePickFile = async () => {
-    setAttachmentSheetOpen(false);
     let DocumentPicker: typeof import("expo-document-picker");
     try {
       DocumentPicker = require("expo-document-picker");
@@ -336,8 +353,14 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         ...(asNotice && { asNotice: true }),
       });
       resetComposer();
-    } catch {
-      Alert.alert(t("전송 실패"), t("잠시 후 다시 시도해주세요."));
+    } catch (error) {
+      // 용량·형식 문제 등 서버가 알려준 이유를 그대로 보여준다.
+      const message = (error as { response?: { data?: { message?: string | string[] } } }).response
+        ?.data?.message;
+      Alert.alert(
+        t("전송 실패"),
+        (Array.isArray(message) ? message[0] : message) ?? t("잠시 후 다시 시도해주세요."),
+      );
     } finally {
       setSending(false);
     }
@@ -588,8 +611,9 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       <AttachmentSheet
         visible={attachmentSheetOpen}
         onClose={() => setAttachmentSheetOpen(false)}
-        onPickMedia={() => void handlePickMedia()}
-        onPickFile={() => void handlePickFile()}
+        onDismiss={runPendingPick}
+        onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
+        onPickFile={() => pickAfterSheetClosed(handlePickFile)}
         onPickPoll={() => {
           setAttachmentSheetOpen(false);
           navigation.navigate("ChatPollCreate", { kind, id });
