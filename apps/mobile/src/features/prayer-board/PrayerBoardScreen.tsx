@@ -80,14 +80,18 @@ export function PrayerBoardScreen() {
     dialogRef.current?.open();
   };
 
+  // 확인을 누르면 팝업을 먼저 닫고 대상을 비운다 — 요청 중에 확인이 한 번 더 눌려 같은 글을
+  // 두 번 지우려다 "삭제 실패"가 뜨지 않게.
   const handleDeleteConfirm = async () => {
+    const target = pendingDelete;
+    dialogRef.current?.close();
+    setPendingDelete(null);
+    if (!target) return;
     try {
-      if (pendingDelete) await deletePrayer(pendingDelete.id);
+      await deletePrayer(target.id);
     } catch {
       Alert.alert(t("삭제 실패"), t("잠시 후 다시 시도해주세요."));
     }
-    dialogRef.current?.close();
-    setPendingDelete(null);
     // 카테고리별로 캐시가 나뉘어 있어 지운 글이 다른 탭에 남지 않도록 기도제목 쿼리를 전부 새로 받는다.
     await queryClient.invalidateQueries({ queryKey: ["prayers"] });
   };
