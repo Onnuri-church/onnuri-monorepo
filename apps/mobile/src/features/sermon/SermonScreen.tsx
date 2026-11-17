@@ -13,6 +13,7 @@ import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll"
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchSermons } from "./api";
 import { SermonVideoCard } from "./components/SermonVideoCard";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 말씀 게시판. 월 필터 아래로 설교영상 카드가 쌓인다.
 export function SermonScreen() {
@@ -24,12 +25,13 @@ export function SermonScreen() {
   const handleHideTabBarScroll = useHideTabBarOnScroll();
   const insets = useSafeAreaInsets();
 
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["sermons", month],
     queryFn: () => fetchSermons(month),
     // 달을 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
     placeholderData: keepPreviousData,
   });
+  const pullRefresh = usePullToRefresh(refetch);
 
   if (isPending) {
     return (
@@ -72,7 +74,7 @@ export function SermonScreen() {
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl {...pullRefresh} />}
       >
         {items.map((video) => (
           <SermonVideoCard

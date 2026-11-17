@@ -3,14 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  RefreshControl,
-  ScrollView,
-  Text,
-  View,
-  useWindowDimensions,
-} from "react-native";
+import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { useAuthStore } from "../../shared/store/useAuthStore";
 
@@ -30,6 +23,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { ensureSensitiveConsent } from "../consent/ensureSensitiveConsent";
 import { ensureNotSuspended } from "../profile/ensureNotSuspended";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 export function QtBoardScreen() {
   const insets = useSafeAreaInsets();
@@ -49,12 +43,13 @@ export function QtBoardScreen() {
     label: t("{{month}}월", { month: index + 1 }),
   }));
 
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["qt-shares", mine, pick?.year, pick?.month],
     queryFn: () => fetchQtShares({ mine, year: pick?.year, month: pick?.month }),
     // 필터를 바꾸는 동안 이전 응답을 유지한다 — 안 그러면 필터 줄까지 스켈레톤으로 사라진다.
     placeholderData: keepPreviousData,
   });
+  const pullRefresh = usePullToRefresh(refetch);
 
   // 범위를 바꾸면 연·월 선택을 비운다 — 전체에서 보던 달에 내 글이 없어 빈 화면부터 보게
   // 되는 걸 막고, 서버가 그 범위의 최근 달을 다시 골라 준다.
@@ -165,9 +160,7 @@ export function QtBoardScreen() {
         contentContainerClassName="gap-4 pt-4 px-5"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 16 + insets.bottom }}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-        }
+        refreshControl={<RefreshControl {...pullRefresh} />}
       >
         {items.length === 0 && (
           <Text className="mt-16 text-center text-body-medium text-text-alternative">
