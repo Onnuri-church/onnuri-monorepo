@@ -63,7 +63,8 @@ export function TeamFormScreen() {
   const [name, setName] = useState("");
   // 팀장은 한 명 이상 — 팀에 따라 여러 명이다 (셀장·부셀장처럼).
   const [leaderIds, setLeaderIds] = useState<string[]>([]);
-  // 목록 아이콘 — 안 고르면 회색 원으로 보인다. 선택사항이라 제출 조건에 넣지 않는다.
+  // 목록 아이콘 — 팀 이름·팀장과 함께 필수다 (SCRUM-210). 다시 누르면 해제되지만 그러면 등록이 막힌다.
+  // 기존 팀이 목록에 없는 아이콘을 쓰고 있으면 null로 채워져, 편집 저장 전에 다시 고르게 된다.
   const [iconName, setIconName] = useState<IconName | null>(null);
   // 커버는 기존 저장 주소(http) 또는 새로 고른 로컬 사진(file://)을 한 상태로 들고,
   // 저장할 때 로컬이면 업로드해서 주소로 바꾼다 (uploadImage가 http는 그대로 통과).
@@ -102,7 +103,7 @@ export function TeamFormScreen() {
   const discardDialog = useDiscardGuard({ dirty, submitting: locked, mode: teamId ? "edit" : "create" });
 
   const handleSubmitPress = async () => {
-    if (leaderIds.length === 0 || !acquire()) return;
+    if (leaderIds.length === 0 || !iconName || !acquire()) return;
 
     // 실패하면 다시 누를 수 있게 풀고, 오류는 기존처럼 그대로 던진다.
     try {
@@ -111,8 +112,9 @@ export function TeamFormScreen() {
         name,
         leaderIds,
         iconName,
-        tagline,
-        description,
+        // 한 줄 소개·팀 소개는 선택이다 (SCRUM-210) — 비워 두면 빈 문자열 대신 null로 보낸다.
+        tagline: tagline.trim() || null,
+        description: description.trim() || null,
         coverImageUrl,
         canUploadBulletin,
         canManageBanner,
@@ -188,7 +190,7 @@ export function TeamFormScreen() {
           </View>
 
           <View>
-            {/* 다시 누르면 해제 — 아이콘 없는 팀(회색 원)도 허용한다 */}
+            {/* 필수 — 다시 누르면 해제되고, 해제된 채로는 등록 버튼이 꺼진다 (SCRUM-210) */}
             <Field label={t("팀 아이콘")}>
               <View className="flex-row flex-wrap" style={{ gap: 12 }}>
                 {TEAM_ICONS.map((icon) => {
@@ -270,12 +272,8 @@ export function TeamFormScreen() {
               label={teamId ? t("저장") : t("등록하기")}
               onPress={handleSubmitPress}
               loading={submitting}
-              disabled={
-                name.trim().length === 0 ||
-                leaderIds.length === 0 ||
-                tagline.trim().length === 0 ||
-                description.trim().length === 0
-              }
+              // 필수는 팀 이름·팀장·아이콘뿐이다. 배경사진·소개·권한은 비워도 등록된다 (SCRUM-210).
+              disabled={name.trim().length === 0 || leaderIds.length === 0 || !iconName}
             />
           </View>
         </ScrollView>

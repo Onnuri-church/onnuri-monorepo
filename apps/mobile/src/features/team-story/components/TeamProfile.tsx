@@ -22,7 +22,8 @@ export function TeamProfile({ name, description, icon }: TeamProfileProps) {
       </View>
       <View className="flex-1 gap-1.5">
         <Text className="text-title text-text-normal">{name}</Text>
-        <Text className="text-body-small text-text-neutral">{description}</Text>
+        {/* 한 줄 소개는 선택 항목 — 비어 있으면 줄 자체를 그리지 않는다 */}
+        {description ? <Text className="text-body-small text-text-neutral">{description}</Text> : null}
       </View>
     </View>
   );
