@@ -73,10 +73,22 @@ function useRoomMutation<TInput>(
   });
 }
 
+// 보낸 메시지는 서버 응답으로 바로 목록 끝에 붙인다 — 방 전체를 다시 받을 때까지 기다리지 않는다 (SCRUM-212).
+// 공지·읽음 등 나머지 상태는 뒤이어 다시 받아 맞춘다.
 export function useSendChatMessage(kind: ChatKind, id: string) {
-  return useRoomMutation(kind, id, (body: SendChatMessageRequest) =>
-    apiClient.post<ChatMessageInfo>(roomPath(kind, id), body).then((res) => res.data),
-  );
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: SendChatMessageRequest) =>
+      apiClient.post<ChatMessageInfo>(roomPath(kind, id), body).then((res) => res.data),
+    onSuccess: (message) => {
+      queryClient.setQueryData<ChatRoomResponse>(["chat", kind, id], (room) =>
+        room && !room.messages.some((item) => item.id === message.id)
+          ? { ...room, messages: [...room.messages, message] }
+          : room,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["chat", kind, id] });
+    },
+  });
 }
 
 export function useSetChatNotice(kind: ChatKind, id: string) {
