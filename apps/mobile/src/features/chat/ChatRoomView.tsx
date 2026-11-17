@@ -319,6 +319,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         createdAt: new Date().toISOString(),
         isMine: true,
         canDelete: false,
+        isSystem: false,
+        unreadCount: 0,
       };
       setPending((prev) => [...prev, { localId, body, message, failed: false }]);
       resetComposer();
@@ -414,7 +416,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           </Text>
         )}
         {messages.map((message) =>
-          !message.isMine && blockedIds.has(message.authorId) ? (
+          !message.isMine && !message.isSystem && blockedIds.has(message.authorId) ? (
             <Text key={message.id} className="text-body-small text-text-alternative">
               {t("차단한 사용자의 메시지예요")}
             </Text>

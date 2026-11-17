@@ -1,6 +1,10 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { LeaderRoomCandidate, LeaderRoomSummary } from '@onnuri/shared';
+import type {
+  ChatRoomResponse,
+  LeaderRoomCandidate,
+  LeaderRoomSummary,
+} from '@onnuri/shared';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -289,6 +293,17 @@ describe('Leader rooms (e2e)', () => {
       );
       expect(mine?.unreadCount).toBe(1);
 
+      // 메시지별 숫자 — 보낸 팀장 화면에서 그 메시지는 셀장 1명이 아직 안 읽었다 (SCRUM-219)
+      const latestOf = async () => {
+        const room = await request(server())
+          .get(`/leader-rooms/${roomId}/messages`)
+          .set(auth(teamLeaderToken))
+          .expect(200);
+        const messages = (room.body as ChatRoomResponse).messages;
+        return messages[messages.length - 1];
+      };
+      expect((await latestOf()).unreadCount).toBe(1);
+
       // 내가 쓴 메시지는 안 읽음으로 세지 않는다
       const own = (
         await request(server()).get('/leader-rooms').set(auth(teamLeaderToken))
@@ -305,6 +320,7 @@ describe('Leader rooms (e2e)', () => {
         await request(server()).get('/leader-rooms').set(auth(cellLeaderToken))
       ).body as LeaderRoomSummary[];
       expect(after.find((r) => r.id === roomId)?.unreadCount).toBe(0);
+      expect((await latestOf()).unreadCount).toBe(0);
     });
   });
 
@@ -355,6 +371,22 @@ describe('Leader rooms (e2e)', () => {
         .delete(`/leader-rooms/${roomId}/members/${otherLeaderId}`)
         .set(auth(adminToken))
         .expect(200);
+
+      // 초대·추방하면 방에 안내 메시지가 남고, 안 읽은 수에는 들어가지 않는다 (SCRUM-217)
+      const room = await request(server())
+        .get(`/leader-rooms/${roomId}/messages`)
+        .set(auth(adminToken))
+        .expect(200);
+      const system = (room.body as ChatRoomResponse).messages.filter(
+        (m) => m.isSystem,
+      );
+      expect(system.map((m) => m.content)).toEqual([
+        expect.stringContaining('초대했어요'),
+        expect.stringContaining('내보냈어요'),
+      ]);
+      expect(system.every((m) => m.unreadCount === 0 && !m.canDelete)).toBe(
+        true,
+      );
 
       await request(server())
         .delete(`/leader-rooms/${roomId}`)

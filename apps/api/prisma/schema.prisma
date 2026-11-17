@@ -311,6 +311,7 @@ model ChatMessage {
   replies          ChatMessage[]  @relation("ChatReply")
   mentionedUserIds String[]       @default([]) // 언급(@)된 멤버 — 서버가 방 멤버만 남긴다
   noticeAt         DateTime? // 공지로 등록된 시각 (null = 일반 메시지). 가장 최근 공지가 방 상단에 보인다
+  isSystem         Boolean        @default(false) // 입장·퇴장 안내 (authorId는 초대·추방한 사람) — 가운데 회색 글씨로 보인다
   deletedAt        DateTime? // 작성자·관리자 삭제 soft delete
   createdAt        DateTime       @default(now())
   reactions        ChatReaction[]
