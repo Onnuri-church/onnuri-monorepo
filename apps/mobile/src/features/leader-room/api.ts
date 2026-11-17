@@ -82,3 +82,14 @@ export function useRemoveLeaderRoomMember(roomId: string) {
 export function useDeleteLeaderRoom(roomId: string) {
   return useRoomsMutation(() => apiClient.delete(`/leader-rooms/${roomId}`));
 }
+
+// 스스로 나가기 (SCRUM-223) — 목록만 다시 받는다. 화면은 성공하면 바로 뒤로 간다.
+export function useLeaveLeaderRoom(roomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post(`/leader-rooms/${roomId}/leave`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["leader-rooms"] });
+    },
+  });
+}

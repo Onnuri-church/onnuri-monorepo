@@ -12,12 +12,7 @@ import type {
   UpdateTeamBoardCommentRequest,
   UpdateChatRoomRequest,
 } from "@onnuri/shared";
-import {
-  useInfiniteQuery,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -51,10 +46,7 @@ export function useTeamBoardPost(teamId: string, postId: string | undefined) {
   });
 }
 
-function useBoardMutation<TInput>(
-  teamId: string,
-  mutationFn: (input: TInput) => Promise<unknown>,
-) {
+function useBoardMutation<TInput>(teamId: string, mutationFn: (input: TInput) => Promise<unknown>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
@@ -130,7 +122,9 @@ export function useTeamBoardUnread(teamId: string, enabled: boolean) {
   return useQuery({
     queryKey: ["team-board-unread", teamId],
     queryFn: () =>
-      apiClient.get<{ count: number }>(`/teams/${teamId}/board/unread`).then((res) => res.data.count),
+      apiClient
+        .get<{ count: number }>(`/teams/${teamId}/board/unread`)
+        .then((res) => res.data.count),
     enabled: enabled && teamId !== "",
     refetchInterval: 15000,
   });
@@ -139,8 +133,7 @@ export function useTeamBoardUnread(teamId: string, enabled: boolean) {
 export function useChatRoomDetail(roomId: string | undefined) {
   return useQuery({
     queryKey: ["chat-room", roomId],
-    queryFn: () =>
-      apiClient.get<ChatRoomDetail>(`/chat-rooms/${roomId}`).then((res) => res.data),
+    queryFn: () => apiClient.get<ChatRoomDetail>(`/chat-rooms/${roomId}`).then((res) => res.data),
     enabled: roomId !== undefined,
   });
 }
@@ -184,4 +177,15 @@ export function useRemoveChatRoomMember(roomId: string) {
 
 export function useDeleteChatRoom(roomId: string) {
   return useRoomsMutation(() => apiClient.delete(`/chat-rooms/${roomId}`));
+}
+
+// 스스로 나가기 (SCRUM-223) — 목록만 다시 받는다. 화면은 성공하면 바로 뒤로 간다.
+export function useLeaveChatRoom(roomId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => apiClient.post(`/chat-rooms/${roomId}/leave`),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["chat-rooms"] });
+    },
+  });
 }
