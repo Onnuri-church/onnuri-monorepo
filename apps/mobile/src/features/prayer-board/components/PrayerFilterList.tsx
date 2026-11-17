@@ -13,6 +13,7 @@ import { PRAYER_CATEGORIES, deletePrayer, type PrayerCategory } from "../api";
 import { useToggleBookmark } from "../useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./PrayerCard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
 
 interface PrayerFilterListProps {
   /** react-query 캐시 구분용 이름 (예: "bookmarked") */
@@ -47,10 +48,11 @@ export function PrayerFilterList({
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const toggleBookmark = useToggleBookmark();
 
-  const { data, isPending, isError, refetch, isRefetching } = useQuery({
+  const { data, isPending, isError, refetch } = useQuery({
     queryKey: ["prayers", name, category],
     queryFn: () => fetchList(category),
   });
+  const pullRefresh = usePullToRefresh(refetch);
 
   const askDelete = (prayer: PrayerRequest) => {
     setPendingDelete(prayer);
@@ -82,9 +84,7 @@ export function PrayerFilterList({
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-        }
+        refreshControl={<RefreshControl {...pullRefresh} />}
       >
         {isPending && (
           <>

@@ -16,6 +16,7 @@ import { MonthPicker } from "../cell/components/MonthPicker";
 import { fetchTeams } from "../profile/api";
 import { useAdminAttendance, useUpdateAdminAttendance } from "./api";
 import { RadioOption } from "./components/RadioOption";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 type AttendanceFilter = "all" | "cell" | "team";
 
@@ -72,11 +73,12 @@ export function AdminAttendanceScreen() {
   const cellId = selectedCellId ?? cells?.[0]?.id;
   const teamId = selectedTeamId ?? teams?.[0]?.id;
 
-  const { data, isLoading, refetch, isRefetching } = useAdminAttendance({
+  const { data, isLoading, refetch } = useAdminAttendance({
     month: monthParam,
     scope: filter,
     groupId: filter === "cell" ? cellId : filter === "team" ? teamId : undefined,
   });
+  const pullRefresh = usePullToRefresh(refetch);
   const dates = data?.dates ?? [];
   const groups = data?.groups ?? [];
   // 전체 보기에서는 멤버 없는 셀을 맨 아래로 모은다 ("셀 없음" 그룹은 멤버가 있을 때만 내려온다).
@@ -136,13 +138,15 @@ export function AdminAttendanceScreen() {
       <ScrollView
         contentContainerClassName="px-5 pt-4"
         contentContainerStyle={{ paddingBottom: 64 + insets.bottom }}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-        }
+        refreshControl={<RefreshControl {...pullRefresh} />}
       >
         {/* 필터 */}
         <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
-          <RadioOption label={t("전체")} selected={filter === "all"} onPress={() => setFilter("all")} />
+          <RadioOption
+            label={t("전체")}
+            selected={filter === "all"}
+            onPress={() => setFilter("all")}
+          />
           <RadioOption
             label={t("특정 셀")}
             selected={filter === "cell"}
@@ -207,7 +211,9 @@ export function AdminAttendanceScreen() {
         {/* 범례 */}
         {/* 번역으로 길어지면 다음 줄로 넘어가게 wrap — 설명은 한 줄을 다 쓰고 색 범례는 그 아래로 내려간다. */}
         <View className="mt-4 flex-row flex-wrap items-center gap-x-2.5 gap-y-1">
-          <Text className="text-caption-main text-text-alternative">{t("왼쪽 예배 · 오른쪽 셀모임 · 칸을 누르면 출석을 고쳐요")}</Text>
+          <Text className="text-caption-main text-text-alternative">
+            {t("왼쪽 예배 · 오른쪽 셀모임 · 칸을 누르면 출석을 고쳐요")}
+          </Text>
           <View className="flex-row items-center gap-1">
             <View className="h-3 w-3 bg-primary-normal" />
             <Text className="text-caption-main text-text-alternative">{t("출석")}</Text>
@@ -372,7 +378,9 @@ export function AdminAttendanceScreen() {
                   <Text className="text-body-regular text-text-alternative">
                     {field === "worship"
                       ? t("예배가 없는 날이에요. 고치려면 먼저 모임 없는 날 지정을 바꿔주세요.")
-                      : t("셀모임이 없는 날이거나 소속 셀이 없어요. 모임 없는 날 지정을 확인해주세요.")}
+                      : t(
+                          "셀모임이 없는 날이거나 소속 셀이 없어요. 모임 없는 날 지정을 확인해주세요.",
+                        )}
                   </Text>
                   <Text className="mt-1 text-body-main text-primary-normal">
                     {t("모임 없는 날 지정 열기")}

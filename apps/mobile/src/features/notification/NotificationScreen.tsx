@@ -21,6 +21,7 @@ import {
   useRemoveNotification,
 } from "./api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 카드 상단 라벨 옆 로고 심볼 크기 (시안 15).
 const SYMBOL_SIZE = 15;
@@ -62,7 +63,8 @@ export function NotificationScreen() {
   const { t } = useTranslation();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
-  const { data: notifications, isLoading, refetch, isRefetching } = useNotifications();
+  const { data: notifications, isLoading, refetch } = useNotifications();
+  const pullRefresh = usePullToRefresh(refetch);
   const markAllRead = useMarkAllNotificationsRead();
   const removeNotification = useRemoveNotification();
   const removeAll = useRemoveAllNotifications();
@@ -149,7 +151,10 @@ export function NotificationScreen() {
         navigation.navigate("TeamFollowerNoteBoard", { teamId: first, noteId: second });
         break;
       case "group-meeting":
-        navigation.navigate("GroupMeetingDetail", { id: first, commentId: item.commentId ?? undefined });
+        navigation.navigate("GroupMeetingDetail", {
+          id: first,
+          commentId: item.commentId ?? undefined,
+        });
         break;
       case "department-activity":
         navigation.navigate("DepartmentActivityDetail", {
@@ -208,12 +213,10 @@ export function NotificationScreen() {
       ) : (
         <ScrollView
           contentContainerClassName="gap-5 px-5 pt-6"
-        // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
-        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
+          // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
+          contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
           // 화면을 열어둔 채 새 알림이 오면 당겨서 받아온다.
-          refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-          }
+          refreshControl={<RefreshControl {...pullRefresh} />}
         >
           {groups.map((group) => {
             const [latest, ...rest] = group;

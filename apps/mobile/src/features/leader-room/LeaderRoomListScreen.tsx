@@ -11,6 +11,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useMe } from "../profile/useMe";
 import { useLeaderRooms } from "./api";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 전체 리더 방 목록 — 팀장·팔로워(셀장·부셀장)는 자기가 들어간 방만, 관리자는 모든 방을 본다.
 // 새 방 만들기는 관리자만 (헤더 오른쪽 "만들기").
@@ -19,7 +20,8 @@ export function LeaderRoomListScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const insets = useSafeAreaInsets();
   const me = useMe();
-  const { data: rooms, isLoading, refetch, isRefetching } = useLeaderRooms(true);
+  const { data: rooms, isLoading, refetch } = useLeaderRooms(true);
+  const pullRefresh = usePullToRefresh(refetch);
 
   const canCreate = me?.isAdmin === true;
 
@@ -43,7 +45,7 @@ export function LeaderRoomListScreen() {
         data={rooms ?? []}
         keyExtractor={(room) => room.id}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl {...pullRefresh} />}
         renderItem={({ item: room }) => (
           <Pressable
             className="mx-5 border-b border-background-assistive py-4 active:opacity-60"
@@ -68,7 +70,7 @@ export function LeaderRoomListScreen() {
           isLoading ? null : (
             <Text className="mt-16 px-5 text-center text-body-medium text-text-alternative">
               {canCreate
-                ? t("아직 리더 방이 없어요. 오른쪽 위 \"만들기\"로 만들어보세요.")
+                ? t('아직 리더 방이 없어요. 오른쪽 위 "만들기"로 만들어보세요.')
                 : t("들어가 있는 리더 방이 없어요. 관리자가 초대하면 여기에 나타나요.")}
             </Text>
           )

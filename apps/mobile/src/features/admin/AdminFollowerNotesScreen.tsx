@@ -11,6 +11,7 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { CellListRow } from "../cell/components/CellListRow";
 import { useAdminFollowerNoteOverview } from "./api";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 type TabKey = "cell" | "team";
 
@@ -24,7 +25,8 @@ export function AdminFollowerNotesScreen() {
   const themeColors = useThemeColors();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [tab, setTab] = useState<TabKey>("cell");
-  const { data, isLoading, refetch, isRefetching } = useAdminFollowerNoteOverview();
+  const { data, isLoading, refetch } = useAdminFollowerNoteOverview();
+  const pullRefresh = usePullToRefresh(refetch);
 
   // 게시판을 보고 돌아오면 새 노트 수가 줄어 있으니 다시 받는다.
   useFocusEffect(
@@ -56,9 +58,7 @@ export function AdminFollowerNotesScreen() {
       {isLoading ? t("목록을 불러오고 있어요.") : t("표시할 항목이 없어요.")}
     </Text>
   );
-  const refreshControl = (
-    <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
-  );
+  const refreshControl = <RefreshControl {...pullRefresh} />;
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -77,10 +77,20 @@ export function AdminFollowerNotesScreen() {
               key={item.key}
               scaleTo={0.94}
               className="h-full flex-row items-center gap-1"
-              style={active ? { borderBottomWidth: 2, borderBottomColor: themeColors.text.normal } : undefined}
+              style={
+                active
+                  ? { borderBottomWidth: 2, borderBottomColor: themeColors.text.normal }
+                  : undefined
+              }
               onPress={() => setTab(item.key)}
             >
-              <Text className={active ? "text-body-main text-text-normal" : "text-body-main text-text-alternative"}>
+              <Text
+                className={
+                  active
+                    ? "text-body-main text-text-normal"
+                    : "text-body-main text-text-alternative"
+                }
+              >
                 {item.label}
               </Text>
               {item.hasNew && <View className="h-1.5 w-1.5 rounded-full bg-semantic-danger" />}

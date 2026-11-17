@@ -19,6 +19,7 @@ import {
 import { canWriteFollowerNote } from "./cellDetail";
 import { NoteNumberBadge } from "./components/NoteNumberBadge";
 import { getNoteQuestions } from "./followerNotes";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 셀 팔로워 노트 게시판 (관리 탭 > 팔로워 노트 — 셀장·관리자 전용 경로로만 진입한다).
 // 화면 본체는 팀 노트와 공용(FollowerNoteBoardView)이고, 여기서는 셀 노트의 3문항 내용만 그린다.
@@ -30,15 +31,16 @@ export function FollowerNoteBoardScreen() {
   const cell = useCell(cellId);
   // 작성·편집·삭제는 그 셀의 셀장·부셀장만 — 관리자는 열람과 댓글(목사님 댓글)만 (2026-09-10 확정).
   const me = useMe();
-  const { data: notes, isLoading, refetch, isRefetching } = useFollowerNotes(cellId);
+  const { data: notes, isLoading, refetch } = useFollowerNotes(cellId);
+  const pullRefresh = usePullToRefresh(refetch);
 
   return (
     <FollowerNoteBoardView
       caption={cell?.name ?? ""}
       notes={notes}
       isLoading={isLoading}
-      isRefetching={isRefetching}
-      onRefresh={() => void refetch()}
+      isRefetching={pullRefresh.refreshing}
+      onRefresh={pullRefresh.onRefresh}
       targetNoteId={noteId}
       canWrite={canWriteFollowerNote(cellId, me)}
       onWritePress={() => navigation.navigate("FollowerNoteWrite", { cellId })}

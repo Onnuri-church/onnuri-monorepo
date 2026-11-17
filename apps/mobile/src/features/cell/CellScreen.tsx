@@ -13,6 +13,7 @@ import { CellManageList } from "../admin/components/CellManageList";
 import { useMe } from "../profile/useMe";
 import { useCells } from "./api";
 import { CellListRow } from "./components/CellListRow";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 하단 탭 "셀 페이지"의 진입 화면. 일반 유저는 내 셀 하나만 보이고(2026-10-18 확정 — 다른 셀은
 // 서버도 열람을 막는다), 그 행을 누르면 셀의 페이지(소식/갤러리/구성원/관리 4탭)로 들어간다.
@@ -27,7 +28,8 @@ export function CellScreen() {
   // 셀이 적어 목록이 화면보다 짧아도 살짝 스크롤돼 탭바가 숨겨지게 최소 높이를 잡는다.
   const [listHeight, setListHeight] = useState(0);
 
-  const { data: cells, isLoading, refetch, isRefetching } = useCells();
+  const { data: cells, isLoading, refetch } = useCells();
+  const pullRefresh = usePullToRefresh(refetch);
   // "나의 셀" 뱃지 기준은 /users/me의 현재 소속 — 게스트는 me가 없어 뱃지가 안 붙는다.
   const me = useMe();
 
@@ -99,7 +101,7 @@ export function CellScreen() {
         onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+        refreshControl={<RefreshControl {...pullRefresh} />}
         renderItem={({ item }) => (
           <CellListRow
             cell={item}

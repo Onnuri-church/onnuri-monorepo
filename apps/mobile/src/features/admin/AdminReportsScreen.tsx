@@ -11,6 +11,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 import { useAdminReports, useHandleReport } from "../report/api";
 import { useSuspendMember } from "./api";
 import { openSuspendPicker } from "./openSuspendPicker";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 const TARGET_LABELS: Record<AdminReportItem["targetType"], string> = {
   POST: "게시글",
@@ -33,7 +34,8 @@ export function AdminReportsScreen() {
   const insets = useSafeAreaInsets();
   const themeColors = useThemeColors();
   const [status, setStatus] = useState<"open" | "done">("open");
-  const { data: reports, isPending, refetch, isRefetching } = useAdminReports(status);
+  const { data: reports, isPending, refetch } = useAdminReports(status);
+  const pullRefresh = usePullToRefresh(refetch);
   const { mutate: handle, isPending: handling } = useHandleReport();
   const { mutate: suspend, isPending: suspending } = useSuspendMember();
 
@@ -43,8 +45,7 @@ export function AdminReportsScreen() {
       suspend(
         { memberId: report.targetAuthorId, days },
         {
-          onError: () =>
-            Alert.alert(t("이용 정지하지 못했어요"), t("잠시 후 다시 시도해 주세요.")),
+          onError: () => Alert.alert(t("이용 정지하지 못했어요"), t("잠시 후 다시 시도해 주세요.")),
         },
       ),
     );
@@ -64,11 +65,19 @@ export function AdminReportsScreen() {
       className="bg-background-normal"
       contentContainerClassName="gap-4 px-5 pt-5"
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-      refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />}
+      refreshControl={<RefreshControl {...pullRefresh} />}
     >
       <View className="flex-row gap-2">
-        <FilterChip label={t("처리 전")} selected={status === "open"} onPress={() => setStatus("open")} />
-        <FilterChip label={t("처리됨")} selected={status === "done"} onPress={() => setStatus("done")} />
+        <FilterChip
+          label={t("처리 전")}
+          selected={status === "open"}
+          onPress={() => setStatus("open")}
+        />
+        <FilterChip
+          label={t("처리됨")}
+          selected={status === "done"}
+          onPress={() => setStatus("done")}
+        />
       </View>
 
       {isPending ? (
@@ -79,12 +88,17 @@ export function AdminReportsScreen() {
         </Text>
       ) : (
         reports.map((report) => (
-          <View key={report.id} className="gap-2 rounded-5 bg-background-normal px-4 py-4 shadow-card">
+          <View
+            key={report.id}
+            className="gap-2 rounded-5 bg-background-normal px-4 py-4 shadow-card"
+          >
             <View className="flex-row items-center justify-between">
               <Text className="text-body-main text-text-normal">
                 {t(REPORT_REASON_LABELS[report.reason])} · {t(TARGET_LABELS[report.targetType])}
               </Text>
-              <Text className="text-body-small text-text-alternative">{toTimeAgo(report.createdAt)}</Text>
+              <Text className="text-body-small text-text-alternative">
+                {toTimeAgo(report.createdAt)}
+              </Text>
             </View>
             <Text className="text-body-medium text-text-neutral" numberOfLines={6}>
               {report.snapshot}
@@ -122,10 +136,14 @@ export function AdminReportsScreen() {
                 </PressableScale>
               </View>
             ) : (
-              <Text className="text-body-small text-primary-normal">{t(STATUS_LABELS[report.status])}</Text>
+              <Text className="text-body-small text-primary-normal">
+                {t(STATUS_LABELS[report.status])}
+              </Text>
             )}
             {report.targetAuthorIsAdmin ? null : report.targetAuthorSuspended ? (
-              <Text className="text-body-small text-semantic-danger">{t("작성자 이용 정지 중")}</Text>
+              <Text className="text-body-small text-semantic-danger">
+                {t("작성자 이용 정지 중")}
+              </Text>
             ) : (
               <PressableScale
                 scaleTo={0.97}
@@ -133,7 +151,9 @@ export function AdminReportsScreen() {
                 className="items-center rounded-xl border border-semantic-danger py-2"
                 onPress={() => confirmSuspend(report)}
               >
-                <Text className="text-body-small text-semantic-danger">{t("작성자 이용 정지")}</Text>
+                <Text className="text-body-small text-semantic-danger">
+                  {t("작성자 이용 정지")}
+                </Text>
               </PressableScale>
             )}
           </View>

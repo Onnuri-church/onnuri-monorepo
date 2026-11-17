@@ -16,6 +16,7 @@ import {
   useTeamFollowerNotes,
   useUpdateTeamFollowerNoteComment,
 } from "./teamApi";
+import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
 // 팀 팔로워 노트 게시판 (SCRUM-180) — 팀장들이 함께 쓰는 팀원 케어 기록. 들어오는 길은 팀 스토리 상세의
 // "팀 팔로워 노트"(팀장에게만)와 팀장 마이페이지. 화면은 셀 노트와 같고 내용(본문 하나)만 다르다.
@@ -27,16 +28,19 @@ export function TeamFollowerNoteBoardScreen() {
   const { teamId, noteId } = route.params;
   const team = useTeam(teamId);
   const me = useMe();
-  const isTeamLeader = (me?.teams ?? []).some((item) => item.id === teamId && item.role === "LEADER");
-  const { data: notes, isLoading, refetch, isRefetching } = useTeamFollowerNotes(teamId);
+  const isTeamLeader = (me?.teams ?? []).some(
+    (item) => item.id === teamId && item.role === "LEADER",
+  );
+  const { data: notes, isLoading, refetch } = useTeamFollowerNotes(teamId);
+  const pullRefresh = usePullToRefresh(refetch);
 
   return (
     <FollowerNoteBoardView
       caption={team?.name ?? ""}
       notes={notes}
       isLoading={isLoading}
-      isRefetching={isRefetching}
-      onRefresh={() => void refetch()}
+      isRefetching={pullRefresh.refreshing}
+      onRefresh={pullRefresh.onRefresh}
       targetNoteId={noteId}
       canWrite={isTeamLeader}
       onWritePress={() => navigation.navigate("TeamFollowerNoteWrite", { teamId })}
@@ -49,7 +53,10 @@ export function TeamFollowerNoteBoardScreen() {
         title: note.dateLabel,
         // 다른 팀장이 고쳤으면 누가 마지막으로 고쳤는지 같이 보여준다 (한 노트를 함께 편집).
         authorLine: note.editedByName
-          ? t("{{name}} 작성 · {{editor}} 수정", { name: note.authorName, editor: note.editedByName })
+          ? t("{{name}} 작성 · {{editor}} 수정", {
+              name: note.authorName,
+              editor: note.editedByName,
+            })
           : t("{{name}} 작성", { name: note.authorName }),
         avatarUrl: note.authorAvatarUrl,
         timeLabel: toTimeAgo(note.createdAt),
