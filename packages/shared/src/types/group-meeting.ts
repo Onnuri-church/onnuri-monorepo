@@ -49,6 +49,8 @@ export interface GroupMeetingComment {
   content: string;
   /** 내 댓글 여부 — 삭제 버튼 노출 기준 (서버 삭제 권한도 작성자 본인만) */
   isMine: boolean;
+  /** 답글 (SCRUM-216) — 1단계까지라 여기 담긴 댓글의 replies는 항상 빈 배열이다 */
+  replies: GroupMeetingComment[];
 }
 
 export interface GroupMeetingMember {

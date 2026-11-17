@@ -994,6 +994,7 @@ model Notification {
   title     String // 알림 화면 상단 라벨
   body      String // "이서연 셀장님이 누리셀 팔로워 노트를 작성했어요."
   linkUrl   String? // 탭하면 이동할 딥링크
+  commentId String? // 댓글 알림이면 그 댓글 — 앱이 상세에서 짚어 보여준다 (SCRUM-215)
   readAt    DateTime? // null = 안 읽음
   createdAt DateTime         @default(now())
 

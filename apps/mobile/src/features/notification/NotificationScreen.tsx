@@ -149,10 +149,13 @@ export function NotificationScreen() {
         navigation.navigate("TeamFollowerNoteBoard", { teamId: first, noteId: second });
         break;
       case "group-meeting":
-        navigation.navigate("GroupMeetingDetail", { id: first });
+        navigation.navigate("GroupMeetingDetail", { id: first, commentId: item.commentId ?? undefined });
         break;
       case "department-activity":
-        navigation.navigate("DepartmentActivityDetail", { id: first });
+        navigation.navigate("DepartmentActivityDetail", {
+          id: first,
+          commentId: item.commentId ?? undefined,
+        });
         break;
       case "qt":
         navigation.navigate("QtBoardDetail", { id: first });
@@ -164,7 +167,13 @@ export function NotificationScreen() {
         navigation.navigate("PrayerBoardDetail", { id: first });
         break;
       case "cell-news":
-        if (second) navigation.navigate("CellNewsDetail", { cellId: first, newsId: second });
+        if (second)
+          navigation.navigate("CellNewsDetail", {
+            cellId: first,
+            newsId: second,
+            // 댓글 알림이면 그 댓글로 스크롤해 잠깐 강조한다 (SCRUM-215)
+            commentId: item.commentId ?? undefined,
+          });
         break;
       // 새 신고 (SCRUM-199) — 관리자에게만 온다
       case "admin":
