@@ -3,7 +3,10 @@ import { useRef, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import { AppearIn } from "../../shared/components/base/AppearIn";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { PendingCommentItem } from "../../shared/components/composed/CommentThread";
+import type { PendingComment } from "../../shared/hooks/usePendingComments";
 import { Icon } from "../../shared/components/base/Icon";
 import { PressableScale } from "../../shared/components/base/PressableScale";
 import { CommentEmpty } from "../../shared/components/composed/CommentEmpty";
@@ -51,6 +54,10 @@ interface FollowerNoteCardProps {
   editing: FollowerNoteCommentInfo | null;
   onCancelComposerMode: () => void;
   onComposerFocus: () => void;
+  /** 이 노트에 보내는 중인 댓글 (SCRUM-215) */
+  pending?: PendingComment[];
+  /** 화면을 연 뒤 새로 생긴 댓글인지 — 등장 효과 */
+  isNew?: (id: string) => boolean;
 }
 
 // 팔로워 노트 카드 — 셀·팀 노트 공용 (SCRUM-182·180). 접혀 있을 땐 날짜·작성자만 깔끔하게(화살표 없음),
@@ -71,6 +78,8 @@ export function FollowerNoteCard({
   editing,
   onCancelComposerMode,
   onComposerFocus,
+  pending = [],
+  isNew,
 }: FollowerNoteCardProps) {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
@@ -83,17 +92,19 @@ export function FollowerNoteCard({
   };
 
   const renderComment = (comment: FollowerNoteCommentInfo) => (
-    <CommentItem
-      authorName={comment.authorName}
-      // 작성자 사진 — 예전 서버 응답에는 없을 수 있어 null(기본 이미지)로 둔다
-      avatarUrl={comment.authorAvatarUrl ?? null}
-      timeAgo={comment.dateLabel}
-      content={comment.content}
-      // 답글은 원댓글에만 단다 — 깊이가 1단계까지라 서버가 400을 준다.
-      onReplyPress={comment.parentId ? undefined : () => onReplyComment(comment)}
-      onEditPress={comment.canEdit ? () => onEditComment(comment) : undefined}
-      onDeletePress={comment.canDelete ? () => onDeleteComment(comment) : undefined}
-    />
+    <AppearIn animate={isNew?.(comment.id) ?? false}>
+      <CommentItem
+        authorName={comment.authorName}
+        // 작성자 사진 — 예전 서버 응답에는 없을 수 있어 null(기본 이미지)로 둔다
+        avatarUrl={comment.authorAvatarUrl ?? null}
+        timeAgo={comment.dateLabel}
+        content={comment.content}
+        // 답글은 원댓글에만 단다 — 깊이가 1단계까지라 서버가 400을 준다.
+        onReplyPress={comment.parentId ? undefined : () => onReplyComment(comment)}
+        onEditPress={comment.canEdit ? () => onEditComment(comment) : undefined}
+        onDeletePress={comment.canDelete ? () => onDeleteComment(comment) : undefined}
+      />
+    </AppearIn>
   );
 
   return (
@@ -101,7 +112,9 @@ export function FollowerNoteCard({
       <PressableScale scaleTo={0.98} className="px-5 py-4" onPress={onToggle}>
         <View className="flex-row items-center gap-2.5">
           <Text className="text-heading-small text-text-normal">{content.title}</Text>
-          <Text className="flex-1 text-body-medium text-text-alternative">{content.subtitle ?? ""}</Text>
+          <Text className="flex-1 text-body-medium text-text-alternative">
+            {content.subtitle ?? ""}
+          </Text>
           {expanded && onMenuPress && (
             <Pressable ref={menuButtonRef} onPress={handleMenuPress} hitSlop={10}>
               <Icon name="more" size={24} color={colors.icon.normal} />
@@ -129,9 +142,11 @@ export function FollowerNoteCard({
             }}
           >
             <Text className="text-body-main text-text-normal">
-              {t("댓글 {{count}}", { count: comments.length })}
+              {t("댓글 {{count}}", {
+                count: comments.length + pending.filter((item) => !item.parentId).length,
+              })}
             </Text>
-            {comments.length === 0 ? (
+            {comments.length + pending.length === 0 ? (
               <CommentEmpty />
             ) : (
               <View className="mt-2">
@@ -148,7 +163,19 @@ export function FollowerNoteCard({
                             {renderComment(reply)}
                           </View>
                         ))}
+                      {pending
+                        .filter((item) => item.parentId === comment.id)
+                        .map((item) => (
+                          <View key={item.localId} className="pl-10">
+                            <PendingCommentItem content={item.content} />
+                          </View>
+                        ))}
                     </View>
+                  ))}
+                {pending
+                  .filter((item) => !item.parentId)
+                  .map((item) => (
+                    <PendingCommentItem key={item.localId} content={item.content} />
                   ))}
               </View>
             )}

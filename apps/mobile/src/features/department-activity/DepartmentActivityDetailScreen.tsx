@@ -24,7 +24,15 @@ import {
   toggleReaction,
   updateComment,
 } from "./api";
-import { CommentThread } from "./components/CommentThread";
+import { CommentThread } from "../../shared/components/composed/CommentThread";
+import { useCommentScroll } from "../../shared/hooks/useCommentScroll";
+import { useNewItems } from "../../shared/hooks/useNewItems";
+import {
+  flattenCommentIds,
+  insertComment,
+  usePendingComments,
+} from "../../shared/hooks/usePendingComments";
+import { PendingCommentItem } from "../../shared/components/composed/CommentThread";
 import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 import { PostAuthor } from "./components/PostAuthor";
 import { ReactionBar } from "./components/ReactionBar";
@@ -51,7 +59,8 @@ export function DepartmentActivityDetailScreen() {
   const { openReport, sheet: reportSheet } = useReport();
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
-  const { id } = useRoute<RouteProp<RootStackParamList, "DepartmentActivityDetail">>().params;
+  const { id, commentId } =
+    useRoute<RouteProp<RootStackParamList, "DepartmentActivityDetail">>().params;
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const queryClient = useQueryClient();
   const dialogRef = useRef<AppDialogRef>(null);
@@ -83,6 +92,11 @@ export function DepartmentActivityDetailScreen() {
     queryKey: ["team-activity", id],
     queryFn: () => fetchTeamActivity(id),
   });
+  // 댓글 즉시 표시·등장 효과·알림 진입 강조 (SCRUM-215)
+  const pendingComments = usePendingComments();
+  const { isNew, markSeen } = useNewItems(data ? flattenCommentIds(data.comments) : undefined);
+  const scrollRef = useRef<ScrollView>(null);
+  const commentScroll = useCommentScroll(scrollRef, commentId, data?.comments);
 
   // 상세를 다시 받아 좋아요 수·댓글을 서버 값으로 맞춘다. 목록도 함께 새로고침한다 —
   // 조회수·댓글 수·좋아요가 카드에 그대로 보이기 때문이다.
@@ -110,17 +124,29 @@ export function DepartmentActivityDetailScreen() {
     },
   });
 
-  const { mutate: submitComment, isPending: isSubmitting } = useMutation({
-    mutationFn: () => addComment(id, draft.trim(), replyTo?.id),
-    onSuccess: () => {
-      setDraft("");
-      setReplyTo(null);
-      refresh();
-    },
-    onError: () => {
+  // 누르는 즉시 흐린 댓글을 먼저 그리고 입력칸을 비운다 — 서버가 받으면 같은 자리에서 진짜 댓글로
+  // 바뀌고, 실패하면 쓴 내용을 입력칸에 되돌린다 (SCRUM-215).
+  const submitComment = async () => {
+    const content = draft.trim();
+    const parentId = replyTo?.id ?? null;
+    const localId = pendingComments.add(content, parentId);
+    setDraft("");
+    setReplyTo(null);
+    try {
+      const created = await addComment(id, content, parentId ?? undefined);
+      markSeen(created.id);
+      queryClient.setQueryData<typeof data>(["team-activity", id], (prev) =>
+        prev ? { ...prev, comments: insertComment(prev.comments, created, parentId) } : prev,
+      );
+      pendingComments.remove(localId);
+      // 목록 카드의 댓글 수를 맞춘다
+      void queryClient.invalidateQueries({ queryKey: ["team-activities"] });
+    } catch {
+      pendingComments.remove(localId);
+      setDraft((prev) => prev || content);
       Alert.alert(t("댓글을 남기지 못했어요"), t("잠시 후 다시 시도해주세요."));
-    },
-  });
+    }
+  };
 
   const { mutate: saveComment, isPending: isSavingComment } = useMutation({
     mutationFn: (input: { commentId: string; content: string }) =>
@@ -155,18 +181,22 @@ export function DepartmentActivityDetailScreen() {
           variant="sub"
           title={t("부서활동 게시판")}
           rightAction={canManage || viewerItems.length > 0 ? "more" : "none"}
-          menuItems={!canManage ? viewerItems : [
-            {
-              icon: "edit",
-              label: t("수정하기"),
-              onPress: () => navigation.navigate("DepartmentActivityMeta", { postId: id }),
-            },
-            {
-              icon: "trash-can",
-              label: t("삭제하기"),
-              onPress: () => dialogRef.current?.open(),
-            },
-          ]}
+          menuItems={
+            !canManage
+              ? viewerItems
+              : [
+                  {
+                    icon: "edit",
+                    label: t("수정하기"),
+                    onPress: () => navigation.navigate("DepartmentActivityMeta", { postId: id }),
+                  },
+                  {
+                    icon: "trash-can",
+                    label: t("삭제하기"),
+                    onPress: () => dialogRef.current?.open(),
+                  },
+                ]
+          }
         />
       ),
     });
@@ -189,12 +219,12 @@ export function DepartmentActivityDetailScreen() {
   };
 
   const handleSubmit = () => {
-    if (draft.trim().length === 0 || isSubmitting || isSavingComment) return;
+    if (draft.trim().length === 0 || isSavingComment) return;
     if (editing) {
       saveComment({ commentId: editing.id, content: draft.trim() });
       return;
     }
-    submitComment();
+    void submitComment();
   };
 
   const handleEditPress = (comment: PostComment) => {
@@ -227,11 +257,7 @@ export function DepartmentActivityDetailScreen() {
 
   // 작성 화면에서 올린 사진이 우선이고, 없으면 시드로 넣은 대표 이미지를 한 장 쓴다.
   const photos =
-    data.imageUrls.length > 0
-      ? data.imageUrls
-      : data.coverImageUrl
-        ? [data.coverImageUrl]
-        : [];
+    data.imageUrls.length > 0 ? data.imageUrls : data.coverImageUrl ? [data.coverImageUrl] : [];
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -239,6 +265,7 @@ export function DepartmentActivityDetailScreen() {
           ScrollView가 화면 전체를 차지해 입력줄이 화면 밖으로 밀린다. flex-1만 주면
           입력줄이 쓰고 남은 높이를 가져가서 키보드가 올라와도 같이 줄어든다. */}
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         contentContainerClassName="justify-start py-5 px-5"
         keyboardShouldPersistTaps="handled"
@@ -252,9 +279,7 @@ export function DepartmentActivityDetailScreen() {
               // 관성이 안 붙는 느린 스와이프에도 점이 따라오도록 onScroll로 계산 (셀 소식 상세와 동일)
               scrollEventThrottle={16}
               onScroll={(event) =>
-                setPhotoIndex(
-                  Math.round(event.nativeEvent.contentOffset.x / photoWidth),
-                )
+                setPhotoIndex(Math.round(event.nativeEvent.contentOffset.x / photoWidth))
               }
             >
               {photos.map((url, index) => (
@@ -269,11 +294,7 @@ export function DepartmentActivityDetailScreen() {
               ))}
             </ScrollView>
             {photos.length > 1 && (
-              <PageIndicator
-                className="mt-2.5"
-                count={photos.length}
-                current={photoIndex}
-              />
+              <PageIndicator className="mt-2.5" count={photos.length} current={photoIndex} />
             )}
           </View>
         ) : (
@@ -287,46 +308,53 @@ export function DepartmentActivityDetailScreen() {
         />
         {/* 내용 */}
         <View className="flex justify-start">
-          <Text className="mt-2 text-heading-medium text-text-normal">
-            {data.title}
-          </Text>
-          <Text className="mt-2 text-body-medium text-text-neutral">
-            {data.content}
-          </Text>
+          <Text className="mt-2 text-heading-medium text-text-normal">{data.title}</Text>
+          <Text className="mt-2 text-body-medium text-text-neutral">{data.content}</Text>
           {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
           <ReactionBar reactions={data.reactions} onReact={(emoji) => react(emoji)} />
         </View>
-        <View className="mt-5 border-t border-t-text-assistive">
+        <View
+          className="mt-5 border-t border-t-text-assistive"
+          onLayout={commentScroll.onSectionLayout}
+        >
           {/* 대댓글은 수에서 뺀다 — 서버가 최상위만 세서 목록 카드와 같은 값이 된다. */}
           <Text className="my-4 text-body-main text-text-normal">
-            {t("댓글 {{count}}", { count: data.comments.length })}
+            {t("댓글 {{count}}", { count: data.comments.length + pendingComments.topLevel.length })}
           </Text>
-          {data.comments.length === 0 ? (
+          {data.comments.length + pendingComments.topLevel.length === 0 ? (
             <CommentEmpty />
           ) : (
             data.comments.map((comment) => (
-              <CommentThread
-                key={comment.id}
-                comment={comment}
-                onReplyPress={(target) => {
-                  setEditing(null);
-                  setReplyTo(target);
-                }}
-                onEditPress={handleEditPress}
-                onDeletePress={handleDeletePress}
-                onBlockPress={
-                  canBlock
-                    ? (target) => requestBlock({ userId: target.authorId, name: target.authorName })
-                    : undefined
-                }
-                onReportPress={
-                  canBlock
-                    ? (target) => openReport({ targetType: "COMMENT", targetId: target.id })
-                    : undefined
-                }
-              />
+              <View key={comment.id} onLayout={commentScroll.onThreadLayout(comment.id)}>
+                <CommentThread
+                  comment={comment}
+                  isNew={isNew}
+                  pendingReplies={pendingComments.repliesOf(comment.id)}
+                  highlightId={commentScroll.highlightId}
+                  onReplyPress={(target) => {
+                    setEditing(null);
+                    setReplyTo(target);
+                  }}
+                  onEditPress={handleEditPress}
+                  onDeletePress={handleDeletePress}
+                  onBlockPress={
+                    canBlock
+                      ? (target) =>
+                          requestBlock({ userId: target.authorId, name: target.authorName })
+                      : undefined
+                  }
+                  onReportPress={
+                    canBlock
+                      ? (target) => openReport({ targetType: "COMMENT", targetId: target.id })
+                      : undefined
+                  }
+                />
+              </View>
             ))
           )}
+          {pendingComments.topLevel.map((item) => (
+            <PendingCommentItem key={item.localId} content={item.content} />
+          ))}
           {blockDialog}
           {reportSheet}
           {viewerSheets}
@@ -383,7 +411,11 @@ export function DepartmentActivityDetailScreen() {
         />
       </View>
 
-      <ChatImageViewer urls={photos} startIndex={viewerIndex} onClose={() => setViewerIndex(null)} />
+      <ChatImageViewer
+        urls={photos}
+        startIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
+      />
 
       <AppDialog
         ref={dialogRef}

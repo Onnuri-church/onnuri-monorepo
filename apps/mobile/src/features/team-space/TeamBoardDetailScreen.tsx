@@ -19,7 +19,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
+import { AppearIn } from "../../shared/components/base/AppearIn";
 import { Avatar } from "../../shared/components/base/Avatar";
+import { useNewItems } from "../../shared/hooks/useNewItems";
+import { flattenCommentIds, usePendingComments } from "../../shared/hooks/usePendingComments";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { Header } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
@@ -66,6 +70,12 @@ export function TeamBoardDetailScreen() {
     if (!loadedPostId) return;
     void queryClient.invalidateQueries({ queryKey: ["team-board-unread"] });
   }, [loadedPostId, queryClient]);
+  // 댓글 즉시 표시·등장 효과 (SCRUM-215)
+  const pendingComments = usePendingComments();
+  const { isNew, markSeen } = useNewItems(post ? flattenCommentIds(post.comments) : undefined);
+  const me = useAuthStore((state) =>
+    state.session.status === "authenticated" ? state.session.user : null,
+  );
   const addComment = useAddBoardComment(teamId, postId);
   const deleteComment = useDeleteBoardComment(teamId, postId);
   const updateComment = useUpdateBoardComment(teamId, postId);
@@ -123,7 +133,8 @@ export function TeamBoardDetailScreen() {
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     if (!post || post.imageUrls.length < 2) return;
     // 화면 가운데 높이가 걸쳐 있는 사진을 현재 사진으로 본다.
-    const center = event.nativeEvent.contentOffset.y + event.nativeEvent.layoutMeasurement.height / 2;
+    const center =
+      event.nativeEvent.contentOffset.y + event.nativeEvent.layoutMeasurement.height / 2;
     let found = 0;
     post.imageUrls.forEach((_, index) => {
       const layout = imageLayouts.current[index];
@@ -148,17 +159,49 @@ export function TeamBoardDetailScreen() {
       );
       return;
     }
-    addComment.mutate(
-      { content, ...(replyTo && { parentId: replyTo.id }) },
-      {
-        onSuccess: () => {
-          setDraft("");
-          setReplyTo(null);
-        },
-        onError: () => Alert.alert(t("댓글 등록 실패"), t("잠시 후 다시 시도해주세요.")),
-      },
-    );
+    // 누르는 즉시 흐린 댓글을 먼저 그리고 입력칸을 비운다 (SCRUM-215). 이 API는 새 댓글을 돌려주지
+    // 않고 상세를 다시 받으므로, 다시 받은 목록의 댓글을 "이미 본 것"으로 등록한 뒤 흐린 댓글을 뺀다.
+    const parentId = replyTo?.id ?? null;
+    const localId = pendingComments.add(content, parentId);
+    setDraft("");
+    setReplyTo(null);
+    addComment
+      .mutateAsync({ content, ...(parentId && { parentId }) })
+      .then(() => {
+        const fresh = queryClient.getQueryData<{ comments: TeamBoardCommentInfo[] }>([
+          "team-board",
+          teamId,
+          "post",
+          postId,
+        ]);
+        flattenCommentIds(fresh?.comments ?? []).forEach(markSeen);
+        pendingComments.remove(localId);
+      })
+      .catch(() => {
+        pendingComments.remove(localId);
+        setDraft((prev) => prev || content);
+        Alert.alert(t("댓글 등록 실패"), t("잠시 후 다시 시도해주세요."));
+      });
   };
+
+  // 보내는 중인 댓글 — 내 이름·사진으로 흐리게 (renderComment와 같은 모양)
+  const renderPending = (item: { localId: string; content: string }, isReply: boolean) => (
+    <AppearIn key={item.localId} animate>
+      <View
+        className={isReply ? "ml-10 flex-row gap-2 py-2" : "flex-row gap-2 py-2"}
+        style={{ opacity: 0.5 }}
+      >
+        <Avatar imageUrl={me?.avatarUrl ?? null} size={isReply ? 28 : 36} />
+        <View className="flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text className="text-body-main text-text-normal">{me?.name ?? ""}</Text>
+            <Text className="text-body-small text-text-alternative">{t("보내는 중")}</Text>
+          </View>
+          <Text className="mt-1 text-body-medium text-text-neutral">{item.content}</Text>
+        </View>
+      </View>
+    </AppearIn>
+  );
 
   const handleDeleteComment = (comment: TeamBoardCommentInfo) => {
     Alert.alert(t("댓글을 삭제할까요?"), undefined, [
@@ -193,45 +236,53 @@ export function TeamBoardDetailScreen() {
   const totalReactions = post.reactors.length;
 
   const renderComment = (comment: TeamBoardCommentInfo, isReply: boolean) => (
-    <View key={comment.id} className={isReply ? "ml-10 flex-row gap-2 py-2" : "flex-row gap-2 py-2"}>
-      <Avatar imageUrl={comment.authorAvatarUrl} size={isReply ? 28 : 36} />
-      <View className="flex-1">
-        <View className="flex-row items-center gap-2">
-          <Text className="text-body-main text-text-normal">{comment.authorName}</Text>
-          <Text className="text-body-small text-text-alternative">{toTimeAgo(comment.createdAt)}</Text>
-        </View>
-        <Text className="mt-1 text-body-medium text-text-neutral">{comment.content}</Text>
-        <View className="mt-1 flex-row gap-3">
-          {!isReply && (
-            <Pressable onPress={() => setReplyTo(comment)} hitSlop={8}>
-              <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
-            </Pressable>
-          )}
-          {comment.canEdit && (
-            <Pressable
-              onPress={() => {
-                setEditing(comment);
-                setReplyTo(null);
-                setDraft(comment.content);
-              }}
-              hitSlop={8}
-            >
-              <Text className="text-body-small text-text-alternative">{t("수정")}</Text>
-            </Pressable>
-          )}
-          {comment.canDelete && (
-            <Pressable onPress={() => handleDeleteComment(comment)} hitSlop={8}>
-              <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
-            </Pressable>
-          )}
+    <AppearIn key={comment.id} animate={isNew(comment.id)}>
+      <View className={isReply ? "ml-10 flex-row gap-2 py-2" : "flex-row gap-2 py-2"}>
+        <Avatar imageUrl={comment.authorAvatarUrl} size={isReply ? 28 : 36} />
+        <View className="flex-1">
+          <View className="flex-row items-center gap-2">
+            <Text className="text-body-main text-text-normal">{comment.authorName}</Text>
+            <Text className="text-body-small text-text-alternative">
+              {toTimeAgo(comment.createdAt)}
+            </Text>
+          </View>
+          <Text className="mt-1 text-body-medium text-text-neutral">{comment.content}</Text>
+          <View className="mt-1 flex-row gap-3">
+            {!isReply && (
+              <Pressable onPress={() => setReplyTo(comment)} hitSlop={8}>
+                <Text className="text-body-small text-text-alternative">{t("답글")}</Text>
+              </Pressable>
+            )}
+            {comment.canEdit && (
+              <Pressable
+                onPress={() => {
+                  setEditing(comment);
+                  setReplyTo(null);
+                  setDraft(comment.content);
+                }}
+                hitSlop={8}
+              >
+                <Text className="text-body-small text-text-alternative">{t("수정")}</Text>
+              </Pressable>
+            )}
+            {comment.canDelete && (
+              <Pressable onPress={() => handleDeleteComment(comment)} hitSlop={8}>
+                <Text className="text-body-small text-text-alternative">{t("삭제")}</Text>
+              </Pressable>
+            )}
+          </View>
         </View>
       </View>
-    </View>
+    </AppearIn>
   );
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView onScroll={handleScroll} scrollEventThrottle={32} contentContainerStyle={{ paddingBottom: 24 }}>
+      <ScrollView
+        onScroll={handleScroll}
+        scrollEventThrottle={32}
+        contentContainerStyle={{ paddingBottom: 24 }}
+      >
         {/* 작성자 */}
         <View className="flex-row items-center gap-3 px-5 pt-4">
           <Avatar imageUrl={post.authorAvatarUrl} size={44} />
@@ -239,7 +290,8 @@ export function TeamBoardDetailScreen() {
             <Text className="text-body-main text-text-normal">{post.authorName}</Text>
             <Text className="text-caption-main text-text-alternative">
               {toTimeAgo(post.createdAt)}
-              {post.editedAt ? ` · ${t("수정됨")}` : ""} · {t("읽음 {{count}}", { count: post.readCount })}
+              {post.editedAt ? ` · ${t("수정됨")}` : ""} ·{" "}
+              {t("읽음 {{count}}", { count: post.readCount })}
             </Text>
           </View>
         </View>
@@ -279,7 +331,9 @@ export function TeamBoardDetailScreen() {
                 <Text className="flex-1 text-body-small text-text-normal" numberOfLines={1}>
                   {file.name}
                 </Text>
-                <Text className="text-caption-main text-text-alternative">{formatSize(file.size)}</Text>
+                <Text className="text-caption-main text-text-alternative">
+                  {formatSize(file.size)}
+                </Text>
               </Pressable>
             ))}
           </View>
@@ -311,7 +365,9 @@ export function TeamBoardDetailScreen() {
                     onLoad={(event) => {
                       const { width, height } = event.nativeEvent.source;
                       if (width > 0 && height > 0) {
-                        setRatios((prev) => (prev[url] ? prev : { ...prev, [url]: width / height }));
+                        setRatios((prev) =>
+                          prev[url] ? prev : { ...prev, [url]: width / height },
+                        );
                       }
                     }}
                   />
@@ -357,9 +413,14 @@ export function TeamBoardDetailScreen() {
 
             <View className="ml-3 flex-1 flex-row items-center">
               {post.reactors.slice(0, REACTOR_PREVIEW_COUNT).map((reactor, index) => (
-                <View key={`${reactor.userId}-${reactor.emoji}`} className={index === 0 ? "" : "-ml-1"}>
+                <View
+                  key={`${reactor.userId}-${reactor.emoji}`}
+                  className={index === 0 ? "" : "-ml-1"}
+                >
                   <Avatar imageUrl={reactor.avatarUrl} size={44} />
-                  <Text className="absolute -bottom-1 -right-1 text-body-main">{reactor.emoji}</Text>
+                  <Text className="absolute -bottom-1 -right-1 text-body-main">
+                    {reactor.emoji}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -373,7 +434,7 @@ export function TeamBoardDetailScreen() {
 
         {/* 댓글 */}
         <View className="px-5 pt-4">
-          {post.comments.length === 0 ? (
+          {post.comments.length + pendingComments.topLevel.length === 0 ? (
             <View className="items-center rounded-2xl bg-background-muted py-6">
               <Text className="text-body-small text-text-alternative">
                 {t("멤버들과 댓글로 대화해 보세요.")}
@@ -384,9 +445,11 @@ export function TeamBoardDetailScreen() {
               <View key={comment.id}>
                 {renderComment(comment, false)}
                 {comment.replies.map((reply) => renderComment(reply, true))}
+                {pendingComments.repliesOf(comment.id).map((item) => renderPending(item, true))}
               </View>
             ))
           )}
+          {pendingComments.topLevel.map((item) => renderPending(item, false))}
         </View>
       </ScrollView>
 
@@ -454,7 +517,11 @@ export function TeamBoardDetailScreen() {
         onConfirm={confirmDeletePost}
       />
 
-      <ReactorsModal visible={reactorsOpen} reactors={post.reactors} onClose={() => setReactorsOpen(false)} />
+      <ReactorsModal
+        visible={reactorsOpen}
+        reactors={post.reactors}
+        onClose={() => setReactorsOpen(false)}
+      />
 
       <ChatImageViewer
         urls={post.imageUrls}

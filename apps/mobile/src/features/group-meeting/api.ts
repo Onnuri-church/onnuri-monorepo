@@ -1,5 +1,6 @@
 import type {
   CreateGroupMeetingRequest,
+  GroupMeetingComment,
   GroupMeetingDetail,
   GroupMeetingListResponse,
   MyGroupMeeting,
@@ -192,8 +193,11 @@ export function useRemoveGroupMeetingPhoto(meetingId: string) {
 export function useAddGroupMeetingComment(meetingId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
-      apiClient.post(`/posts/${meetingId}/comments`, { content }).then((res) => res.data),
+    // parentId를 주면 그 댓글의 답글이 된다 (SCRUM-216 — 1단계까지)
+    mutationFn: ({ content, parentId }: { content: string; parentId?: string }) =>
+      apiClient
+        .post<GroupMeetingComment>(`/posts/${meetingId}/comments`, { content, parentId })
+        .then((res) => res.data),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["group-meetings", meetingId] }),
   });

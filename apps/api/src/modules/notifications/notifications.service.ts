@@ -32,6 +32,8 @@ export interface NotifyInput {
   body: string;
   /** 앱 내부 경로 ("notice/{id}" 등) — shared NotificationInfo.linkUrl 참고 */
   linkUrl?: string;
+  /** 댓글 알림이면 그 댓글 — 앱이 상세에서 그 댓글로 스크롤해 강조한다 (SCRUM-215) */
+  commentId?: string;
   /** 푸시를 거를 유저 설정 컬럼 — 없으면 타입별 기본(PUSH_PREF_COLUMN)을 쓴다 */
   pref?: PrefColumn;
 }
@@ -54,6 +56,7 @@ export class NotificationsService {
         title: true,
         body: true,
         linkUrl: true,
+        commentId: true,
         readAt: true,
         createdAt: true,
       },
@@ -64,6 +67,7 @@ export class NotificationsService {
       title: row.title,
       body: row.body,
       linkUrl: row.linkUrl,
+      commentId: row.commentId,
       isRead: row.readAt !== null,
       createdAt: row.createdAt.toISOString(),
     }));
@@ -122,6 +126,7 @@ export class NotificationsService {
           title: input.title,
           body: input.body,
           linkUrl: input.linkUrl ?? null,
+          commentId: input.commentId ?? null,
         })),
       });
       await this.sendPush(userIds, input);
@@ -186,7 +191,10 @@ export class NotificationsService {
       body: input.body,
       sound: 'default',
       // 앱이 푸시 탭을 받으면 알림센터를 연다 — linkUrl은 이후 딥링크 확장용으로 같이 싣는다.
-      data: { linkUrl: input.linkUrl ?? null },
+      data: {
+        linkUrl: input.linkUrl ?? null,
+        commentId: input.commentId ?? null,
+      },
     }));
 
     for (let start = 0; start < messages.length; start += 100) {

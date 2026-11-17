@@ -28,7 +28,8 @@ export type RootStackParamList = {
   Bulletin: undefined;
   // teamId를 주면 그 팀으로 필터된 채 열린다 (팀 상세의 "OO팀 게시판" 진입).
   DepartmentActivity: { teamId?: string } | undefined;
-  DepartmentActivityDetail: { id: string };
+  /** commentId: 댓글 알림으로 들어오면 그 댓글로 스크롤해 강조한다 (SCRUM-215) */
+  DepartmentActivityDetail: { id: string; commentId?: string };
   // 글쓰기 1단계(날짜·부서·제목). postId가 있으면 그 글 수정, 없으면 새 글 작성.
   DepartmentActivityMeta: { postId: string } | undefined;
   // 글쓰기 2단계(본문·사진) — 1단계에서 정한 값을 넘겨 받는다. postId가 있으면 수정 모드.
@@ -45,7 +46,7 @@ export type RootStackParamList = {
   GroupMeeting: undefined;
   // 마이페이지 "취향 소그룹" — 내가 신청·참여 중인 모임 목록.
   MyGroupMeetings: undefined;
-  GroupMeetingDetail: { id: string };
+  GroupMeetingDetail: { id: string; commentId?: string };
   // 상세 "사진 N장 모두 보기" — 월 묶음 그리드 (편집은 소그룹장·관리자).
   GroupMeetingGallery: { meetingId: string };
   // 상세 "참여 멤버" 행 — 승인된 멤버 전체 명단.
@@ -101,7 +102,7 @@ export type RootStackParamList = {
   // 전체 셀 목록(하단 탭)에서 셀을 고르면 진입하는 개별 셀 페이지 (소식/갤러리/구성원/관리 4탭).
   // 셀은 관리자가 만들고 종료하는 유동 데이터라 화면 하나가 cellId로 어떤 셀이든 그린다.
   CellDetail: { cellId: string };
-  CellNewsDetail: { cellId: string; newsId: string };
+  CellNewsDetail: { cellId: string; newsId: string; commentId?: string };
   CellNewsWrite: { cellId: string; newsId?: string };
   // 갤러리 사진 뷰어. index는 월 섹션을 이어붙인 평탄화 순번이다.
   CellGalleryPhoto: { cellId: string; index: number };

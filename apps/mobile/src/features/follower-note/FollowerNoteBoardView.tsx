@@ -9,9 +9,15 @@ import { FilterChip } from "../../shared/components/base/FilterChip";
 import { FloatingButton } from "../../shared/components/base/FloatingButton";
 import { Icon } from "../../shared/components/base/Icon";
 import { KeyboardAvoidingContainer } from "../../shared/components/base/KeyboardAvoidingContainer";
+import { useNewItems } from "../../shared/hooks/useNewItems";
+import type { PendingComment } from "../../shared/hooks/usePendingComments";
 import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { colors } from "../../shared/theme/tokens";
-import { FollowerNoteCard, type FollowerNoteCardContent, type MenuAnchor } from "./FollowerNoteCard";
+import {
+  FollowerNoteCard,
+  type FollowerNoteCardContent,
+  type MenuAnchor,
+} from "./FollowerNoteCard";
 
 /** 게시판이 다루는 노트의 공통 모양 — 셀 노트·팀 노트 모두 이 필드를 가진다. */
 export interface BoardNote {
@@ -21,7 +27,8 @@ export interface BoardNote {
   comments: FollowerNoteCommentInfo[];
 }
 
-type MutateOptions = { onSuccess?: () => void; onError?: (error: unknown) => void };
+// onSuccess는 서버가 돌려준 갱신된 노트 목록을 받는다 (셀·팀 훅 모두 목록을 돌려준다).
+type MutateOptions = { onSuccess?: (data: unknown) => void; onError?: (error: unknown) => void };
 /** react-query useMutation 결과에서 쓰는 부분만 — 셀·팀 훅이 같은 모양이라 그대로 넘긴다. */
 interface Mutation<V> {
   mutate(variables: V, options?: MutateOptions): void;
@@ -83,6 +90,12 @@ export function FollowerNoteBoardView<N extends BoardNote>({
   // 답글 대상과 수정 중인 댓글 — 입력창 하나를 모드만 바꿔 쓴다 (부서활동 상세와 같은 방식).
   const [replyTo, setReplyTo] = useState<FollowerNoteCommentInfo | null>(null);
   const [editing, setEditing] = useState<FollowerNoteCommentInfo | null>(null);
+  // 보내는 중인 댓글 (SCRUM-215) — 누르는 즉시 흐리게 먼저 그린다. 노트마다 따로 모은다.
+  const [pending, setPending] = useState<(PendingComment & { noteId: string })[]>([]);
+  // 화면을 연 뒤 새로 생긴 댓글만 등장 효과를 준다
+  const { isNew, markSeen } = useNewItems(
+    notes?.flatMap((note) => note.comments.map((comment) => comment.id)),
+  );
   // ⋮ 메뉴 — 누른 버튼 아래에 붙인다 (큐티나눔 게시판과 같은 방식).
   const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
 
@@ -157,7 +170,11 @@ export function FollowerNoteBoardView<N extends BoardNote>({
   };
 
   const handleMenuPress = (id: string, anchor: MenuAnchor) =>
-    setMenu({ id, top: anchor.y + anchor.height + 4, right: windowWidth - (anchor.x + anchor.width) });
+    setMenu({
+      id,
+      top: anchor.y + anchor.height + 4,
+      right: windowWidth - (anchor.x + anchor.width),
+    });
 
   const handleDeletePress = (noteId: string) => {
     deleteTargetId.current = noteId;
@@ -174,7 +191,7 @@ export function FollowerNoteBoardView<N extends BoardNote>({
 
   const handleCommentSubmit = () => {
     const content = commentDraft.trim();
-    if (!expandedId || !content || addComment.isPending || updateComment.isPending) return;
+    if (!expandedId || !content || updateComment.isPending) return;
     if (editing) {
       updateComment.mutate(
         { noteId: expandedId, commentId: editing.id, content },
@@ -186,14 +203,34 @@ export function FollowerNoteBoardView<N extends BoardNote>({
       );
       return;
     }
+    const noteId = expandedId;
+    const parentId = replyTo?.id ?? null;
+    const localId = `local-${Date.now()}`;
+    setPending((prev) => [...prev, { localId, noteId, content, parentId }]);
+    resetComposer();
+    const removePending = () =>
+      setPending((prev) => prev.filter((item) => item.localId !== localId));
     addComment.mutate(
-      { noteId: expandedId, content, parentId: replyTo?.id },
+      { noteId, content, parentId: parentId ?? undefined },
       {
-        onSuccess: resetComposer,
+        // 응답 목록에 든 댓글을 "이미 본 것"으로 등록하고 흐린 댓글을 뺀다 — 같은 자리에서 바뀐다.
+        onSuccess: (data) => {
+          (data as BoardNote[] | undefined)?.forEach((note) =>
+            note.comments.forEach((comment) => markSeen(comment.id)),
+          );
+          removePending();
+        },
         // 실패를 그냥 삼키면 입력칸만 남고 아무 일도 안 일어난 것처럼 보인다 (SCRUM-211).
         // 서버가 이유를 주면(권한·검증 등) 그대로, 아니면 상태 코드라도 같이 보여 원인을 알 수 있게 한다.
-        onError: (error) =>
-          Alert.alert(t("댓글을 등록하지 못했어요"), describeError(error, t("잠시 후 다시 시도해주세요."))),
+        // 실패하면 흐린 댓글을 지우고 쓴 내용을 입력칸에 되돌린다.
+        onError: (error) => {
+          removePending();
+          setCommentDraft((prev) => prev || content);
+          Alert.alert(
+            t("댓글을 등록하지 못했어요"),
+            describeError(error, t("잠시 후 다시 시도해주세요.")),
+          );
+        },
       },
     );
   };
@@ -259,7 +296,11 @@ export function FollowerNoteBoardView<N extends BoardNote>({
               onSelect={(month) => handlePick({ year: pick.year, month })}
             />
           </View>
-          <FilterChip label={t("전체 기간")} selected={showAll} onPress={() => setShowAll((prev) => !prev)} />
+          <FilterChip
+            label={t("전체 기간")}
+            selected={showAll}
+            onPress={() => setShowAll((prev) => !prev)}
+          />
         </View>
 
         <ScrollView
@@ -295,6 +336,8 @@ export function FollowerNoteBoardView<N extends BoardNote>({
                 <FollowerNoteCard
                   content={renderContent(note)}
                   comments={note.comments}
+                  pending={pending.filter((item) => item.noteId === note.id)}
+                  isNew={isNew}
                   expanded={note.id === expandedId}
                   onToggle={() => expand(note.id === expandedId ? null : note.id)}
                   onMenuPress={canWrite ? (anchor) => handleMenuPress(note.id, anchor) : undefined}

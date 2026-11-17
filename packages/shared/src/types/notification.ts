@@ -34,6 +34,8 @@ export interface NotificationInfo {
    * 앱의 NotificationScreen이 파싱해 네비게이션한다. null이면 이동 없음.
    */
   linkUrl: string | null;
+  /** 댓글 알림이면 그 댓글 id — 상세 화면이 그 댓글로 스크롤해 잠깐 강조한다 (SCRUM-215) */
+  commentId: string | null;
   isRead: boolean;
   /** ISO datetime — "방금 전" 같은 상대 표기는 앱이 조립한다 (utils/date의 toTimeAgo) */
   createdAt: string;

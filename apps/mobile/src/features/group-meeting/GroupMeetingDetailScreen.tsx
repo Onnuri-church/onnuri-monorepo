@@ -1,7 +1,8 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import type { GroupMeetingComment, GroupMeetingDetail } from "@onnuri/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRef, useState } from "react";
 import {
   Alert,
   Image,
@@ -40,7 +41,14 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { CommentInput } from "../../shared/components/composed/CommentInput";
-import { CommentItem } from "../../shared/components/composed/CommentItem";
+import { CommentThread, PendingCommentItem } from "../../shared/components/composed/CommentThread";
+import { useCommentScroll } from "../../shared/hooks/useCommentScroll";
+import { useNewItems } from "../../shared/hooks/useNewItems";
+import {
+  flattenCommentIds,
+  insertComment,
+  usePendingComments,
+} from "../../shared/hooks/usePendingComments";
 import { ManageLinkCard } from "../cell/components/ManageLinkCard";
 import { useMe } from "../profile/useMe";
 import { useBlockConfirm } from "../block/useBlockConfirm";
@@ -89,6 +97,8 @@ export function GroupMeetingDetailScreen() {
   const { openReport, sheet: reportSheet } = useReport();
   const themeColors = useThemeColors();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupMeetingDetail">>();
+  // 답글 대상 (SCRUM-216)
+  const [replyTo, setReplyTo] = useState<GroupMeetingComment | null>(null);
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [comment, setComment] = useState("");
 
@@ -129,7 +139,6 @@ export function GroupMeetingDetailScreen() {
     }
   };
 
-
   const {
     data: meeting,
     isPending,
@@ -139,6 +148,14 @@ export function GroupMeetingDetailScreen() {
     queryKey: ["group-meetings", params.id],
     queryFn: () => fetchGroupMeetingDetail(params.id),
   });
+  // 댓글 즉시 표시·등장 효과·알림 진입 강조 (SCRUM-215)
+  const queryClient = useQueryClient();
+  const pendingComments = usePendingComments();
+  const { isNew, markSeen } = useNewItems(
+    meeting ? flattenCommentIds(meeting.comments) : undefined,
+  );
+  const scrollRef = useRef<ScrollView>(null);
+  const commentScroll = useCommentScroll(scrollRef, params.commentId, meeting?.comments);
 
   // 당겨서 새로고침 — 직접 당겼을 때만 스피너를 보인다 (뒤에서 도는 갱신에는 안 뜨게).
   const [refreshing, setRefreshing] = useState(false);
@@ -151,14 +168,44 @@ export function GroupMeetingDetailScreen() {
     }
   };
 
-  const handleCommentSubmit = () => {
+  // 누르는 즉시 흐린 댓글을 먼저 그리고 입력칸을 비운다 — 서버가 받으면 같은 자리에서 진짜 댓글로
+  // 바뀌고, 실패하면 쓴 내용을 입력칸에 되돌린다 (SCRUM-215). 답글 대상이 있으면 그 아래에 단다 (SCRUM-216).
+  const handleCommentSubmit = async () => {
     const content = comment.trim();
-    if (!content || addComment.isPending) return;
+    if (!content) return;
     if (!me) {
       Alert.alert(t("로그인이 필요해요"), t("댓글은 로그인 후 남길 수 있어요."));
       return;
     }
-    addComment.mutate(content, { onSuccess: () => setComment("") });
+    const parentId = replyTo?.id ?? null;
+    const localId = pendingComments.add(content, parentId);
+    setComment("");
+    setReplyTo(null);
+    try {
+      // 서버는 게시판 공용 댓글 모양으로 돌려준다 — 소그룹 화면에 필요한 필드는 같다.
+      const created = await addComment.mutateAsync({ content, parentId: parentId ?? undefined });
+      const asMeetingComment: GroupMeetingComment = {
+        id: created.id,
+        authorId: created.authorId,
+        authorName: created.authorName,
+        authorAvatarUrl: created.authorAvatarUrl,
+        createdAt: created.createdAt,
+        content: created.content,
+        isMine: true,
+        replies: [],
+      };
+      markSeen(created.id);
+      queryClient.setQueryData<GroupMeetingDetail>(["group-meetings", params.id], (prev) =>
+        prev
+          ? { ...prev, comments: insertComment(prev.comments, asMeetingComment, parentId) }
+          : prev,
+      );
+      pendingComments.remove(localId);
+    } catch {
+      pendingComments.remove(localId);
+      setComment((prev) => prev || content);
+      Alert.alert(t("댓글을 등록하지 못했어요"), t("잠시 후 다시 시도해주세요."));
+    }
   };
 
   // 하단 버튼 — 참여는 승인제: 신청(PENDING) → 소그룹장/관리자 승인. 상태별로 문구가 바뀐다.
@@ -168,11 +215,12 @@ export function GroupMeetingDetailScreen() {
       Alert.alert(t("로그인이 필요해요"), t("참여 신청은 로그인 후 할 수 있어요."));
       return;
     }
-    const mutation = meeting.myStatus === null || meeting.myStatus === "REJECTED" ? join : cancelJoin;
+    const mutation =
+      meeting.myStatus === null || meeting.myStatus === "REJECTED" ? join : cancelJoin;
     mutation.mutate(undefined, {
       onError: (error) => {
-        const message =
-          (error as { response?: { data?: { message?: string } } }).response?.data?.message;
+        const message = (error as { response?: { data?: { message?: string } } }).response?.data
+          ?.message;
         Alert.alert(t("요청 실패"), message ?? t("잠시 후 다시 시도해주세요."));
       },
     });
@@ -197,7 +245,9 @@ export function GroupMeetingDetailScreen() {
   if (isError) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
-        <Text className="text-body-medium text-text-alternative">{t("모임을 불러오지 못했어요")}</Text>
+        <Text className="text-body-medium text-text-alternative">
+          {t("모임을 불러오지 못했어요")}
+        </Text>
       </View>
     );
   }
@@ -213,8 +263,11 @@ export function GroupMeetingDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <ScrollView
+        ref={scrollRef}
         contentContainerClassName="pb-6"
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />
+        }
       >
         {meeting.heroImageUrl ? (
           <Image
@@ -254,9 +307,7 @@ export function GroupMeetingDetailScreen() {
             {meeting.canManage && (
               <Pressable
                 className="rounded-md bg-background-muted px-2 py-0.5"
-                onPress={() =>
-                  navigation.navigate("GroupMeetingForm", { meetingId: params.id })
-                }
+                onPress={() => navigation.navigate("GroupMeetingForm", { meetingId: params.id })}
               >
                 <Text className="text-body-small text-text-neutral">{t("수정")}</Text>
               </Pressable>
@@ -284,9 +335,7 @@ export function GroupMeetingDetailScreen() {
           <Pressable
             className="mt-3 flex-row items-center gap-3"
             disabled={!me}
-            onPress={() =>
-              navigation.navigate("GroupMeetingMembers", { meetingId: params.id })
-            }
+            onPress={() => navigation.navigate("GroupMeetingMembers", { meetingId: params.id })}
           >
             {/* 사진 없는 멤버는 회색 기본 원으로 채운다(합쳐서 최대 3개) — 이 줄이 명단으로
                 가는 버튼인데, 전원이 사진이 없으면 아바타 줄이 통째로 사라져 눌리는 줄인지
@@ -362,7 +411,9 @@ export function GroupMeetingDetailScreen() {
                   {meeting.pendingMembers.slice(0, 3).map((member, index) => (
                     <View
                       key={member.id}
-                      className={index === 0 ? "" : "-ml-2 rounded-full border border-background-normal"}
+                      className={
+                        index === 0 ? "" : "-ml-2 rounded-full border border-background-normal"
+                      }
                     >
                       <Avatar imageUrl={member.avatarUrl} size={32} />
                     </View>
@@ -470,10 +521,18 @@ export function GroupMeetingDetailScreen() {
           </View>
         )}
 
-        <View className="pt-6" style={{ paddingHorizontal: CONTENT_PADDING }}>
+        <View
+          className="pt-6"
+          style={{ paddingHorizontal: CONTENT_PADDING }}
+          onLayout={commentScroll.onSectionLayout}
+        >
           {/* 게스트에게는 서버가 댓글을 내려주지 않는다 (SCRUM-192) — 개수 대신 안내만. */}
           <Text className="text-heading-small text-text-normal">
-            {me ? t("댓글 {{count}}", { count: meeting.comments.length }) : t("댓글")}
+            {me
+              ? t("댓글 {{count}}", {
+                  count: meeting.comments.length + pendingComments.topLevel.length,
+                })
+              : t("댓글")}
           </Text>
           {!me && (
             <Text className="mt-2 text-body-small text-text-alternative">
@@ -482,26 +541,30 @@ export function GroupMeetingDetailScreen() {
           )}
           <View className="mt-2">
             {meeting.comments.map((item) => (
-              <CommentItem
-                key={item.id}
-                authorName={item.authorName}
-                timeAgo={toTimeAgo(item.createdAt)}
-                content={item.content}
-                avatarUrl={item.authorAvatarUrl}
-                onDeletePress={
-                  item.isMine ? () => deleteComment.mutate(item.id) : undefined
-                }
-                onBlockPress={
-                  canBlock && !item.isMine
-                    ? () => requestBlock({ userId: item.authorId, name: item.authorName })
-                    : undefined
-                }
-                onReportPress={
-                  canBlock && !item.isMine
-                    ? () => openReport({ targetType: "COMMENT", targetId: item.id })
-                    : undefined
-                }
-              />
+              <View key={item.id} onLayout={commentScroll.onThreadLayout(item.id)}>
+                <CommentThread
+                  comment={item}
+                  isNew={isNew}
+                  pendingReplies={pendingComments.repliesOf(item.id)}
+                  highlightId={commentScroll.highlightId}
+                  onReplyPress={me ? (target) => setReplyTo(target) : undefined}
+                  onDeletePress={(target) => deleteComment.mutate(target.id)}
+                  onBlockPress={
+                    canBlock
+                      ? (target) =>
+                          requestBlock({ userId: target.authorId, name: target.authorName })
+                      : undefined
+                  }
+                  onReportPress={
+                    canBlock
+                      ? (target) => openReport({ targetType: "COMMENT", targetId: target.id })
+                      : undefined
+                  }
+                />
+              </View>
+            ))}
+            {pendingComments.topLevel.map((item) => (
+              <PendingCommentItem key={item.localId} content={item.content} />
             ))}
             {blockDialog}
             {reportSheet}
@@ -543,9 +606,24 @@ export function GroupMeetingDetailScreen() {
           backgroundColor: themeColors.background.normal,
         }}
       >
-        <CommentInput value={comment} onChangeText={setComment} onSubmit={handleCommentSubmit} />
+        {/* 답글 모드일 때만 누구에게 다는 중인지 보여주고 빠져나갈 길을 준다 (SCRUM-216) */}
+        {replyTo && (
+          <View className="mb-2 flex-row items-center justify-between">
+            <Text className="text-body-small text-text-alternative">
+              {t("{{name}}님에게 답글", { name: replyTo.authorName })}
+            </Text>
+            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+              <Text className="text-body-small text-text-alternative">{t("취소")}</Text>
+            </Pressable>
+          </View>
+        )}
+        <CommentInput
+          value={comment}
+          onChangeText={setComment}
+          onSubmit={() => void handleCommentSubmit()}
+          placeholder={replyTo ? t("답글을 입력하세요") : undefined}
+        />
       </View>
-
     </View>
   );
 }
