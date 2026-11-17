@@ -220,7 +220,9 @@ export class PrayersService {
       // 익명 글은 작성자 id도 내리지 않는다 — 차단 목록에 실명이 뜨면 익명이 깨진다 (SCRUM-201)
       authorId: anonymous ? null : row.authorId,
       // 익명 글은 사진도 노출하지 않는다 — 이름과 달리 관리자에게도 숨긴다 (사진은 식별력이 세다).
-      authorAvatarUrl: anonymous ? null : row.author.avatarUrl,
+      // 단 작성자 본인에게는 내 글임을 알 수 있게 그대로 보여준다 (이름도 "익명(내 이름)"으로 나간다).
+      authorAvatarUrl:
+        anonymous && row.authorId !== userId ? null : row.author.avatarUrl,
       content: row.content,
       viewCount: row.viewCount + 1,
       photoUrls: row.images.map((image) => image.url),
