@@ -21,7 +21,7 @@ export interface BoardNote {
   comments: FollowerNoteCommentInfo[];
 }
 
-type MutateOptions = { onSuccess?: () => void; onError?: () => void };
+type MutateOptions = { onSuccess?: () => void; onError?: (error: unknown) => void };
 /** react-query useMutation 결과에서 쓰는 부분만 — 셀·팀 훅이 같은 모양이라 그대로 넘긴다. */
 interface Mutation<V> {
   mutate(variables: V, options?: MutateOptions): void;
@@ -188,7 +188,13 @@ export function FollowerNoteBoardView<N extends BoardNote>({
     }
     addComment.mutate(
       { noteId: expandedId, content, parentId: replyTo?.id },
-      { onSuccess: resetComposer },
+      {
+        onSuccess: resetComposer,
+        // 실패를 그냥 삼키면 입력칸만 남고 아무 일도 안 일어난 것처럼 보인다 (SCRUM-211).
+        // 서버가 이유를 주면(권한·검증 등) 그대로, 아니면 상태 코드라도 같이 보여 원인을 알 수 있게 한다.
+        onError: (error) =>
+          Alert.alert(t("댓글을 등록하지 못했어요"), describeError(error, t("잠시 후 다시 시도해주세요."))),
+      },
     );
   };
 
@@ -349,4 +355,14 @@ export function FollowerNoteBoardView<N extends BoardNote>({
       />
     </View>
   );
+}
+
+// 서버 응답의 message(문자열 또는 검증 오류 배열)를 안내 문구로 — 없으면 기본 문구에 상태 코드를 붙인다.
+function describeError(error: unknown, fallback: string): string {
+  const response = (error as { response?: { status?: number; data?: { message?: unknown } } })
+    .response;
+  const message = response?.data?.message;
+  if (typeof message === "string" && message) return message;
+  if (Array.isArray(message) && typeof message[0] === "string") return message[0];
+  return response?.status ? `${fallback} (${response.status})` : fallback;
 }
