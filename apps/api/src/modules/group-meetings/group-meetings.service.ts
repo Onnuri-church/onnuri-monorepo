@@ -41,6 +41,28 @@ function toPeriodLabel(start: Date | null, end: Date | null): string {
 
 // 취향 소그룹 (HobbyGroup = Post 1:1 확장). 참여는 승인제 — 신청(PENDING)을 소그룹장/관리자가
 // 승인·거절한다 (2026-09-08 확정). 소그룹장은 생성 폼에서 한 명 이상 지정 (2026-09-21 확정).
+// 소그룹 댓글 한 건 — 답글(replies)은 부르는 쪽이 채운다.
+function toMeetingComment(
+  comment: {
+    id: string;
+    content: string;
+    createdAt: Date;
+    authorId: string;
+    author: { name: string; avatarUrl: string | null };
+  },
+  userId: string | undefined,
+) {
+  return {
+    id: comment.id,
+    authorId: comment.authorId,
+    authorName: comment.author.name,
+    authorAvatarUrl: comment.author.avatarUrl,
+    createdAt: comment.createdAt.toISOString(),
+    content: comment.content,
+    isMine: userId !== undefined && comment.authorId === userId,
+  };
+}
+
 @Injectable()
 export class GroupMeetingsService {
   constructor(
@@ -203,14 +225,30 @@ export class GroupMeetingsService {
                 { createdAt: 'desc' },
               ],
             },
+            // 최상위 댓글만 받고 답글은 그 아래에 묶는다 (SCRUM-216 — 1단계 답글).
             comments: {
-              where: { deletedAt: null, author: visibleAuthorWhere() },
+              where: {
+                deletedAt: null,
+                parentId: null,
+                author: visibleAuthorWhere(),
+              },
               select: {
                 id: true,
                 content: true,
                 createdAt: true,
                 authorId: true,
                 author: { select: { name: true, avatarUrl: true } },
+                replies: {
+                  where: { deletedAt: null, author: visibleAuthorWhere() },
+                  select: {
+                    id: true,
+                    content: true,
+                    createdAt: true,
+                    authorId: true,
+                    author: { select: { name: true, avatarUrl: true } },
+                  },
+                  orderBy: { createdAt: 'asc' },
+                },
               },
               orderBy: { createdAt: 'asc' },
             },
@@ -294,13 +332,11 @@ export class GroupMeetingsService {
       })),
       photoCount: isGuest ? 0 : group.post.images.length,
       comments: (isGuest ? [] : group.post.comments).map((comment) => ({
-        id: comment.id,
-        authorId: comment.authorId,
-        authorName: comment.author.name,
-        authorAvatarUrl: comment.author.avatarUrl,
-        createdAt: comment.createdAt.toISOString(),
-        content: comment.content,
-        isMine: userId !== undefined && comment.authorId === userId,
+        ...toMeetingComment(comment, userId),
+        replies: comment.replies.map((reply) => ({
+          ...toMeetingComment(reply, userId),
+          replies: [],
+        })),
       })),
       myStatus: mine?.status ?? null,
       canManage,

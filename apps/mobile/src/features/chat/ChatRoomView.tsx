@@ -5,18 +5,12 @@ import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  Image,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Image, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadAttachment, uploadImage } from "../../shared/api/upload";
+import { AppearIn } from "../../shared/components/base/AppearIn";
+import { useNewItems } from "../../shared/hooks/useNewItems";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { Icon } from "../../shared/components/base/Icon";
@@ -83,7 +77,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { data: room } = useChatRoom(kind, id, focused);
-  const send = useSendChatMessage(kind, id);
+  // 방을 연 뒤 새로 온 말풍선만 "톡" 하고 나타나게 한다 (SCRUM-215). 내가 보낸 건 보내는 중 말풍선이
+  // 먼저 나타났으니 진짜로 바뀔 때는 효과를 주지 않는다.
+  const { isNew, markSeen } = useNewItems(room?.messages.map((message) => message.id));
+  const send = useSendChatMessage(kind, id, (message) => markSeen(message.id));
   const setNotice = useSetChatNotice(kind, id);
   const react = useToggleChatReaction(kind, id);
   const remove = useDeleteChatMessage(kind, id);
@@ -135,9 +132,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const mentionCandidates =
     mentionQuery === null
       ? []
-      : (room?.members ?? [])
-          .filter((member) => member.name.includes(mentionQuery))
-          .slice(0, 6);
+      : (room?.members ?? []).filter((member) => member.name.includes(mentionQuery)).slice(0, 6);
 
   const handlePickMention = (member: { id: string; name: string }) => {
     setDraft((prev) => prev.replace(/@([^\s@]*)$/, `@${member.name} `));
@@ -176,7 +171,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     setPhotoUris((prev) => [...prev, ...nextPhotos].slice(0, MAX_IMAGES));
     setVideos((prev) => [...prev, ...nextVideos].slice(0, MAX_VIDEOS));
     if (skipped > 0) {
-      Alert.alert(t("동영상은 50MB까지 보낼 수 있어요"), t("용량이 큰 동영상 {{count}}개는 제외했어요.", { count: skipped }));
+      Alert.alert(
+        t("동영상은 50MB까지 보낼 수 있어요"),
+        t("용량이 큰 동영상 {{count}}개는 제외했어요.", { count: skipped }),
+      );
     }
   };
 
@@ -188,7 +186,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     try {
       DocumentPicker = require("expo-document-picker");
     } catch {
-      Alert.alert(t("앱 업데이트가 필요해요"), t("파일 보내기는 앱을 새로 설치한 뒤에 쓸 수 있어요."));
+      Alert.alert(
+        t("앱 업데이트가 필요해요"),
+        t("파일 보내기는 앱을 새로 설치한 뒤에 쓸 수 있어요."),
+      );
       return;
     }
     const result = await DocumentPicker.getDocumentAsync({
@@ -225,7 +226,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     }
     setFiles((prev) => [...prev, ...picked].slice(0, MAX_FILES));
     if (skipped > 0) {
-      Alert.alert(t("파일은 10MB까지 보낼 수 있어요"), t("용량이 큰 파일 {{count}}개는 제외했어요.", { count: skipped }));
+      Alert.alert(
+        t("파일은 10MB까지 보낼 수 있어요"),
+        t("용량이 큰 파일 {{count}}개는 제외했어요.", { count: skipped }),
+      );
     }
   };
 
@@ -243,7 +247,9 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   };
 
   const deliver = (localId: string, body: SendChatMessageRequest) => {
-    setPending((prev) => prev.map((item) => (item.localId === localId ? { ...item, failed: false } : item)));
+    setPending((prev) =>
+      prev.map((item) => (item.localId === localId ? { ...item, failed: false } : item)),
+    );
     sendQueue.current = sendQueue.current.then(() =>
       send
         .mutateAsync(body)
@@ -390,55 +396,58 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
               {t("차단한 사용자의 메시지예요")}
             </Text>
           ) : (
-          <ChatBubble
-            key={message.id}
-            message={message}
-            kind={kind}
-            roomId={id}
-            onLongPress={() => setActionTarget(message)}
-            onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
-            onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
-          />
+            <AppearIn key={message.id} variant="pop" animate={isNew(message.id)}>
+              <ChatBubble
+                message={message}
+                kind={kind}
+                roomId={id}
+                onLongPress={() => setActionTarget(message)}
+                onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
+                onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
+              />
+            </AppearIn>
           ),
         )}
         {pending.map((item) => (
-          <View key={item.localId} className="gap-1">
-            {/* 보내는 중에는 흐리게 — 서버가 받으면 이 자리는 진짜 메시지로 바뀐다 */}
-            <View style={{ opacity: item.failed ? 1 : 0.5 }}>
-              <ChatBubble
-                message={item.message}
-                kind={kind}
-                roomId={id}
-                onLongPress={() => undefined}
-                onImagePress={() => undefined}
-                onReactionPress={() => undefined}
-              />
-            </View>
-            {item.failed && (
-              <View className="flex-row items-center justify-end gap-3">
-                <Text className="text-caption-main text-semantic-danger">{t("전송 실패")}</Text>
-                <Pressable hitSlop={8} onPress={() => deliver(item.localId, item.body)}>
-                  <Text className="text-caption-main text-primary-normal">{t("다시 보내기")}</Text>
-                </Pressable>
-                <Pressable
-                  hitSlop={8}
-                  onPress={() =>
-                    setPending((prev) => prev.filter((value) => value.localId !== item.localId))
-                  }
-                >
-                  <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
-                </Pressable>
+          <AppearIn key={item.localId} variant="pop" animate>
+            <View className="gap-1">
+              {/* 보내는 중에는 흐리게 — 서버가 받으면 이 자리는 진짜 메시지로 바뀐다 */}
+              <View style={{ opacity: item.failed ? 1 : 0.5 }}>
+                <ChatBubble
+                  message={item.message}
+                  kind={kind}
+                  roomId={id}
+                  onLongPress={() => undefined}
+                  onImagePress={() => undefined}
+                  onReactionPress={() => undefined}
+                />
               </View>
-            )}
-          </View>
+              {item.failed && (
+                <View className="flex-row items-center justify-end gap-3">
+                  <Text className="text-caption-main text-semantic-danger">{t("전송 실패")}</Text>
+                  <Pressable hitSlop={8} onPress={() => deliver(item.localId, item.body)}>
+                    <Text className="text-caption-main text-primary-normal">
+                      {t("다시 보내기")}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    hitSlop={8}
+                    onPress={() =>
+                      setPending((prev) => prev.filter((value) => value.localId !== item.localId))
+                    }
+                  >
+                    <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
+                  </Pressable>
+                </View>
+              )}
+            </View>
+          </AppearIn>
         ))}
       </ScrollView>
 
       {/* 언급 후보 */}
       {mentionCandidates.length > 0 && (
-        <View
-          className="border-t border-background-assistive bg-background-normal px-5 py-2"
-        >
+        <View className="border-t border-background-assistive bg-background-normal px-5 py-2">
           {mentionCandidates.map((member) => (
             <Pressable
               key={member.id}
@@ -600,7 +609,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           closeActions();
         }}
         onToggleNotice={() => {
-          if (actionTarget) setNotice.mutate({ messageId: actionTarget.id, on: !actionTarget.isNotice });
+          if (actionTarget)
+            setNotice.mutate({ messageId: actionTarget.id, on: !actionTarget.isNotice });
           closeActions();
         }}
         onDelete={() => {

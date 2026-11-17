@@ -567,14 +567,30 @@ export class PostsService {
         },
         _count: { select: { likes: true } },
         likes: { where: myLikeFilter(userId), select: { id: true } },
+        // 최상위 댓글만 받고 답글은 그 아래에 묶는다 (SCRUM-216 — 부서활동과 같은 1단계 답글).
         comments: {
-          where: { deletedAt: null, author: visibleAuthorWhere() },
+          where: {
+            deletedAt: null,
+            parentId: null,
+            author: visibleAuthorWhere(),
+          },
           select: {
             id: true,
             content: true,
             createdAt: true,
             authorId: true,
             author: { select: { name: true, avatarUrl: true } },
+            replies: {
+              where: { deletedAt: null, author: visibleAuthorWhere() },
+              select: {
+                id: true,
+                content: true,
+                createdAt: true,
+                authorId: true,
+                author: { select: { name: true, avatarUrl: true } },
+              },
+              orderBy: { createdAt: 'asc' },
+            },
           },
           orderBy: { createdAt: 'asc' },
         },
@@ -603,10 +619,12 @@ export class PostsService {
       likeCount: post._count.likes,
       likedByMe: post.likes.length > 0,
       isMine: post.authorId === userId,
-      // 셀 소식은 대댓글을 쓰지 않아 replies가 항상 빈 배열이다 (부서활동만 1단계로 쓴다).
-      comments: post.comments.map((comment) =>
-        toPostComment(comment, userId, isAdmin),
-      ),
+      comments: post.comments.map((comment) => ({
+        ...toPostComment(comment, userId, isAdmin),
+        replies: comment.replies.map((reply) =>
+          toPostComment(reply, userId, isAdmin),
+        ),
+      })),
     };
   }
 
@@ -1158,6 +1176,8 @@ export class PostsService {
       },
     });
 
+    // 알림을 누르면 그 댓글을 짚어 보여준다 (SCRUM-215) — 앱이 commentId로 스크롤·강조한다.
+    const linkUrl = toPostLinkUrl(post.board, postId, post.cellId);
     // 글 작성자 알림 — 내 글에 내가 단 댓글은 제외.
     if (post.authorId !== userId) {
       await this.notifications.notify([post.authorId], {
@@ -1166,8 +1186,29 @@ export class PostsService {
         body: post.title
           ? `${comment.author.name}님이 "${post.title}"에 댓글을 남겼어요.`
           : `${comment.author.name}님이 회원님의 글에 댓글을 남겼어요.`,
-        linkUrl: toPostLinkUrl(post.board, postId, post.cellId),
+        linkUrl,
+        commentId: comment.id,
       });
+    }
+    // 답글이면 원댓글 작성자에게도 알린다 (SCRUM-216) — 나 자신·위에서 이미 알린 글 작성자는 빼고.
+    if (parentId) {
+      const parent = await this.prisma.comment.findUnique({
+        where: { id: parentId },
+        select: { authorId: true },
+      });
+      if (
+        parent &&
+        parent.authorId !== userId &&
+        parent.authorId !== post.authorId
+      ) {
+        await this.notifications.notify([parent.authorId], {
+          type: 'COMMENT',
+          title: '답글',
+          body: `${comment.author.name}님이 회원님의 댓글에 답글을 남겼어요.`,
+          linkUrl,
+          commentId: comment.id,
+        });
+      }
     }
 
     return toPostComment(comment, userId);

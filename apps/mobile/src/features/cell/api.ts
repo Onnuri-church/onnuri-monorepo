@@ -105,9 +105,10 @@ export function useDeleteCellNews(cellId: string) {
 export function useAddCellNewsComment(newsId: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (content: string) =>
+    // parentId를 주면 그 댓글의 답글이 된다 (SCRUM-216 — 1단계까지)
+    mutationFn: ({ content, parentId }: { content: string; parentId?: string }) =>
       apiClient
-        .post<PostComment>(`/posts/${newsId}/comments`, { content })
+        .post<PostComment>(`/posts/${newsId}/comments`, { content, parentId })
         .then((res) => res.data),
     onSuccess: () =>
       void queryClient.invalidateQueries({ queryKey: ["cell-news-detail", newsId] }),

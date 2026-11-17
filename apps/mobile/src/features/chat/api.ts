@@ -75,12 +75,19 @@ function useRoomMutation<TInput>(
 
 // 보낸 메시지는 서버 응답으로 바로 목록 끝에 붙인다 — 방 전체를 다시 받을 때까지 기다리지 않는다 (SCRUM-212).
 // 공지·읽음 등 나머지 상태는 뒤이어 다시 받아 맞춘다.
-export function useSendChatMessage(kind: ChatKind, id: string) {
+// onBeforeAppend: 캐시에 붙이기 직전에 불린다 — 화면이 "보내는 중" 말풍선을 진짜로 바꿀 때 등장 효과를
+// 다시 주지 않게 그 id를 미리 등록한다 (SCRUM-215).
+export function useSendChatMessage(
+  kind: ChatKind,
+  id: string,
+  onBeforeAppend?: (message: ChatMessageInfo) => void,
+) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (body: SendChatMessageRequest) =>
       apiClient.post<ChatMessageInfo>(roomPath(kind, id), body).then((res) => res.data),
     onSuccess: (message) => {
+      onBeforeAppend?.(message);
       queryClient.setQueryData<ChatRoomResponse>(["chat", kind, id], (room) =>
         room && !room.messages.some((item) => item.id === message.id)
           ? { ...room, messages: [...room.messages, message] }
