@@ -1,4 +1,4 @@
-import type { ChatMessageInfo } from "@onnuri/shared";
+import type { ChatMessageInfo, SendChatMessageRequest } from "@onnuri/shared";
 import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
@@ -17,6 +17,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadAttachment, uploadImage } from "../../shared/api/upload";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { Icon } from "../../shared/components/base/Icon";
 import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
@@ -96,6 +97,14 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const [mentioned, setMentioned] = useState<{ id: string; name: string }[]>([]);
   const [asNotice, setAsNotice] = useState(false);
   const [sending, setSending] = useState(false);
+  // 글만 있는 메시지는 보내는 즉시 흐리게 먼저 그린다 (SCRUM-212) — 서버가 받으면 진짜 메시지로 바뀌고,
+  // 실패하면 그 자리에 다시 보내기/삭제를 띄운다. 첨부가 있는 메시지는 업로드가 끝나야 해서 기존대로 기다린다.
+  const [pending, setPending] = useState<PendingMessage[]>([]);
+  // 연달아 보낸 메시지가 순서대로 저장되게 한 줄로 세워 보낸다.
+  const sendQueue = useRef<Promise<unknown>>(Promise.resolve());
+  const me = useAuthStore((state) =>
+    state.session.status === "authenticated" ? state.session.user : null,
+  );
   const [actionTarget, setActionTarget] = useState<ChatMessageInfo | null>(null);
   const [viewer, setViewer] = useState<{ urls: string[]; index: number } | null>(null);
 
@@ -223,8 +232,77 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const hasAttachment = photoUris.length + videos.length + files.length > 0;
   const canSend = (draft.trim() !== "" || hasAttachment) && !sending;
 
+  const resetComposer = () => {
+    setDraft("");
+    setPhotoUris([]);
+    setVideos([]);
+    setFiles([]);
+    setReplyTo(null);
+    setMentioned([]);
+    setAsNotice(false);
+  };
+
+  const deliver = (localId: string, body: SendChatMessageRequest) => {
+    setPending((prev) => prev.map((item) => (item.localId === localId ? { ...item, failed: false } : item)));
+    sendQueue.current = sendQueue.current.then(() =>
+      send
+        .mutateAsync(body)
+        .then(() => setPending((prev) => prev.filter((item) => item.localId !== localId)))
+        .catch(() =>
+          setPending((prev) =>
+            prev.map((item) => (item.localId === localId ? { ...item, failed: true } : item)),
+          ),
+        ),
+    );
+  };
+
   const handleSend = async () => {
     if (!canSend) return;
+    const content = draft.trim();
+    // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
+    const mentionedUserIds = mentioned
+      .filter((member) => content.includes(`@${member.name}`))
+      .map((member) => member.id);
+
+    if (!hasAttachment) {
+      const body: SendChatMessageRequest = {
+        content,
+        ...(replyTo && { replyToId: replyTo.id }),
+        ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
+        ...(asNotice && { asNotice: true }),
+      };
+      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const message: ChatMessageInfo = {
+        id: localId,
+        authorId: me?.id ?? "",
+        authorName: me?.name ?? "",
+        authorAvatarUrl: me?.avatarUrl ?? null,
+        content,
+        imageUrls: [],
+        videoUrls: [],
+        files: [],
+        replyTo: replyTo
+          ? {
+              id: replyTo.id,
+              authorName: replyTo.authorName,
+              content: replyTo.content,
+              hasImage: replyTo.imageUrls.length > 0,
+            }
+          : null,
+        poll: null,
+        mentions: mentioned.filter((member) => mentionedUserIds.includes(member.id)),
+        isNotice: asNotice,
+        reactions: [],
+        createdAt: new Date().toISOString(),
+        isMine: true,
+        canDelete: false,
+      };
+      setPending((prev) => [...prev, { localId, body, message, failed: false }]);
+      resetComposer();
+      deliver(localId, body);
+      return;
+    }
+
     setSending(true);
     try {
       const [imageUrls, videoUrls, uploadedFiles] = await Promise.all([
@@ -242,11 +320,6 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           })),
         ),
       ]);
-      const content = draft.trim();
-      // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
-      const mentionedUserIds = mentioned
-        .filter((member) => content.includes(`@${member.name}`))
-        .map((member) => member.id);
       await send.mutateAsync({
         content,
         ...(imageUrls.length > 0 && { imageUrls }),
@@ -256,13 +329,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
         ...(asNotice && { asNotice: true }),
       });
-      setDraft("");
-      setPhotoUris([]);
-      setVideos([]);
-      setFiles([]);
-      setReplyTo(null);
-      setMentioned([]);
-      setAsNotice(false);
+      resetComposer();
     } catch {
       Alert.alert(t("전송 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
@@ -305,8 +372,9 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         keyboardShouldPersistTaps="handled"
         // 새 메시지가 생겼을 때만 맨 아래로 간다 — 같은 내용을 다시 받을 때는 위치를 건드리지 않는다.
         onContentSizeChange={() => {
-          if (messages.length !== lastCount.current) {
-            lastCount.current = messages.length;
+          const count = messages.length + pending.length;
+          if (count !== lastCount.current) {
+            lastCount.current = count;
             scrollRef.current?.scrollToEnd({ animated: true });
           }
         }}
@@ -333,6 +401,37 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           />
           ),
         )}
+        {pending.map((item) => (
+          <View key={item.localId} className="gap-1">
+            {/* 보내는 중에는 흐리게 — 서버가 받으면 이 자리는 진짜 메시지로 바뀐다 */}
+            <View style={{ opacity: item.failed ? 1 : 0.5 }}>
+              <ChatBubble
+                message={item.message}
+                kind={kind}
+                roomId={id}
+                onLongPress={() => undefined}
+                onImagePress={() => undefined}
+                onReactionPress={() => undefined}
+              />
+            </View>
+            {item.failed && (
+              <View className="flex-row items-center justify-end gap-3">
+                <Text className="text-caption-main text-semantic-danger">{t("전송 실패")}</Text>
+                <Pressable hitSlop={8} onPress={() => deliver(item.localId, item.body)}>
+                  <Text className="text-caption-main text-primary-normal">{t("다시 보내기")}</Text>
+                </Pressable>
+                <Pressable
+                  hitSlop={8}
+                  onPress={() =>
+                    setPending((prev) => prev.filter((value) => value.localId !== item.localId))
+                  }
+                >
+                  <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+        ))}
       </ScrollView>
 
       {/* 언급 후보 */}
@@ -539,3 +638,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     </View>
   );
 }
+
+type PendingMessage = {
+  localId: string;
+  body: SendChatMessageRequest;
+  message: ChatMessageInfo;
+  failed: boolean;
+};

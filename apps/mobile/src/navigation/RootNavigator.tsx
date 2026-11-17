@@ -180,7 +180,7 @@ export function RootNavigator() {
   // 지원이 끝난 예전 앱이면 다른 화면 대신 업데이트 안내만 (SCRUM-193)
   const updateCheck = useUpdateRequired();
   // 첫 실행이면 앱 접근 권한 안내 → (확인) → 스플래시 → 로그인/메인 순서다 — 안내를 보는 동안 세션 복원을 미룬다.
-  useAppBootstrap(permissionGuideSeen === true);
+  const bootstrap = useAppBootstrap(permissionGuideSeen === true);
 
   // 로그인/세션 복원이 끝나면 /users/me(소속·역할)를 미리 받아둔다 — 마이페이지에 처음
   // 들어갈 때 배지·소속이 지연 없이 뜨게 하기 위해서다. 실패해도 화면이 다시 조회한다.
@@ -203,7 +203,9 @@ export function RootNavigator() {
     return <PermissionGuideScreen />;
   }
   if (session.status === "loading") {
-    return <SplashScreen />;
+    return (
+      <SplashScreen slow={bootstrap.slow} failed={bootstrap.failed} onRetry={bootstrap.retry} />
+    );
   }
 
   // 현재 방침에 동의하지 않은 로그인 유저(신규 가입·기존 회원 모두)는 동의 화면만 본다 (SCRUM-175).

@@ -68,5 +68,9 @@
   "선택 권한을 허용하지 않아도 앱을 이용할 수 있지만, 일부 기능 이용에 제한이 있을 수 있어요.": "You can use the app without optional permissions, but some features may be limited.",
   "가입 완료": "Welcome!",
   "부산온누리교회 청년부 앱 가입이 완료되었어요.\n함께하게 되어 반가워요!": "You've joined the Busan Onnuri youth app.\nWe're glad you're here!",
-  "메인으로": "Go to home"
+  "메인으로": "Go to home",
+  "서버에 연결하지 못했어요": "Couldn't connect to the server",
+  "인터넷 연결을 확인하고 다시 시도해주세요.": "Check your internet connection and try again.",
+  "서버에 연결하고 있어요…": "Connecting to the server…",
+  "다시 시도": "Try again"
 }

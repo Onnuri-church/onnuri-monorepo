@@ -65,10 +65,13 @@ export function TeamStoryDetailScreen() {
         icon={isIconName(team?.iconName) ? team.iconName : undefined}
       />
 
-      <View className="mt-6 gap-3">
-        <Text className="text-heading-small text-text-normal">{t("팀 소개")}</Text>
-        <Text className="text-body-medium text-text-alternative">{team?.description ?? ""}</Text>
-      </View>
+      {/* 팀 소개는 선택 항목이라 비어 있으면 제목까지 감춘다 (SCRUM-210) */}
+      {team?.description ? (
+        <View className="mt-6 gap-3">
+          <Text className="text-heading-small text-text-normal">{t("팀 소개")}</Text>
+          <Text className="text-body-medium text-text-alternative">{team.description}</Text>
+        </View>
+      ) : null}
 
       <View className="mt-12">
         <ActivityPhotos
