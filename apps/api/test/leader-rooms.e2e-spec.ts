@@ -388,6 +388,27 @@ describe('Leader rooms (e2e)', () => {
         true,
       );
 
+      // 스스로 나가면 "나갔어요" 안내가 남고, 그 뒤로는 방에 못 들어온다 (SCRUM-223)
+      await request(server())
+        .post(`/leader-rooms/${roomId}/leave`)
+        .set(auth(cellLeaderToken))
+        .expect(204);
+      await request(server())
+        .post(`/leader-rooms/${roomId}/leave`)
+        .set(auth(cellLeaderToken))
+        .expect(400);
+      await request(server())
+        .get(`/leader-rooms/${roomId}/messages`)
+        .set(auth(cellLeaderToken))
+        .expect(403);
+      const afterLeave = await request(server())
+        .get(`/leader-rooms/${roomId}/messages`)
+        .set(auth(adminToken))
+        .expect(200);
+      const last = (afterLeave.body as ChatRoomResponse).messages.at(-1);
+      expect(last?.isSystem).toBe(true);
+      expect(last?.content).toContain('나갔어요');
+
       await request(server())
         .delete(`/leader-rooms/${roomId}`)
         .set(auth(adminToken))

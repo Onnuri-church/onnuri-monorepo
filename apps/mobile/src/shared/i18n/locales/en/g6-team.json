@@ -238,5 +238,8 @@
   "팀원들의 근황, 함께 기도할 부분, 목사님께 나누고 싶은 이야기": "Members' updates, things to pray about, anything to share with the pastor",
   "팀 활동 게시판": "Team activity board",
   "열 수 없어요": "Couldn't open",
-  "사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요.": "Check photo and file access permissions, then try again."
+  "사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요.": "Check photo and file access permissions, then try again.",
+  "채팅방을 나갈까요?": "Leave this chat?",
+  "나가면 대화를 볼 수 없고, 다시 들어오려면 초대를 받아야 해요.": "You won't see the conversation anymore, and you'll need an invite to rejoin.",
+  "나가지 못했어요": "Couldn't leave the chat"
 }

@@ -253,12 +253,22 @@ export class LeaderRoomsService {
     });
     if (removed.count === 0)
       throw new NotFoundException('이 방의 멤버가 아닙니다.');
-    await this.postSystemMessage(
-      { leaderRoomId: roomId },
-      userId,
-      [memberId],
-      'remove',
-    );
+    // 관리 화면에서 자기 자신을 내보내면 "나갔어요"로 남긴다
+    if (memberId === userId) {
+      await this.postSystemMessage(
+        { leaderRoomId: roomId },
+        userId,
+        [],
+        'leave',
+      );
+    } else {
+      await this.postSystemMessage(
+        { leaderRoomId: roomId },
+        userId,
+        [memberId],
+        'remove',
+      );
+    }
     return this.findDetail(userId, roomId);
   }
 
@@ -267,9 +277,9 @@ export class LeaderRoomsService {
     room: { leaderRoomId: string },
     actorId: string,
     targetIds: string[],
-    verb: 'invite' | 'remove',
+    verb: 'invite' | 'remove' | 'leave',
   ): Promise<void> {
-    if (targetIds.length === 0) return;
+    if (verb !== 'leave' && targetIds.length === 0) return;
     const users = await this.prisma.user.findMany({
       where: { id: { in: [actorId, ...targetIds] } },
       select: { id: true, name: true },
@@ -287,9 +297,22 @@ export class LeaderRoomsService {
         content:
           verb === 'invite'
             ? `${actor}이 ${targets}을 초대했어요.`
-            : `${actor}이 ${targets}을 내보냈어요.`,
+            : verb === 'remove'
+              ? `${actor}이 ${targets}을 내보냈어요.`
+              : `${actor}이 나갔어요.`,
       },
     });
+  }
+
+  // 스스로 나가기 — 방 멤버 누구나. 다시 들어오려면 관리자가 초대해야 한다 (SCRUM-223).
+  async leave(userId: string, roomId: string): Promise<void> {
+    await this.findRoom(roomId);
+    const removed = await this.prisma.leaderRoomMember.deleteMany({
+      where: { roomId, userId },
+    });
+    if (removed.count === 0)
+      throw new BadRequestException('이 방의 멤버가 아니에요.');
+    await this.postSystemMessage({ leaderRoomId: roomId }, userId, [], 'leave');
   }
 
   // 방 삭제 — 메시지는 보존하되 방 목록에서 사라진다 (soft delete).
