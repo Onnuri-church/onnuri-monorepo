@@ -268,5 +268,7 @@
   "대화내용 검색": "Search messages",
   "최근 대화에서 찾아요": "Searching recent messages",
   "이전 결과": "Previous result",
-  "다음 결과": "Next result"
+  "다음 결과": "Next result",
+  "최근 사진": "Recent photos",
+  "전송 {{count}}": "Send {{count}}"
 }
