@@ -18,6 +18,11 @@ import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import {
+  CHAT_BACKGROUNDS,
+  useChatBackgroundStore,
+} from "../../shared/store/useChatBackgroundStore";
+import { useThemeStore } from "../../shared/store/useThemeStore";
+import {
   markChatRead,
   useChatRoom,
   useDeleteChatMessage,
@@ -76,6 +81,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
+  // 채팅방 배경 — 방마다 내 폰에서 고른 색, 없으면 눈이 덜 부신 기본 회색 (SCRUM-229)
+  const themeMode = useThemeStore((state) => state.mode);
+  const backgroundId = useChatBackgroundStore((state) => state.byRoom[`${kind}:${id}`]);
+  const chatBackground = CHAT_BACKGROUNDS[backgroundId ?? "default"][themeMode];
   const focused = useIsFocused();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -488,7 +497,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const closeActions = () => setActionTarget(null);
 
   return (
-    <View className="flex-1 bg-background-normal">
+    <View className="flex-1" style={{ backgroundColor: chatBackground }}>
       {/* 공지 — 가장 최근에 공지로 등록된 메시지를 상단에 고정해서 보여준다. */}
       {room?.notice && (
         <View className="flex-row items-center gap-2 border-b border-background-assistive bg-background-alternative px-5 py-2">

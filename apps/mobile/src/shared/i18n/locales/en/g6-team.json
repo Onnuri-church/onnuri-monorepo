@@ -245,5 +245,13 @@
   "카메라": "Camera",
   "설정에서 온누리 온의 카메라 접근을 허용해주세요.": "Allow camera access for Onnuri On in Settings.",
   "전송": "Send",
-  "간단한 설명을 입력해 주세요.": "Add a short caption."
+  "간단한 설명을 입력해 주세요.": "Add a short caption.",
+  "기본": "Default",
+  "민트": "Mint",
+  "하늘": "Sky",
+  "라벤더": "Lavender",
+  "피치": "Peach",
+  "샌드": "Sand",
+  "그레이": "Gray",
+  "화이트": "White"
 }

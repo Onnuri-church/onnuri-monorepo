@@ -9,15 +9,13 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import "./global.css";
 import { queryClient } from "./src/shared/api/queryClient";
-import {
-  restoreQueryCache,
-  startQueryCachePersistence,
-} from "./src/shared/api/queryPersist";
+import { restoreQueryCache, startQueryCachePersistence } from "./src/shared/api/queryPersist";
 import { pretendardFonts } from "./src/shared/theme/fonts";
 import "./src/shared/i18n";
 import { restoreLanguage } from "./src/shared/store/useLanguageStore";
 import { ThemeRoot } from "./src/shared/theme/ThemeRoot";
 import { restorePermissionGuide } from "./src/shared/store/usePermissionGuideStore";
+import { restoreChatBackgrounds } from "./src/shared/store/useChatBackgroundStore";
 import { restoreThemeMode } from "./src/shared/store/useThemeStore";
 import { RootNavigator } from "./src/navigation/RootNavigator";
 
@@ -51,6 +49,7 @@ function App() {
 
   useEffect(() => {
     void restoreThemeMode();
+    void restoreChatBackgrounds();
     void restoreLanguage();
     void restorePermissionGuide();
   }, []);
