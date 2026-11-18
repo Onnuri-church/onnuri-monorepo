@@ -286,6 +286,7 @@ model ChatReadState {
   userId     String
   scope      String
   lastReadAt DateTime
+  muted      Boolean  @default(false) // 이 방 일반 메시지 푸시 끄기 (언급·공지는 그대로 온다)
 
   @@unique([userId, scope])
 }

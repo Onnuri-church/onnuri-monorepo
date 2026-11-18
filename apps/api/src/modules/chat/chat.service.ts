@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import type {
   ChatFile,
+  ChatMediaItem,
   ChatMember,
   ChatMessageInfo,
   ChatPollInfo,
@@ -27,6 +28,8 @@ import {
 const RECENT_LIMIT = 100;
 // 알림 본문에 싣는 메시지 미리보기 길이
 const SNIPPET_LENGTH = 40;
+// 서랍 사진 모아보기 최대 장수
+const MEDIA_LIMIT = 60;
 
 /**
  * 단톡방 하나 — 팀 단톡방(roomId), 셀 단톡방(cellId), 취향소그룹 단톡방(groupId),
@@ -192,10 +195,49 @@ export class ChatService {
     return { count };
   }
 
+  // 이 방 알림 끄기·켜기 — 읽음 기록과 같은 행에 둔다 (없으면 지금을 읽음 위치로 만든다) (SCRUM-230).
+  async setMuted(
+    userId: string,
+    room: ChatRoom,
+    muted: boolean,
+  ): Promise<void> {
+    await this.assertAccess(userId, room);
+    const scope = this.readScope(room);
+    await this.prisma.chatReadState.upsert({
+      where: { userId_scope: { userId, scope } },
+      update: { muted },
+      create: { userId, scope, lastReadAt: new Date(), muted },
+    });
+  }
+
+  // 이 방에서 오간 사진 — 서랍의 "사진/동영상"이 쓴다. 최근 메시지부터 사진을 펼쳐 최대 MEDIA_LIMIT장.
+  async media(userId: string, room: ChatRoom): Promise<ChatMediaItem[]> {
+    await this.assertAccess(userId, room);
+    const rows = await this.prisma.chatMessage.findMany({
+      where: {
+        ...this.roomWhere(room),
+        deletedAt: null,
+        imageUrls: { isEmpty: false },
+      },
+      select: { id: true, imageUrls: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+      take: MEDIA_LIMIT,
+    });
+    return rows
+      .flatMap((row) =>
+        row.imageUrls.map((url) => ({
+          messageId: row.id,
+          url,
+          createdAt: row.createdAt.toISOString(),
+        })),
+      )
+      .slice(0, MEDIA_LIMIT);
+  }
+
   async find(userId: string, room: ChatRoom): Promise<ChatRoomResponse> {
     const access = await this.assertAccess(userId, room);
 
-    const [recent, latestNotice] = await Promise.all([
+    const [recent, latestNotice, myState] = await Promise.all([
       this.prisma.chatMessage.findMany({
         where: { ...this.roomWhere(room), deletedAt: null },
         select: MESSAGE_SELECT,
@@ -210,6 +252,10 @@ export class ChatService {
         },
         select: MESSAGE_SELECT,
         orderBy: { noticeAt: 'desc' },
+      }),
+      this.prisma.chatReadState.findUnique({
+        where: { userId_scope: { userId, scope: this.readScope(room) } },
+        select: { muted: true },
       }),
     ]);
 
@@ -228,6 +274,7 @@ export class ChatService {
         : null,
       members: access.members,
       canNotice: access.canNotice,
+      muted: myState?.muted ?? false,
     };
   }
 
@@ -310,6 +357,7 @@ export class ChatService {
     const unreadOf = await this.unreadCounter(room, access.members);
     const info = this.toInfo(row, userId, access, memberNames, unreadOf(row));
     await this.notifyRoom(
+      room,
       userId,
       info,
       access,
@@ -744,6 +792,7 @@ export class ChatService {
   // 알림 — 언급은 알림센터에 쌓고 푸시, 공지도 같이 쌓는다. 일반 메시지는 알림센터를
   // 어지럽히지 않게 푸시만 보낸다. 본인은 뺀다.
   private async notifyRoom(
+    room: ChatRoom,
     authorId: string,
     info: ChatMessageInfo,
     access: RoomAccess,
@@ -776,7 +825,15 @@ export class ChatService {
       });
       return;
     }
-    await this.notifications.pushOnly(rest, {
+    // 이 방 알림을 끈 사람은 일반 메시지 푸시를 받지 않는다 (언급·공지는 위에서 그대로 보낸다).
+    const muted = await this.prisma.chatReadState.findMany({
+      where: { scope: this.readScope(room), userId: { in: rest }, muted: true },
+      select: { userId: true },
+    });
+    const mutedIds = new Set(muted.map((state) => state.userId));
+    const targets = rest.filter((id) => !mutedIds.has(id));
+    if (targets.length === 0) return;
+    await this.notifications.pushOnly(targets, {
       type: 'CHAT',
       title: '단톡방',
       body: `${info.authorName}: ${snippet}`,

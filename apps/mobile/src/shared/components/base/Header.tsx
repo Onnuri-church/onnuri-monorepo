@@ -52,7 +52,11 @@ interface SubHeaderProps {
    * 기본값은 더보기(⋮) — 단, 누를 수 없는 아이콘은 그리지 않는다: ⋮는 menuItems가,
    * 공유는 onPressShare가 있을 때만 나온다 (안 넘기고 등록한 화면에 죽은 버튼이 떠 있었다).
    */
-  rightAction?: "more" | "home" | "export" | "bookmark" | "bookmark-more" | "text" | "none";
+  rightAction?: "more" | "home" | "export" | "bookmark" | "bookmark-more" | "text" | "chat" | "none";
+  /** 단톡방 돋보기 (rightAction이 "chat"일 때) — 없으면 돋보기를 그리지 않는다 */
+  onPressSearch?: () => void;
+  /** 단톡방 서랍 ☰ (rightAction이 "chat"일 때) */
+  onPressMenu?: () => void;
   /** rightAction이 "text"일 때 그릴 문구 (예: "완료", "편집"). */
   rightLabel?: string;
   /** 우측 문구 버튼 동작 (rightAction이 "text"일 때). */
@@ -192,7 +196,8 @@ export function Header(props: HeaderProps) {
                 style={{
                   width:
                     (props.rightAction === "home" && props.extraRightAction) ||
-                    props.rightAction === "bookmark-more"
+                    props.rightAction === "bookmark-more" ||
+                    (props.rightAction === "chat" && props.onPressSearch)
                       ? 68
                       : undefined,
                 }}
@@ -240,6 +245,18 @@ export function Header(props: HeaderProps) {
                   ) : (
                       <View className="w-7" />
                   )
+              ) : props.rightAction === "chat" ? (
+                  // 단톡방 (SCRUM-230) — 카카오톡처럼 돋보기(대화 검색)와 ☰(서랍)
+                  <View className="flex-row items-center gap-3">
+                    {props.onPressSearch && (
+                      <PressableScale scaleTo={0.85} onPress={props.onPressSearch} hitSlop={8}>
+                        <Icon name="search" size={28} color={colors.icon.strong} />
+                      </PressableScale>
+                    )}
+                    <PressableScale scaleTo={0.85} onPress={props.onPressMenu} hitSlop={8}>
+                      <Icon name="menu" size={28} color={colors.icon.strong} />
+                    </PressableScale>
+                  </View>
               ) : props.rightAction === "bookmark-more" ? (
                   // 기도제목 남의 글 (SCRUM-201) — 자주 쓰는 저장은 밖에, 가끔 쓰는 신고·차단은 ⋮ 안에.
                   <View className="flex-row items-center gap-3">

@@ -324,6 +324,49 @@ describe('Leader rooms (e2e)', () => {
     });
   });
 
+  describe('서랍 (SCRUM-230)', () => {
+    it('방 알림을 끄고 켜면 방 응답의 muted가 바뀐다', async () => {
+      const mutedOf = async () =>
+        (
+          (
+            await request(server())
+              .get(`/leader-rooms/${roomId}/messages`)
+              .set(auth(cellLeaderToken))
+              .expect(200)
+          ).body as ChatRoomResponse
+        ).muted;
+      expect(await mutedOf()).toBe(false);
+      await request(server())
+        .put(`/chats/leader/${roomId}/mute`)
+        .set(auth(cellLeaderToken))
+        .send({ muted: true })
+        .expect(204);
+      expect(await mutedOf()).toBe(true);
+      await request(server())
+        .put(`/chats/leader/${roomId}/mute`)
+        .set(auth(cellLeaderToken))
+        .send({ muted: false })
+        .expect(204);
+      expect(await mutedOf()).toBe(false);
+    });
+
+    it('사진 모아보기는 방 멤버만, 알 수 없는 종류는 400', async () => {
+      const res = await request(server())
+        .get(`/chats/leader/${roomId}/media`)
+        .set(auth(cellLeaderToken))
+        .expect(200);
+      expect(Array.isArray(res.body)).toBe(true);
+      await request(server())
+        .get(`/chats/leader/${roomId}/media`)
+        .set(auth(otherLeaderToken))
+        .expect(403);
+      await request(server())
+        .get(`/chats/nope/${roomId}/media`)
+        .set(auth(cellLeaderToken))
+        .expect(400);
+    });
+  });
+
   describe('강등', () => {
     it('팀장이 아니게 되면 방 멤버 행이 남아 있어도 방과 목록에 못 들어온다', async () => {
       await prisma.teamMembership.update({

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -15,9 +16,10 @@ import { BlockSuspended } from '../../common/decorators/block-suspended.decorato
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
-import { ChatService } from './chat.service';
+import { type ChatRoom, ChatService } from './chat.service';
 import { AddChatPollOptionDto, VoteChatPollDto } from './dto/poll.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
+import { SetChatMuteDto } from './dto/set-chat-mute.dto';
 import { SetChatNoticeDto } from './dto/set-chat-notice.dto';
 import { ToggleChatReactionDto } from './dto/toggle-chat-reaction.dto';
 
@@ -311,4 +313,34 @@ export class ChatController {
   closePoll(@CurrentUser() user: JwtPayload, @Param('pollId') pollId: string) {
     return this.chatService.closePoll(user.sub, pollId);
   }
+
+  // 서랍(☰) — 방 종류와 무관한 주소로 알림 끄기·사진 모아보기 (SCRUM-230)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Put('chats/:kind/:id/mute')
+  setMuted(
+    @CurrentUser() user: JwtPayload,
+    @Param('kind') kind: string,
+    @Param('id') id: string,
+    @Body() dto: SetChatMuteDto,
+  ) {
+    return this.chatService.setMuted(user.sub, toChatRoom(kind, id), dto.muted);
+  }
+
+  @Get('chats/:kind/:id/media')
+  media(
+    @CurrentUser() user: JwtPayload,
+    @Param('kind') kind: string,
+    @Param('id') id: string,
+  ) {
+    return this.chatService.media(user.sub, toChatRoom(kind, id));
+  }
+}
+
+// 앱의 방 종류 이름(room·cell·group·leader) → 서비스가 쓰는 방 키
+function toChatRoom(kind: string, id: string): ChatRoom {
+  if (kind === 'room') return { roomId: id };
+  if (kind === 'cell') return { cellId: id };
+  if (kind === 'group') return { groupId: id };
+  if (kind === 'leader') return { leaderRoomId: id };
+  throw new BadRequestException('알 수 없는 단톡방 종류입니다.');
 }
