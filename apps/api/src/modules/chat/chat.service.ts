@@ -28,8 +28,8 @@ import {
 const RECENT_LIMIT = 100;
 // 알림 본문에 싣는 메시지 미리보기 길이
 const SNIPPET_LENGTH = 40;
-// 서랍 사진 모아보기 최대 장수
-const MEDIA_LIMIT = 60;
+// 사진 모아보기 한 쪽에 담는 메시지 수 (사진은 메시지당 최대 12장)
+const MEDIA_PAGE = 30;
 
 /**
  * 단톡방 하나 — 팀 단톡방(roomId), 셀 단톡방(cellId), 취향소그룹 단톡방(groupId),
@@ -210,28 +210,37 @@ export class ChatService {
     });
   }
 
-  // 이 방에서 오간 사진 — 서랍의 "사진/동영상"이 쓴다. 최근 메시지부터 사진을 펼쳐 최대 MEDIA_LIMIT장.
-  async media(userId: string, room: ChatRoom): Promise<ChatMediaItem[]> {
+  // 이 방에서 오간 사진 — 서랍의 "사진/동영상"과 전체 보기 페이지가 쓴다 (SCRUM-230·233).
+  // 사진이 있는 메시지를 최근 것부터 MEDIA_PAGE개씩 펼친다. before(ISO)를 주면 그 이전 메시지부터 —
+  // 한 메시지의 사진이 쪽 사이에서 잘리지 않게 메시지 단위로 끊는다.
+  async media(
+    userId: string,
+    room: ChatRoom,
+    before?: string,
+  ): Promise<ChatMediaItem[]> {
     await this.assertAccess(userId, room);
+    const beforeDate = before ? new Date(before) : null;
+    if (beforeDate && Number.isNaN(beforeDate.getTime())) {
+      throw new BadRequestException('before는 ISO 시각이어야 해요.');
+    }
     const rows = await this.prisma.chatMessage.findMany({
       where: {
         ...this.roomWhere(room),
         deletedAt: null,
         imageUrls: { isEmpty: false },
+        ...(beforeDate && { createdAt: { lt: beforeDate } }),
       },
       select: { id: true, imageUrls: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
-      take: MEDIA_LIMIT,
+      take: MEDIA_PAGE,
     });
-    return rows
-      .flatMap((row) =>
-        row.imageUrls.map((url) => ({
-          messageId: row.id,
-          url,
-          createdAt: row.createdAt.toISOString(),
-        })),
-      )
-      .slice(0, MEDIA_LIMIT);
+    return rows.flatMap((row) =>
+      row.imageUrls.map((url) => ({
+        messageId: row.id,
+        url,
+        createdAt: row.createdAt.toISOString(),
+      })),
+    );
   }
 
   async find(userId: string, room: ChatRoom): Promise<ChatRoomResponse> {
