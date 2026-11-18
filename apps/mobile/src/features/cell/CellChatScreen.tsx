@@ -1,6 +1,6 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Header } from "../../shared/components/base/Header";
@@ -17,6 +17,9 @@ export function CellChatScreen() {
 
   const title = t("{{name}} 단톡방", { name: cell?.name ?? t("셀") });
 
+  // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
+  const [searching, setSearching] = useState(false);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
@@ -24,6 +27,7 @@ export function CellChatScreen() {
           variant="sub"
           title={title}
           rightAction="chat"
+          onPressSearch={() => setSearching(true)}
           onPressMenu={() =>
             navigation.navigate("ChatRoomInfo", { kind: "cell", id: params.cellId, title })
           }
@@ -32,5 +36,12 @@ export function CellChatScreen() {
     });
   }, [navigation, params.cellId, title]);
 
-  return <ChatRoomView kind="cell" id={params.cellId} />;
+  return (
+    <ChatRoomView
+      kind="cell"
+      id={params.cellId}
+      searchOpen={searching}
+      onSearchClose={() => setSearching(false)}
+    />
+  );
 }

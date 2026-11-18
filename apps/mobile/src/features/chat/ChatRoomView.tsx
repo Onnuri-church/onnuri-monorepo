@@ -66,11 +66,14 @@ interface PickedVideo {
 interface ChatRoomViewProps {
   kind: ChatKind;
   id: string;
+  /** 헤더 돋보기를 눌러 대화 검색 중인지 (SCRUM-231) */
+  searchOpen?: boolean;
+  onSearchClose?: () => void;
 }
 
 // 팀·셀 단톡방 본체. 대화, 사진 보내기, 답장, 언급(@), 이모지 반응, 공지(상단 고정)를 한 화면에서
 // 처리한다. 화면이 열려 있는 동안 몇 초마다 새 메시지를 받아오고, 새 메시지가 오면 맨 아래로 따라간다.
-export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
+export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: ChatRoomViewProps) {
   const { t } = useTranslation();
   // 차단 (SCRUM-198) — 차단한 사람의 메시지는 내용 대신 한 줄 안내로 접는다. 대화 흐름(답장 등)이
   // 끊기지 않게 서버에서 빼지 않고 앱에서 가린다.
@@ -81,6 +84,10 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
+  // 대화 검색 (SCRUM-231) — 불러온 최근 대화 안에서 글자가 들어간 메시지를 찾고, ∧∨로 오가며 강조한다.
+  const [searchText, setSearchText] = useState("");
+  const [matchCursor, setMatchCursor] = useState(0);
+  const messageY = useRef(new Map<string, number>());
   // 채팅방 배경 — 방마다 내 폰에서 고른 색, 없으면 눈이 덜 부신 기본 회색 (SCRUM-229)
   const themeMode = useThemeStore((state) => state.mode);
   const backgroundId = useChatBackgroundStore((state) => state.byRoom[`${kind}:${id}`]);
@@ -121,10 +128,36 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lastCount = useRef(0);
   const messages = room?.messages ?? [];
+  const searchQuery = searchOpen ? searchText.trim().toLowerCase() : "";
+  // 오래된 것부터 — 커서는 가장 최근 일치(마지막)에서 시작해 ∧로 위(예전)로 간다.
+  const matchIds = useMemo(
+    () =>
+      searchQuery === ""
+        ? []
+        : messages
+            .filter((message) => message.content.toLowerCase().includes(searchQuery))
+            .map((message) => message.id),
+    [messages, searchQuery],
+  );
+  const currentMatchId = matchIds.length > 0 ? matchIds[matchCursor] : null;
 
   // 읽음 표시 — 방이 열려 있는 동안 가장 최근 메시지가 바뀔 때마다 서버에 알린다. 알린 뒤 목록·아이콘의
   // 안 읽은 표시를 다시 받아 빨간 점이 사라지게 한다.
   const queryClient = useQueryClient();
+  // 검색어가 바뀌면 가장 최근 일치로, 검색을 닫으면 검색어를 비운다.
+  useEffect(() => {
+    setMatchCursor(Math.max(0, matchIds.length - 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 검색어가 바뀔 때만 커서를 옮긴다
+  }, [searchQuery]);
+  useEffect(() => {
+    if (!searchOpen) setSearchText("");
+  }, [searchOpen]);
+  // 지금 가리키는 메시지가 화면 위쪽에 오게 스크롤한다.
+  useEffect(() => {
+    if (!currentMatchId) return;
+    const y = messageY.current.get(currentMatchId);
+    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+  }, [currentMatchId]);
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
   useEffect(() => {
     if (!focused || !latestMessageId) return;
@@ -516,6 +549,27 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         </View>
       )}
 
+      {/* 대화 검색창 (SCRUM-231) */}
+      {searchOpen && (
+        <View className="flex-row items-center gap-3 border-b border-background-assistive bg-background-normal px-5 py-2">
+          <View className="h-10 flex-1 flex-row items-center gap-2 rounded-xl bg-background-muted px-3">
+            <Icon name="search" size={18} color={themeColors.icon.normal} />
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder={t("대화내용 검색")}
+              placeholderTextColor={themeColors.text.alternative}
+              className="flex-1 text-body-main text-text-normal"
+              autoFocus
+              returnKeyType="search"
+            />
+          </View>
+          <Pressable hitSlop={8} onPress={onSearchClose}>
+            <Text className="text-body-main text-text-normal">{t("취소")}</Text>
+          </Pressable>
+        </View>
+      )}
+
       <ScrollView
         ref={scrollRef}
         contentContainerClassName="gap-4 px-5 py-4"
@@ -540,16 +594,27 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
               {t("차단한 사용자의 메시지예요")}
             </Text>
           ) : (
-            <AppearIn key={message.id} variant="pop" animate={isNew(message.id)}>
-              <ChatBubble
-                message={message}
-                kind={kind}
-                roomId={id}
-                onLongPress={() => setActionTarget(message)}
-                onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
-                onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
-              />
-            </AppearIn>
+            <View
+              key={message.id}
+              onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
+              className={message.id === currentMatchId ? "-mx-2 rounded-2xl px-2 py-1" : undefined}
+              style={
+                message.id === currentMatchId
+                  ? { backgroundColor: "rgba(255, 196, 0, 0.28)" }
+                  : undefined
+              }
+            >
+              <AppearIn variant="pop" animate={isNew(message.id)}>
+                <ChatBubble
+                  message={message}
+                  kind={kind}
+                  roomId={id}
+                  onLongPress={() => setActionTarget(message)}
+                  onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
+                  onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
+                />
+              </AppearIn>
+            </View>
           ),
         )}
         {pending.map((item) => {
@@ -597,7 +662,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       </ScrollView>
 
       {/* 언급 후보 */}
-      {mentionCandidates.length > 0 && (
+      {!searchOpen && mentionCandidates.length > 0 && (
         <View className="border-t border-background-assistive bg-background-normal px-5 py-2">
           {mentionCandidates.map((member) => (
             <Pressable
@@ -611,75 +676,98 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         </View>
       )}
 
-      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄 */}
-      <View
-        className="border-t border-background-assistive bg-background-normal px-5 pt-2"
-        style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
-      >
-        {replyTo && (
-          <View className="mb-2 flex-row items-center rounded-xl bg-background-muted px-3 py-2">
-            <View className="flex-1">
-              <Text className="text-caption-main text-text-neutral" numberOfLines={1}>
-                {t("{{name}}님에게 답장", { name: replyTo.authorName })}
-              </Text>
-              <Text className="text-caption-main text-text-alternative" numberOfLines={1}>
-                {replyTo.content || t("사진")}
-              </Text>
-            </View>
-            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-              <Icon name="close-square" size={20} />
+      {/* 검색 중에는 입력창 대신 일치 개수와 ∧∨ 이동 (카카오톡처럼) */}
+      {searchOpen && (
+        <View
+          className="flex-row items-center justify-between border-t border-background-assistive bg-background-normal px-5 pt-2"
+          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+        >
+          <Text className="text-body-small text-text-alternative">
+            {searchQuery === ""
+              ? t("최근 대화에서 찾아요")
+              : matchIds.length === 0
+                ? t("검색 결과가 없어요")
+                : `${matchCursor + 1} / ${matchIds.length}`}
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              hitSlop={6}
+              disabled={matchCursor <= 0}
+              onPress={() => setMatchCursor((value) => Math.max(0, value - 1))}
+              className="h-10 w-10 items-center justify-center rounded-full bg-background-muted"
+              style={{ opacity: matchCursor <= 0 ? 0.4 : 1 }}
+              accessibilityLabel={t("이전 결과")}
+            >
+              <Text className="text-body-main text-text-normal">∧</Text>
+            </Pressable>
+            <Pressable
+              hitSlop={6}
+              disabled={matchCursor >= matchIds.length - 1}
+              onPress={() => setMatchCursor((value) => Math.min(matchIds.length - 1, value + 1))}
+              className="h-10 w-10 items-center justify-center rounded-full bg-background-muted"
+              style={{ opacity: matchCursor >= matchIds.length - 1 ? 0.4 : 1 }}
+              accessibilityLabel={t("다음 결과")}
+            >
+              <Text className="text-body-main text-text-normal">∨</Text>
             </Pressable>
           </View>
-        )}
+        </View>
+      )}
 
-        {(videos.length > 0 || files.length > 0) && (
-          <View className="mb-2 gap-1">
-            {videos.map((video) => (
-              <View
-                key={video.uri}
-                className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
-              >
-                <Icon name="play" size={18} />
-                <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
-                  {video.name}
+      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄 */}
+      {!searchOpen && (
+        <View
+          className="border-t border-background-assistive bg-background-normal px-5 pt-2"
+          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+        >
+          {replyTo && (
+            <View className="mb-2 flex-row items-center rounded-xl bg-background-muted px-3 py-2">
+              <View className="flex-1">
+                <Text className="text-caption-main text-text-neutral" numberOfLines={1}>
+                  {t("{{name}}님에게 답장", { name: replyTo.authorName })}
                 </Text>
-                <Pressable
-                  onPress={() => setVideos((prev) => prev.filter((item) => item.uri !== video.uri))}
-                  hitSlop={8}
-                >
-                  <Icon name="close-square" size={18} />
-                </Pressable>
-              </View>
-            ))}
-            {files.map((file) => (
-              <View
-                key={file.uri}
-                className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
-              >
-                <Icon name="note" size={18} />
-                <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
-                  {file.name}
+                <Text className="text-caption-main text-text-alternative" numberOfLines={1}>
+                  {replyTo.content || t("사진")}
                 </Text>
-                <Pressable
-                  onPress={() => setFiles((prev) => prev.filter((item) => item.uri !== file.uri))}
-                  hitSlop={8}
-                >
-                  <Icon name="close-square" size={18} />
-                </Pressable>
               </View>
-            ))}
-          </View>
-        )}
+              <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+                <Icon name="close-square" size={20} />
+              </Pressable>
+            </View>
+          )}
 
-        {photoUris.length > 0 && (
-          <ScrollView horizontal className="mb-2" showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
-              {photoUris.map((uri) => (
-                <View key={uri}>
-                  <Image source={{ uri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+          {(videos.length > 0 || files.length > 0) && (
+            <View className="mb-2 gap-1">
+              {videos.map((video) => (
+                <View
+                  key={video.uri}
+                  className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
+                >
+                  <Icon name="play" size={18} />
+                  <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
+                    {video.name}
+                  </Text>
                   <Pressable
-                    className="absolute right-1 top-1"
-                    onPress={() => setPhotoUris((prev) => prev.filter((item) => item !== uri))}
+                    onPress={() =>
+                      setVideos((prev) => prev.filter((item) => item.uri !== video.uri))
+                    }
+                    hitSlop={8}
+                  >
+                    <Icon name="close-square" size={18} />
+                  </Pressable>
+                </View>
+              ))}
+              {files.map((file) => (
+                <View
+                  key={file.uri}
+                  className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
+                >
+                  <Icon name="note" size={18} />
+                  <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
+                    {file.name}
+                  </Text>
+                  <Pressable
+                    onPress={() => setFiles((prev) => prev.filter((item) => item.uri !== file.uri))}
                     hitSlop={8}
                   >
                     <Icon name="close-square" size={18} />
@@ -687,54 +775,73 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
                 </View>
               ))}
             </View>
-          </ScrollView>
-        )}
+          )}
 
-        <View className="flex-row items-center gap-2">
-          <Pressable
-            className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-            onPress={() => setAttachmentSheetOpen(true)}
-          >
-            <Icon name="plus" size={20} />
-          </Pressable>
-          {room?.canNotice && (
+          {photoUris.length > 0 && (
+            <ScrollView horizontal className="mb-2" showsHorizontalScrollIndicator={false}>
+              <View className="flex-row gap-2">
+                {photoUris.map((uri) => (
+                  <View key={uri}>
+                    <Image source={{ uri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+                    <Pressable
+                      className="absolute right-1 top-1"
+                      onPress={() => setPhotoUris((prev) => prev.filter((item) => item !== uri))}
+                      hitSlop={8}
+                    >
+                      <Icon name="close-square" size={18} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+
+          <View className="flex-row items-center gap-2">
             <Pressable
-              className={
-                asNotice
-                  ? "h-9 w-9 items-center justify-center rounded-full bg-primary-normal active:opacity-60"
-                  : "h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-              }
-              onPress={() => setAsNotice((prev) => !prev)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+              onPress={() => setAttachmentSheetOpen(true)}
+            >
+              <Icon name="plus" size={20} />
+            </Pressable>
+            {room?.canNotice && (
+              <Pressable
+                className={
+                  asNotice
+                    ? "h-9 w-9 items-center justify-center rounded-full bg-primary-normal active:opacity-60"
+                    : "h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+                }
+                onPress={() => setAsNotice((prev) => !prev)}
+              >
+                <Icon
+                  name="announcement"
+                  size={18}
+                  color={asNotice ? colors.icon.disable : colors.icon.normal}
+                />
+              </Pressable>
+            )}
+            <TextInput
+              className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
+              placeholderTextColor={themeColors.text.alternative}
+              onSubmitEditing={canSend ? () => handleSend() : undefined}
+              returnKeyType="send"
+            />
+            <Pressable
+              className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+              disabled={!canSend}
+              onPress={() => handleSend()}
             >
               <Icon
-                name="announcement"
-                size={18}
-                color={asNotice ? colors.icon.disable : colors.icon.normal}
+                name="send-fill"
+                size={20}
+                color={canSend ? themeColors.primary.normal : themeColors.icon.normal}
               />
             </Pressable>
-          )}
-          <TextInput
-            className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
-            placeholderTextColor={themeColors.text.alternative}
-            onSubmitEditing={canSend ? () => handleSend() : undefined}
-            returnKeyType="send"
-          />
-          <Pressable
-            className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-            disabled={!canSend}
-            onPress={() => handleSend()}
-          >
-            <Icon
-              name="send-fill"
-              size={20}
-              color={canSend ? themeColors.primary.normal : themeColors.icon.normal}
-            />
-          </Pressable>
+          </View>
         </View>
-      </View>
+      )}
 
       <CameraPreview
         uri={cameraUri}
