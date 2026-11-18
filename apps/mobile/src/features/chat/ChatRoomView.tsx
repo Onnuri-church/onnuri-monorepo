@@ -899,6 +899,20 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         onClose={() => setAttachmentSheetOpen(false)}
         onDismiss={runPendingPick}
         onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
+        onSendRecent={(uris) => {
+          // 최근 사진 줄에서 고른 사진을 바로 보낸다 (SCRUM-241) — 12장씩 나누는 것도 같은 길로 간다.
+          setAttachmentSheetOpen(false);
+          sendMessages({
+            content: "",
+            photos: uris,
+            videos: [],
+            files: [],
+            replyTo: null,
+            mentionedUserIds: [],
+            mentions: [],
+            asNotice: false,
+          });
+        }}
         onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
         onPickFile={() => pickAfterSheetClosed(handlePickFile)}
         onPickPoll={() => {

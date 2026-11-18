@@ -1,8 +1,10 @@
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Image, Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "../../../shared/components/base/Icon";
+import { useRecentPhotos } from "./RecentPhotos";
 
 interface AttachmentSheetProps {
   visible: boolean;
@@ -17,7 +19,12 @@ interface AttachmentSheetProps {
   onPickFile: () => void;
   /** 투표 만들기 */
   onPickPoll: () => void;
+  /** 최근 사진 줄에서 골라 바로 보내기 (SCRUM-241, 아이폰) */
+  onSendRecent?: (uris: string[]) => void;
 }
+
+const TILE = 96;
+const MAX_PICK = 20;
 
 interface AttachmentRow {
   icon: IconName;
@@ -37,11 +44,26 @@ export function AttachmentSheet({
   onPickMedia,
   onPickFile,
   onPickPoll,
+  onSendRecent,
 }: AttachmentSheetProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
+  const recent = useRecentPhotos(visible);
+  // 고른 순서대로 번호를 붙인다 (카카오톡처럼)
+  const [picked, setPicked] = useState<string[]>([]);
+  useEffect(() => {
+    if (!visible) setPicked([]);
+  }, [visible]);
+  const togglePick = (uri: string) =>
+    setPicked((prev) =>
+      prev.includes(uri)
+        ? prev.filter((value) => value !== uri)
+        : prev.length >= MAX_PICK
+          ? prev
+          : [...prev, uri],
+    );
 
-  // 위: 카메라 칸 (카카오톡의 "최근 사진" 줄 자리 — 최근 사진은 다음 앱 빌드에서 오른쪽에 붙인다)
+  // 위: 최근 사진 줄 (카메라 칸 + 사진첩 최근 사진, 아이폰) — SCRUM-228·241
   // 아래: 사진·동영상 / 파일 / 투표
   const rows: AttachmentRow[] = [
     { icon: "image", color: "#3FA55B", label: t("사진·동영상"), onPress: onPickMedia },
@@ -64,16 +86,76 @@ export function AttachmentSheet({
         >
           {/* 시트 손잡이 */}
           <View className="mb-1 h-1 w-10 self-center rounded-full bg-background-assistive" />
-          <View className="px-5 pb-3 pt-2">
+          {/* 최근 사진 — 고르면 오른쪽 위 "전송"이 켜진다 */}
+          <View className="flex-row items-center justify-between px-5 pt-2">
+            <Text className="font-pretendard-semibold text-body-main text-text-normal">
+              {t("최근 사진")}
+            </Text>
+            {recent.length > 0 && (
+              <Pressable
+                disabled={picked.length === 0}
+                onPress={() => onSendRecent?.(picked)}
+                className={
+                  picked.length > 0
+                    ? "rounded-full bg-primary-normal px-4 py-1.5"
+                    : "rounded-full bg-background-muted px-4 py-1.5"
+                }
+              >
+                <Text
+                  className={
+                    picked.length > 0
+                      ? "text-body-small text-text-onImage"
+                      : "text-body-small text-text-alternative"
+                  }
+                >
+                  {picked.length > 0 ? t("전송 {{count}}", { count: picked.length }) : t("전송")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12, gap: 6 }}
+          >
             <Pressable
               onPress={onPickCamera}
-              className="h-24 w-24 items-center justify-center rounded-2xl active:opacity-70"
-              style={{ backgroundColor: "#9A9A9A" }}
+              className="items-center justify-center rounded-2xl active:opacity-70"
+              style={{ width: TILE, height: TILE, backgroundColor: "#9A9A9A" }}
               accessibilityLabel={t("카메라")}
             >
               <Icon name="camera" size={34} color="#FFFFFF" />
             </Pressable>
-          </View>
+            {recent.map((photo) => {
+              const order = picked.indexOf(photo.uri);
+              return (
+                <Pressable key={photo.id} onPress={() => togglePick(photo.uri)}>
+                  <Image
+                    source={{ uri: photo.uri }}
+                    style={{
+                      width: TILE,
+                      height: TILE,
+                      borderRadius: 16,
+                      opacity: order >= 0 ? 0.75 : 1,
+                    }}
+                    resizeMode="cover"
+                  />
+                  <View
+                    className={
+                      order >= 0
+                        ? "absolute right-1.5 top-1.5 h-6 w-6 items-center justify-center rounded-full bg-primary-normal"
+                        : "absolute right-1.5 top-1.5 h-6 w-6 rounded-full border-2 border-text-onImage"
+                    }
+                    style={order >= 0 ? undefined : { backgroundColor: "rgba(0,0,0,0.15)" }}
+                  >
+                    {order >= 0 && (
+                      <Text className="text-caption-main text-text-onImage">{order + 1}</Text>
+                    )}
+                  </View>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
           <View className="border-t border-background-assistive">
             {rows.map((row) => (
               <Pressable

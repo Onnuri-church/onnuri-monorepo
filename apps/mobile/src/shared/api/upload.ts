@@ -1,5 +1,6 @@
 import { apiClient } from "./client";
 import { UPLOAD_TIMEOUT_MS } from "./config";
+import { compressImage } from "../utils/compressImage";
 
 // 확장자 → mimetype. RN의 FormData 파일 파트는 type이 없으면 서버에서 형식 검증에 걸린다.
 const MIME_TYPES: Record<string, string> = {
@@ -30,6 +31,8 @@ export async function uploadImageWithProgress(
   onProgress?: UploadProgress,
 ): Promise<string> {
   if (uri.startsWith("http")) return uri;
+  // 올리기 전에 줄인다 (SCRUM-240) — 줄인 사진은 JPEG라 이름·형식도 그걸 따른다.
+  uri = await compressImage(uri);
 
   const name = uri.split("/").pop() ?? "photo.jpg";
   const extension = name.includes(".") ? name.split(".").pop()!.toLowerCase() : "jpg";
