@@ -88,6 +88,8 @@ export type RootStackParamList = {
   // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기 — 관리자만
   LeaderRoomForm: { roomId?: string };
   LeaderRoom: { roomId: string };
+  /** 단톡방 서랍(☰) — 알림·사진·배경·대화 상대 (SCRUM-230) */
+  ChatRoomInfo: { kind: "room" | "cell" | "group" | "leader"; id: string; title: string };
   CellChat: { cellId: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;

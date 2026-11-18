@@ -28,6 +28,7 @@ import Image from "../../assets/icons/image.svg";
 import Jubo from "../../assets/icons/jubo.svg";
 import Link from "../../assets/icons/link.svg";
 import Lock from "../../assets/icons/lock.svg";
+import Menu from "../../assets/icons/menu.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
@@ -93,6 +94,7 @@ const ICONS = {
   link: Link,
   lock: Lock,
   "media-strip": MediaStrip,
+  menu: Menu,
   more: More,
   "nav-home": NavHome,
   note: Note,

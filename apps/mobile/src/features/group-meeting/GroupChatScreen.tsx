@@ -1,4 +1,5 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,24 +14,29 @@ import { fetchGroupMeetingDetail } from "./api";
 export function GroupChatScreen() {
   const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "GroupChat">>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   // 상세를 거쳐 들어오므로 캐시에 있다.
   const { data: meeting } = useQuery({
     queryKey: ["group-meetings", params.meetingId],
     queryFn: () => fetchGroupMeetingDetail(params.meetingId),
   });
 
+  const title = t("{{name}} 단톡방", { name: meeting?.title ?? t("소그룹") });
+
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <Header
           variant="sub"
-          title={t("{{name}} 단톡방", { name: meeting?.title ?? t("소그룹") })}
-          rightAction="none"
+          title={title}
+          rightAction="chat"
+          onPressMenu={() =>
+            navigation.navigate("ChatRoomInfo", { kind: "group", id: params.meetingId, title })
+          }
         />
       ),
     });
-  }, [navigation, meeting?.title, t]);
+  }, [navigation, params.meetingId, title]);
 
   return <ChatRoomView kind="group" id={params.meetingId} />;
 }

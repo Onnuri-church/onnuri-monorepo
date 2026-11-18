@@ -1,4 +1,5 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -11,20 +12,25 @@ import { useCell } from "./api";
 export function CellChatScreen() {
   const { t } = useTranslation();
   const { params } = useRoute<RouteProp<RootStackParamList, "CellChat">>();
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const cell = useCell(params.cellId);
+
+  const title = t("{{name}} 단톡방", { name: cell?.name ?? t("셀") });
 
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
         <Header
           variant="sub"
-          title={t("{{name}} 단톡방", { name: cell?.name ?? t("셀") })}
-          rightAction="none"
+          title={title}
+          rightAction="chat"
+          onPressMenu={() =>
+            navigation.navigate("ChatRoomInfo", { kind: "cell", id: params.cellId, title })
+          }
         />
       ),
     });
-  }, [navigation, cell?.name, t]);
+  }, [navigation, params.cellId, title]);
 
   return <ChatRoomView kind="cell" id={params.cellId} />;
 }
