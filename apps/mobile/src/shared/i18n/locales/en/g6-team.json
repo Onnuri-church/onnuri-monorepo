@@ -264,5 +264,9 @@
   "대화 상대": "Members",
   "나": "Me",
   "채팅방 관리 (이름·멤버)": "Manage chat (name, members)",
-  "채팅방 나가기": "Leave chat"
+  "채팅방 나가기": "Leave chat",
+  "대화내용 검색": "Search messages",
+  "최근 대화에서 찾아요": "Searching recent messages",
+  "이전 결과": "Previous result",
+  "다음 결과": "Next result"
 }

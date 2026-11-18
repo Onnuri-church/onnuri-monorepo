@@ -1,7 +1,7 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
-import { useLayoutEffect } from "react";
+import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import { Header } from "../../shared/components/base/Header";
@@ -23,6 +23,9 @@ export function GroupChatScreen() {
 
   const title = t("{{name}} 단톡방", { name: meeting?.title ?? t("소그룹") });
 
+  // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
+  const [searching, setSearching] = useState(false);
+
   useLayoutEffect(() => {
     navigation.setOptions({
       header: () => (
@@ -30,6 +33,7 @@ export function GroupChatScreen() {
           variant="sub"
           title={title}
           rightAction="chat"
+          onPressSearch={() => setSearching(true)}
           onPressMenu={() =>
             navigation.navigate("ChatRoomInfo", { kind: "group", id: params.meetingId, title })
           }
@@ -38,5 +42,12 @@ export function GroupChatScreen() {
     });
   }, [navigation, params.meetingId, title]);
 
-  return <ChatRoomView kind="group" id={params.meetingId} />;
+  return (
+    <ChatRoomView
+      kind="group"
+      id={params.meetingId}
+      searchOpen={searching}
+      onSearchClose={() => setSearching(false)}
+    />
+  );
 }
