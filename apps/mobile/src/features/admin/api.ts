@@ -13,7 +13,7 @@ import type {
   UpdateAdminAttendanceRequest,
   UpdateAdminMemberRequest,
 } from "@onnuri/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -37,8 +37,7 @@ export function useUpdateAdminAttendance() {
 export function useAdminMembers(enabled = true) {
   return useQuery({
     queryKey: ["admin", "members"],
-    queryFn: () =>
-      apiClient.get<AdminMemberSummary[]>("/users").then((res) => res.data),
+    queryFn: () => apiClient.get<AdminMemberSummary[]>("/users").then((res) => res.data),
     // GET /users는 관리자 전용 — 비관리자 화면(소그룹 수정의 소그룹장)에서는 요청 자체를 끈다.
     enabled,
   });
@@ -48,8 +47,7 @@ export function useAdminMembers(enabled = true) {
 export function useAdminMember(memberId: string) {
   return useQuery({
     queryKey: ["admin", "members", memberId],
-    queryFn: () =>
-      apiClient.get<AdminMemberDetail>(`/users/${memberId}`).then((res) => res.data),
+    queryFn: () => apiClient.get<AdminMemberDetail>(`/users/${memberId}`).then((res) => res.data),
   });
 }
 
@@ -67,9 +65,7 @@ export function useUpdateAdminMember(memberId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (payload: UpdateAdminMemberRequest) =>
-      apiClient
-        .patch<AdminMemberDetail>(`/users/${memberId}`, payload)
-        .then((res) => res.data),
+      apiClient.patch<AdminMemberDetail>(`/users/${memberId}`, payload).then((res) => res.data),
     onSuccess: (detail) => {
       queryClient.setQueryData(["admin", "members", memberId], detail);
       invalidateMembers();
@@ -98,12 +94,11 @@ export interface AdminAttendanceParams {
 export function useAdminAttendance(params: AdminAttendanceParams) {
   return useQuery({
     queryKey: ["admin", "attendance", params],
-    queryFn: () =>
-      apiClient
-        .get<AdminAttendanceResponse>("/admin/attendance", { params })
-        .then((res) => res.data),
+    queryFn: () => fetchAdminAttendance(params),
     // 셀·멤버 구성이 바뀐 직후에도 최신이 보이도록 캐시를 쓰지 않는다 (기본 staleTime 1분).
     staleTime: 0,
+    // 달·필터를 바꾸는 동안 이전 표를 유지한다 — 빈 화면이 깜빡이지 않게 (SCRUM-239).
+    placeholderData: keepPreviousData,
     // 특정 셀/팀 필터인데 아직 선택지가 안 뽑혔으면(목록 로딩 전) 기다린다.
     enabled: params.scope === "all" || params.groupId !== undefined,
   });
@@ -143,9 +138,7 @@ export function useUpdateCell(cellId: string) {
   const invalidateCells = useInvalidateCells();
   return useMutation({
     mutationFn: (payload: CellFormPayload) =>
-      apiClient
-        .patch<CellDetailResponse>(`/cells/${cellId}`, payload)
-        .then((res) => res.data),
+      apiClient.patch<CellDetailResponse>(`/cells/${cellId}`, payload).then((res) => res.data),
     onSuccess: invalidateCells,
   });
 }
@@ -199,8 +192,7 @@ function useInvalidateBanners() {
 export function useHomeBanners() {
   return useQuery({
     queryKey: ["admin", "banners"],
-    queryFn: () =>
-      apiClient.get<HomeBanner[]>("/notices/banners").then((res) => res.data),
+    queryFn: () => apiClient.get<HomeBanner[]>("/notices/banners").then((res) => res.data),
   });
 }
 
@@ -217,9 +209,7 @@ export function useUpdateHomeBanner(bannerId: string) {
   const invalidateBanners = useInvalidateBanners();
   return useMutation({
     mutationFn: (payload: UpdateHomeBannerRequest) =>
-      apiClient
-        .patch<HomeBanner>(`/notices/banners/${bannerId}`, payload)
-        .then((res) => res.data),
+      apiClient.patch<HomeBanner>(`/notices/banners/${bannerId}`, payload).then((res) => res.data),
     onSuccess: invalidateBanners,
   });
 }
@@ -246,13 +236,36 @@ export function useDeleteHomeBanner() {
 }
 
 // 모임 없는 날 — 그 달 일요일별 지정 상태. 지정/해제는 출석부·셀 출석 화면 데이터도 바꾸므로 같이 무효화한다.
+export function fetchAdminOffDays(month: string): Promise<AdminOffDaysResponse> {
+  return apiClient
+    .get<AdminOffDaysResponse>("/admin/off-days", { params: { month } })
+    .then((res) => res.data);
+}
+
+export function fetchAdminAttendance(
+  params: AdminAttendanceParams,
+): Promise<AdminAttendanceResponse> {
+  return apiClient
+    .get<AdminAttendanceResponse>("/admin/attendance", { params })
+    .then((res) => res.data);
+}
+
+// 앞뒤 달을 미리 받아 둔다 — 월 토글로 옆 달을 고르면 바로 보이게 (SCRUM-239).
+export function neighborMonths(month: string): string[] {
+  const [year, monthOfYear] = month.split("-").map(Number);
+  const shift = (delta: number) => {
+    const date = new Date(year, monthOfYear - 1 + delta, 1);
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+  };
+  return [shift(-1), shift(1)];
+}
+
 export function useAdminOffDays(month: string) {
   return useQuery({
     queryKey: ["admin", "off-days", month],
-    queryFn: () =>
-      apiClient
-        .get<AdminOffDaysResponse>("/admin/off-days", { params: { month } })
-        .then((res) => res.data),
+    queryFn: () => fetchAdminOffDays(month),
+    // 달을 바꾸는 동안 이전 목록을 유지한다 (SCRUM-239)
+    placeholderData: keepPreviousData,
   });
 }
 

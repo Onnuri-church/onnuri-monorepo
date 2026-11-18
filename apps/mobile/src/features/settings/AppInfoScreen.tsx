@@ -25,6 +25,7 @@ export function AppInfoScreen() {
   const rows: { label: string; value: string; onPress?: () => void }[] = [
     { label: t("운영"), value: t("부산온누리교회 청년부") },
     { label: t("개발"), value: t("이지환") },
+    { label: t("디자인"), value: t("남현지") },
     {
       label: t("문의"),
       value: CONTACT_EMAIL,
