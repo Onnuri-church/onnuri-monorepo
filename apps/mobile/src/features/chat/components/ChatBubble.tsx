@@ -4,7 +4,7 @@ import { Linking, Pressable, Text, View } from "react-native";
 
 import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
-import { toTimeAgo } from "../../../shared/utils/date";
+import { toChatTime } from "../../../shared/utils/date";
 import type { ChatKind } from "../api";
 import { MentionText } from "./MentionText";
 import { PhotoGrid } from "./PhotoGrid";
@@ -18,6 +18,8 @@ interface ChatBubbleProps {
   onLongPress: () => void;
   onImagePress: (index: number) => void;
   onReactionPress: (emoji: string) => void;
+  /** 시각을 달지 — 같은 사람이 같은 분에 연달아 보낸 메시지는 마지막에만 단다 (기본 true) */
+  showTime?: boolean;
   /** 보내는 중인 첨부 메시지 — 카카오톡처럼 말풍선 위에 진행 상태를, 실패하면 왼쪽에 ↻·× 버튼을 그린다 */
   upload?: PendingUpload;
 }
@@ -57,6 +59,7 @@ export function ChatBubble({
   onImagePress,
   onReactionPress,
   upload,
+  showTime = true,
 }: ChatBubbleProps) {
   const { t } = useTranslation();
   const mine = message.isMine;
@@ -268,7 +271,7 @@ export function ChatBubble({
           <View className="mt-1 flex-row items-center gap-1.5">
             {unread}
             <Text className="text-caption-main text-text-alternative">
-              {toTimeAgo(message.createdAt)}
+              {showTime && toChatTime(message.createdAt)}
             </Text>
           </View>
         </View>
@@ -285,7 +288,7 @@ export function ChatBubble({
         {reactions}
         <View className="mt-1 flex-row items-center gap-1.5">
           <Text className="text-caption-main text-text-alternative">
-            {toTimeAgo(message.createdAt)}
+            {showTime && toChatTime(message.createdAt)}
           </Text>
           {unread}
         </View>
