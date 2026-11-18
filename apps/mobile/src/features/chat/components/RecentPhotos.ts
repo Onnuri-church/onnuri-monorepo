@@ -76,6 +76,13 @@ export function useRecentPhotos(visible: boolean): RecentPhoto[] {
 
   useEffect(() => {
     if (!visible || Platform.OS !== "ios") return;
+    // 이미 읽어 둔 게 있으면 열 때는 아무것도 하지 않고(패널을 바로 끌어도 버벅이지 않게),
+    // 닫힐 때 조용히 새로 읽어 다음에 열 때 최신이 보이게 한다.
+    if (cached.length > 0) {
+      return () => {
+        void loadOnce(false);
+      };
+    }
     let cancelled = false;
     // 패널이 올라오는 동안에는 사진첩을 건드리지 않는다 — 같이 하면 올라오는 움직임이 끊긴다.
     const timer = setTimeout(() => {
