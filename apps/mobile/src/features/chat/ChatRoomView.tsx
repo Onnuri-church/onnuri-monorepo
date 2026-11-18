@@ -45,6 +45,7 @@ import {
 } from "./api";
 import { ChatBubble } from "./components/ChatBubble";
 import { AttachmentSheet } from "./components/AttachmentSheet";
+import { preloadRecentPhotos } from "./components/RecentPhotos";
 import { CameraPreview } from "./components/CameraPreview";
 import { ChatImageViewer } from "./components/ChatImageViewer";
 import { MessageActionModal } from "./components/MessageActionModal";
@@ -153,6 +154,11 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
     const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     return () => clearTimeout(timer);
   }, [attachmentSheetOpen, keyboardHeight, positioned]);
+  // + 패널의 최근 사진을 방에 들어온 뒤 한가할 때 미리 읽어 둔다 — 패널이 끊김 없이 올라오게.
+  useEffect(() => {
+    const timer = setTimeout(preloadRecentPhotos, 1200);
+    return () => clearTimeout(timer);
+  }, []);
   // 안드로이드 뒤로가기는 패널부터 닫는다 (키보드와 같은 동작).
   useEffect(() => {
     if (!attachmentSheetOpen) return;
