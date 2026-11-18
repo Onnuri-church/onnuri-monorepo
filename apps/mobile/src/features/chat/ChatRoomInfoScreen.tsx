@@ -43,7 +43,8 @@ export function ChatRoomInfoScreen() {
   const canLeave = (kind === "room" || kind === "leader") && isMember;
 
   const muted = room?.muted ?? false;
-  const mediaUrls = (media ?? []).map((item) => item.url);
+  // 서랍에는 최근 30장만 가로로, 전체는 "사진/동영상"을 눌러 연다 (SCRUM-233)
+  const mediaUrls = (media ?? []).slice(0, 30).map((item) => item.url);
 
   const handleManage = () => {
     if (kind === "room" && teamRoom) {
@@ -124,12 +125,16 @@ export function ChatRoomInfoScreen() {
 
         {/* 사진/동영상 */}
         <View className="mx-5 gap-3 rounded-5 bg-background-normal py-4 shadow-card">
-          <View className="flex-row items-center gap-3 px-4">
+          <Pressable
+            className="flex-row items-center gap-3 px-4 active:opacity-60"
+            onPress={() => navigation.navigate("ChatMedia", { kind, id })}
+          >
             <View className="h-7 w-7 items-center justify-center rounded-md bg-primary-normal">
               <Icon name="image" size={18} color="#FFFFFF" />
             </View>
-            <Text className="text-body-medium text-text-normal">{t("사진/동영상")}</Text>
-          </View>
+            <Text className="flex-1 text-body-medium text-text-normal">{t("사진/동영상")}</Text>
+            <Icon name="expand-right" size={20} color={colors.icon.normal} />
+          </Pressable>
           {mediaUrls.length === 0 ? (
             <Text className="px-4 text-body-small text-text-alternative">
               {t("아직 주고받은 사진이 없어요")}
