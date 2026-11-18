@@ -73,6 +73,8 @@ import { QtBoardDetailScreen } from "../features/qt-board/QtBoardDetailScreen";
 import { QtBoardScreen } from "../features/qt-board/QtBoardScreen";
 import { SermonDetailScreen } from "../features/sermon/SermonDetailScreen";
 import { NotificationSettingsScreen } from "../features/settings/NotificationSettingsScreen";
+import { AppInfoScreen } from "../features/settings/AppInfoScreen";
+import { OpenSourceLicensesScreen } from "../features/settings/OpenSourceLicensesScreen";
 import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
@@ -676,6 +678,22 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("차단 목록")} rightAction="home" />,
+            }}
+          />
+          <Stack.Screen
+            name="AppInfo"
+            component={AppInfoScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("앱 정보")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="OpenSourceLicenses"
+            component={OpenSourceLicensesScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("오픈소스 라이선스")} rightAction="none" />,
             }}
           />
           <Stack.Screen
