@@ -241,5 +241,9 @@
   "사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요.": "Check photo and file access permissions, then try again.",
   "채팅방을 나갈까요?": "Leave this chat?",
   "나가면 대화를 볼 수 없고, 다시 들어오려면 초대를 받아야 해요.": "You won't see the conversation anymore, and you'll need an invite to rejoin.",
-  "나가지 못했어요": "Couldn't leave the chat"
+  "나가지 못했어요": "Couldn't leave the chat",
+  "카메라": "Camera",
+  "설정에서 온누리 온의 카메라 접근을 허용해주세요.": "Allow camera access for Onnuri On in Settings.",
+  "전송": "Send",
+  "간단한 설명을 입력해 주세요.": "Add a short caption."
 }

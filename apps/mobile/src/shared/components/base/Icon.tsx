@@ -8,6 +8,7 @@ import Bookmark from "../../assets/icons/bookmark.svg";
 import BookmarkActive from "../../assets/icons/bookmark-active.svg";
 import BoxFill from "../../assets/icons/box-fill.svg";
 import Calendar from "../../assets/icons/calendar.svg";
+import Camera from "../../assets/icons/camera.svg";
 import Card from "../../assets/icons/card.svg";
 import Chat from "../../assets/icons/chat.svg";
 import Check from "../../assets/icons/check.svg";
@@ -87,6 +88,7 @@ const ICONS = {
   "favorite-fill": FavoriteFill,
   home: Home,
   image: Image,
+  camera: Camera,
   jubo: Jubo,
   link: Link,
   lock: Lock,
