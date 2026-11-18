@@ -272,20 +272,37 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   // 순서가 섞이지 않게 앞 메시지가 끝난 뒤에 다음 것을 보낸다 (카카오톡처럼).
   const deliver = (item: PendingMessage) => {
     const { localId, body, uploads } = item;
-    patchPending(localId, { failed: false, error: undefined, progress: uploads ? 0 : undefined });
+    patchPending(localId, {
+      failed: false,
+      error: undefined,
+      upload: uploads
+        ? {
+            loaded: 0,
+            total: 0,
+            current: 1,
+            count: uploads.photos.length + uploads.videos.length + uploads.files.length,
+          }
+        : undefined,
+    });
     sendQueue.current = sendQueue.current.then(async () => {
       try {
         let finalBody = body;
         if (uploads) {
-          // 파일마다 보낸 바이트를 모아 전체 진행률을 낸다. 크기를 모르는 파일은 1로 쳐서 막대가 멈추지 않게 한다.
+          // 파일마다 보낸 바이트를 모아 전체 용량과 몇 번째 파일인지 낸다 (카카오톡처럼 말풍선 위에 표시).
+          const count = uploads.photos.length + uploads.videos.length + uploads.files.length;
           const loaded: number[] = [];
           const totals: number[] = [];
           const track = (index: number) => (sent: number, total: number) => {
             loaded[index] = sent;
-            totals[index] = total > 0 ? total : 1;
+            totals[index] = total;
             const sum = totals.reduce((acc, value) => acc + (value ?? 0), 0);
             const done = loaded.reduce((acc, value) => acc + (value ?? 0), 0);
-            if (sum > 0) patchPending(localId, { progress: Math.min(0.99, done / sum) });
+            const finished = totals.filter(
+              (value, at) => value > 0 && (loaded[at] ?? 0) >= value,
+            ).length;
+            patchPending(localId, {
+              upload: { loaded: done, total: sum, current: Math.min(count, finished + 1), count },
+            });
           };
           let index = 0;
           const [imageUrls, videoUrls, uploadedFiles] = await Promise.all([
@@ -317,7 +334,6 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             ...(videoUrls.length > 0 && { videoUrls }),
             ...(uploadedFiles.length > 0 && { files: uploadedFiles }),
           };
-          patchPending(localId, { progress: 1 });
         }
         await send.mutateAsync(finalBody);
         setPending((prev) => prev.filter((value) => value.localId !== localId));
@@ -327,7 +343,6 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           .response?.data?.message;
         patchPending(localId, {
           failed: true,
-          progress: undefined,
           error: Array.isArray(message) ? message[0] : message,
         });
       }
@@ -450,60 +465,48 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             </AppearIn>
           ),
         )}
-        {pending.map((item) => (
-          <AppearIn key={item.localId} variant="pop" animate>
-            <View className="gap-1">
-              {/* 보내는 중에는 흐리게 — 서버가 받으면 이 자리는 진짜 메시지로 바뀐다 */}
-              <View style={{ opacity: item.failed ? 1 : 0.5 }}>
-                <ChatBubble
-                  message={item.message}
-                  kind={kind}
-                  roomId={id}
-                  onLongPress={() => undefined}
-                  onImagePress={() => undefined}
-                  onReactionPress={() => undefined}
-                />
-              </View>
-              {/* 첨부 업로드 진행률 — 카카오톡처럼 막대가 차오른다 */}
-              {!item.failed && item.progress !== undefined && (
-                <View className="flex-row items-center justify-end gap-2">
-                  <View className="h-1 w-28 overflow-hidden rounded-full bg-background-assistive">
-                    <View
-                      className="h-full rounded-full bg-primary-normal"
-                      style={{ width: `${Math.round(item.progress * 100)}%` }}
-                    />
-                  </View>
-                  <Text className="text-caption-main text-text-alternative">
-                    {Math.round(item.progress * 100)}%
-                  </Text>
+        {pending.map((item) => {
+          const removePending = () =>
+            setPending((prev) => prev.filter((value) => value.localId !== item.localId));
+          return (
+            <AppearIn key={item.localId} variant="pop" animate>
+              <View className="gap-1">
+                {/* 첨부는 말풍선 위에 진행 상태를 덮어 그리고(카카오톡처럼), 글자만 보낼 때는 흐리게 */}
+                <View style={{ opacity: item.uploads || item.failed ? 1 : 0.5 }}>
+                  <ChatBubble
+                    message={item.message}
+                    kind={kind}
+                    roomId={id}
+                    onLongPress={() => undefined}
+                    onImagePress={() => undefined}
+                    onReactionPress={() => undefined}
+                    upload={
+                      item.uploads || item.failed
+                        ? {
+                            loaded: item.upload?.loaded ?? 0,
+                            total: item.upload?.total ?? 0,
+                            current: item.upload?.current ?? 1,
+                            count: item.upload?.count ?? 1,
+                            failed: item.failed,
+                            onRetry: () => deliver(item),
+                            onCancel: removePending,
+                          }
+                        : undefined
+                    }
+                  />
                 </View>
-              )}
-              {item.failed && (
-                <View className="flex-row items-center justify-end gap-3">
+                {item.failed && (
                   <Text
-                    className="flex-shrink text-caption-main text-semantic-danger"
+                    className="text-right text-caption-main text-semantic-danger"
                     numberOfLines={2}
                   >
                     {item.error ? `${t("전송 실패")} · ${item.error}` : t("전송 실패")}
                   </Text>
-                  <Pressable hitSlop={8} onPress={() => deliver(item)}>
-                    <Text className="text-caption-main text-primary-normal">
-                      {t("다시 보내기")}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() =>
-                      setPending((prev) => prev.filter((value) => value.localId !== item.localId))
-                    }
-                  >
-                    <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
-                  </Pressable>
-                </View>
-              )}
-            </View>
-          </AppearIn>
-        ))}
+                )}
+              </View>
+            </AppearIn>
+          );
+        })}
       </ScrollView>
 
       {/* 언급 후보 */}
@@ -719,8 +722,8 @@ type PendingMessage = {
   uploads?: { photos: string[]; videos: PickedVideo[]; files: PickedFile[] };
   message: ChatMessageInfo;
   failed: boolean;
-  /** 첨부 업로드 진행률 0~1 (첨부가 없으면 없음) */
-  progress?: number;
+  /** 첨부 업로드 상태 — 보낸/전체 바이트, 몇 번째 파일인지 (첨부가 없으면 없음) */
+  upload?: { loaded: number; total: number; current: number; count: number };
   /** 서버가 알려준 실패 이유 */
   error?: string;
 };

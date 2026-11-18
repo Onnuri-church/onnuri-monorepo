@@ -17,9 +17,30 @@ interface ChatBubbleProps {
   onLongPress: () => void;
   onImagePress: (index: number) => void;
   onReactionPress: (emoji: string) => void;
+  /** 보내는 중인 첨부 메시지 — 카카오톡처럼 말풍선 위에 진행 상태를, 실패하면 왼쪽에 ↻·× 버튼을 그린다 */
+  upload?: PendingUpload;
+}
+
+export interface PendingUpload {
+  /** 지금까지 보낸 바이트와 전체 바이트 (아직 모르면 0) */
+  loaded: number;
+  total: number;
+  /** 몇 번째 파일을 올리는 중인지 (1부터) / 전체 파일 수 */
+  current: number;
+  count: number;
+  failed: boolean;
+  onRetry: () => void;
+  onCancel: () => void;
 }
 
 const IMAGE_SIZE = 140;
+
+// 업로드 진행 표기 — 카카오톡처럼 소수 둘째 자리까지 ("0.00/161.84KB")
+function formatProgress(loaded: number, total: number): string {
+  const mb = total >= 1024 * 1024;
+  const unit = mb ? 1024 * 1024 : 1024;
+  return `${(loaded / unit).toFixed(2)}/${(total / unit).toFixed(2)}${mb ? "MB" : "KB"}`;
+}
 
 // 바이트 → "2.4MB" 같은 짧은 표기
 function formatSize(bytes: number): string {
@@ -36,6 +57,7 @@ export function ChatBubble({
   onLongPress,
   onImagePress,
   onReactionPress,
+  upload,
 }: ChatBubbleProps) {
   const { t } = useTranslation();
   const mine = message.isMine;
@@ -167,6 +189,50 @@ export function ChatBubble({
     </Pressable>
   );
 
+  // 보내는 중 — 말풍선을 어둡게 덮고 가운데에 사진 아이콘과 진행 상태를 띄운다.
+  // 여러 개면 "1/2"처럼 몇 번째인지, 하나면 "0.00/161.84KB"처럼 보낸 용량을 보여준다.
+  const hasAttachment =
+    message.imageUrls.length + message.videoUrls.length + message.files.length > 0;
+  const bubble =
+    upload && hasAttachment ? (
+      <View>
+        {body}
+        <View
+          pointerEvents="none"
+          className="absolute inset-0 items-center justify-center gap-1.5 rounded-2xl"
+          style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+        >
+          <View
+            className="h-11 w-11 items-center justify-center rounded-full"
+            style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
+          >
+            <Icon name={upload.failed ? "warning" : "image"} size={22} color="#FFFFFF" />
+          </View>
+          {!upload.failed && (upload.count > 1 || upload.total > 0) && (
+            <Text className="text-caption-main text-text-onImage">
+              {upload.count > 1
+                ? `${upload.current}/${upload.count}`
+                : formatProgress(upload.loaded, upload.total)}
+            </Text>
+          )}
+        </View>
+      </View>
+    ) : (
+      body
+    );
+
+  // 실패하면 말풍선 왼쪽에 다시 보내기(↻)·취소(×) — 카카오톡과 같은 자리
+  const retry = upload?.failed ? (
+    <View className="mr-1.5 flex-row items-center self-end rounded-full bg-background-normal px-1 shadow-card">
+      <Pressable hitSlop={6} onPress={upload.onRetry} className="px-2 py-1">
+        <Text className="text-body-main text-text-normal">↻</Text>
+      </Pressable>
+      <Pressable hitSlop={6} onPress={upload.onCancel} className="px-2 py-1">
+        <Text className="text-body-main text-semantic-danger">✕</Text>
+      </Pressable>
+    </View>
+  ) : null;
+
   const reactions = message.reactions.length > 0 && (
     <View className="mt-1 flex-row flex-wrap gap-1">
       {message.reactions.map((reaction) => (
@@ -190,7 +256,10 @@ export function ChatBubble({
     return (
       <View className="items-end">
         <View className="max-w-[78%] items-end">
-          {body}
+          <View className="flex-row">
+            {retry}
+            {bubble}
+          </View>
           {reactions}
           <View className="mt-1 flex-row items-center gap-1.5">
             {unread}
