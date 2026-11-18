@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import { Platform, Pressable, Text, View } from "react-native";
 
 import { AppSheet, type AppSheetRef } from "../../../shared/components/base/AppSheet";
+import { Button } from "../../../shared/components/base/Button";
 import { Icon } from "../../../shared/components/base/Icon";
 import { toDateString } from "../../../shared/components/composed/DateField";
 import { colors } from "../../../shared/theme/tokens";
@@ -143,6 +144,17 @@ export function DateRangeField({ from, to, onChange }: DateRangeFieldProps) {
                 sheetRef.current?.close();
               }}
             />
+            {/* 달력에 이미 표시된 날(처음엔 오늘)은 눌러도 바뀐 게 없어 선택이 안 됐다 —
+                보이는 날짜 그대로 고르는 버튼을 둔다 (SCRUM-246). */}
+            <View className="pt-2">
+              <Button
+                label={t("{{date}} 선택", { date: toDotted(toDateString(pickerValue)) })}
+                onPress={() => {
+                  apply(side, pickerValue);
+                  sheetRef.current?.close();
+                }}
+              />
+            </View>
           </View>
         </AppSheet>
       )}

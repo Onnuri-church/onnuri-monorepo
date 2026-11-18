@@ -630,8 +630,6 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         ref={scrollRef}
         contentContainerClassName="gap-4 px-5 py-4"
         keyboardShouldPersistTaps="handled"
-        // 채팅을 끌어 올리면 + 패널을 닫는다 (카카오톡처럼)
-        onScrollBeginDrag={() => attachmentSheetOpen && setAttachmentSheetOpen(false)}
         // 새 메시지가 생겼을 때만 맨 아래로 간다 — 같은 내용을 다시 받을 때는 위치를 건드리지 않는다.
         onContentSizeChange={() => {
           const count = messages.length + pending.length;
@@ -786,8 +784,8 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         </View>
       )}
 
-      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄 */}
-      {!searchOpen && (
+      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄. + 패널이 열려 있으면 숨긴다 (카카오톡처럼) */}
+      {!searchOpen && !attachmentSheetOpen && (
         <View
           className="border-t border-background-assistive bg-background-normal px-5 pt-2"
           // + 패널이 열려 있으면 바닥 여백은 패널이 맡는다
@@ -924,9 +922,19 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         </View>
       )}
 
-      {/* + 패널 — 입력줄 아래 키보드 자리 (SCRUM-243) */}
+      {/* + 패널 — 입력줄 대신 키보드 자리에 올라온다 (SCRUM-243). 채팅은 그만큼 줄어 마지막 메시지가
+          패널 위에 보이고, 패널 밖(어두워진 채팅)을 누르거나 손잡이를 아래로 끌면 닫힌다. */}
+      {!searchOpen && attachmentSheetOpen && (
+        <Pressable
+          className="absolute inset-0"
+          style={{ backgroundColor: "rgba(0,0,0,0.25)" }}
+          onPress={() => setAttachmentSheetOpen(false)}
+          accessibilityLabel={t("닫기")}
+        />
+      )}
       {!searchOpen && attachmentSheetOpen && (
         <AttachmentSheet
+          onClose={() => setAttachmentSheetOpen(false)}
           minHeight={lastKeyboardHeight.current || undefined}
           onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
           onSendRecent={(uris) => {

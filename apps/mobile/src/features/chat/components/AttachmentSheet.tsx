@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Animated, Image, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "../../../shared/components/base/Icon";
 import { useRecentPhotos } from "./RecentPhotos";
 
 interface AttachmentSheetProps {
+  /** 손잡이를 아래로 끌어 닫을 때 */
+  onClose: () => void;
   /** 패널 최소 높이 — 마지막 키보드 높이를 넘겨 키보드 ↔ 패널을 바꿀 때 채팅이 출렁이지 않게 한다 */
   minHeight?: number;
   /** 카메라로 바로 찍기 */
@@ -37,6 +39,7 @@ interface AttachmentRow {
 // 위에 카메라 칸 + 최근 사진, 아래에 사진·동영상 / 파일 / 투표 (SCRUM-228·241).
 // 열려 있을 때만 그려지므로 고른 사진은 닫히면 저절로 비워진다.
 export function AttachmentSheet({
+  onClose,
   minHeight,
   onPickCamera,
   onPickMedia,
@@ -66,37 +69,65 @@ export function AttachmentSheet({
     { icon: "poll", color: "#F2A33A", label: t("투표"), onPress: onPickPoll },
   ];
 
+  // 아래에서 올라오며 나타나고, 손잡이·제목 줄을 아래로 끌면 따라 내려가다 닫힌다 (카카오톡처럼).
+  const offset = useRef(new Animated.Value(80)).current;
+  useEffect(() => {
+    Animated.timing(offset, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+  }, [offset]);
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_event, gesture) =>
+        gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderMove: (_event, gesture) => offset.setValue(Math.max(0, gesture.dy)),
+      onPanResponderRelease: (_event, gesture) => {
+        if (gesture.dy > 60 || gesture.vy > 0.8) {
+          onClose();
+        } else {
+          Animated.spring(offset, { toValue: 0, useNativeDriver: true }).start();
+        }
+      },
+      onPanResponderTerminate: () =>
+        Animated.spring(offset, { toValue: 0, useNativeDriver: true }).start(),
+    }),
+  ).current;
+
   return (
-    <View
-      className="border-t border-background-assistive bg-background-normal"
-      style={{ paddingBottom: insets.bottom + 8, minHeight }}
+    <Animated.View
+      className="rounded-t-3xl bg-background-normal"
+      style={{ paddingBottom: insets.bottom + 8, minHeight, transform: [{ translateY: offset }] }}
     >
-      {/* 최근 사진 — 고르면 오른쪽 위 "전송"이 켜진다 */}
-      <View className="flex-row items-center justify-between px-5 pt-2">
-        <Text className="font-pretendard-semibold text-body-main text-text-normal">
-          {t("최근 사진")}
-        </Text>
-        {recent.length > 0 && (
-          <Pressable
-            disabled={picked.length === 0}
-            onPress={() => onSendRecent?.(picked)}
-            className={
-              picked.length > 0
-                ? "rounded-full bg-primary-normal px-4 py-1.5"
-                : "rounded-full bg-background-muted px-4 py-1.5"
-            }
-          >
-            <Text
+      {/* 손잡이 + 제목 줄 — 여기를 아래로 끌면 닫힌다 */}
+      <View {...pan.panHandlers}>
+        <View className="items-center pb-1 pt-2.5">
+          <View className="h-1 w-10 rounded-full bg-background-assistive" />
+        </View>
+        {/* 최근 사진 — 고르면 오른쪽 위 "전송"이 켜진다 */}
+        <View className="flex-row items-center justify-between px-5 pt-2">
+          <Text className="font-pretendard-semibold text-body-main text-text-normal">
+            {t("최근 사진")}
+          </Text>
+          {recent.length > 0 && (
+            <Pressable
+              disabled={picked.length === 0}
+              onPress={() => onSendRecent?.(picked)}
               className={
                 picked.length > 0
-                  ? "text-body-small text-text-onImage"
-                  : "text-body-small text-text-alternative"
+                  ? "rounded-full bg-primary-normal px-4 py-1.5"
+                  : "rounded-full bg-background-muted px-4 py-1.5"
               }
             >
-              {picked.length > 0 ? t("전송 {{count}}", { count: picked.length }) : t("전송")}
-            </Text>
-          </Pressable>
-        )}
+              <Text
+                className={
+                  picked.length > 0
+                    ? "text-body-small text-text-onImage"
+                    : "text-body-small text-text-alternative"
+                }
+              >
+                {picked.length > 0 ? t("전송 {{count}}", { count: picked.length }) : t("전송")}
+              </Text>
+            </Pressable>
+          )}
+        </View>
       </View>
       <ScrollView
         horizontal
@@ -158,6 +189,6 @@ export function AttachmentSheet({
           </Pressable>
         ))}
       </View>
-    </View>
+    </Animated.View>
   );
 }
