@@ -62,7 +62,14 @@ export class AdminAttendanceService {
     const [year, monthOfYear] = month.split('-').map(Number);
     const sundays = sundaysOfMonth(year, monthOfYear);
 
-    const groups = await this.findGroups(dto.scope ?? 'all', dto.groupId);
+    // 그룹(셀·팀 멤버)과 모임 없는 날은 서로 무관해서 같이 받는다 — DB 왕복을 한 번 줄인다 (SCRUM-239).
+    const [groups, offDays] = await Promise.all([
+      this.findGroups(dto.scope ?? 'all', dto.groupId),
+      this.prisma.offDay.findMany({
+        where: { date: { in: sundays } },
+        select: { date: true, kind: true },
+      }),
+    ]);
     const memberIds = groups.flatMap((group) => group.members.map((m) => m.id));
     const cellIds = [
       ...new Set(
@@ -111,10 +118,6 @@ export class AdminAttendanceService {
     }
 
     // 관리자가 지정한 모임 없는 날 — 해당 칸은 기록과 상관없이 '-'.
-    const offDays = await this.prisma.offDay.findMany({
-      where: { date: { in: sundays } },
-      select: { date: true, kind: true },
-    });
     const offKindByWeek = new Map(
       offDays.map((offDay) => [String(offDay.date.getTime()), offDay.kind]),
     );

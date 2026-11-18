@@ -1,6 +1,7 @@
 import type { AdminOffDay, OffDayConflictBody, OffDayKind } from "@onnuri/shared";
 import axios from "axios";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
@@ -9,7 +10,7 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import { CalendarYearMonthPicker } from "../../shared/components/composed/CalendarYearMonthPicker";
-import { useAdminOffDays, useSetAdminOffDay } from "./api";
+import { fetchAdminOffDays, neighborMonths, useAdminOffDays, useSetAdminOffDay } from "./api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 출석부 > 모임 없는 날 지정 — 일요일마다 예배/셀모임이 없는 날을 지정한다. 지정한 쪽은 출석부에서
@@ -40,6 +41,17 @@ export function AdminOffDaysScreen() {
 
   const monthParam = `${year}-${String(month).padStart(2, "0")}`;
   const { data, isLoading } = useAdminOffDays(monthParam);
+  // 앞뒤 달을 미리 받아 둔다 — 월 토글로 옆 달을 고르면 바로 보인다 (SCRUM-239).
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (!data) return;
+    for (const month of neighborMonths(monthParam)) {
+      void queryClient.prefetchQuery({
+        queryKey: ["admin", "off-days", month],
+        queryFn: () => fetchAdminOffDays(month),
+      });
+    }
+  }, [data, monthParam, queryClient]);
   const setOffDay = useSetAdminOffDay();
 
   const apply = (date: string, kind: OffDayKind | null, confirm?: boolean) => {
