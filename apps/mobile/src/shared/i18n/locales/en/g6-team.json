@@ -270,5 +270,6 @@
   "이전 결과": "Previous result",
   "다음 결과": "Next result",
   "최근 사진": "Recent photos",
-  "전송 {{count}}": "Send {{count}}"
+  "전송 {{count}}": "Send {{count}}",
+  "첨부": "Attach"
 }
