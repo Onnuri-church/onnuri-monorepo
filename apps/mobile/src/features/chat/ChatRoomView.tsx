@@ -28,6 +28,7 @@ import {
 } from "./api";
 import { ChatBubble } from "./components/ChatBubble";
 import { AttachmentSheet } from "./components/AttachmentSheet";
+import { CameraPreview } from "./components/CameraPreview";
 import { ChatImageViewer } from "./components/ChatImageViewer";
 import { MessageActionModal } from "./components/MessageActionModal";
 import { MentionText } from "./components/MentionText";
@@ -89,6 +90,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
 
   const [draft, setDraft] = useState("");
   const [photoUris, setPhotoUris] = useState<string[]>([]);
+  // 카메라로 막 찍은 사진 — 있으면 전송 미리보기를 띄운다
+  const [cameraUri, setCameraUri] = useState<string | null>(null);
   const [videos, setVideos] = useState<PickedVideo[]>([]);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
@@ -157,6 +160,21 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     };
     setAttachmentSheetOpen(false);
     setTimeout(runPendingPick, Platform.OS === "ios" ? 700 : 0);
+  };
+
+  // 카메라로 찍으면 카카오톡처럼 미리보기(설명 입력·전송)를 띄운다 (SCRUM-228).
+  const handlePickCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t("카메라 권한이 필요해요"),
+        t("설정에서 온누리 온의 카메라 접근을 허용해주세요."),
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
+    if (result.canceled || result.assets.length === 0) return;
+    setCameraUri(result.assets[0].uri);
   };
 
   // 앨범에서 사진·동영상을 함께 고른다. 사진은 20장, 동영상은 3개·50MB까지다.
@@ -351,34 +369,37 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     });
   };
 
-  const handleSend = async () => {
-    if (!canSend) return;
-    const content = draft.trim();
-    // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
-    const mentionedUserIds = mentioned
-      .filter((member) => content.includes(`@${member.name}`))
-      .map((member) => member.id);
-
+  // 메시지를 보낸다 — 입력창 보내기와 카메라 미리보기 전송이 같이 쓴다.
+  const sendMessages = (params: {
+    content: string;
+    photos: string[];
+    videos: PickedVideo[];
+    files: PickedFile[];
+    replyTo: ChatMessageInfo | null;
+    mentionedUserIds: string[];
+    mentions: { id: string; name: string }[];
+    asNotice: boolean;
+  }) => {
     // 글자든 첨부든 보내기를 누르면 바로 "보내는 중" 말풍선을 띄운다 (SCRUM-226).
     // 첨부는 기기 안의 사진·파일 주소로 먼저 그리고, 업로드는 뒤에서 진행한다.
     // 사진이 12장을 넘으면 12장씩 묶어 메시지를 나눈다 — 글·답장·동영상·파일은 첫 묶음에 붙인다.
     const photoChunks: string[][] = [];
-    for (let at = 0; at < photoUris.length; at += IMAGES_PER_MESSAGE) {
-      photoChunks.push(photoUris.slice(at, at + IMAGES_PER_MESSAGE));
+    for (let at = 0; at < params.photos.length; at += IMAGES_PER_MESSAGE) {
+      photoChunks.push(params.photos.slice(at, at + IMAGES_PER_MESSAGE));
     }
     if (photoChunks.length === 0) photoChunks.push([]);
 
     const items = photoChunks.map((photos, chunkIndex): PendingMessage => {
       const first = chunkIndex === 0;
-      const chunkVideos = first ? videos : [];
-      const chunkFiles = first ? files : [];
-      const chunkContent = first ? content : "";
-      const chunkMentions = first ? mentionedUserIds : [];
+      const chunkVideos = first ? params.videos : [];
+      const chunkFiles = first ? params.files : [];
+      const chunkContent = first ? params.content : "";
+      const chunkMentions = first ? params.mentionedUserIds : [];
       const body: SendChatMessageRequest = {
         content: chunkContent,
-        ...(first && replyTo && { replyToId: replyTo.id }),
+        ...(first && params.replyTo && { replyToId: params.replyTo.id }),
         ...(chunkMentions.length > 0 && { mentionedUserIds: chunkMentions }),
-        ...(first && asNotice && { asNotice: true }),
+        ...(first && params.asNotice && { asNotice: true }),
       };
       const hasChunkAttachment = photos.length + chunkVideos.length + chunkFiles.length > 0;
       const localId = `local-${Date.now()}-${chunkIndex}-${Math.random().toString(36).slice(2, 8)}`;
@@ -399,17 +420,17 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           videoUrls: chunkVideos.map((video) => video.uri),
           files: chunkFiles.map((file) => ({ url: file.uri, name: file.name, size: file.size })),
           replyTo:
-            first && replyTo
+            first && params.replyTo
               ? {
-                  id: replyTo.id,
-                  authorName: replyTo.authorName,
-                  content: replyTo.content,
-                  hasImage: replyTo.imageUrls.length > 0,
+                  id: params.replyTo.id,
+                  authorName: params.replyTo.authorName,
+                  content: params.replyTo.content,
+                  hasImage: params.replyTo.imageUrls.length > 0,
                 }
               : null,
           poll: null,
-          mentions: mentioned.filter((member) => chunkMentions.includes(member.id)),
-          isNotice: first && asNotice,
+          mentions: params.mentions.filter((member) => chunkMentions.includes(member.id)),
+          isNotice: first && params.asNotice,
           reactions: [],
           createdAt: new Date().toISOString(),
           isMine: true,
@@ -420,8 +441,41 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       };
     });
     setPending((prev) => [...prev, ...items]);
-    resetComposer();
     for (const item of items) deliver(item);
+  };
+
+  const handleSend = () => {
+    if (!canSend) return;
+    const content = draft.trim();
+    // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
+    const mentionedUserIds = mentioned
+      .filter((member) => content.includes(`@${member.name}`))
+      .map((member) => member.id);
+    sendMessages({
+      content,
+      photos: photoUris,
+      videos,
+      files,
+      replyTo,
+      mentionedUserIds,
+      mentions: mentioned,
+      asNotice,
+    });
+    resetComposer();
+  };
+
+  // 카메라로 찍은 사진을 미리보기에서 바로 보낸다 — 설명을 쓰면 사진 아래 글로 같이 간다 (SCRUM-228).
+  const sendCameraPhoto = (uri: string, caption: string) => {
+    sendMessages({
+      content: caption.trim(),
+      photos: [uri],
+      videos: [],
+      files: [],
+      replyTo: null,
+      mentionedUserIds: [],
+      mentions: [],
+      asNotice: false,
+    });
   };
 
   const handleDeletePress = (message: ChatMessageInfo) => {
@@ -656,13 +710,13 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             onChangeText={setDraft}
             placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
             placeholderTextColor={themeColors.text.alternative}
-            onSubmitEditing={canSend ? () => void handleSend() : undefined}
+            onSubmitEditing={canSend ? () => handleSend() : undefined}
             returnKeyType="send"
           />
           <Pressable
             className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
             disabled={!canSend}
-            onPress={() => void handleSend()}
+            onPress={() => handleSend()}
           >
             <Icon
               name="send-fill"
@@ -673,10 +727,20 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         </View>
       </View>
 
+      <CameraPreview
+        uri={cameraUri}
+        onClose={() => setCameraUri(null)}
+        onSend={(caption) => {
+          if (cameraUri) sendCameraPhoto(cameraUri, caption);
+          setCameraUri(null);
+        }}
+      />
+
       <AttachmentSheet
         visible={attachmentSheetOpen}
         onClose={() => setAttachmentSheetOpen(false)}
         onDismiss={runPendingPick}
+        onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
         onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
         onPickFile={() => pickAfterSheetClosed(handlePickFile)}
         onPickPoll={() => {
