@@ -1,12 +1,13 @@
 import type { ChatMessageInfo } from "@onnuri/shared";
 import { useTranslation } from "react-i18next";
-import { Image, Linking, Pressable, Text, View } from "react-native";
+import { Linking, Pressable, Text, View } from "react-native";
 
 import { Avatar } from "../../../shared/components/base/Avatar";
 import { Icon } from "../../../shared/components/base/Icon";
 import { toTimeAgo } from "../../../shared/utils/date";
 import type { ChatKind } from "../api";
 import { MentionText } from "./MentionText";
+import { PhotoGrid } from "./PhotoGrid";
 import { PollCard } from "./PollCard";
 
 interface ChatBubbleProps {
@@ -32,8 +33,6 @@ export interface PendingUpload {
   onRetry: () => void;
   onCancel: () => void;
 }
-
-const IMAGE_SIZE = 140;
 
 // 업로드 진행 표기 — 카카오톡처럼 소수 둘째 자리까지 ("0.00/161.84KB")
 function formatProgress(loaded: number, total: number): string {
@@ -81,10 +80,13 @@ export function ChatBubble({
       </Text>
     ) : null;
 
-  // 투표 메시지는 말풍선 대신 투표 카드로 그린다.
-  const body = message.poll ? (
-    <PollCard poll={message.poll} kind={kind} id={roomId} onLongPress={onLongPress} />
-  ) : (
+  // 사진은 말풍선 밖에 카카오톡처럼 사진만 묶어 그리고, 글·답장·동영상·파일만 말풍선에 넣는다.
+  const hasText =
+    message.isNotice ||
+    message.replyTo !== null ||
+    message.videoUrls.length + message.files.length > 0 ||
+    message.content !== "";
+  const textBubble = !hasText ? null : (
     <Pressable
       onLongPress={onLongPress}
       className={
@@ -126,23 +128,6 @@ export function ChatBubble({
           >
             {message.replyTo.content || t("사진")}
           </Text>
-        </View>
-      )}
-      {message.imageUrls.length > 0 && (
-        <View className="flex-row flex-wrap gap-1">
-          {message.imageUrls.map((url, index) => (
-            <Pressable
-              key={`${index}-${url}`}
-              onPress={() => onImagePress(index)}
-              onLongPress={onLongPress}
-            >
-              <Image
-                source={{ uri: url }}
-                style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 12 }}
-                resizeMode="cover"
-              />
-            </Pressable>
-          ))}
         </View>
       )}
       {/* 동영상 — 앱 안 플레이어 없이 기기의 기본 플레이어로 연다 (네이티브 모듈 추가 없이). */}
@@ -188,38 +173,57 @@ export function ChatBubble({
       )}
     </Pressable>
   );
+  const photos =
+    message.imageUrls.length > 0 ? (
+      <PhotoGrid urls={message.imageUrls} onPress={onImagePress} onLongPress={onLongPress} />
+    ) : null;
 
   // 보내는 중 — 말풍선을 어둡게 덮고 가운데에 사진 아이콘과 진행 상태를 띄운다.
   // 여러 개면 "1/2"처럼 몇 번째인지, 하나면 "0.00/161.84KB"처럼 보낸 용량을 보여준다.
   const hasAttachment =
     message.imageUrls.length + message.videoUrls.length + message.files.length > 0;
-  const bubble =
+  const overlay =
     upload && hasAttachment ? (
-      <View>
-        {body}
+      <View
+        pointerEvents="none"
+        className="absolute inset-0 items-center justify-center gap-1.5 rounded-2xl"
+        style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+      >
         <View
-          pointerEvents="none"
-          className="absolute inset-0 items-center justify-center gap-1.5 rounded-2xl"
-          style={{ backgroundColor: "rgba(0,0,0,0.35)" }}
+          className="h-11 w-11 items-center justify-center rounded-full"
+          style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
         >
-          <View
-            className="h-11 w-11 items-center justify-center rounded-full"
-            style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
-          >
-            <Icon name={upload.failed ? "warning" : "image"} size={22} color="#FFFFFF" />
-          </View>
-          {!upload.failed && (upload.count > 1 || upload.total > 0) && (
-            <Text className="text-caption-main text-text-onImage">
-              {upload.count > 1
-                ? `${upload.current}/${upload.count}`
-                : formatProgress(upload.loaded, upload.total)}
-            </Text>
-          )}
+          <Icon name={upload.failed ? "warning" : "image"} size={22} color="#FFFFFF" />
         </View>
+        {!upload.failed && (upload.count > 1 || upload.total > 0) && (
+          <Text className="text-caption-main text-text-onImage">
+            {upload.count > 1
+              ? `${upload.current}/${upload.count}`
+              : formatProgress(upload.loaded, upload.total)}
+          </Text>
+        )}
       </View>
-    ) : (
-      body
-    );
+    ) : null;
+
+  // 진행 상태는 사진 묶음 위에 (사진이 없으면 동영상·파일 말풍선 위에) 덮는다.
+  const body = message.poll ? (
+    <PollCard poll={message.poll} kind={kind} id={roomId} onLongPress={onLongPress} />
+  ) : (
+    <View className={mine ? "items-end gap-1" : "items-start gap-1"}>
+      {photos && (
+        <View>
+          {photos}
+          {overlay}
+        </View>
+      )}
+      {textBubble && (
+        <View className="max-w-full">
+          {textBubble}
+          {!photos && overlay}
+        </View>
+      )}
+    </View>
+  );
 
   // 실패하면 말풍선 왼쪽에 다시 보내기(↻)·취소(×) — 카카오톡과 같은 자리
   const retry = upload?.failed ? (
@@ -258,7 +262,7 @@ export function ChatBubble({
         <View className="max-w-[78%] items-end">
           <View className="flex-row">
             {retry}
-            {bubble}
+            {body}
           </View>
           {reactions}
           <View className="mt-1 flex-row items-center gap-1.5">

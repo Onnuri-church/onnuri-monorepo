@@ -17,7 +17,8 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-export const CHAT_MAX_IMAGES = 5;
+// 사진은 한 메시지에 12장까지 — 앱은 한 번에 20장까지 고르고 12장씩 묶어 나눠 보낸다 (카카오톡처럼).
+export const CHAT_MAX_IMAGES = 12;
 export const CHAT_MAX_VIDEOS = 3;
 export const CHAT_MAX_FILES = 3;
 
@@ -83,7 +84,7 @@ export class SendChatMessageDto {
   @IsOptional()
   @IsArray()
   @ArrayMaxSize(CHAT_MAX_IMAGES, {
-    message: '사진은 최대 5장까지 보낼 수 있어요.',
+    message: '사진은 한 번에 최대 12장까지 보낼 수 있어요.',
   })
   @IsUrl({}, { each: true })
   @IsStorageUrl({ each: true })
