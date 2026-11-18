@@ -132,7 +132,8 @@ export function AdminAttendanceScreen() {
   };
 
   const handleMarkChange = (field: "worship" | "meeting", attended: boolean) => {
-    if (!editTarget || !editDateKey || updateAttendance.isPending) return;
+    // 저장 중에도 계속 누를 수 있다 — 표는 바로 바뀌고 저장은 차례로 간다 (SCRUM-244).
+    if (!editTarget || !editDateKey) return;
     updateAttendance.mutate(
       { userId: editTarget.userId, date: editDateKey, [field]: attended },
       {
@@ -415,7 +416,6 @@ export function AdminAttendanceScreen() {
                             ? "h-11 flex-1 items-center justify-center rounded-2.5 bg-primary-normal"
                             : "h-11 flex-1 items-center justify-center rounded-2.5 bg-background-muted"
                         }
-                        disabled={updateAttendance.isPending}
                         onPress={() => handleMarkChange(field, attended)}
                       >
                         <Text

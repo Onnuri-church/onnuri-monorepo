@@ -130,8 +130,10 @@ export function TeamStoryScreen() {
           ))}
         </View>
 
-        {/* 새 팀 만들기. 파라미터 없이 열면 폼이 생성 모드가 된다. */}
-        {canManage && (
+        {/* 새 팀 만들기. 파라미터 없이 열면 폼이 생성 모드가 된다.
+            목록을 받는 동안에는 숨긴다 — 투명한 로딩 블록 아래에 혼자 떠 있다가 목록이 오면
+            위로 튀어 올라가 보였다 (SCRUM-242). */}
+        {canManage && !isPending && (
           <Pressable
             className="h-12 flex-row items-center justify-center gap-1 rounded-xl border border-dashed border-icon-normal active:opacity-60"
             onPress={() => navigation.navigate("TeamForm")}
