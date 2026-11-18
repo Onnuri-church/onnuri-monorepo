@@ -99,5 +99,14 @@
   "노트 {{count}}개": "{{count}} notes",
   "아직 노트가 없어요": "No notes yet",
   "목록을 불러오고 있어요.": "Loading…",
-  "표시할 항목이 없어요.": "Nothing to show."
+  "표시할 항목이 없어요.": "Nothing to show.",
+  "엑셀로 내려받기": "Download as Excel",
+  "시작": "Start",
+  "끝": "End",
+  "날짜 선택": "Select date",
+  "{{from}} ~ {{to}} · 일요일 {{count}}번": "{{from}} ~ {{to}} · {{count}} Sundays",
+  "끝 날짜를 골라주세요": "Now pick an end date",
+  "시작 날짜부터 골라주세요": "Pick a start date first",
+  "시작 날짜": "Start date",
+  "끝 날짜": "End date"
 }

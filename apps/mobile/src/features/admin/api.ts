@@ -1,5 +1,6 @@
 import type {
   AdminFollowerNoteOverview,
+  AdminAttendanceMark,
   AdminAttendanceResponse,
   AdminDownloadPreview,
   AdminOffDaysResponse,
@@ -18,15 +19,66 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { apiClient } from "../../shared/api/client";
 
 // 출석부 칸 수정 (관리자 전용 PUT /admin/attendance) — 날짜 제한 없이 예배·셀모임 출석을 대신 고친다.
-// 성공하면 출석부 집계(셀 출석 화면 캐시 포함)를 다시 받는다.
+// 누르는 순간 표를 먼저 바꾸고 저장은 뒤에서 한다 (SCRUM-244) — 예전엔 저장 + 표 다시 받기가 끝나야
+// 체크가 바뀌어 느렸다. 실패하면 원래 표로 돌린다. 연달아 누른 저장이 다 끝난 뒤에만 다시 받는다.
+const UPDATE_ATTENDANCE_KEY = ["admin", "attendance", "update"];
+
+function applyMark(
+  data: AdminAttendanceResponse | undefined,
+  body: UpdateAdminAttendanceRequest,
+): AdminAttendanceResponse | undefined {
+  if (!data) return data;
+  const weekIndex = data.dateKeys.indexOf(body.date);
+  if (weekIndex < 0) return data;
+  const toMark = (attended: boolean | undefined, current: AdminAttendanceMark) =>
+    attended === undefined ? current : attended ? "O" : "X";
+  return {
+    ...data,
+    groups: data.groups.map((group) => ({
+      ...group,
+      rows: group.rows.map((row) =>
+        row.id !== body.userId
+          ? row
+          : {
+              ...row,
+              weeks: row.weeks.map((week, index) =>
+                index !== weekIndex
+                  ? week
+                  : ([toMark(body.worship, week[0]), toMark(body.meeting, week[1])] as [
+                      AdminAttendanceMark,
+                      AdminAttendanceMark,
+                    ]),
+              ),
+            },
+      ),
+    })),
+  };
+}
+
 export function useUpdateAdminAttendance() {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: UPDATE_ATTENDANCE_KEY,
     mutationFn: (body: UpdateAdminAttendanceRequest) =>
       apiClient
         .put<{ worship: boolean; meeting: boolean }>("/admin/attendance", body)
         .then((res) => res.data),
-    onSuccess: () => {
+    onMutate: async (body) => {
+      await queryClient.cancelQueries({ queryKey: ["admin", "attendance"] });
+      const snapshot = queryClient.getQueriesData<AdminAttendanceResponse>({
+        queryKey: ["admin", "attendance"],
+      });
+      queryClient.setQueriesData<AdminAttendanceResponse>(
+        { queryKey: ["admin", "attendance"] },
+        (data) => applyMark(data, body),
+      );
+      return { snapshot };
+    },
+    onError: (_error, _body, context) => {
+      context?.snapshot.forEach(([key, data]) => queryClient.setQueryData(key, data));
+    },
+    onSettled: () => {
+      if (queryClient.isMutating({ mutationKey: UPDATE_ATTENDANCE_KEY }) > 1) return;
       void queryClient.invalidateQueries({ queryKey: ["admin", "attendance"] });
       void queryClient.invalidateQueries({ queryKey: ["cell-attendance"] });
     },

@@ -25,6 +25,7 @@ import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useHomeNotices } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
+import { fetchTeams } from "../profile/api";
 import { useMe } from "../profile/useMe";
 import { fetchQtShares } from "../qt-board/api";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -105,6 +106,11 @@ export function HomeScreen() {
       queryFn: () => fetchQtShares({ mine: false }),
     });
   }, [isGuest, queryClient]);
+
+  // 팀스토리 탭 목록도 미리 받아 둔다 — 탭을 누르면 바로 보이게 (SCRUM-242). 게스트도 보는 목록이다.
+  useEffect(() => {
+    void queryClient.prefetchQuery({ queryKey: ["teams"], queryFn: fetchTeams });
+  }, [queryClient]);
 
   // 당겨서 새로고침 — 세 요청을 같이 다시 받는다. isRefetching은 백그라운드 갱신에도 켜져서
   // 스피너가 멋대로 돌므로 쓰지 않고, 당긴 동안만 직접 true로 둔다.

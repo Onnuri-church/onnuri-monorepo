@@ -5,7 +5,18 @@ import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  BackHandler,
+  Image,
+  Keyboard,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { uploadAttachment, uploadImageWithProgress } from "../../shared/api/upload";
@@ -131,6 +142,34 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   // 처음 열 때는 맨 아래로 순간 이동한 뒤에 보여준다 — 위에서 그렸다가 아래로 미끄러지는 게 보이지 않게 (SCRUM-232).
   const [positioned, setPositioned] = useState(false);
   const positionedAt = useRef(0);
+
+  // + 패널은 키보드 자리에 들어간다 (SCRUM-243). 마지막 키보드 높이를 기억해 패널 높이로 쓰면
+  // 키보드 ↔ 패널을 바꿀 때 채팅이 출렁이지 않는다.
+  const lastKeyboardHeight = useRef(0);
+  if (keyboardHeight > 0) lastKeyboardHeight.current = keyboardHeight;
+  // 패널이나 키보드가 올라와 채팅 칸이 줄면 마지막 메시지가 그 바로 위에 보이게 맨 아래로 맞춘다.
+  useEffect(() => {
+    if (!positioned || (!attachmentSheetOpen && keyboardHeight === 0)) return;
+    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    return () => clearTimeout(timer);
+  }, [attachmentSheetOpen, keyboardHeight, positioned]);
+  // 안드로이드 뒤로가기는 패널부터 닫는다 (키보드와 같은 동작).
+  useEffect(() => {
+    if (!attachmentSheetOpen) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      setAttachmentSheetOpen(false);
+      return true;
+    });
+    return () => sub.remove();
+  }, [attachmentSheetOpen]);
+  const toggleAttachmentPanel = () => {
+    if (attachmentSheetOpen) {
+      setAttachmentSheetOpen(false);
+      return;
+    }
+    Keyboard.dismiss();
+    setAttachmentSheetOpen(true);
+  };
   const messages = room?.messages ?? [];
   const searchQuery = searchOpen ? searchText.trim().toLowerCase() : "";
   // 오래된 것부터 — 커서는 가장 최근 일치(마지막)에서 시작해 ∧로 위(예전)로 간다.
@@ -189,23 +228,12 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
     setMentioned((prev) => (prev.some((item) => item.id === member.id) ? prev : [...prev, member]));
   };
 
-  // iOS는 시트(Modal)가 다 닫히기 전에 사진·파일 선택창을 띄우면 아무 반응 없이 무시된다.
-  // 그래서 시트를 닫고, 닫힘이 끝난 뒤(onDismiss)에 선택창을 연다. onDismiss가 안 오는 경우를 대비해
-  // 잠시 뒤에도 한 번 시도하고, 둘 중 먼저 오는 쪽에서 한 번만 실행한다.
-  const pendingPickRef = useRef<(() => void) | null>(null);
-  const runPendingPick = () => {
-    const action = pendingPickRef.current;
-    pendingPickRef.current = null;
-    action?.();
-  };
+  // 패널은 팝업이 아니라서 닫힘을 기다릴 필요 없이 바로 선택창을 연다 (SCRUM-243 — 예전엔 0.7초 대기).
   const pickAfterSheetClosed = (action: () => Promise<void>) => {
-    pendingPickRef.current = () => {
-      action().catch(() => {
-        Alert.alert(t("열 수 없어요"), t("사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요."));
-      });
-    };
     setAttachmentSheetOpen(false);
-    setTimeout(runPendingPick, Platform.OS === "ios" ? 700 : 0);
+    action().catch(() => {
+      Alert.alert(t("열 수 없어요"), t("사진·파일 접근 권한을 확인한 뒤 다시 시도해주세요."));
+    });
   };
 
   // 카메라로 찍으면 카카오톡처럼 미리보기(설명 입력·전송)를 띄운다 (SCRUM-228).
@@ -602,6 +630,8 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         ref={scrollRef}
         contentContainerClassName="gap-4 px-5 py-4"
         keyboardShouldPersistTaps="handled"
+        // 채팅을 끌어 올리면 + 패널을 닫는다 (카카오톡처럼)
+        onScrollBeginDrag={() => attachmentSheetOpen && setAttachmentSheetOpen(false)}
         // 새 메시지가 생겼을 때만 맨 아래로 간다 — 같은 내용을 다시 받을 때는 위치를 건드리지 않는다.
         onContentSizeChange={() => {
           const count = messages.length + pending.length;
@@ -760,7 +790,10 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
       {!searchOpen && (
         <View
           className="border-t border-background-assistive bg-background-normal px-5 pt-2"
-          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+          // + 패널이 열려 있으면 바닥 여백은 패널이 맡는다
+          style={{
+            paddingBottom: attachmentSheetOpen ? 8 : (keyboardHeight || insets.bottom) + 8,
+          }}
         >
           {replyTo && (
             <View className="mb-2 flex-row items-center rounded-xl bg-background-muted px-3 py-2">
@@ -841,9 +874,13 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
           <View className="flex-row items-center gap-2">
             <Pressable
               className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-              onPress={() => setAttachmentSheetOpen(true)}
+              onPress={toggleAttachmentPanel}
+              accessibilityLabel={attachmentSheetOpen ? t("닫기") : t("첨부")}
             >
-              <Icon name="plus" size={20} />
+              {/* 열려 있으면 +를 45도 돌려 ×로 보여준다 (카카오톡처럼) */}
+              <View style={attachmentSheetOpen ? { transform: [{ rotate: "45deg" }] } : undefined}>
+                <Icon name="plus" size={20} />
+              </View>
             </Pressable>
             {room?.canNotice && (
               <Pressable
@@ -865,6 +902,8 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
               className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
               value={draft}
               onChangeText={setDraft}
+              // 입력창을 누르면 패널이 내려가고 키보드로 바뀐다
+              onFocus={() => setAttachmentSheetOpen(false)}
               placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
               placeholderTextColor={themeColors.text.alternative}
               onSubmitEditing={canSend ? () => handleSend() : undefined}
@@ -885,39 +924,40 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         </View>
       )}
 
+      {/* + 패널 — 입력줄 아래 키보드 자리 (SCRUM-243) */}
+      {!searchOpen && attachmentSheetOpen && (
+        <AttachmentSheet
+          minHeight={lastKeyboardHeight.current || undefined}
+          onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
+          onSendRecent={(uris) => {
+            // 최근 사진 줄에서 고른 사진을 바로 보낸다 (SCRUM-241) — 12장씩 나누는 것도 같은 길로 간다.
+            setAttachmentSheetOpen(false);
+            sendMessages({
+              content: "",
+              photos: uris,
+              videos: [],
+              files: [],
+              replyTo: null,
+              mentionedUserIds: [],
+              mentions: [],
+              asNotice: false,
+            });
+          }}
+          onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
+          onPickFile={() => pickAfterSheetClosed(handlePickFile)}
+          onPickPoll={() => {
+            setAttachmentSheetOpen(false);
+            navigation.navigate("ChatPollCreate", { kind, id });
+          }}
+        />
+      )}
+
       <CameraPreview
         uri={cameraUri}
         onClose={() => setCameraUri(null)}
         onSend={(caption) => {
           if (cameraUri) sendCameraPhoto(cameraUri, caption);
           setCameraUri(null);
-        }}
-      />
-
-      <AttachmentSheet
-        visible={attachmentSheetOpen}
-        onClose={() => setAttachmentSheetOpen(false)}
-        onDismiss={runPendingPick}
-        onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
-        onSendRecent={(uris) => {
-          // 최근 사진 줄에서 고른 사진을 바로 보낸다 (SCRUM-241) — 12장씩 나누는 것도 같은 길로 간다.
-          setAttachmentSheetOpen(false);
-          sendMessages({
-            content: "",
-            photos: uris,
-            videos: [],
-            files: [],
-            replyTo: null,
-            mentionedUserIds: [],
-            mentions: [],
-            asNotice: false,
-          });
-        }}
-        onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
-        onPickFile={() => pickAfterSheetClosed(handlePickFile)}
-        onPickPoll={() => {
-          setAttachmentSheetOpen(false);
-          navigation.navigate("ChatPollCreate", { kind, id });
         }}
       />
 

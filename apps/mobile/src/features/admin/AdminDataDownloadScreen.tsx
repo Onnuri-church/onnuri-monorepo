@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery } from "@tanstack/react-query";
 import { File, Paths } from "expo-file-system";
 import * as Sharing from "expo-sharing";
-import { useRef, useState } from "react";
+import { type ReactNode, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 
@@ -11,14 +11,14 @@ import { API_BASE_URL } from "../../shared/api/config";
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
-import { DateField, toDateString } from "../../shared/components/composed/DateField";
+import { toDateString } from "../../shared/components/composed/DateField";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
 import { fetchTeams } from "../profile/api";
 import { useAdminDownloadPreview } from "./api";
-import { RadioOption } from "./components/RadioOption";
+import { DateRangeField } from "./components/DateRangeField";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type DataKind = "member" | "attendance" | "both";
@@ -27,8 +27,95 @@ type Period = "all" | "thisYear" | "lastYear" | "custom";
 
 const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
-function SectionLabel({ children }: { children: string }) {
-  return <Text className="text-body-main text-text-normal">{children}</Text>;
+// 질문 하나 = 번호 + 질문 + 답 (SCRUM-245). 답하면 번호가 체크로 바뀌어 어디까지 했는지 보인다.
+function Step({
+  index,
+  done,
+  title,
+  children,
+}: {
+  index: number;
+  done: boolean;
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <View className="flex-row gap-3">
+      <View
+        className={
+          done
+            ? "h-6 w-6 items-center justify-center rounded-full bg-primary-normal"
+            : "h-6 w-6 items-center justify-center rounded-full bg-background-alternative"
+        }
+      >
+        <Text
+          className={
+            done ? "text-caption-small text-text-disable" : "text-caption-small text-primary-normal"
+          }
+        >
+          {done ? "✓" : String(index)}
+        </Text>
+      </View>
+      <View className="flex-1 gap-3">
+        <Text className="pt-0.5 text-body-main text-text-normal">{title}</Text>
+        {children}
+      </View>
+    </View>
+  );
+}
+
+// 알약 모양 선택지 — 작은 라디오 원 대신 누르기 쉬운 칸, 고르면 초록 테두리·옅은 초록 바탕.
+function Chip({
+  label,
+  selected,
+  onPress,
+}: {
+  label: string;
+  selected: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <Pressable
+      className={
+        selected
+          ? "rounded-full border border-primary-normal bg-background-alternative px-4 py-2"
+          : "rounded-full border border-background-assistive bg-background-normal px-4 py-2"
+      }
+      onPress={onPress}
+      style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
+    >
+      <Text
+        className={
+          selected ? "text-body-small text-primary-normal" : "text-body-small text-text-neutral"
+        }
+      >
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+function ChipRow<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: { id: T; label: string }[];
+  value: T | null;
+  onChange: (id: T) => void;
+}) {
+  return (
+    <View className="flex-row flex-wrap gap-2">
+      {options.map((option) => (
+        <Chip
+          key={option.id}
+          label={option.label}
+          selected={value === option.id}
+          onPress={() => onChange(option.id)}
+        />
+      ))}
+    </View>
+  );
 }
 
 // 관리자 출석부·회원 관리 헤더의 "다운로드"로 진입. GET /admin/download가 만든 엑셀
@@ -118,7 +205,10 @@ export function AdminDataDownloadScreen() {
         },
       );
       // 앱 안에는 엑셀 뷰어가 없으니 OS 공유 시트로 넘긴다 — 파일 앱 저장·카톡 전송 등.
-      await Sharing.shareAsync(file.uri, { mimeType: XLSX_MIME, dialogTitle: t("데이터 다운로드") });
+      await Sharing.shareAsync(file.uri, {
+        mimeType: XLSX_MIME,
+        dialogTitle: t("데이터 다운로드"),
+      });
     } catch {
       Alert.alert(t("다운로드 실패"), t("잠시 후 다시 시도해주세요."));
     } finally {
@@ -128,49 +218,37 @@ export function AdminDataDownloadScreen() {
 
   return (
     <View className="flex-1 bg-background-normal">
-      <ScrollView contentContainerClassName="gap-7 px-5 pt-6"
+      <ScrollView
+        contentContainerClassName="gap-8 px-5 pt-6"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
-        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}>
-        <View className="gap-4">
-          <SectionLabel>{t("어떤 데이터가 필요하세요?")}</SectionLabel>
-          <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
-            <RadioOption
-              label={t("회원 정보")}
-              selected={dataKind === "member"}
-              onPress={() => setDataKind("member")}
-            />
-            <RadioOption
-              label={t("출석 데이터")}
-              selected={dataKind === "attendance"}
-              onPress={() => setDataKind("attendance")}
-            />
-            <RadioOption
-              label={t("둘 다")}
-              selected={dataKind === "both"}
-              onPress={() => setDataKind("both")}
-            />
-          </View>
-        </View>
+        contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
+      >
+        <Step index={1} done={dataKind !== null} title={t("어떤 데이터가 필요하세요?")}>
+          <ChipRow
+            value={dataKind}
+            onChange={setDataKind}
+            options={[
+              { id: "member", label: t("회원 정보") },
+              { id: "attendance", label: t("출석 데이터") },
+              { id: "both", label: t("둘 다") },
+            ]}
+          />
+        </Step>
 
-        <View className="gap-4">
-          <SectionLabel>{t("누구의 데이터인가요?")}</SectionLabel>
-          <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
-            <RadioOption
-              label={t("청년부 전체")}
-              selected={target === "all"}
-              onPress={() => setTarget("all")}
-            />
-            <RadioOption
-              label={t("특정 셀")}
-              selected={target === "cell"}
-              onPress={() => setTarget("cell")}
-            />
-            <RadioOption
-              label={t("특정 팀")}
-              selected={target === "team"}
-              onPress={() => setTarget("team")}
-            />
-          </View>
+        <Step
+          index={2}
+          done={target === "all" || (target !== null && pickerId !== null)}
+          title={t("누구의 데이터인가요?")}
+        >
+          <ChipRow
+            value={target}
+            onChange={setTarget}
+            options={[
+              { id: "all", label: t("청년부 전체") },
+              { id: "cell", label: t("특정 셀") },
+              { id: "team", label: t("특정 팀") },
+            ]}
+          />
           {(target === "cell" || target === "team") && (
             <Pressable
               className="h-12 flex-row items-center justify-between rounded-2.5 bg-background-muted px-4"
@@ -188,54 +266,42 @@ export function AdminDataDownloadScreen() {
               </View>
             </Pressable>
           )}
-        </View>
+        </Step>
 
-        <View className="gap-4">
-          <SectionLabel>{t("어느 기간이요?")}</SectionLabel>
-          <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">
-            <RadioOption
-              label={t("전체")}
-              selected={period === "all"}
-              onPress={() => setPeriod("all")}
-            />
-            <RadioOption
-              label={t("올해")}
-              selected={period === "thisYear"}
-              onPress={() => setPeriod("thisYear")}
-            />
-            <RadioOption
-              label={t("작년")}
-              selected={period === "lastYear"}
-              onPress={() => setPeriod("lastYear")}
-            />
-            <RadioOption
-              label={t("직접 선택")}
-              selected={period === "custom"}
-              onPress={() => setPeriod("custom")}
-            />
-          </View>
+        <Step
+          index={3}
+          done={
+            period !== null && (period !== "custom" || (customFrom !== null && customTo !== null))
+          }
+          title={t("어느 기간이요?")}
+        >
+          <ChipRow
+            value={period}
+            onChange={setPeriod}
+            options={[
+              { id: "all", label: t("전체") },
+              { id: "thisYear", label: t("올해") },
+              { id: "lastYear", label: t("작년") },
+              { id: "custom", label: t("직접 선택") },
+            ]}
+          />
           {period === "custom" && (
-            <View className="-mt-4">
-              <DateField
-                label=""
-                placeholder={t("시작일을 선택하세요.")}
-                value={customFrom}
-                onChange={setCustomFrom}
-              />
-              <View className="-mt-4">
-                <DateField
-                  label=""
-                  placeholder={t("종료일을 선택하세요.")}
-                  value={customTo}
-                  onChange={setCustomTo}
-                />
-              </View>
-            </View>
+            <DateRangeField
+              from={customFrom}
+              to={customTo}
+              onChange={(from, to) => {
+                setCustomFrom(from);
+                setCustomTo(to);
+              }}
+            />
           )}
-        </View>
+        </Step>
       </ScrollView>
 
-      <View className="px-5 pb-12">
+      <View
+        className="border-t border-background-muted bg-background-normal px-5 pt-3"
+        style={{ paddingBottom: 12 + insets.bottom }}
+      >
         {query && (
           <Pressable
             className="mb-3 flex-row items-center justify-between rounded-2.5 bg-background-alternative px-4 py-3"
@@ -264,7 +330,7 @@ export function AdminDataDownloadScreen() {
           </Pressable>
         )}
         <Button
-          label={downloading ? t("만드는 중...") : t("다운로드")}
+          label={downloading ? t("만드는 중...") : t("엑셀로 내려받기")}
           disabled={!canDownload}
           onPress={handleDownloadPress}
         />
