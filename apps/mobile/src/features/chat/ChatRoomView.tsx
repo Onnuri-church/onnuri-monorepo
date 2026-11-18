@@ -8,7 +8,7 @@ import { useTranslation } from "react-i18next";
 import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { uploadAttachment, uploadImage } from "../../shared/api/upload";
+import { uploadAttachment, uploadImageWithProgress } from "../../shared/api/upload";
 import { AppearIn } from "../../shared/components/base/AppearIn";
 import { useNewItems } from "../../shared/hooks/useNewItems";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -93,7 +93,6 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const [replyTo, setReplyTo] = useState<ChatMessageInfo | null>(null);
   const [mentioned, setMentioned] = useState<{ id: string; name: string }[]>([]);
   const [asNotice, setAsNotice] = useState(false);
-  const [sending, setSending] = useState(false);
   // 글만 있는 메시지는 보내는 즉시 흐리게 먼저 그린다 (SCRUM-212) — 서버가 받으면 진짜 메시지로 바뀌고,
   // 실패하면 그 자리에 다시 보내기/삭제를 띄운다. 첨부가 있는 메시지는 업로드가 끝나야 해서 기존대로 기다린다.
   const [pending, setPending] = useState<PendingMessage[]>([]);
@@ -251,7 +250,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   };
 
   const hasAttachment = photoUris.length + videos.length + files.length > 0;
-  const canSend = (draft.trim() !== "" || hasAttachment) && !sending;
+  const canSend = draft.trim() !== "" || hasAttachment;
 
   const resetComposer = () => {
     setDraft("");
@@ -263,20 +262,91 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     setAsNotice(false);
   };
 
-  const deliver = (localId: string, body: SendChatMessageRequest) => {
+  // 보내는 중 말풍선의 진행률·실패 상태를 바꾼다.
+  const patchPending = (localId: string, patch: Partial<PendingMessage>) =>
     setPending((prev) =>
-      prev.map((item) => (item.localId === localId ? { ...item, failed: false } : item)),
+      prev.map((item) => (item.localId === localId ? { ...item, ...patch } : item)),
     );
-    sendQueue.current = sendQueue.current.then(() =>
-      send
-        .mutateAsync(body)
-        .then(() => setPending((prev) => prev.filter((item) => item.localId !== localId)))
-        .catch(() =>
-          setPending((prev) =>
-            prev.map((item) => (item.localId === localId ? { ...item, failed: true } : item)),
-          ),
-        ),
-    );
+
+  // 첨부가 있으면 먼저 올리고(진행률을 말풍선 아래 막대로 보여준다) 올라간 주소로 메시지를 보낸다.
+  // 순서가 섞이지 않게 앞 메시지가 끝난 뒤에 다음 것을 보낸다 (카카오톡처럼).
+  const deliver = (item: PendingMessage) => {
+    const { localId, body, uploads } = item;
+    patchPending(localId, {
+      failed: false,
+      error: undefined,
+      upload: uploads
+        ? {
+            loaded: 0,
+            total: 0,
+            current: 1,
+            count: uploads.photos.length + uploads.videos.length + uploads.files.length,
+          }
+        : undefined,
+    });
+    sendQueue.current = sendQueue.current.then(async () => {
+      try {
+        let finalBody = body;
+        if (uploads) {
+          // 파일마다 보낸 바이트를 모아 전체 용량과 몇 번째 파일인지 낸다 (카카오톡처럼 말풍선 위에 표시).
+          const count = uploads.photos.length + uploads.videos.length + uploads.files.length;
+          const loaded: number[] = [];
+          const totals: number[] = [];
+          const track = (index: number) => (sent: number, total: number) => {
+            loaded[index] = sent;
+            totals[index] = total;
+            const sum = totals.reduce((acc, value) => acc + (value ?? 0), 0);
+            const done = loaded.reduce((acc, value) => acc + (value ?? 0), 0);
+            const finished = totals.filter(
+              (value, at) => value > 0 && (loaded[at] ?? 0) >= value,
+            ).length;
+            patchPending(localId, {
+              upload: { loaded: done, total: sum, current: Math.min(count, finished + 1), count },
+            });
+          };
+          let index = 0;
+          const [imageUrls, videoUrls, uploadedFiles] = await Promise.all([
+            Promise.all(uploads.photos.map((uri) => uploadImageWithProgress(uri, track(index++)))),
+            Promise.all(
+              uploads.videos.map((video) =>
+                uploadAttachment(
+                  video.uri,
+                  { name: video.name, mimeType: video.mimeType },
+                  track(index++),
+                ),
+              ),
+            ),
+            Promise.all(
+              uploads.files.map(async (file) => ({
+                url: await uploadAttachment(
+                  file.uri,
+                  { name: file.name, mimeType: file.mimeType },
+                  track(index++),
+                ),
+                name: file.name,
+                size: file.size,
+              })),
+            ),
+          ]);
+          finalBody = {
+            ...body,
+            ...(imageUrls.length > 0 && { imageUrls }),
+            ...(videoUrls.length > 0 && { videoUrls }),
+            ...(uploadedFiles.length > 0 && { files: uploadedFiles }),
+          };
+        }
+        await send.mutateAsync(finalBody);
+        setPending((prev) => prev.filter((value) => value.localId !== localId));
+      } catch (error) {
+        // 용량·형식 문제 등 서버가 알려준 이유를 말풍선 아래에 보여준다.
+        const message = (error as { response?: { data?: { message?: string | string[] } } })
+          .response?.data?.message;
+        patchPending(localId, {
+          failed: true,
+          error: Array.isArray(message) ? message[0] : message,
+        });
+      }
+    });
   };
 
   const handleSend = async () => {
@@ -287,85 +357,47 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       .filter((member) => content.includes(`@${member.name}`))
       .map((member) => member.id);
 
-    if (!hasAttachment) {
-      const body: SendChatMessageRequest = {
-        content,
-        ...(replyTo && { replyToId: replyTo.id }),
-        ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
-        ...(asNotice && { asNotice: true }),
-      };
-      const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-      const message: ChatMessageInfo = {
-        id: localId,
-        authorId: me?.id ?? "",
-        authorName: me?.name ?? "",
-        authorAvatarUrl: me?.avatarUrl ?? null,
-        content,
-        imageUrls: [],
-        videoUrls: [],
-        files: [],
-        replyTo: replyTo
-          ? {
-              id: replyTo.id,
-              authorName: replyTo.authorName,
-              content: replyTo.content,
-              hasImage: replyTo.imageUrls.length > 0,
-            }
-          : null,
-        poll: null,
-        mentions: mentioned.filter((member) => mentionedUserIds.includes(member.id)),
-        isNotice: asNotice,
-        reactions: [],
-        createdAt: new Date().toISOString(),
-        isMine: true,
-        canDelete: false,
-        isSystem: false,
-        unreadCount: 0,
-      };
-      setPending((prev) => [...prev, { localId, body, message, failed: false }]);
-      resetComposer();
-      deliver(localId, body);
-      return;
-    }
-
-    setSending(true);
-    try {
-      const [imageUrls, videoUrls, uploadedFiles] = await Promise.all([
-        Promise.all(photoUris.map((uri) => uploadImage(uri))),
-        Promise.all(
-          videos.map((video) =>
-            uploadAttachment(video.uri, { name: video.name, mimeType: video.mimeType }),
-          ),
-        ),
-        Promise.all(
-          files.map(async (file) => ({
-            url: await uploadAttachment(file.uri, { name: file.name, mimeType: file.mimeType }),
-            name: file.name,
-            size: file.size,
-          })),
-        ),
-      ]);
-      await send.mutateAsync({
-        content,
-        ...(imageUrls.length > 0 && { imageUrls }),
-        ...(videoUrls.length > 0 && { videoUrls }),
-        ...(uploadedFiles.length > 0 && { files: uploadedFiles }),
-        ...(replyTo && { replyToId: replyTo.id }),
-        ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
-        ...(asNotice && { asNotice: true }),
-      });
-      resetComposer();
-    } catch (error) {
-      // 용량·형식 문제 등 서버가 알려준 이유를 그대로 보여준다.
-      const message = (error as { response?: { data?: { message?: string | string[] } } }).response
-        ?.data?.message;
-      Alert.alert(
-        t("전송 실패"),
-        (Array.isArray(message) ? message[0] : message) ?? t("잠시 후 다시 시도해주세요."),
-      );
-    } finally {
-      setSending(false);
-    }
+    // 글자든 첨부든 보내기를 누르면 바로 "보내는 중" 말풍선을 띄운다 (SCRUM-226).
+    // 첨부는 기기 안의 사진·파일 주소로 먼저 그리고, 업로드는 뒤에서 진행한다.
+    const body: SendChatMessageRequest = {
+      content,
+      ...(replyTo && { replyToId: replyTo.id }),
+      ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
+      ...(asNotice && { asNotice: true }),
+    };
+    const uploads = hasAttachment ? { photos: photoUris, videos, files } : undefined;
+    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const message: ChatMessageInfo = {
+      id: localId,
+      authorId: me?.id ?? "",
+      authorName: me?.name ?? "",
+      authorAvatarUrl: me?.avatarUrl ?? null,
+      content,
+      imageUrls: photoUris,
+      videoUrls: videos.map((video) => video.uri),
+      files: files.map((file) => ({ url: file.uri, name: file.name, size: file.size })),
+      replyTo: replyTo
+        ? {
+            id: replyTo.id,
+            authorName: replyTo.authorName,
+            content: replyTo.content,
+            hasImage: replyTo.imageUrls.length > 0,
+          }
+        : null,
+      poll: null,
+      mentions: mentioned.filter((member) => mentionedUserIds.includes(member.id)),
+      isNotice: asNotice,
+      reactions: [],
+      createdAt: new Date().toISOString(),
+      isMine: true,
+      canDelete: false,
+      isSystem: false,
+      unreadCount: 0,
+    };
+    const item: PendingMessage = { localId, body, uploads, message, failed: false };
+    setPending((prev) => [...prev, item]);
+    resetComposer();
+    deliver(item);
   };
 
   const handleDeletePress = (message: ChatMessageInfo) => {
@@ -433,41 +465,48 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
             </AppearIn>
           ),
         )}
-        {pending.map((item) => (
-          <AppearIn key={item.localId} variant="pop" animate>
-            <View className="gap-1">
-              {/* 보내는 중에는 흐리게 — 서버가 받으면 이 자리는 진짜 메시지로 바뀐다 */}
-              <View style={{ opacity: item.failed ? 1 : 0.5 }}>
-                <ChatBubble
-                  message={item.message}
-                  kind={kind}
-                  roomId={id}
-                  onLongPress={() => undefined}
-                  onImagePress={() => undefined}
-                  onReactionPress={() => undefined}
-                />
-              </View>
-              {item.failed && (
-                <View className="flex-row items-center justify-end gap-3">
-                  <Text className="text-caption-main text-semantic-danger">{t("전송 실패")}</Text>
-                  <Pressable hitSlop={8} onPress={() => deliver(item.localId, item.body)}>
-                    <Text className="text-caption-main text-primary-normal">
-                      {t("다시 보내기")}
-                    </Text>
-                  </Pressable>
-                  <Pressable
-                    hitSlop={8}
-                    onPress={() =>
-                      setPending((prev) => prev.filter((value) => value.localId !== item.localId))
+        {pending.map((item) => {
+          const removePending = () =>
+            setPending((prev) => prev.filter((value) => value.localId !== item.localId));
+          return (
+            <AppearIn key={item.localId} variant="pop" animate>
+              <View className="gap-1">
+                {/* 첨부는 말풍선 위에 진행 상태를 덮어 그리고(카카오톡처럼), 글자만 보낼 때는 흐리게 */}
+                <View style={{ opacity: item.uploads || item.failed ? 1 : 0.5 }}>
+                  <ChatBubble
+                    message={item.message}
+                    kind={kind}
+                    roomId={id}
+                    onLongPress={() => undefined}
+                    onImagePress={() => undefined}
+                    onReactionPress={() => undefined}
+                    upload={
+                      item.uploads || item.failed
+                        ? {
+                            loaded: item.upload?.loaded ?? 0,
+                            total: item.upload?.total ?? 0,
+                            current: item.upload?.current ?? 1,
+                            count: item.upload?.count ?? 1,
+                            failed: item.failed,
+                            onRetry: () => deliver(item),
+                            onCancel: removePending,
+                          }
+                        : undefined
                     }
-                  >
-                    <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
-                  </Pressable>
+                  />
                 </View>
-              )}
-            </View>
-          </AppearIn>
-        ))}
+                {item.failed && (
+                  <Text
+                    className="text-right text-caption-main text-semantic-danger"
+                    numberOfLines={2}
+                  >
+                    {item.error ? `${t("전송 실패")} · ${item.error}` : t("전송 실패")}
+                  </Text>
+                )}
+              </View>
+            </AppearIn>
+          );
+        })}
       </ScrollView>
 
       {/* 언급 후보 */}
@@ -677,7 +716,14 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
 
 type PendingMessage = {
   localId: string;
+  /** 첨부 주소를 뺀 본문 — 첨부는 uploads를 올린 뒤 채운다 */
   body: SendChatMessageRequest;
+  /** 아직 올리지 않은 첨부 (기기 안 주소). 다시 보내기도 처음부터 다시 올린다 */
+  uploads?: { photos: string[]; videos: PickedVideo[]; files: PickedFile[] };
   message: ChatMessageInfo;
   failed: boolean;
+  /** 첨부 업로드 상태 — 보낸/전체 바이트, 몇 번째 파일인지 (첨부가 없으면 없음) */
+  upload?: { loaded: number; total: number; current: number; count: number };
+  /** 서버가 알려준 실패 이유 */
+  error?: string;
 };

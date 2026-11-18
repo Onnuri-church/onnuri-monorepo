@@ -12,6 +12,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 import { useMe } from "../profile/useMe";
 import { useChatRooms } from "./api";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { usePrefetchChatRooms } from "../chat/api";
 
 // 팀 단톡방 목록 — 팀장·관리자는 그 팀의 모든 방을, 팀원은 자기가 들어간 방만 본다.
 // 새 방 만들기는 팀장·관리자만 (헤더 오른쪽 "만들기").
@@ -23,6 +24,13 @@ export function ChatRoomListScreen() {
   const me = useMe();
   const { data: rooms, isLoading, refetch } = useChatRooms(params.teamId);
   const pullRefresh = usePullToRefresh(refetch);
+  // 최근 대화가 오간 방부터 미리 받아 둬서 누르면 바로 보이게 한다 (SCRUM-225)
+  usePrefetchChatRooms(
+    "room",
+    [...(rooms ?? [])]
+      .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+      .map((room) => room.id),
+  );
 
   const canCreate =
     me?.isAdmin === true ||
