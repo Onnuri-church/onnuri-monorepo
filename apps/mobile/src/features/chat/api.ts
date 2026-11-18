@@ -9,7 +9,7 @@ import type {
   ToggleChatReactionRequest,
   VoteChatPollRequest,
 } from "@onnuri/shared";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
 import { apiClient } from "../../shared/api/client";
@@ -215,6 +215,23 @@ export function useChatMedia(kind: ChatKind, id: string) {
     queryKey: ["chat-media", kind, id],
     queryFn: () =>
       apiClient.get<ChatMediaItem[]>(`/chats/${kind}/${id}/media`).then((res) => res.data),
+  });
+}
+
+// 사진 전체 보기 (SCRUM-233) — 최근 것부터 한 쪽씩, 아래로 내리면 이전 사진을 이어 받는다.
+// 다음 쪽은 지금까지 받은 마지막 사진의 시각보다 이전 메시지부터 (서버가 메시지 단위로 끊는다).
+export function useChatMediaPages(kind: ChatKind, id: string) {
+  return useInfiniteQuery({
+    queryKey: ["chat-media-pages", kind, id],
+    initialPageParam: undefined as string | undefined,
+    queryFn: ({ pageParam }) =>
+      apiClient
+        .get<ChatMediaItem[]>(`/chats/${kind}/${id}/media`, {
+          params: pageParam ? { before: pageParam } : undefined,
+        })
+        .then((res) => res.data),
+    getNextPageParam: (lastPage) =>
+      lastPage.length > 0 ? lastPage[lastPage.length - 1].createdAt : undefined,
   });
 }
 

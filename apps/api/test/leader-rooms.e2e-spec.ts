@@ -360,6 +360,15 @@ describe('Leader rooms (e2e)', () => {
         .get(`/chats/leader/${roomId}/media`)
         .set(auth(otherLeaderToken))
         .expect(403);
+      // 이전 쪽 불러오기 — before는 ISO 시각만 (SCRUM-233)
+      await request(server())
+        .get(`/chats/leader/${roomId}/media?before=${new Date().toISOString()}`)
+        .set(auth(cellLeaderToken))
+        .expect(200);
+      await request(server())
+        .get(`/chats/leader/${roomId}/media?before=not-a-date`)
+        .set(auth(cellLeaderToken))
+        .expect(400);
       await request(server())
         .get(`/chats/nope/${roomId}/media`)
         .set(auth(cellLeaderToken))

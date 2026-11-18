@@ -9,6 +9,7 @@ import {
   Param,
   Post,
   Put,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 
@@ -331,8 +332,9 @@ export class ChatController {
     @CurrentUser() user: JwtPayload,
     @Param('kind') kind: string,
     @Param('id') id: string,
+    @Query('before') before?: string,
   ) {
-    return this.chatService.media(user.sub, toChatRoom(kind, id));
+    return this.chatService.media(user.sub, toChatRoom(kind, id), before);
   }
 }
 
