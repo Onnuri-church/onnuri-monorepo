@@ -49,6 +49,15 @@ module.exports = ({ config }) => ({
         cameraPermission: "게시글·프로필에 올릴 사진을 찍으려면 카메라 접근 권한이 필요해요.",
       },
     ],
+    // 채팅 + 시트의 "최근 사진" 줄 — 사진첩을 직접 읽는다 (SCRUM-241). 저장은 하지 않는다.
+    [
+      "expo-media-library",
+      {
+        photosPermission: "채팅에 보낼 최근 사진을 보여주려면 사진 접근 권한이 필요해요.",
+        savePhotosPermission: "사진을 저장하려면 사진 보관함 접근 권한이 필요해요.",
+        isAccessMediaLocationEnabled: false,
+      },
+    ],
     // 데이터 다운로드(엑셀)의 공유 시트용 — expo install이 동적 config라 자동 추가를 못 해 수동 등록.
     "expo-sharing",
     // QR 출석 스캔용 카메라 — iOS 권한 문구는 여기서 정한다 (없으면 심사 거절 사유).
