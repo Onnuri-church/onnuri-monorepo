@@ -21,6 +21,7 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { submitConsent } from "../consent/api";
 import { SettingRow } from "./components/SettingRow";
+import Constants from "expo-constants";
 
 // 섹션 제목 시안 스타일(14px/600)과 버전정보(14px/400 #555555)는 등록된 텍스트 스타일·토큰에
 // 없다 — caption-main(13/500)·body-small(13/400)+text.neutral로 근사했고, 등록 여부는
@@ -227,8 +228,17 @@ export function SettingsScreen() {
         </View>
       </View>
 
-      <Text className="mt-10 pl-4.5 text-body-small text-text-neutral">
-        {t("버전정보 {{version}}", { version: "1.0.0" })}
+      {/* 앱 정보 — 운영·개발·문의, 오픈소스 라이선스 (SCRUM-238) */}
+      <View className="mt-7.5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
+        <SettingRow
+          title={t("앱 정보")}
+          onPress={() => navigation.navigate("AppInfo")}
+          right={<Icon name="expand-right" color={colors.primary.normal} />}
+        />
+      </View>
+
+      <Text className="mt-6 pl-4.5 text-body-small text-text-neutral">
+        {t("버전정보 {{version}}", { version: Constants.expoConfig?.version ?? "1.0.0" })}
       </Text>
 
       <AppSheet
