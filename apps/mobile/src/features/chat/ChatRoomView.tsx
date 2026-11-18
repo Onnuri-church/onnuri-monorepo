@@ -18,6 +18,11 @@ import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import {
+  CHAT_BACKGROUNDS,
+  useChatBackgroundStore,
+} from "../../shared/store/useChatBackgroundStore";
+import { useThemeStore } from "../../shared/store/useThemeStore";
+import {
   markChatRead,
   useChatRoom,
   useDeleteChatMessage,
@@ -28,6 +33,7 @@ import {
 } from "./api";
 import { ChatBubble } from "./components/ChatBubble";
 import { AttachmentSheet } from "./components/AttachmentSheet";
+import { CameraPreview } from "./components/CameraPreview";
 import { ChatImageViewer } from "./components/ChatImageViewer";
 import { MessageActionModal } from "./components/MessageActionModal";
 import { MentionText } from "./components/MentionText";
@@ -60,11 +66,14 @@ interface PickedVideo {
 interface ChatRoomViewProps {
   kind: ChatKind;
   id: string;
+  /** 헤더 돋보기를 눌러 대화 검색 중인지 (SCRUM-231) */
+  searchOpen?: boolean;
+  onSearchClose?: () => void;
 }
 
 // 팀·셀 단톡방 본체. 대화, 사진 보내기, 답장, 언급(@), 이모지 반응, 공지(상단 고정)를 한 화면에서
 // 처리한다. 화면이 열려 있는 동안 몇 초마다 새 메시지를 받아오고, 새 메시지가 오면 맨 아래로 따라간다.
-export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
+export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: ChatRoomViewProps) {
   const { t } = useTranslation();
   // 차단 (SCRUM-198) — 차단한 사람의 메시지는 내용 대신 한 줄 안내로 접는다. 대화 흐름(답장 등)이
   // 끊기지 않게 서버에서 빼지 않고 앱에서 가린다.
@@ -75,6 +84,14 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
+  // 대화 검색 (SCRUM-231) — 불러온 최근 대화 안에서 글자가 들어간 메시지를 찾고, ∧∨로 오가며 강조한다.
+  const [searchText, setSearchText] = useState("");
+  const [matchCursor, setMatchCursor] = useState(0);
+  const messageY = useRef(new Map<string, number>());
+  // 채팅방 배경 — 방마다 내 폰에서 고른 색, 없으면 눈이 덜 부신 기본 회색 (SCRUM-229)
+  const themeMode = useThemeStore((state) => state.mode);
+  const backgroundId = useChatBackgroundStore((state) => state.byRoom[`${kind}:${id}`]);
+  const chatBackground = CHAT_BACKGROUNDS[backgroundId ?? "default"][themeMode];
   const focused = useIsFocused();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -89,6 +106,8 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
 
   const [draft, setDraft] = useState("");
   const [photoUris, setPhotoUris] = useState<string[]>([]);
+  // 카메라로 막 찍은 사진 — 있으면 전송 미리보기를 띄운다
+  const [cameraUri, setCameraUri] = useState<string | null>(null);
   const [videos, setVideos] = useState<PickedVideo[]>([]);
   const [files, setFiles] = useState<PickedFile[]>([]);
   const [attachmentSheetOpen, setAttachmentSheetOpen] = useState(false);
@@ -109,10 +128,36 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const scrollRef = useRef<ScrollView>(null);
   const lastCount = useRef(0);
   const messages = room?.messages ?? [];
+  const searchQuery = searchOpen ? searchText.trim().toLowerCase() : "";
+  // 오래된 것부터 — 커서는 가장 최근 일치(마지막)에서 시작해 ∧로 위(예전)로 간다.
+  const matchIds = useMemo(
+    () =>
+      searchQuery === ""
+        ? []
+        : messages
+            .filter((message) => message.content.toLowerCase().includes(searchQuery))
+            .map((message) => message.id),
+    [messages, searchQuery],
+  );
+  const currentMatchId = matchIds.length > 0 ? matchIds[matchCursor] : null;
 
   // 읽음 표시 — 방이 열려 있는 동안 가장 최근 메시지가 바뀔 때마다 서버에 알린다. 알린 뒤 목록·아이콘의
   // 안 읽은 표시를 다시 받아 빨간 점이 사라지게 한다.
   const queryClient = useQueryClient();
+  // 검색어가 바뀌면 가장 최근 일치로, 검색을 닫으면 검색어를 비운다.
+  useEffect(() => {
+    setMatchCursor(Math.max(0, matchIds.length - 1));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 검색어가 바뀔 때만 커서를 옮긴다
+  }, [searchQuery]);
+  useEffect(() => {
+    if (!searchOpen) setSearchText("");
+  }, [searchOpen]);
+  // 지금 가리키는 메시지가 화면 위쪽에 오게 스크롤한다.
+  useEffect(() => {
+    if (!currentMatchId) return;
+    const y = messageY.current.get(currentMatchId);
+    if (y !== undefined) scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+  }, [currentMatchId]);
   const latestMessageId = messages.length > 0 ? messages[messages.length - 1].id : null;
   useEffect(() => {
     if (!focused || !latestMessageId) return;
@@ -157,6 +202,21 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     };
     setAttachmentSheetOpen(false);
     setTimeout(runPendingPick, Platform.OS === "ios" ? 700 : 0);
+  };
+
+  // 카메라로 찍으면 카카오톡처럼 미리보기(설명 입력·전송)를 띄운다 (SCRUM-228).
+  const handlePickCamera = async () => {
+    const permission = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        t("카메라 권한이 필요해요"),
+        t("설정에서 온누리 온의 카메라 접근을 허용해주세요."),
+      );
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 0.8 });
+    if (result.canceled || result.assets.length === 0) return;
+    setCameraUri(result.assets[0].uri);
   };
 
   // 앨범에서 사진·동영상을 함께 고른다. 사진은 20장, 동영상은 3개·50MB까지다.
@@ -351,34 +411,37 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     });
   };
 
-  const handleSend = async () => {
-    if (!canSend) return;
-    const content = draft.trim();
-    // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
-    const mentionedUserIds = mentioned
-      .filter((member) => content.includes(`@${member.name}`))
-      .map((member) => member.id);
-
+  // 메시지를 보낸다 — 입력창 보내기와 카메라 미리보기 전송이 같이 쓴다.
+  const sendMessages = (params: {
+    content: string;
+    photos: string[];
+    videos: PickedVideo[];
+    files: PickedFile[];
+    replyTo: ChatMessageInfo | null;
+    mentionedUserIds: string[];
+    mentions: { id: string; name: string }[];
+    asNotice: boolean;
+  }) => {
     // 글자든 첨부든 보내기를 누르면 바로 "보내는 중" 말풍선을 띄운다 (SCRUM-226).
     // 첨부는 기기 안의 사진·파일 주소로 먼저 그리고, 업로드는 뒤에서 진행한다.
     // 사진이 12장을 넘으면 12장씩 묶어 메시지를 나눈다 — 글·답장·동영상·파일은 첫 묶음에 붙인다.
     const photoChunks: string[][] = [];
-    for (let at = 0; at < photoUris.length; at += IMAGES_PER_MESSAGE) {
-      photoChunks.push(photoUris.slice(at, at + IMAGES_PER_MESSAGE));
+    for (let at = 0; at < params.photos.length; at += IMAGES_PER_MESSAGE) {
+      photoChunks.push(params.photos.slice(at, at + IMAGES_PER_MESSAGE));
     }
     if (photoChunks.length === 0) photoChunks.push([]);
 
     const items = photoChunks.map((photos, chunkIndex): PendingMessage => {
       const first = chunkIndex === 0;
-      const chunkVideos = first ? videos : [];
-      const chunkFiles = first ? files : [];
-      const chunkContent = first ? content : "";
-      const chunkMentions = first ? mentionedUserIds : [];
+      const chunkVideos = first ? params.videos : [];
+      const chunkFiles = first ? params.files : [];
+      const chunkContent = first ? params.content : "";
+      const chunkMentions = first ? params.mentionedUserIds : [];
       const body: SendChatMessageRequest = {
         content: chunkContent,
-        ...(first && replyTo && { replyToId: replyTo.id }),
+        ...(first && params.replyTo && { replyToId: params.replyTo.id }),
         ...(chunkMentions.length > 0 && { mentionedUserIds: chunkMentions }),
-        ...(first && asNotice && { asNotice: true }),
+        ...(first && params.asNotice && { asNotice: true }),
       };
       const hasChunkAttachment = photos.length + chunkVideos.length + chunkFiles.length > 0;
       const localId = `local-${Date.now()}-${chunkIndex}-${Math.random().toString(36).slice(2, 8)}`;
@@ -399,17 +462,17 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
           videoUrls: chunkVideos.map((video) => video.uri),
           files: chunkFiles.map((file) => ({ url: file.uri, name: file.name, size: file.size })),
           replyTo:
-            first && replyTo
+            first && params.replyTo
               ? {
-                  id: replyTo.id,
-                  authorName: replyTo.authorName,
-                  content: replyTo.content,
-                  hasImage: replyTo.imageUrls.length > 0,
+                  id: params.replyTo.id,
+                  authorName: params.replyTo.authorName,
+                  content: params.replyTo.content,
+                  hasImage: params.replyTo.imageUrls.length > 0,
                 }
               : null,
           poll: null,
-          mentions: mentioned.filter((member) => chunkMentions.includes(member.id)),
-          isNotice: first && asNotice,
+          mentions: params.mentions.filter((member) => chunkMentions.includes(member.id)),
+          isNotice: first && params.asNotice,
           reactions: [],
           createdAt: new Date().toISOString(),
           isMine: true,
@@ -420,8 +483,41 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       };
     });
     setPending((prev) => [...prev, ...items]);
-    resetComposer();
     for (const item of items) deliver(item);
+  };
+
+  const handleSend = () => {
+    if (!canSend) return;
+    const content = draft.trim();
+    // 본문에서 "@이름"이 지워진 언급은 보내지 않는다.
+    const mentionedUserIds = mentioned
+      .filter((member) => content.includes(`@${member.name}`))
+      .map((member) => member.id);
+    sendMessages({
+      content,
+      photos: photoUris,
+      videos,
+      files,
+      replyTo,
+      mentionedUserIds,
+      mentions: mentioned,
+      asNotice,
+    });
+    resetComposer();
+  };
+
+  // 카메라로 찍은 사진을 미리보기에서 바로 보낸다 — 설명을 쓰면 사진 아래 글로 같이 간다 (SCRUM-228).
+  const sendCameraPhoto = (uri: string, caption: string) => {
+    sendMessages({
+      content: caption.trim(),
+      photos: [uri],
+      videos: [],
+      files: [],
+      replyTo: null,
+      mentionedUserIds: [],
+      mentions: [],
+      asNotice: false,
+    });
   };
 
   const handleDeletePress = (message: ChatMessageInfo) => {
@@ -434,7 +530,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
   const closeActions = () => setActionTarget(null);
 
   return (
-    <View className="flex-1 bg-background-normal">
+    <View className="flex-1" style={{ backgroundColor: chatBackground }}>
       {/* 공지 — 가장 최근에 공지로 등록된 메시지를 상단에 고정해서 보여준다. */}
       {room?.notice && (
         <View className="flex-row items-center gap-2 border-b border-background-assistive bg-background-alternative px-5 py-2">
@@ -450,6 +546,27 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
               <Text className="text-body-small text-text-normal">{t("사진 공지")}</Text>
             )}
           </View>
+        </View>
+      )}
+
+      {/* 대화 검색창 (SCRUM-231) */}
+      {searchOpen && (
+        <View className="flex-row items-center gap-3 border-b border-background-assistive bg-background-normal px-5 py-2">
+          <View className="h-10 flex-1 flex-row items-center gap-2 rounded-xl bg-background-muted px-3">
+            <Icon name="search" size={18} color={themeColors.icon.normal} />
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder={t("대화내용 검색")}
+              placeholderTextColor={themeColors.text.alternative}
+              className="flex-1 text-body-main text-text-normal"
+              autoFocus
+              returnKeyType="search"
+            />
+          </View>
+          <Pressable hitSlop={8} onPress={onSearchClose}>
+            <Text className="text-body-main text-text-normal">{t("취소")}</Text>
+          </Pressable>
         </View>
       )}
 
@@ -477,16 +594,27 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
               {t("차단한 사용자의 메시지예요")}
             </Text>
           ) : (
-            <AppearIn key={message.id} variant="pop" animate={isNew(message.id)}>
-              <ChatBubble
-                message={message}
-                kind={kind}
-                roomId={id}
-                onLongPress={() => setActionTarget(message)}
-                onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
-                onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
-              />
-            </AppearIn>
+            <View
+              key={message.id}
+              onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
+              className={message.id === currentMatchId ? "-mx-2 rounded-2xl px-2 py-1" : undefined}
+              style={
+                message.id === currentMatchId
+                  ? { backgroundColor: "rgba(255, 196, 0, 0.28)" }
+                  : undefined
+              }
+            >
+              <AppearIn variant="pop" animate={isNew(message.id)}>
+                <ChatBubble
+                  message={message}
+                  kind={kind}
+                  roomId={id}
+                  onLongPress={() => setActionTarget(message)}
+                  onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
+                  onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
+                />
+              </AppearIn>
+            </View>
           ),
         )}
         {pending.map((item) => {
@@ -534,7 +662,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
       </ScrollView>
 
       {/* 언급 후보 */}
-      {mentionCandidates.length > 0 && (
+      {!searchOpen && mentionCandidates.length > 0 && (
         <View className="border-t border-background-assistive bg-background-normal px-5 py-2">
           {mentionCandidates.map((member) => (
             <Pressable
@@ -548,75 +676,98 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
         </View>
       )}
 
-      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄 */}
-      <View
-        className="border-t border-background-assistive bg-background-normal px-5 pt-2"
-        style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
-      >
-        {replyTo && (
-          <View className="mb-2 flex-row items-center rounded-xl bg-background-muted px-3 py-2">
-            <View className="flex-1">
-              <Text className="text-caption-main text-text-neutral" numberOfLines={1}>
-                {t("{{name}}님에게 답장", { name: replyTo.authorName })}
-              </Text>
-              <Text className="text-caption-main text-text-alternative" numberOfLines={1}>
-                {replyTo.content || t("사진")}
-              </Text>
-            </View>
-            <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
-              <Icon name="close-square" size={20} />
+      {/* 검색 중에는 입력창 대신 일치 개수와 ∧∨ 이동 (카카오톡처럼) */}
+      {searchOpen && (
+        <View
+          className="flex-row items-center justify-between border-t border-background-assistive bg-background-normal px-5 pt-2"
+          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+        >
+          <Text className="text-body-small text-text-alternative">
+            {searchQuery === ""
+              ? t("최근 대화에서 찾아요")
+              : matchIds.length === 0
+                ? t("검색 결과가 없어요")
+                : `${matchCursor + 1} / ${matchIds.length}`}
+          </Text>
+          <View className="flex-row items-center gap-2">
+            <Pressable
+              hitSlop={6}
+              disabled={matchCursor <= 0}
+              onPress={() => setMatchCursor((value) => Math.max(0, value - 1))}
+              className="h-10 w-10 items-center justify-center rounded-full bg-background-muted"
+              style={{ opacity: matchCursor <= 0 ? 0.4 : 1 }}
+              accessibilityLabel={t("이전 결과")}
+            >
+              <Text className="text-body-main text-text-normal">∧</Text>
+            </Pressable>
+            <Pressable
+              hitSlop={6}
+              disabled={matchCursor >= matchIds.length - 1}
+              onPress={() => setMatchCursor((value) => Math.min(matchIds.length - 1, value + 1))}
+              className="h-10 w-10 items-center justify-center rounded-full bg-background-muted"
+              style={{ opacity: matchCursor >= matchIds.length - 1 ? 0.4 : 1 }}
+              accessibilityLabel={t("다음 결과")}
+            >
+              <Text className="text-body-main text-text-normal">∨</Text>
             </Pressable>
           </View>
-        )}
+        </View>
+      )}
 
-        {(videos.length > 0 || files.length > 0) && (
-          <View className="mb-2 gap-1">
-            {videos.map((video) => (
-              <View
-                key={video.uri}
-                className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
-              >
-                <Icon name="play" size={18} />
-                <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
-                  {video.name}
+      {/* 입력 영역 — 답장 대상·첨부 사진 미리보기·입력줄 */}
+      {!searchOpen && (
+        <View
+          className="border-t border-background-assistive bg-background-normal px-5 pt-2"
+          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+        >
+          {replyTo && (
+            <View className="mb-2 flex-row items-center rounded-xl bg-background-muted px-3 py-2">
+              <View className="flex-1">
+                <Text className="text-caption-main text-text-neutral" numberOfLines={1}>
+                  {t("{{name}}님에게 답장", { name: replyTo.authorName })}
                 </Text>
-                <Pressable
-                  onPress={() => setVideos((prev) => prev.filter((item) => item.uri !== video.uri))}
-                  hitSlop={8}
-                >
-                  <Icon name="close-square" size={18} />
-                </Pressable>
-              </View>
-            ))}
-            {files.map((file) => (
-              <View
-                key={file.uri}
-                className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
-              >
-                <Icon name="note" size={18} />
-                <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
-                  {file.name}
+                <Text className="text-caption-main text-text-alternative" numberOfLines={1}>
+                  {replyTo.content || t("사진")}
                 </Text>
-                <Pressable
-                  onPress={() => setFiles((prev) => prev.filter((item) => item.uri !== file.uri))}
-                  hitSlop={8}
-                >
-                  <Icon name="close-square" size={18} />
-                </Pressable>
               </View>
-            ))}
-          </View>
-        )}
+              <Pressable onPress={() => setReplyTo(null)} hitSlop={8}>
+                <Icon name="close-square" size={20} />
+              </Pressable>
+            </View>
+          )}
 
-        {photoUris.length > 0 && (
-          <ScrollView horizontal className="mb-2" showsHorizontalScrollIndicator={false}>
-            <View className="flex-row gap-2">
-              {photoUris.map((uri) => (
-                <View key={uri}>
-                  <Image source={{ uri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+          {(videos.length > 0 || files.length > 0) && (
+            <View className="mb-2 gap-1">
+              {videos.map((video) => (
+                <View
+                  key={video.uri}
+                  className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
+                >
+                  <Icon name="play" size={18} />
+                  <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
+                    {video.name}
+                  </Text>
                   <Pressable
-                    className="absolute right-1 top-1"
-                    onPress={() => setPhotoUris((prev) => prev.filter((item) => item !== uri))}
+                    onPress={() =>
+                      setVideos((prev) => prev.filter((item) => item.uri !== video.uri))
+                    }
+                    hitSlop={8}
+                  >
+                    <Icon name="close-square" size={18} />
+                  </Pressable>
+                </View>
+              ))}
+              {files.map((file) => (
+                <View
+                  key={file.uri}
+                  className="flex-row items-center rounded-xl bg-background-muted px-3 py-2"
+                >
+                  <Icon name="note" size={18} />
+                  <Text className="ml-2 flex-1 text-body-small text-text-normal" numberOfLines={1}>
+                    {file.name}
+                  </Text>
+                  <Pressable
+                    onPress={() => setFiles((prev) => prev.filter((item) => item.uri !== file.uri))}
                     hitSlop={8}
                   >
                     <Icon name="close-square" size={18} />
@@ -624,59 +775,88 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
                 </View>
               ))}
             </View>
-          </ScrollView>
-        )}
+          )}
 
-        <View className="flex-row items-center gap-2">
-          <Pressable
-            className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-            onPress={() => setAttachmentSheetOpen(true)}
-          >
-            <Icon name="plus" size={20} />
-          </Pressable>
-          {room?.canNotice && (
+          {photoUris.length > 0 && (
+            <ScrollView horizontal className="mb-2" showsHorizontalScrollIndicator={false}>
+              <View className="flex-row gap-2">
+                {photoUris.map((uri) => (
+                  <View key={uri}>
+                    <Image source={{ uri }} style={{ width: 64, height: 64, borderRadius: 12 }} />
+                    <Pressable
+                      className="absolute right-1 top-1"
+                      onPress={() => setPhotoUris((prev) => prev.filter((item) => item !== uri))}
+                      hitSlop={8}
+                    >
+                      <Icon name="close-square" size={18} />
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </ScrollView>
+          )}
+
+          <View className="flex-row items-center gap-2">
             <Pressable
-              className={
-                asNotice
-                  ? "h-9 w-9 items-center justify-center rounded-full bg-primary-normal active:opacity-60"
-                  : "h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-              }
-              onPress={() => setAsNotice((prev) => !prev)}
+              className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+              onPress={() => setAttachmentSheetOpen(true)}
+            >
+              <Icon name="plus" size={20} />
+            </Pressable>
+            {room?.canNotice && (
+              <Pressable
+                className={
+                  asNotice
+                    ? "h-9 w-9 items-center justify-center rounded-full bg-primary-normal active:opacity-60"
+                    : "h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+                }
+                onPress={() => setAsNotice((prev) => !prev)}
+              >
+                <Icon
+                  name="announcement"
+                  size={18}
+                  color={asNotice ? colors.icon.disable : colors.icon.normal}
+                />
+              </Pressable>
+            )}
+            <TextInput
+              className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
+              value={draft}
+              onChangeText={setDraft}
+              placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
+              placeholderTextColor={themeColors.text.alternative}
+              onSubmitEditing={canSend ? () => handleSend() : undefined}
+              returnKeyType="send"
+            />
+            <Pressable
+              className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
+              disabled={!canSend}
+              onPress={() => handleSend()}
             >
               <Icon
-                name="announcement"
-                size={18}
-                color={asNotice ? colors.icon.disable : colors.icon.normal}
+                name="send-fill"
+                size={20}
+                color={canSend ? themeColors.primary.normal : themeColors.icon.normal}
               />
             </Pressable>
-          )}
-          <TextInput
-            className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
-            value={draft}
-            onChangeText={setDraft}
-            placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
-            placeholderTextColor={themeColors.text.alternative}
-            onSubmitEditing={canSend ? () => void handleSend() : undefined}
-            returnKeyType="send"
-          />
-          <Pressable
-            className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
-            disabled={!canSend}
-            onPress={() => void handleSend()}
-          >
-            <Icon
-              name="send-fill"
-              size={20}
-              color={canSend ? themeColors.primary.normal : themeColors.icon.normal}
-            />
-          </Pressable>
+          </View>
         </View>
-      </View>
+      )}
+
+      <CameraPreview
+        uri={cameraUri}
+        onClose={() => setCameraUri(null)}
+        onSend={(caption) => {
+          if (cameraUri) sendCameraPhoto(cameraUri, caption);
+          setCameraUri(null);
+        }}
+      />
 
       <AttachmentSheet
         visible={attachmentSheetOpen}
         onClose={() => setAttachmentSheetOpen(false)}
         onDismiss={runPendingPick}
+        onPickCamera={() => pickAfterSheetClosed(handlePickCamera)}
         onPickMedia={() => pickAfterSheetClosed(handlePickMedia)}
         onPickFile={() => pickAfterSheetClosed(handlePickFile)}
         onPickPoll={() => {

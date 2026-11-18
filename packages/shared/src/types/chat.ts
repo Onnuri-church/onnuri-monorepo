@@ -131,6 +131,21 @@ export interface ChatRoomResponse {
   members: ChatMember[];
   /** 공지로 등록·해제할 수 있는지 — 팀장/셀장·부셀장과 관리자 */
   canNotice: boolean;
+  /** 내가 이 방 알림을 껐는지 (일반 메시지 푸시만 끈다 — 언급·공지는 온다) */
+  muted: boolean;
+}
+
+/** GET /chats/:kind/:id/media — 이 방에서 오간 사진 (최근 것부터) */
+export interface ChatMediaItem {
+  messageId: string;
+  url: string;
+  /** ISO datetime */
+  createdAt: string;
+}
+
+/** PUT /chats/:kind/:id/mute 요청 본문 */
+export interface SetChatMuteRequest {
+  muted: boolean;
 }
 
 /** POST …/messages 요청 본문 — 내용이나 첨부(사진·동영상·파일) 중 하나는 있어야 하고, 투표도 보낼 수 있다 */

@@ -77,6 +77,7 @@ import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
+import { ChatRoomInfoScreen } from "../features/chat/ChatRoomInfoScreen";
 import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
 import { LeaderRoomFormScreen } from "../features/leader-room/LeaderRoomFormScreen";
 import { LeaderRoomListScreen } from "../features/leader-room/LeaderRoomListScreen";
@@ -489,6 +490,7 @@ export function RootNavigator() {
             component={LeaderRoomScreen}
             options={{ headerShown: true }}
           />
+          <Stack.Screen name="ChatRoomInfo" component={ChatRoomInfoScreen} />
           <Stack.Screen
             name="ChatPollCreate"
             component={ChatPollCreateScreen}

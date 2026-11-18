@@ -1,4 +1,6 @@
 import type {
+  ChatMediaItem,
+  SetChatMuteRequest,
   AddChatPollOptionRequest,
   ChatMessageInfo,
   ChatRoomResponse,
@@ -205,4 +207,32 @@ export function useDeleteChatMessage(kind: ChatKind, id: string) {
   return useRoomMutation(kind, id, (messageId: string) =>
     apiClient.delete(`${roomPath(kind, id)}/${messageId}`),
   );
+}
+
+// 서랍(☰) — 이 방에서 오간 사진 (SCRUM-230)
+export function useChatMedia(kind: ChatKind, id: string) {
+  return useQuery({
+    queryKey: ["chat-media", kind, id],
+    queryFn: () =>
+      apiClient.get<ChatMediaItem[]>(`/chats/${kind}/${id}/media`).then((res) => res.data),
+  });
+}
+
+// 서랍(☰) — 이 방 알림 끄기·켜기. 누르자마자 바꿔 보여주고 실패하면 되돌린다.
+export function useSetChatMute(kind: ChatKind, id: string) {
+  const queryClient = useQueryClient();
+  const queryKey = ["chat", kind, id];
+  return useMutation({
+    mutationFn: (muted: boolean) =>
+      apiClient.put(`/chats/${kind}/${id}/mute`, { muted } satisfies SetChatMuteRequest),
+    onMutate: async (muted) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ChatRoomResponse>(queryKey);
+      if (previous) queryClient.setQueryData<ChatRoomResponse>(queryKey, { ...previous, muted });
+      return { previous };
+    },
+    onError: (_error, _muted, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+  });
 }

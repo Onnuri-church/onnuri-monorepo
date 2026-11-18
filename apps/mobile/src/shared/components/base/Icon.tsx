@@ -8,6 +8,7 @@ import Bookmark from "../../assets/icons/bookmark.svg";
 import BookmarkActive from "../../assets/icons/bookmark-active.svg";
 import BoxFill from "../../assets/icons/box-fill.svg";
 import Calendar from "../../assets/icons/calendar.svg";
+import Camera from "../../assets/icons/camera.svg";
 import Card from "../../assets/icons/card.svg";
 import Chat from "../../assets/icons/chat.svg";
 import Check from "../../assets/icons/check.svg";
@@ -27,6 +28,7 @@ import Image from "../../assets/icons/image.svg";
 import Jubo from "../../assets/icons/jubo.svg";
 import Link from "../../assets/icons/link.svg";
 import Lock from "../../assets/icons/lock.svg";
+import Menu from "../../assets/icons/menu.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
@@ -87,10 +89,12 @@ const ICONS = {
   "favorite-fill": FavoriteFill,
   home: Home,
   image: Image,
+  camera: Camera,
   jubo: Jubo,
   link: Link,
   lock: Lock,
   "media-strip": MediaStrip,
+  menu: Menu,
   more: More,
   "nav-home": NavHome,
   note: Note,
