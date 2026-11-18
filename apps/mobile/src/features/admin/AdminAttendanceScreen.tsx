@@ -12,7 +12,7 @@ import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
-import { MonthPicker } from "../cell/components/MonthPicker";
+import { CalendarYearMonthPicker } from "../../shared/components/composed/CalendarYearMonthPicker";
 import { fetchTeams } from "../profile/api";
 import { useAdminAttendance, useUpdateAdminAttendance } from "./api";
 import { RadioOption } from "./components/RadioOption";
@@ -63,9 +63,10 @@ export function AdminAttendanceScreen() {
 
   // 달 선택 — 시안의 날짜 바를 누르면 월 그리드가 펼쳐진다 (출석 관리 주차별 보기와 동일 그리드).
   const today = new Date();
+  // 연도·월 토글 (SCRUM-236) — 해가 바뀌어도 지난해를 다시 볼 수 있게 연도도 고른다.
+  const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
-  const monthParam = `${today.getFullYear()}-${String(month).padStart(2, "0")}`;
+  const monthParam = `${year}-${String(month).padStart(2, "0")}`;
 
   // 셀/팀 선택지는 실데이터 — 아직 안 고른 상태면 첫 항목을 기본값으로 쓴다.
   const { data: cells } = useCells();
@@ -186,27 +187,18 @@ export function AdminAttendanceScreen() {
           </Pressable>
         )}
 
-        {/* 날짜 — 누르면 월 그리드 펼침 */}
-        <Pressable
-          className="mt-4 h-11 flex-row items-center justify-between rounded-2.5 px-4 bg-background-muted"
-          onPress={() => setMonthPickerOpen((prev) => !prev)}
-        >
-          <Text className="text-body-main text-text-normal">
-            {data?.monthLabel ?? t("{{year}}년 {{month}}월", { year: today.getFullYear(), month })}
-          </Text>
-          <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
-        </Pressable>
-        {monthPickerOpen && (
-          <View className="mt-4">
-            <MonthPicker
-              selectedMonth={month}
-              onSelectMonth={(next) => {
-                setMonth(next);
-                setMonthPickerOpen(false);
-              }}
-            />
-          </View>
-        )}
+        {/* 날짜 — 연도·월 토글 (SCRUM-236) */}
+        <View className="mt-4">
+          <CalendarYearMonthPicker
+            year={year}
+            month={month}
+            futureYears={0}
+            onChange={(nextYear, nextMonth) => {
+              setYear(nextYear);
+              setMonth(nextMonth);
+            }}
+          />
+        </View>
 
         {/* 범례 */}
         {/* 번역으로 길어지면 다음 줄로 넘어가게 wrap — 설명은 한 줄을 다 쓰고 색 범례는 그 아래로 내려간다. */}

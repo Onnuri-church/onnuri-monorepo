@@ -533,26 +533,22 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
 
   const closeActions = () => setActionTarget(null);
 
-  // 메시지 한 건 — 차단한 사람 글은 가리고, 검색 중 가리키는 메시지는 노랗게 강조한다.
+  // 메시지 한 건 — 차단한 사람 글은 가리고, 검색 중에는 찾은 글자만 칠한다 (지금 결과는 진하게).
   const renderMessage = (message: ChatMessageInfo, showTime: boolean) =>
     !message.isMine && !message.isSystem && blockedIds.has(message.authorId) ? (
       <Text className="text-body-small text-text-alternative">
         {t("차단한 사용자의 메시지예요")}
       </Text>
     ) : (
-      <View
-        onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
-        className={message.id === currentMatchId ? "-mx-2 rounded-2xl px-2 py-1" : undefined}
-        style={
-          message.id === currentMatchId ? { backgroundColor: "rgba(255, 196, 0, 0.28)" } : undefined
-        }
-      >
+      <View onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}>
         <AppearIn variant="pop" animate={isNew(message.id)}>
           <ChatBubble
             message={message}
             kind={kind}
             roomId={id}
             showTime={showTime}
+            highlight={searchQuery || undefined}
+            highlightActive={message.id === currentMatchId}
             onLongPress={() => setActionTarget(message)}
             onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
             onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}

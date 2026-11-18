@@ -18,6 +18,10 @@ interface ChatBubbleProps {
   onLongPress: () => void;
   onImagePress: (index: number) => void;
   onReactionPress: (emoji: string) => void;
+  /** 대화 검색어 — 본문에서 찾은 글자만 칠한다 (SCRUM-235) */
+  highlight?: string;
+  /** 지금 가리키는 검색 결과인지 (더 진하게) */
+  highlightActive?: boolean;
   /** 시각을 달지 — 같은 사람이 같은 분에 연달아 보낸 메시지는 마지막에만 단다 (기본 true) */
   showTime?: boolean;
   /** 보내는 중인 첨부 메시지 — 카카오톡처럼 말풍선 위에 진행 상태를, 실패하면 왼쪽에 ↻·× 버튼을 그린다 */
@@ -60,6 +64,8 @@ export function ChatBubble({
   onReactionPress,
   upload,
   showTime = true,
+  highlight,
+  highlightActive = false,
 }: ChatBubbleProps) {
   const { t } = useTranslation();
   const mine = message.isMine;
@@ -172,6 +178,8 @@ export function ChatBubble({
               ? "font-pretendard-semibold underline"
               : "font-pretendard-semibold text-primary-normal"
           }
+          highlight={highlight}
+          highlightActive={highlightActive}
         />
       )}
     </Pressable>

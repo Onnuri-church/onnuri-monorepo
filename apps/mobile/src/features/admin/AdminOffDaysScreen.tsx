@@ -8,7 +8,7 @@ import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppShee
 import { Icon } from "../../shared/components/base/Icon";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
-import { MonthPicker } from "../cell/components/MonthPicker";
+import { CalendarYearMonthPicker } from "../../shared/components/composed/CalendarYearMonthPicker";
 import { useAdminOffDays, useSetAdminOffDay } from "./api";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,12 +32,13 @@ export function AdminOffDaysScreen() {
     { kind: "BOTH_OFF", label: KIND_LABEL.BOTH_OFF },
   ];
   const today = new Date();
+  // 연도·월 토글 (SCRUM-236) — 해가 바뀌어도 지난해를 다시 볼 수 있게 연도도 고른다.
+  const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth() + 1);
-  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
   const [target, setTarget] = useState<AdminOffDay | null>(null);
   const sheetRef = useRef<AppSheetRef>(null);
 
-  const monthParam = `${today.getFullYear()}-${String(month).padStart(2, "0")}`;
+  const monthParam = `${year}-${String(month).padStart(2, "0")}`;
   const { data, isLoading } = useAdminOffDays(monthParam);
   const setOffDay = useSetAdminOffDay();
 
@@ -92,27 +93,18 @@ export function AdminOffDaysScreen() {
           </Text>
         </View>
 
-        {/* 달 선택 — 출석부 날짜 바와 같은 형태 */}
-        <Pressable
-          className="mt-4 h-11 flex-row items-center justify-between rounded-2.5 bg-background-muted px-4"
-          onPress={() => setMonthPickerOpen((prev) => !prev)}
-        >
-          <Text className="text-body-main text-text-normal">
-            {data?.monthLabel ?? t("{{year}}년 {{month}}월", { year: today.getFullYear(), month })}
-          </Text>
-          <Icon name="arrow-drop-down" size={16} color={colors.icon.strongest} />
-        </Pressable>
-        {monthPickerOpen && (
-          <View className="mt-4">
-            <MonthPicker
-              selectedMonth={month}
-              onSelectMonth={(next) => {
-                setMonth(next);
-                setMonthPickerOpen(false);
-              }}
-            />
-          </View>
-        )}
+        {/* 달 선택 — 출석부와 같은 연도·월 토글 (SCRUM-236) */}
+        <View className="mt-4">
+          <CalendarYearMonthPicker
+            year={year}
+            month={month}
+            futureYears={1}
+            onChange={(nextYear, nextMonth) => {
+              setYear(nextYear);
+              setMonth(nextMonth);
+            }}
+          />
+        </View>
 
         <View className="mt-4">
           {(data?.days ?? []).map((day, index) => (
