@@ -1,6 +1,14 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Animated, Image, PanResponder, Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
+import { Gesture, GestureDetector } from "react-native-gesture-handler";
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, type IconName } from "../../../shared/components/base/Icon";
@@ -70,65 +78,67 @@ export function AttachmentSheet({
   ];
 
   // 아래에서 올라오며 나타나고, 손잡이·제목 줄을 아래로 끌면 따라 내려가다 닫힌다 (카카오톡처럼).
-  const offset = useRef(new Animated.Value(80)).current;
+  // 끌기는 화면 스레드에서 처리한다 — 패널이 뜬 직후엔 앱이 최근 사진을 읽느라 바빠서,
+  // 예전 방식(PanResponder)은 그동안 손가락을 따라오지 못했다 (SCRUM-243).
+  const offset = useSharedValue(80);
   useEffect(() => {
-    Animated.timing(offset, { toValue: 0, duration: 180, useNativeDriver: true }).start();
+    offset.value = withTiming(0, { duration: 180 });
   }, [offset]);
-  const pan = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_event, gesture) =>
-        gesture.dy > 6 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
-      onPanResponderMove: (_event, gesture) => offset.setValue(Math.max(0, gesture.dy)),
-      onPanResponderRelease: (_event, gesture) => {
-        if (gesture.dy > 60 || gesture.vy > 0.8) {
-          onClose();
-        } else {
-          Animated.spring(offset, { toValue: 0, useNativeDriver: true }).start();
-        }
-      },
-      onPanResponderTerminate: () =>
-        Animated.spring(offset, { toValue: 0, useNativeDriver: true }).start(),
-    }),
-  ).current;
+  const drag = Gesture.Pan()
+    .activeOffsetY(4)
+    .failOffsetX([-24, 24])
+    .onUpdate((event) => {
+      offset.value = Math.max(0, event.translationY);
+    })
+    .onEnd((event) => {
+      if (event.translationY > 60 || event.velocityY > 800) {
+        offset.value = withTiming(500, { duration: 160 }, () => runOnJS(onClose)());
+      } else {
+        offset.value = withSpring(0, { damping: 20, stiffness: 220 });
+      }
+    });
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: offset.value }] }));
 
   return (
     <Animated.View
       className="rounded-t-3xl bg-background-normal"
-      style={{ paddingBottom: insets.bottom + 8, minHeight, transform: [{ translateY: offset }] }}
+      style={[{ paddingBottom: insets.bottom + 8, minHeight }, sheetStyle]}
     >
       {/* 손잡이 + 제목 줄 — 여기를 아래로 끌면 닫힌다 */}
-      <View {...pan.panHandlers}>
-        <View className="items-center pb-1 pt-2.5">
-          <View className="h-1 w-10 rounded-full bg-background-assistive" />
-        </View>
-        {/* 최근 사진 — 고르면 오른쪽 위 "전송"이 켜진다 */}
-        <View className="flex-row items-center justify-between px-5 pt-2">
-          <Text className="font-pretendard-semibold text-body-main text-text-normal">
-            {t("최근 사진")}
-          </Text>
-          {recent.length > 0 && (
-            <Pressable
-              disabled={picked.length === 0}
-              onPress={() => onSendRecent?.(picked)}
-              className={
-                picked.length > 0
-                  ? "rounded-full bg-primary-normal px-4 py-1.5"
-                  : "rounded-full bg-background-muted px-4 py-1.5"
-              }
-            >
-              <Text
+      <GestureDetector gesture={drag}>
+        <View>
+          <View className="items-center pb-2 pt-3">
+            <View className="h-1 w-10 rounded-full bg-background-assistive" />
+          </View>
+          {/* 최근 사진 — 고르면 오른쪽 위 "전송"이 켜진다 */}
+          <View className="flex-row items-center justify-between px-5 pt-2">
+            <Text className="font-pretendard-semibold text-body-main text-text-normal">
+              {t("최근 사진")}
+            </Text>
+            {recent.length > 0 && (
+              <Pressable
+                disabled={picked.length === 0}
+                onPress={() => onSendRecent?.(picked)}
                 className={
                   picked.length > 0
-                    ? "text-body-small text-text-onImage"
-                    : "text-body-small text-text-alternative"
+                    ? "rounded-full bg-primary-normal px-4 py-1.5"
+                    : "rounded-full bg-background-muted px-4 py-1.5"
                 }
               >
-                {picked.length > 0 ? t("전송 {{count}}", { count: picked.length }) : t("전송")}
-              </Text>
-            </Pressable>
-          )}
+                <Text
+                  className={
+                    picked.length > 0
+                      ? "text-body-small text-text-onImage"
+                      : "text-body-small text-text-alternative"
+                  }
+                >
+                  {picked.length > 0 ? t("전송 {{count}}", { count: picked.length }) : t("전송")}
+                </Text>
+              </Pressable>
+            )}
+          </View>
         </View>
-      </View>
+      </GestureDetector>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
