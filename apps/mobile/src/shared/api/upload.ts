@@ -17,7 +17,18 @@ const MIME_TYPES: Record<string, string> = {
  * 이미 http(s) 주소면(기존 저장값) 다시 올리지 않고 그대로 돌려준다 — 편집 화면에서
  * 사진을 안 바꾼 채 저장하는 경우다.
  */
-export async function uploadImage(uri: string): Promise<string> {
+/** 업로드 진행률 — 보낸 바이트와 전체 바이트 (전체를 모르면 0) */
+export type UploadProgress = (loaded: number, total: number) => void;
+
+// .map(uploadImage)처럼 넘겨도 index가 진행률 자리에 들어가지 않게 진행률 버전은 따로 둔다.
+export function uploadImage(uri: string): Promise<string> {
+  return uploadImageWithProgress(uri);
+}
+
+export async function uploadImageWithProgress(
+  uri: string,
+  onProgress?: UploadProgress,
+): Promise<string> {
   if (uri.startsWith("http")) return uri;
 
   const name = uri.split("/").pop() ?? "photo.jpg";
@@ -33,6 +44,9 @@ export async function uploadImage(uri: string): Promise<string> {
   const response = await apiClient.post<{ url: string }>("/uploads", form, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: UPLOAD_TIMEOUT_MS,
+    onUploadProgress: onProgress
+      ? (event) => onProgress(event.loaded, event.total ?? 0)
+      : undefined,
   });
   return response.data.url;
 }
@@ -44,6 +58,7 @@ export async function uploadImage(uri: string): Promise<string> {
 export async function uploadAttachment(
   uri: string,
   options: { name?: string | null; mimeType?: string | null },
+  onProgress?: UploadProgress,
 ): Promise<string> {
   const name = options.name ?? uri.split("/").pop() ?? "file";
   const form = new FormData();
@@ -56,6 +71,9 @@ export async function uploadAttachment(
   const response = await apiClient.post<{ url: string }>("/uploads", form, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: UPLOAD_TIMEOUT_MS,
+    onUploadProgress: onProgress
+      ? (event) => onProgress(event.loaded, event.total ?? 0)
+      : undefined,
   });
   return response.data.url;
 }

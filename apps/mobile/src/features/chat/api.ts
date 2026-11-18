@@ -8,6 +8,7 @@ import type {
   VoteChatPollRequest,
 } from "@onnuri/shared";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -51,11 +52,32 @@ export function useChatUnread(kind: "cell" | "group", id: string, enabled: boole
   });
 }
 
+const fetchChatRoom = (kind: ChatKind, id: string) =>
+  apiClient.get<ChatRoomResponse>(roomPath(kind, id)).then((res) => res.data);
+
+// 방에 들어가기 전에 대화를 미리 받아 둔다 (SCRUM-225) — 목록·셀 페이지가 보이는 동안 받아 두면
+// 방을 누르는 순간 캐시로 바로 그리고, 들어간 뒤에는 평소처럼 몇 초마다 새로 받는다.
+// 읽음 처리는 하지 않아서 안 읽은 표시에는 영향이 없다. 최근에 대화가 오간 방 몇 개만 받는다.
+const PREFETCH_LIMIT = 5;
+export function usePrefetchChatRooms(kind: ChatKind, ids: string[]) {
+  const queryClient = useQueryClient();
+  const key = ids.slice(0, PREFETCH_LIMIT).join(",");
+  useEffect(() => {
+    if (key === "") return;
+    for (const id of key.split(",")) {
+      void queryClient.prefetchQuery({
+        queryKey: ["chat", kind, id],
+        queryFn: () => fetchChatRoom(kind, id),
+      });
+    }
+  }, [queryClient, kind, key]);
+}
+
 // 실시간 연결 없이 화면이 열려 있는 동안 몇 초마다 새로 받는다 (푸시 알림은 따로 간다).
 export function useChatRoom(kind: ChatKind, id: string, polling: boolean) {
   return useQuery({
     queryKey: ["chat", kind, id],
-    queryFn: () => apiClient.get<ChatRoomResponse>(roomPath(kind, id)).then((res) => res.data),
+    queryFn: () => fetchChatRoom(kind, id),
     refetchInterval: polling ? CHAT_POLL_MS : false,
     enabled: id !== "",
   });
