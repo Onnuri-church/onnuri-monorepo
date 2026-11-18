@@ -92,7 +92,7 @@ export function ChatBubble({
       className={
         mine
           ? "max-w-full gap-2 rounded-2xl bg-primary-normal px-3 py-2"
-          : "max-w-full gap-2 rounded-2xl bg-background-muted px-3 py-2"
+          : "max-w-full gap-2 rounded-2xl bg-background-normal px-3 py-2"
       }
     >
       {message.isNotice && (
