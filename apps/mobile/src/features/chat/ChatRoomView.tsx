@@ -3,7 +3,7 @@ import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as ImagePicker from "expo-image-picker";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Image, Platform, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -15,6 +15,7 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { Icon } from "../../shared/components/base/Icon";
 import { useKeyboardHeight } from "../../shared/hooks/useKeyboardHeight";
+import { isSameDay, isSameMinute, toChatDate } from "../../shared/utils/date";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import {
@@ -95,7 +96,7 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   const focused = useIsFocused();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
-  const { data: room } = useChatRoom(kind, id, focused);
+  const { data: room, isPending: roomLoading } = useChatRoom(kind, id, focused);
   // 방을 연 뒤 새로 온 말풍선만 "톡" 하고 나타나게 한다 (SCRUM-215). 내가 보낸 건 보내는 중 말풍선이
   // 먼저 나타났으니 진짜로 바뀔 때는 효과를 주지 않는다.
   const { isNew, markSeen } = useNewItems(room?.messages.map((message) => message.id));
@@ -127,6 +128,9 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
 
   const scrollRef = useRef<ScrollView>(null);
   const lastCount = useRef(0);
+  // 처음 열 때는 맨 아래로 순간 이동한 뒤에 보여준다 — 위에서 그렸다가 아래로 미끄러지는 게 보이지 않게 (SCRUM-232).
+  const [positioned, setPositioned] = useState(false);
+  const positionedAt = useRef(0);
   const messages = room?.messages ?? [];
   const searchQuery = searchOpen ? searchText.trim().toLowerCase() : "";
   // 오래된 것부터 — 커서는 가장 최근 일치(마지막)에서 시작해 ∧로 위(예전)로 간다.
@@ -529,6 +533,34 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
 
   const closeActions = () => setActionTarget(null);
 
+  // 메시지 한 건 — 차단한 사람 글은 가리고, 검색 중 가리키는 메시지는 노랗게 강조한다.
+  const renderMessage = (message: ChatMessageInfo, showTime: boolean) =>
+    !message.isMine && !message.isSystem && blockedIds.has(message.authorId) ? (
+      <Text className="text-body-small text-text-alternative">
+        {t("차단한 사용자의 메시지예요")}
+      </Text>
+    ) : (
+      <View
+        onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
+        className={message.id === currentMatchId ? "-mx-2 rounded-2xl px-2 py-1" : undefined}
+        style={
+          message.id === currentMatchId ? { backgroundColor: "rgba(255, 196, 0, 0.28)" } : undefined
+        }
+      >
+        <AppearIn variant="pop" animate={isNew(message.id)}>
+          <ChatBubble
+            message={message}
+            kind={kind}
+            roomId={id}
+            showTime={showTime}
+            onLongPress={() => setActionTarget(message)}
+            onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
+            onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
+          />
+        </AppearIn>
+      </View>
+    );
+
   return (
     <View className="flex-1" style={{ backgroundColor: chatBackground }}>
       {/* 공지 — 가장 최근에 공지로 등록된 메시지를 상단에 고정해서 보여준다. */}
@@ -577,46 +609,60 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         // 새 메시지가 생겼을 때만 맨 아래로 간다 — 같은 내용을 다시 받을 때는 위치를 건드리지 않는다.
         onContentSizeChange={() => {
           const count = messages.length + pending.length;
+          if (count === 0) return;
+          if (!positioned) {
+            // 첫 화면 — 애니메이션 없이 맨 아래에서 시작하고, 자리를 잡은 다음 프레임에 보여준다.
+            lastCount.current = count;
+            scrollRef.current?.scrollToEnd({ animated: false });
+            positionedAt.current = Date.now();
+            requestAnimationFrame(() => setPositioned(true));
+            return;
+          }
+          // 연 직후 사진이 늦게 그려져 높이가 늘면 맨 아래를 다시 맞춘다 (1.5초 안에서만).
+          if (count === lastCount.current && Date.now() - positionedAt.current < 1500) {
+            scrollRef.current?.scrollToEnd({ animated: false });
+            return;
+          }
+          // 그다음부터는 새 메시지가 생겼을 때만 부드럽게 따라간다.
           if (count !== lastCount.current) {
             lastCount.current = count;
             scrollRef.current?.scrollToEnd({ animated: true });
           }
         }}
+        style={{ opacity: positioned || messages.length + pending.length === 0 ? 1 : 0 }}
       >
-        {messages.length === 0 && (
+        {/* 불러오는 동안에는 "대화가 없어요"를 띄우지 않는다 */}
+        {!roomLoading && messages.length === 0 && (
           <Text className="pt-10 text-center text-body-medium text-text-alternative">
             {t("아직 대화가 없어요. 첫 메시지를 남겨보세요.")}
           </Text>
         )}
-        {messages.map((message) =>
-          !message.isMine && !message.isSystem && blockedIds.has(message.authorId) ? (
-            <Text key={message.id} className="text-body-small text-text-alternative">
-              {t("차단한 사용자의 메시지예요")}
-            </Text>
-          ) : (
-            <View
-              key={message.id}
-              onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
-              className={message.id === currentMatchId ? "-mx-2 rounded-2xl px-2 py-1" : undefined}
-              style={
-                message.id === currentMatchId
-                  ? { backgroundColor: "rgba(255, 196, 0, 0.28)" }
-                  : undefined
-              }
-            >
-              <AppearIn variant="pop" animate={isNew(message.id)}>
-                <ChatBubble
-                  message={message}
-                  kind={kind}
-                  roomId={id}
-                  onLongPress={() => setActionTarget(message)}
-                  onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
-                  onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
-                />
-              </AppearIn>
-            </View>
-          ),
-        )}
+        {messages.map((message, index) => {
+          const previous = index > 0 ? messages[index - 1] : null;
+          const next = index < messages.length - 1 ? messages[index + 1] : null;
+          // 날이 바뀌면 카카오톡처럼 가운데에 "2026년 11월 8일 일요일" 구분선 (SCRUM-234)
+          const dateDivider =
+            previous === null || !isSameDay(previous.createdAt, message.createdAt) ? (
+              <View className="items-center py-1">
+                <Text className="rounded-full bg-background-muted px-3 py-1 text-caption-main text-text-alternative">
+                  {toChatDate(message.createdAt)}
+                </Text>
+              </View>
+            ) : null;
+          // 같은 사람이 같은 분에 연달아 보낸 메시지는 마지막에만 시각을 단다
+          const showTime =
+            next === null ||
+            next.authorId !== message.authorId ||
+            next.isSystem ||
+            !isSameMinute(next.createdAt, message.createdAt) ||
+            !isSameDay(next.createdAt, message.createdAt);
+          return (
+            <Fragment key={message.id}>
+              {dateDivider}
+              {renderMessage(message, showTime)}
+            </Fragment>
+          );
+        })}
         {pending.map((item) => {
           const removePending = () =>
             setPending((prev) => prev.filter((value) => value.localId !== item.localId));
