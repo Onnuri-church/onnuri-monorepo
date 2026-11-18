@@ -35,7 +35,9 @@ import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useBlockedUserIds } from "../block/api";
 import { useReport } from "../report/useReport";
 
-const MAX_IMAGES = 5;
+// 사진은 한 번에 20장까지 고르고, 보낼 때 12장씩 묶어 메시지를 나눈다 (서버 한도도 메시지당 12장).
+const MAX_IMAGES = 20;
+const IMAGES_PER_MESSAGE = 12;
 const MAX_VIDEOS = 3;
 const MAX_FILES = 3;
 const MB = 1024 * 1024;
@@ -157,7 +159,7 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
     setTimeout(runPendingPick, Platform.OS === "ios" ? 700 : 0);
   };
 
-  // 앨범에서 사진·동영상을 함께 고른다. 사진은 5장, 동영상은 3개·50MB까지다.
+  // 앨범에서 사진·동영상을 함께 고른다. 사진은 20장, 동영상은 3개·50MB까지다.
   const handlePickMedia = async () => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images", "videos"],
@@ -359,45 +361,67 @@ export function ChatRoomView({ kind, id }: ChatRoomViewProps) {
 
     // 글자든 첨부든 보내기를 누르면 바로 "보내는 중" 말풍선을 띄운다 (SCRUM-226).
     // 첨부는 기기 안의 사진·파일 주소로 먼저 그리고, 업로드는 뒤에서 진행한다.
-    const body: SendChatMessageRequest = {
-      content,
-      ...(replyTo && { replyToId: replyTo.id }),
-      ...(mentionedUserIds.length > 0 && { mentionedUserIds }),
-      ...(asNotice && { asNotice: true }),
-    };
-    const uploads = hasAttachment ? { photos: photoUris, videos, files } : undefined;
-    const localId = `local-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const message: ChatMessageInfo = {
-      id: localId,
-      authorId: me?.id ?? "",
-      authorName: me?.name ?? "",
-      authorAvatarUrl: me?.avatarUrl ?? null,
-      content,
-      imageUrls: photoUris,
-      videoUrls: videos.map((video) => video.uri),
-      files: files.map((file) => ({ url: file.uri, name: file.name, size: file.size })),
-      replyTo: replyTo
-        ? {
-            id: replyTo.id,
-            authorName: replyTo.authorName,
-            content: replyTo.content,
-            hasImage: replyTo.imageUrls.length > 0,
-          }
-        : null,
-      poll: null,
-      mentions: mentioned.filter((member) => mentionedUserIds.includes(member.id)),
-      isNotice: asNotice,
-      reactions: [],
-      createdAt: new Date().toISOString(),
-      isMine: true,
-      canDelete: false,
-      isSystem: false,
-      unreadCount: 0,
-    };
-    const item: PendingMessage = { localId, body, uploads, message, failed: false };
-    setPending((prev) => [...prev, item]);
+    // 사진이 12장을 넘으면 12장씩 묶어 메시지를 나눈다 — 글·답장·동영상·파일은 첫 묶음에 붙인다.
+    const photoChunks: string[][] = [];
+    for (let at = 0; at < photoUris.length; at += IMAGES_PER_MESSAGE) {
+      photoChunks.push(photoUris.slice(at, at + IMAGES_PER_MESSAGE));
+    }
+    if (photoChunks.length === 0) photoChunks.push([]);
+
+    const items = photoChunks.map((photos, chunkIndex): PendingMessage => {
+      const first = chunkIndex === 0;
+      const chunkVideos = first ? videos : [];
+      const chunkFiles = first ? files : [];
+      const chunkContent = first ? content : "";
+      const chunkMentions = first ? mentionedUserIds : [];
+      const body: SendChatMessageRequest = {
+        content: chunkContent,
+        ...(first && replyTo && { replyToId: replyTo.id }),
+        ...(chunkMentions.length > 0 && { mentionedUserIds: chunkMentions }),
+        ...(first && asNotice && { asNotice: true }),
+      };
+      const hasChunkAttachment = photos.length + chunkVideos.length + chunkFiles.length > 0;
+      const localId = `local-${Date.now()}-${chunkIndex}-${Math.random().toString(36).slice(2, 8)}`;
+      return {
+        localId,
+        body,
+        uploads: hasChunkAttachment
+          ? { photos, videos: chunkVideos, files: chunkFiles }
+          : undefined,
+        failed: false,
+        message: {
+          id: localId,
+          authorId: me?.id ?? "",
+          authorName: me?.name ?? "",
+          authorAvatarUrl: me?.avatarUrl ?? null,
+          content: chunkContent,
+          imageUrls: photos,
+          videoUrls: chunkVideos.map((video) => video.uri),
+          files: chunkFiles.map((file) => ({ url: file.uri, name: file.name, size: file.size })),
+          replyTo:
+            first && replyTo
+              ? {
+                  id: replyTo.id,
+                  authorName: replyTo.authorName,
+                  content: replyTo.content,
+                  hasImage: replyTo.imageUrls.length > 0,
+                }
+              : null,
+          poll: null,
+          mentions: mentioned.filter((member) => chunkMentions.includes(member.id)),
+          isNotice: first && asNotice,
+          reactions: [],
+          createdAt: new Date().toISOString(),
+          isMine: true,
+          canDelete: false,
+          isSystem: false,
+          unreadCount: 0,
+        },
+      };
+    });
+    setPending((prev) => [...prev, ...items]);
     resetComposer();
-    deliver(item);
+    for (const item of items) deliver(item);
   };
 
   const handleDeletePress = (message: ChatMessageInfo) => {
