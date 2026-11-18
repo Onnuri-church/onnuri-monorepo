@@ -72,5 +72,16 @@
   "서버에 연결하지 못했어요": "Couldn't connect to the server",
   "인터넷 연결을 확인하고 다시 시도해주세요.": "Check your internet connection and try again.",
   "서버에 연결하고 있어요…": "Connecting to the server…",
-  "다시 시도": "Try again"
+  "다시 시도": "Try again",
+  "앱 정보": "About",
+  "운영": "Operated by",
+  "개발": "Developed by",
+  "문의": "Contact",
+  "부산온누리교회 청년부": "Busan Onnuri Church Young Adults",
+  "이지환": "Jihwan Lee",
+  "버전 {{version}}": "Version {{version}}",
+  "부산온누리교회 청년부가 말씀과 기도, 일상을 함께 나누는 앱이에요.": "An app for Busan Onnuri Church young adults to share the Word, prayer, and everyday life.",
+  "오픈소스 라이선스": "Open source licenses",
+  "온누리 온은 아래 오픈소스 소프트웨어를 사용해요. 각 소프트웨어의 라이선스를 따릅니다.": "Onnuri On uses the open source software below, under each project's license.",
+  "{{license}} 전문 보기": "View full {{license}} text"
 }

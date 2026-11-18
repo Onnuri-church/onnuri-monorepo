@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -25,6 +25,8 @@ import { PushNotificationGate } from "../notification/PushNotificationGate";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useHomeNotices } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
+import { useMe } from "../profile/useMe";
+import { fetchQtShares } from "../qt-board/api";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
 import { useHomeBanner, useHomePosts } from "./api";
@@ -80,19 +82,29 @@ export function HomeScreen() {
   const { data: homeNotices, refetch: refetchNotices } = useHomeNotices();
   const hasNotices = (homeNotices ?? []).length > 0;
 
-  // 기도제목 최신 3건 — 게시판과 같은 목록 API를 쓴다. 홈 카드는 작성일·D-day를 쓰지 않으므로
-  // (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 떼서 날짜 줄이 그려지지 않게 한다.
-  // ["prayers"] 프리픽스라 게시판에서 등록·삭제하면 홈도 같이 갱신된다.
+  // 기도제목 최신 3건 — 게시판 첫 화면("전체")과 같은 쿼리를 그대로 쓴다 (SCRUM-237).
+  // 한 번 받으면 기도제목 게시판에 들어가자마자 목록이(없으면 "없어요"가) 바로 보인다.
+  // 홈 카드는 작성일·D-day를 쓰지 않으므로 (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 뗀다.
+  const isAdmin = useMe()?.isAdmin === true;
   const { data: prayers, refetch: refetchPrayers } = useQuery({
-    queryKey: ["prayers", "home"],
+    queryKey: ["prayers", "board", "all", isAdmin],
     enabled: !isGuest,
-    queryFn: async () => {
-      const { items } = await fetchPrayers("all");
-      return items
+    queryFn: () => fetchPrayers("all"),
+    select: (data) =>
+      data.items
         .slice(0, PRAYER_CAROUSEL_SIZE)
-        .map((prayer) => ({ ...prayer, createdDate: undefined, ddayLabel: undefined }));
-    },
+        .map((prayer) => ({ ...prayer, createdDate: undefined, ddayLabel: undefined })),
   });
+
+  // 큐티나눔 게시판 첫 화면도 미리 받아 둔다 — 들어가면 회색 블록 없이 바로 보이게 (SCRUM-237).
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (isGuest) return;
+    void queryClient.prefetchQuery({
+      queryKey: ["qt-shares", false, undefined, undefined],
+      queryFn: () => fetchQtShares({ mine: false }),
+    });
+  }, [isGuest, queryClient]);
 
   // 당겨서 새로고침 — 세 요청을 같이 다시 받는다. isRefetching은 백그라운드 갱신에도 켜져서
   // 스피너가 멋대로 돌므로 쓰지 않고, 당긴 동안만 직접 true로 둔다.
