@@ -1,9 +1,10 @@
-import type { MeResponse } from "@onnuri/shared";
+import type { HomeBanner, MeResponse } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, ScrollView, Text, View } from "react-native";
+import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -13,6 +14,7 @@ import { NotificationBell } from "../../shared/components/base/Header";
 import { Icon } from "../../shared/components/base/Icon";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
 import { i18n } from "../../shared/i18n";
+import { apiClient } from "../../shared/api/client";
 import { signOut } from "../../shared/api/session";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { colors } from "../../shared/theme/tokens";
@@ -137,6 +139,21 @@ export function MyPageScreen() {
   const leaderTeam = me?.teams.find((item) => item.role === "LEADER");
   const team = leaderTeam?.name ?? me?.team?.name ?? t("없음");
   const role = deriveRole(me, me?.isAdmin ?? sessionUser?.isAdmin ?? false);
+
+  // 관리자면 홈 배너 관리 목록과 배너 사진을 미리 받아 둔다 — 들어가면 바로 보이게 (SCRUM-239).
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    if (role !== "admin") return;
+    void queryClient
+      .fetchQuery({
+        queryKey: ["admin", "banners"],
+        queryFn: () => apiClient.get<HomeBanner[]>("/notices/banners").then((res) => res.data),
+      })
+      .then((banners) => {
+        for (const banner of banners) if (banner.imageUrl) void Image.prefetch(banner.imageUrl);
+      })
+      .catch(() => undefined);
+  }, [role, queryClient]);
   const myTeamId = leaderTeam?.id ?? me?.team?.id;
   // 리더 방 안 읽은 수 합계 — 권한이 없으면 요청하지 않는다.
   const { data: leaderRooms } = useLeaderRooms(me?.canUseLeaderRooms === true);

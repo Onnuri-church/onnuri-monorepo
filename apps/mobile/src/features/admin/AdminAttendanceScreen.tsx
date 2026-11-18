@@ -1,8 +1,8 @@
 import type { AdminAttendanceMark } from "@onnuri/shared";
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
-import { useQuery } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +14,12 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useCells } from "../cell/api";
 import { CalendarYearMonthPicker } from "../../shared/components/composed/CalendarYearMonthPicker";
 import { fetchTeams } from "../profile/api";
-import { useAdminAttendance, useUpdateAdminAttendance } from "./api";
+import {
+  fetchAdminAttendance,
+  neighborMonths,
+  useAdminAttendance,
+  useUpdateAdminAttendance,
+} from "./api";
 import { RadioOption } from "./components/RadioOption";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
@@ -80,6 +85,26 @@ export function AdminAttendanceScreen() {
     groupId: filter === "cell" ? cellId : filter === "team" ? teamId : undefined,
   });
   const pullRefresh = usePullToRefresh(refetch);
+  // 앞뒤 달 표를 미리 받아 둔다 — 월 토글로 옆 달을 고르면 바로 보인다 (SCRUM-239).
+  const queryClient = useQueryClient();
+  const attendanceParams = {
+    month: monthParam,
+    scope: filter,
+    groupId: filter === "cell" ? cellId : filter === "team" ? teamId : undefined,
+  };
+  useEffect(() => {
+    if (!data) return;
+    if (attendanceParams.scope !== "all" && attendanceParams.groupId === undefined) return;
+    for (const month of neighborMonths(monthParam)) {
+      const params = { ...attendanceParams, month };
+      void queryClient.prefetchQuery({
+        queryKey: ["admin", "attendance", params],
+        queryFn: () => fetchAdminAttendance(params),
+        staleTime: 60_000,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 표가 도착한 뒤 한 번씩만
+  }, [data, monthParam, filter, cellId, teamId, queryClient]);
   const dates = data?.dates ?? [];
   const groups = data?.groups ?? [];
   // 전체 보기에서는 멤버 없는 셀을 맨 아래로 모은다 ("셀 없음" 그룹은 멤버가 있을 때만 내려온다).
