@@ -108,5 +108,6 @@
   "끝 날짜를 골라주세요": "Now pick an end date",
   "시작 날짜부터 골라주세요": "Pick a start date first",
   "시작 날짜": "Start date",
-  "끝 날짜": "End date"
+  "끝 날짜": "End date",
+  "{{date}} 선택": "Select {{date}}"
 }
