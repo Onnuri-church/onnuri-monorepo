@@ -85,5 +85,10 @@
   "온누리 온은 아래 오픈소스 소프트웨어를 사용해요. 각 소프트웨어의 라이선스를 따릅니다.": "Onnuri On uses the open source software below, under each project's license.",
   "{{license}} 전문 보기": "View full {{license}} text",
   "디자인": "Design",
-  "남현지": "Hyunji Nam"
+  "남현지": "Hyunji Nam",
+  "이 기기의 알림이 켜졌어요": "Notifications are now on for this device",
+  "이 기기는 알림이 꺼져 있어요": "Notifications are off on this device",
+  "휴대폰 설정에서 알림을 허용해야 소식을 받을 수 있어요.": "Allow notifications in your phone settings to receive updates.",
+  "알림을 켜야 공지·댓글·채팅 소식을 받을 수 있어요.": "Turn on notifications to receive announcements, comments, and chat messages.",
+  "휴대폰 설정 열기": "Open phone settings"
 }

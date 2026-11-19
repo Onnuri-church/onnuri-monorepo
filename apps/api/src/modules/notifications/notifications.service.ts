@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, Interval } from '@nestjs/schedule';
 import type { NotificationInfo } from '@onnuri/shared';
 import type { NotificationType } from '../../../generated/prisma';
 
@@ -38,9 +38,33 @@ export interface NotifyInput {
   pref?: PrefColumn;
 }
 
+// 푸시 영수증 확인 (SCRUM-266). Expo는 보낼 때 "접수증(ticket)"만 주고, 실제 전달 결과(영수증)는
+// 잠시 뒤 따로 물어봐야 알려준다. 인증 키 누락(InvalidCredentials) 같은 실패는 영수증에만 나온다.
+const RECEIPT_CHECK_INTERVAL_MS = 60 * 1000;
+/** 접수 후 이만큼 지난 것부터 확인한다 — 너무 일찍 물으면 아직 결과가 없다 */
+const RECEIPT_MIN_AGE_MS = 60 * 1000;
+/** 이만큼 지나도록 결과가 없으면 버린다 */
+const RECEIPT_MAX_AGE_MS = 30 * 60 * 1000;
+/** 서버가 한 대라 메모리에 둔다 — 확인을 기다리는 접수증 상한 (넘으면 오래된 것부터 버린다) */
+const PENDING_RECEIPT_LIMIT = 2000;
+
+interface PushTicket {
+  status: string;
+  id?: string;
+  message?: string;
+  details?: { error?: string };
+}
+
 @Injectable()
 export class NotificationsService {
   private readonly logger = new Logger(NotificationsService.name);
+  /** 접수증 id → 보낸 토큰·시각. 영수증에서 죽은 토큰이 나오면 지우려고 토큰을 같이 둔다. */
+  private readonly pendingReceipts = new Map<
+    string,
+    { token: string; sentAt: number }
+  >();
+  /** 기기 토큰이 없다고 이미 기록한 사용자 — 메시지마다 같은 줄이 쌓이지 않게 한 번만 남긴다 */
+  private readonly loggedNoToken = new Set<string>();
 
   constructor(private readonly prisma: PrismaService) {}
 
@@ -179,8 +203,16 @@ export class NotificationsService {
 
     const tokens = await this.prisma.pushToken.findMany({
       where: { userId: { in: targetIds } },
-      select: { token: true },
+      select: { token: true, userId: true },
     });
+    // 기기 토큰이 없는 사람은 푸시가 갈 곳이 없다 — 알림 권한을 안 켰거나 등록에 실패한 기기다.
+    // "왜 알림이 안 오지"를 추적할 수 있게 사용자당 한 번만 기록한다 (SCRUM-266).
+    const withToken = new Set(tokens.map((row) => row.userId));
+    for (const userId of targetIds) {
+      if (withToken.has(userId) || this.loggedNoToken.has(userId)) continue;
+      this.loggedNoToken.add(userId);
+      this.logger.warn(`push skipped: 등록된 기기가 없는 사용자 ${userId}`);
+    }
     if (tokens.length === 0) return;
 
     const messages = tokens.map(({ token }) => ({
@@ -213,19 +245,107 @@ export class NotificationsService {
 
       // 티켓은 요청 순서와 1:1 대응 — 죽은 토큰만 골라 지운다.
       const { data: tickets } = (await response.json()) as {
-        data?: { status: string; details?: { error?: string } }[];
+        data?: PushTicket[];
       };
-      const deadTokens = (tickets ?? []).flatMap((ticket, index) =>
-        ticket.status === 'error' &&
-        ticket.details?.error === 'DeviceNotRegistered'
-          ? [chunk[index].to]
-          : [],
-      );
-      if (deadTokens.length > 0) {
-        await this.prisma.pushToken.deleteMany({
-          where: { token: { in: deadTokens } },
-        });
+      const deadTokens: string[] = [];
+      const now = Date.now();
+      (tickets ?? []).forEach((ticket, index) => {
+        const token = chunk[index].to;
+        if (ticket.status === 'ok') {
+          // 실제 전달 결과는 영수증으로 나중에 확인한다 (checkPushReceipts).
+          if (ticket.id) this.rememberReceipt(ticket.id, token, now);
+          return;
+        }
+        if (ticket.details?.error === 'DeviceNotRegistered') {
+          deadTokens.push(token);
+          return;
+        }
+        // 그 밖의 접수 실패는 예전엔 버려져서 원인을 알 수 없었다 (SCRUM-266).
+        this.logger.warn(
+          `push ticket error: ${ticket.details?.error ?? 'unknown'} — ${ticket.message ?? ''}`,
+        );
+      });
+      await this.deleteTokens(deadTokens);
+    }
+  }
+
+  private rememberReceipt(id: string, token: string, sentAt: number) {
+    if (this.pendingReceipts.size >= PENDING_RECEIPT_LIMIT) {
+      // Map은 넣은 순서를 지킨다 — 맨 앞이 가장 오래된 접수증이다.
+      const oldest = this.pendingReceipts.keys().next().value;
+      if (oldest !== undefined) this.pendingReceipts.delete(oldest);
+    }
+    this.pendingReceipts.set(id, { token, sentAt });
+  }
+
+  private async deleteTokens(tokens: string[]) {
+    if (tokens.length === 0) return;
+    await this.prisma.pushToken.deleteMany({
+      where: { token: { in: tokens } },
+    });
+  }
+
+  // 보낸 푸시의 실제 전달 결과를 확인한다 (SCRUM-266). 실패 사유를 기록하고, 앱이 지워진 기기의
+  // 토큰은 정리한다. 알림 발송과 같이 절대 던지지 않는다.
+  // https://docs.expo.dev/push-notifications/sending-notifications/#push-receipts
+  @Interval(RECEIPT_CHECK_INTERVAL_MS)
+  async checkPushReceipts(): Promise<void> {
+    if (this.pendingReceipts.size === 0) return;
+    const now = Date.now();
+    const due: string[] = [];
+    for (const [id, entry] of this.pendingReceipts) {
+      const age = now - entry.sentAt;
+      if (age > RECEIPT_MAX_AGE_MS) this.pendingReceipts.delete(id);
+      else if (age >= RECEIPT_MIN_AGE_MS) due.push(id);
+    }
+
+    try {
+      // 요청당 1000개 제한 — 넘는 건 다음 주기에 본다.
+      for (let start = 0; start < due.length; start += 1000) {
+        const ids = due.slice(start, start + 1000);
+        const response = await fetch(
+          'https://exp.host/--/api/v2/push/getReceipts',
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids }),
+          },
+        );
+        if (!response.ok) {
+          this.logger.warn(`push receipt check failed: ${response.status}`);
+          return;
+        }
+        const { data: receipts } = (await response.json()) as {
+          data?: Record<string, PushTicket>;
+        };
+        const deadTokens: string[] = [];
+        const errorCounts = new Map<
+          string,
+          { count: number; message: string }
+        >();
+        for (const [id, receipt] of Object.entries(receipts ?? {})) {
+          const entry = this.pendingReceipts.get(id);
+          this.pendingReceipts.delete(id);
+          if (receipt.status === 'ok') continue;
+          const code = receipt.details?.error ?? 'unknown';
+          if (code === 'DeviceNotRegistered' && entry) {
+            deadTokens.push(entry.token);
+            continue;
+          }
+          const seen = errorCounts.get(code);
+          if (seen) seen.count += 1;
+          else
+            errorCounts.set(code, { count: 1, message: receipt.message ?? '' });
+        }
+        for (const [code, { count, message }] of errorCounts) {
+          this.logger.warn(
+            `push delivery failed: ${code} ${count}건 — ${message}`,
+          );
+        }
+        await this.deleteTokens(deadTokens);
       }
+    } catch (error) {
+      this.logger.warn(`push receipt check failed: ${String(error)}`);
     }
   }
 }
