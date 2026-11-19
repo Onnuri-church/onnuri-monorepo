@@ -213,6 +213,14 @@ export class ReportsService {
         return this.prisma.teamBoardComment
           .findFirst({ where, select: { authorId: true, content: true } })
           .then((row) => row && { authorId: row.authorId, text: row.content });
+      // 투표 댓글은 숨김 표시(deletedAt)가 없다 — 지우면 행이 사라진다.
+      case 'CHAT_POLL_COMMENT':
+        return this.prisma.chatPollComment
+          .findFirst({
+            where: { id },
+            select: { authorId: true, content: true },
+          })
+          .then((row) => row && { authorId: row.authorId, text: row.content });
     }
   }
 
@@ -234,6 +242,9 @@ export class ReportsService {
         return;
       case 'TEAM_BOARD_COMMENT':
         await this.prisma.teamBoardComment.updateMany({ where, data });
+        return;
+      case 'CHAT_POLL_COMMENT':
+        await this.prisma.chatPollComment.deleteMany({ where: { id } });
         return;
     }
   }

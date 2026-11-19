@@ -5,7 +5,8 @@ export type ReportTargetType =
   | "COMMENT"
   | "CHAT_MESSAGE"
   | "TEAM_BOARD_POST"
-  | "TEAM_BOARD_COMMENT";
+  | "TEAM_BOARD_COMMENT"
+  | "CHAT_POLL_COMMENT";
 
 export type ReportReason = "ABUSE" | "SEXUAL" | "SPAM" | "PRIVACY" | "OTHER";
 
