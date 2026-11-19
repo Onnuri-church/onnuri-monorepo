@@ -75,18 +75,14 @@ export function ChatPollDetailScreen() {
   const [votersOpen, setVotersOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
 
-  // 댓글을 쓰려고 키보드를 올리면 마지막 댓글이 입력줄 바로 위에 보이게 맨 아래로 내린다 (SCRUM-247).
-  // 댓글을 남긴 직후에도 새 댓글이 보이게 내린다.
+  // 댓글을 쓰려고 키보드를 올리면 마지막 댓글이 입력줄 바로 위에 보이게 맨 아래로 맞춘다 (SCRUM-247).
+  // 키보드 때문에 목록 칸이 줄어드는 바로 그 순간(onLayout)에 움직임 없이 맞춘다 — 예전엔 조금 기다렸다가
+  // 천천히 내려가서 늦게 따라오는 것처럼 보였다. 항목 추가 입력칸의 키보드에는 맞추지 않는다
+  // (그 칸이 화면 밖으로 밀려난다).
   const scrollRef = useRef<ScrollView>(null);
-  const scrollToLast = () =>
-    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
-  // 항목 추가 입력칸 때문에 올라온 키보드에는 내리지 않는다 — 그 칸이 화면 밖으로 밀려난다.
   const commentFocused = useRef(false);
-  useEffect(() => {
-    if (keyboardHeight === 0 || !commentFocused.current) return;
-    const timer = scrollToLast();
-    return () => clearTimeout(timer);
-  }, [keyboardHeight]);
+  // 댓글을 남긴 직후 — 새 댓글이 그려져 목록이 길어지는 순간에 맨 아래로 내린다.
+  const scrollAfterSend = useRef(false);
 
   if (!poll) {
     return (
@@ -150,7 +146,7 @@ export function ChatPollDetailScreen() {
     addComment.mutate(content, {
       onSuccess: () => {
         setCommentDraft("");
-        scrollToLast();
+        scrollAfterSend.current = true;
       },
       onError: () => Alert.alert(t("댓글을 남기지 못했어요"), t("잠시 후 다시 시도해주세요.")),
     });
@@ -172,6 +168,14 @@ export function ChatPollDetailScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView
         ref={scrollRef}
+        onLayout={() => {
+          if (commentFocused.current) scrollRef.current?.scrollToEnd({ animated: false });
+        }}
+        onContentSizeChange={() => {
+          if (!scrollAfterSend.current) return;
+          scrollAfterSend.current = false;
+          scrollRef.current?.scrollToEnd({ animated: true });
+        }}
         contentContainerClassName="px-5 pb-4 pt-4"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
