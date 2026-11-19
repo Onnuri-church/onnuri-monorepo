@@ -7,7 +7,7 @@ import {
   BottomSheetScrollView,
 } from "@gorhom/bottom-sheet";
 import { type ReactNode, forwardRef, useCallback, useImperativeHandle, useRef } from "react";
-import { View, useWindowDimensions } from "react-native";
+import { Keyboard, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useThemeColors } from "../../theme/useThemeColors";
@@ -49,6 +49,9 @@ export const AppSheet = forwardRef<AppSheetRef, AppSheetProps>(function AppSheet
     ref,
     () => ({
       open: () => {
+        // 키보드가 떠 있는 채로 열면 시트가 키보드 뒤에 가려져 버튼을 누를 수 없다 (SCRUM-258) —
+        // 글 쓰다가 사진 선택을 누르는 경우. 어느 화면의 시트든 같아서 여기서 내린다.
+        Keyboard.dismiss();
         presentedRef.current = true;
         modalRef.current?.present();
       },
