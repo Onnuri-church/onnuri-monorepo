@@ -2,6 +2,7 @@ import { BottomSheetModal, BottomSheetView } from "@gorhom/bottom-sheet";
 import { forwardRef, useImperativeHandle, useRef, useState } from "react";
 import { Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { markUserNotified } from "../../api/requestErrorAlert";
 
 export interface AppToastRef {
   /** 메시지를 띄운다 — 이미 떠 있으면 내용만 바꾸고 타이머를 다시 센다. */
@@ -31,6 +32,8 @@ export const AppToast = forwardRef<AppToastRef>(function AppToast(_props, ref) {
     ref,
     () => ({
       show: (next: string) => {
+        // 토스트도 안내다 — 요청 실패 공통 알림창이 겹쳐 뜨지 않게 알린다 (SCRUM-262).
+        markUserNotified();
         setMessage(next);
         modalRef.current?.present();
         scheduleHide();
