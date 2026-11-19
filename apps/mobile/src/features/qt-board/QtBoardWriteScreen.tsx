@@ -94,6 +94,8 @@ export function QtBoardWriteScreen () {
             // 목록 카드의 날짜 문구·좋아요는 서버가 만드는 값이라 다시 받는다.
             // 상세는 방금 받은 글이 곧 최신이라 요청 없이 캐시에 바로 넣는다.
             void queryClient.invalidateQueries({queryKey: ["qt-shares"]})
+            // 홈의 큐티 나눔 줄도 같은 글을 보여준다 — 같이 새로 받아야 방금 쓴 글이 바로 뜬다 (SCRUM-259).
+            void queryClient.invalidateQueries({queryKey: ["home-posts"]})
             queryClient.setQueryData(["qt-share", post.id], post)
             navigation.goBack()
         },

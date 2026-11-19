@@ -10,9 +10,11 @@ import {
   UseGuards,
 } from '@nestjs/common';
 
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
+import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { CreateTeamDto } from './dto/create-team.dto';
 import { UpdateTeamDto } from './dto/update-team.dto';
 import { TeamsService } from './teams.service';
@@ -30,12 +32,17 @@ export class TeamsController {
     return this.teamsService.findAll();
   }
 
+  // 팀 소개는 게스트도 보지만 팀원 명단(이름·프로필 사진)은 로그인한 사람에게만 준다
+  // (SCRUM-265) — 스토어에 공개된 앱이라 로그인 없이 누구나 볼 수 있는 범위에서 뺀다.
   @UseGuards(OptionalJwtAuthGuard)
   @Get(':id')
-  async findOne(@Param('id') id: string) {
+  async findOne(
+    @CurrentUser() user: JwtPayload | undefined,
+    @Param('id') id: string,
+  ) {
     const team = await this.teamsService.findOne(id);
     if (!team) throw new NotFoundException('팀을 찾을 수 없습니다.');
-    return team;
+    return user ? team : { ...team, members: [] };
   }
 
   @UseGuards(JwtAuthGuard, AdminGuard)

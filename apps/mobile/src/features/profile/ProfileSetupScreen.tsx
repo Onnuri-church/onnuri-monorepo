@@ -81,6 +81,12 @@ export function ProfileSetupScreen() {
   // 프로필 사진 — 가입 직후엔 소셜 프로필 사진이 기본으로 들어 있다 (서버가 가입 때 저장).
   // AvatarEditor가 저장까지 끝내고 알려주므로 여기는 보여줄 값만 든다.
   const [avatarUrl, setAvatarUrl] = useState<string | null>(sessionUser?.avatarUrl ?? null);
+  // 이름 (SCRUM-264) — 소셜 계정에서 온 값으로 채워 두고 본인이 고칠 수 있게 한다. 카카오는 닉네임,
+  // Apple에서 이메일을 가리면 이메일 앞부분이 들어와 있어서, 출석부·채팅에 그대로 쓰기 어렵다.
+  const [name, setName] = useState(sessionUser?.name ?? "");
+  const nameTouched = useRef(false);
+  // 가입 코드 (SCRUM-263) — 처음 등록할 때만 묻는다. 교회에서 안내받은 코드를 서버가 확인한다.
+  const [joinCode, setJoinCode] = useState("");
   const [birthday, setBirthday] = useState(() => toBirthdayInput(sessionUser?.birthDate ?? null));
   const [phone, setPhone] = useState(sessionUser?.phone ?? "");
   const [gender, setGender] = useState<Gender | null>(sessionUser?.gender ?? null);
@@ -105,6 +111,8 @@ export function ProfileSetupScreen() {
     setCell((prev) => prev ?? me.cell?.name ?? NONE_OPTION);
     if (!teamsTouched.current) setSelectedTeams(me.teams.map((item) => item.name));
     if (!avatarTouched.current) setAvatarUrl(me.avatarUrl ?? null);
+    // 세션 유저의 이름은 로그인 시점 값이다 — 관리자가 그 뒤에 고쳤을 수 있어 me로 맞춘다.
+    if (!nameTouched.current) setName(me.name);
   }, [isEditing, me]);
 
   // 안드로이드 하드웨어(제스처) 뒤로가기. 온보딩에서는 이 화면이 스택의 유일한 화면이라
@@ -129,6 +137,8 @@ export function ProfileSetupScreen() {
 
   // 모든 항목을 채우기 전까지는 등록하기가 비활성이다 (시안에 비활성 상태가 있다).
   const canSubmit =
+    name.trim().length > 0 &&
+    (isEditing || joinCode.trim().length > 0) &&
     parseBirthday(birthday) !== null &&
     PHONE_NUMBER_REGEX.test(phone) &&
     gender !== null &&
@@ -142,6 +152,9 @@ export function ProfileSetupScreen() {
     setSubmitting(true);
     try {
       const user = await patchMyProfile({
+        name: name.trim(),
+        // 수정 모드에서는 묻지 않는다 — 서버도 이미 가입한 사람에게는 확인하지 않는다.
+        ...(!isEditing && { joinCode: joinCode.trim() }),
         birthDate,
         gender,
         phone,
@@ -205,6 +218,40 @@ export function ProfileSetupScreen() {
                 avatarTouched.current = true;
                 setAvatarUrl(url);
               }}
+            />
+          </View>
+
+          {!isEditing && (
+            <View className="py-4">
+              <Text className="text-body-main text-text-normal">{t("가입 코드")}</Text>
+              <TextInput
+                className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+                value={joinCode}
+                onChangeText={setJoinCode}
+                placeholder={t("교회에서 안내받은 코드를 입력하세요")}
+                placeholderTextColor={themeColors.text.assistive}
+                autoCapitalize="none"
+                autoCorrect={false}
+                maxLength={100}
+              />
+              <Text className="mt-2 text-body-small text-text-alternative">
+                {t("청년부 구성원 확인용이에요. 모르면 청년부 임원에게 물어보세요.")}
+              </Text>
+            </View>
+          )}
+
+          <View className="py-4">
+            <Text className="text-body-main text-text-normal">{t("이름")}</Text>
+            <TextInput
+              className="mt-1 h-12 border-b border-background-assistive px-2 text-heading-small text-text-normal"
+              value={name}
+              onChangeText={(value) => {
+                nameTouched.current = true;
+                setName(value);
+              }}
+              placeholder={t("실명을 입력해주세요")}
+              placeholderTextColor={themeColors.text.assistive}
+              maxLength={20}
             />
           </View>
 

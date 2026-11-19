@@ -35,7 +35,12 @@ export function QtPostCard({ post, onPress, onFavoritePress, onMenuPress }: QtPo
   };
 
   return (
-    <Pressable className="p-6 rounded-3xl shadow-card" onPress={onPress}>
+    // 기도제목 카드와 같은 테두리 (SCRUM-260) — 그림자만으로는 흰 배경 위에서 카드 경계가 안 보여
+    // 글이 여러 개면 서로 붙어 보였다.
+    <Pressable
+      className="rounded-3xl border border-background-muted bg-background-normal p-6 active:opacity-80"
+      onPress={onPress}
+    >
       <View className="flex-row items-center gap-3">
         {/* 목록 응답에 작성자 사진이 없어서 기본 프로필 이미지로 둔다. */}
         <Avatar size={40} />

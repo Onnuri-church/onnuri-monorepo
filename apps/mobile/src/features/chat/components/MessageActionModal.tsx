@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { Modal, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { useRetained } from "../../../shared/hooks/useRetained";
+
 interface MessageActionModalProps {
   message: ChatMessageInfo | null;
   canNotice: boolean;
@@ -32,20 +34,23 @@ export function MessageActionModal({
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
+  // 닫히는 동안에도 줄이 그대로 보이게 마지막 메시지로 그린다 (SCRUM-261) — 안 그러면 시트가 접히며 튄다.
+  const shown = useRetained(message);
+
   const rows: { label: string; onPress: () => void; danger?: boolean }[] = [];
-  if (message) {
+  if (shown) {
     rows.push({ label: t("답장"), onPress: onReply });
     if (canNotice) {
       rows.push({
-        label: message.isNotice ? t("공지 해제") : t("공지로 등록"),
+        label: shown.isNotice ? t("공지 해제") : t("공지로 등록"),
         onPress: onToggleNotice,
       });
     }
-    if (message.canDelete) rows.push({ label: t("삭제"), onPress: onDelete, danger: true });
-    if (onReport && !message.isMine) {
+    if (shown.canDelete) rows.push({ label: t("삭제"), onPress: onDelete, danger: true });
+    if (onReport && !shown.isMine) {
       rows.push({ label: t("신고하기"), onPress: onReport, danger: true });
     }
-    if (onBlock && !message.isMine) {
+    if (onBlock && !shown.isMine) {
       rows.push({ label: t("차단하기"), onPress: onBlock, danger: true });
     }
   }

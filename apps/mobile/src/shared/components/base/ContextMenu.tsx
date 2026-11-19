@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Modal, Pressable, Text, View, type StyleProp, type ViewStyle } from "react-native";
 
 import { colors } from "../../theme/tokens";
@@ -33,15 +34,27 @@ const MENU_VERTICAL = 20;
 // 누른 버튼 아래 붙는 팝오버. 바텀시트(AppSheet)와 달리 화면 위쪽 특정 위치에 떠야 하고
 // 헤더까지 덮어야 해서 RN Modal로 띄운다 — 화면 안 절대 위치로는 네비게이터가 그리는 헤더를 못 덮는다.
 export function ContextMenu({ visible, onClose, items, style }: ContextMenuProps) {
+  // 닫히는 동안(페이드아웃)에도 열려 있던 위치·항목을 그대로 그린다 (SCRUM-261). 호출부는 닫을 때
+  // 위치 상태를 null로 비우는데, 그 값을 바로 따르면 사라지는 짧은 순간에 메뉴가 왼쪽 위로 튄다.
+  // 호출부마다 고치지 않도록 여기서 마지막으로 보인 값을 기억한다.
+  const [shown, setShown] = useState({ items, style });
+  if (visible && (shown.items !== items || shown.style !== style)) {
+    setShown({ items, style });
+  }
+  const current = visible ? { items, style } : shown;
+
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       {/* 바깥 아무 곳이나 누르면 닫힌다. 안드로이드 뒤로가기는 onRequestClose가 받는다. */}
       <Pressable className="flex-1" onPress={onClose}>
         <View
           className="absolute rounded-5 bg-background-muted px-2 pt-2.5"
-          style={[{ width: MENU_WIDTH, height: MENU_VERTICAL + ITEM_HEIGHT * items.length }, style]}
+          style={[
+            { width: MENU_WIDTH, height: MENU_VERTICAL + ITEM_HEIGHT * current.items.length },
+            current.style,
+          ]}
         >
-          {items.map((item) => (
+          {current.items.map((item) => (
             <Pressable
               key={item.label}
               className="flex-row items-center gap-2 px-3 active:opacity-60"

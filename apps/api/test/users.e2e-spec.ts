@@ -1,4 +1,5 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
 import { App } from 'supertest/types';
@@ -374,5 +375,76 @@ describe('Users (e2e)', () => {
       expect(activeCell).toBeNull();
       expect(activeTeam).toBeNull();
     });
+  });
+  // 가입 코드 (SCRUM-263) — 운영처럼 코드가 설정된 서버를 흉내 낸다. 설정값은 앱이 뜰 때 읽히므로
+  // 이 묶음에서만 ConfigService.get을 가로채 코드를 준다.
+  describe('가입 코드 (PATCH /users/me)', () => {
+    const JOIN_CODE = 'Onnuri-2026';
+    let newcomerToken: string;
+    let getSpy: jest.SpyInstance;
+
+    beforeAll(async () => {
+      const config = app.get(ConfigService);
+      const original = config.get.bind(config) as (
+        ...args: unknown[]
+      ) => unknown;
+      getSpy = jest
+        .spyOn(config, 'get')
+        .mockImplementation((...args: unknown[]) =>
+          args[0] === 'auth.joinCode' ? JOIN_CODE : original(...args),
+        );
+
+      const login = await request(app.getHttpServer())
+        .post('/auth/login/dev')
+        .set(DEV_LOGIN_HEADER)
+        .send({ email: `newcomer@${EMAIL_DOMAIN}` })
+        .expect(201);
+      newcomerToken = (login.body as { accessToken: string }).accessToken;
+    });
+
+    afterAll(() => getSpy.mockRestore());
+
+    const patchMe = (body: object) =>
+      request(app.getHttpServer())
+        .patch('/users/me')
+        .set('Authorization', `Bearer ${newcomerToken}`)
+        .send(body);
+
+    it('코드 없이 처음 등록하면 400이고 가입되지 않는다', async () => {
+      await patchMe(validBody()).expect(400);
+      await patchMe({ ...validBody(), joinCode: 'wrong-code' }).expect(400);
+
+      const me = await request(app.getHttpServer())
+        .get('/users/me')
+        .set('Authorization', `Bearer ${newcomerToken}`)
+        .expect(200);
+      expect((me.body as UserBody).profileCompleted).toBe(false);
+      // 셀·팀에도 들어가지 않았다.
+      expect((me.body as { cell: unknown }).cell).toBeNull();
+    });
+
+    it('코드가 맞으면 가입되고 이름도 저장된다 (대소문자·공백은 봐준다)', async () => {
+      const res = await patchMe({
+        ...validBody(),
+        joinCode: '  onnuri-2026 ',
+        name: ' 김새신 ',
+      }).expect(200);
+      const body = res.body as UserBody & { name: string };
+      expect(body.profileCompleted).toBe(true);
+      expect(body.name).toBe('김새신');
+    });
+
+    it('이미 가입한 사람의 수정에는 코드를 묻지 않고, 이름을 안 보내면 그대로 둔다', async () => {
+      const res = await patchMe({
+        ...validBody(),
+        phone: '01099998888',
+      }).expect(200);
+      const body = res.body as UserBody & { name: string };
+      expect(body.phone).toBe('01099998888');
+      expect(body.name).toBe('김새신');
+    });
+
+    it('이름이 비어 있으면 400', () =>
+      patchMe({ ...validBody(), name: '   ' }).expect(400));
   });
 });

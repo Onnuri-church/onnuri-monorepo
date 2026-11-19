@@ -16,6 +16,8 @@ export function useNotifications() {
 export function useMarkAllNotificationsRead() {
   return useMutation({
     mutationFn: () => apiClient.post("/notifications/read-all").then((res) => res.data),
+    // 화면을 열면 저절로 도는 요청이라 실패해도 알림창을 띄우지 않는다 (SCRUM-262).
+    meta: { silentError: true },
   });
 }
 
