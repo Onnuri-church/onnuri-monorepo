@@ -14,6 +14,14 @@ export class VoteChatPollDto {
   optionIds!: string[];
 }
 
+// POST /chat-polls/:pollId/comments 요청 본문 (SCRUM-247)
+export class CreateChatPollCommentDto {
+  @IsString()
+  @IsNotEmpty({ message: '댓글을 입력해주세요.' })
+  @MaxLength(300, { message: '댓글은 300자까지 쓸 수 있어요.' })
+  content!: string;
+}
+
 // POST /chat-polls/:pollId/options 요청 본문 — 항목 추가를 허용한 투표만.
 export class AddChatPollOptionDto {
   @IsString()

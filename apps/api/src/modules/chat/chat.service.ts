@@ -9,6 +9,7 @@ import type {
   ChatMediaItem,
   ChatMember,
   ChatMessageInfo,
+  ChatPollCommentInfo,
   ChatPollInfo,
   ChatRoomResponse,
 } from '@onnuri/shared';
@@ -80,6 +81,7 @@ const MESSAGE_SELECT = {
       closesAt: true,
       closedAt: true,
       createdById: true,
+      _count: { select: { comments: true } },
       options: {
         orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
         select: {
@@ -126,6 +128,7 @@ type MessageRow = {
     closesAt: Date | null;
     closedAt: Date | null;
     createdById: string;
+    _count: { comments: number };
     options: {
       id: string;
       text: string;
@@ -557,6 +560,72 @@ export class ChatService {
     }
   }
 
+  // ---- 투표 상세·댓글 (SCRUM-247) — 그 투표가 올라온 방의 멤버만 ----
+  async findPoll(userId: string, pollId: string): Promise<ChatMessageInfo> {
+    const { poll, access } = await this.loadPoll(userId, pollId);
+    return this.reloadPollMessage(userId, poll.message.id, access);
+  }
+
+  async findPollComments(
+    userId: string,
+    pollId: string,
+  ): Promise<ChatPollCommentInfo[]> {
+    const { access } = await this.loadPoll(userId, pollId);
+    const rows = await this.prisma.chatPollComment.findMany({
+      where: { pollId },
+      orderBy: { createdAt: 'asc' },
+      select: {
+        id: true,
+        authorId: true,
+        content: true,
+        createdAt: true,
+        author: { select: { name: true, avatarUrl: true } },
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      authorId: row.authorId,
+      authorName: row.author.name,
+      authorAvatarUrl: row.author.avatarUrl,
+      content: row.content,
+      createdAt: row.createdAt.toISOString(),
+      canDelete: row.authorId === userId || access.isAdmin,
+    }));
+  }
+
+  // 마감된 투표에도 댓글은 달 수 있다 (결과를 두고 이야기할 수 있게).
+  async addPollComment(
+    userId: string,
+    pollId: string,
+    content: string,
+  ): Promise<ChatPollCommentInfo[]> {
+    await this.loadPoll(userId, pollId);
+    const trimmed = content.trim();
+    if (!trimmed) throw new BadRequestException('댓글을 입력해주세요.');
+    await this.prisma.chatPollComment.create({
+      data: { pollId, authorId: userId, content: trimmed },
+    });
+    return this.findPollComments(userId, pollId);
+  }
+
+  async removePollComment(
+    userId: string,
+    pollId: string,
+    commentId: string,
+  ): Promise<void> {
+    const { access } = await this.loadPoll(userId, pollId);
+    const comment = await this.prisma.chatPollComment.findFirst({
+      where: { id: commentId, pollId },
+      select: { authorId: true },
+    });
+    // 이미 지워졌으면 성공으로 본다 (두 번 눌러도 오류가 안 나게).
+    if (!comment) return;
+    if (comment.authorId !== userId && !access.isAdmin) {
+      throw new ForbiddenException('내가 쓴 댓글만 삭제할 수 있습니다.');
+    }
+    await this.prisma.chatPollComment.delete({ where: { id: commentId } });
+  }
+
   // 투표를 찾고, 그 투표가 올라온 방의 접근 권한까지 확인한다.
   private async loadPoll(userId: string, pollId: string) {
     const poll = await this.prisma.chatPoll.findUnique({
@@ -958,6 +1027,7 @@ export class ChatService {
         (poll.createdById === requesterId ||
           access.canNotice ||
           access.isAdmin),
+      commentCount: poll._count.comments,
     };
   }
 

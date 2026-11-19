@@ -2,6 +2,9 @@ import type {
   ChatMediaItem,
   SetChatMuteRequest,
   AddChatPollOptionRequest,
+  ChatPollCommentInfo,
+  ChatPollInfo,
+  CreateChatPollCommentRequest,
   ChatMessageInfo,
   ChatRoomResponse,
   SendChatMessageRequest,
@@ -252,4 +255,101 @@ export function useSetChatMute(kind: ChatKind, id: string) {
       if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
     },
   });
+}
+
+// ---- 투표 상세 화면 + 댓글 (SCRUM-247) ----
+// 투표 하나 — 방 캐시에 있는 값을 먼저 쓰고(바로 보임), 서버에서 다시 받아 맞춘다.
+// 오래된 투표라 방 캐시에 없어도 서버에서 받아 온다.
+export function useChatPoll(kind: ChatKind, id: string, pollId: string) {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: ["chat-poll", pollId],
+    queryFn: () =>
+      apiClient
+        .get<ChatMessageInfo>(`/chat-polls/${pollId}`)
+        .then((res) => res.data.poll as ChatPollInfo),
+    initialData: () =>
+      queryClient
+        .getQueryData<ChatRoomResponse>(["chat", kind, id])
+        ?.messages.find((message) => message.poll?.id === pollId)?.poll ?? undefined,
+    initialDataUpdatedAt: 0,
+    refetchInterval: CHAT_POLL_MS * 2,
+  });
+}
+
+// 상세 화면에서 하는 투표·항목 추가·마감 — 끝나면 상세와 방 목록을 같이 새로 받는다.
+export function useChatPollActions(kind: ChatKind, id: string, pollId: string) {
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    void queryClient.invalidateQueries({ queryKey: ["chat-poll", pollId] });
+    void queryClient.invalidateQueries({ queryKey: ["chat", kind, id] });
+  };
+  const vote = useMutation({
+    mutationFn: (optionIds: string[]) =>
+      apiClient.put(`/chat-polls/${pollId}/votes`, { optionIds } satisfies VoteChatPollRequest),
+    onSettled: refresh,
+  });
+  const addOption = useMutation({
+    mutationFn: (text: string) =>
+      apiClient.post(`/chat-polls/${pollId}/options`, { text } satisfies AddChatPollOptionRequest),
+    onSettled: refresh,
+  });
+  const close = useMutation({
+    mutationFn: () => apiClient.post(`/chat-polls/${pollId}/close`),
+    onSettled: refresh,
+  });
+  return { vote, addOption, close };
+}
+
+export function useChatPollComments(pollId: string) {
+  return useQuery({
+    queryKey: ["chat-poll-comments", pollId],
+    queryFn: () =>
+      apiClient
+        .get<ChatPollCommentInfo[]>(`/chat-polls/${pollId}/comments`)
+        .then((res) => res.data),
+    refetchInterval: CHAT_POLL_MS * 2,
+  });
+}
+
+// 댓글 쓰기·지우기 — 서버가 돌려준 목록으로 바로 바꾸고, 카드의 댓글 수도 맞춘다.
+export function useChatPollCommentActions(kind: ChatKind, id: string, pollId: string) {
+  const queryClient = useQueryClient();
+  const key = ["chat-poll-comments", pollId];
+  const refreshCounts = () => {
+    void queryClient.invalidateQueries({ queryKey: ["chat-poll", pollId] });
+    void queryClient.invalidateQueries({ queryKey: ["chat", kind, id] });
+  };
+  const add = useMutation({
+    mutationFn: (content: string) =>
+      apiClient
+        .post<ChatPollCommentInfo[]>(`/chat-polls/${pollId}/comments`, {
+          content,
+        } satisfies CreateChatPollCommentRequest)
+        .then((res) => res.data),
+    onSuccess: (comments) => {
+      queryClient.setQueryData(key, comments);
+      refreshCounts();
+    },
+  });
+  const remove = useMutation({
+    mutationFn: (commentId: string) =>
+      apiClient.delete(`/chat-polls/${pollId}/comments/${commentId}`),
+    onMutate: async (commentId) => {
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<ChatPollCommentInfo[]>(key);
+      queryClient.setQueryData<ChatPollCommentInfo[]>(key, (list) =>
+        list?.filter((comment) => comment.id !== commentId),
+      );
+      return { previous };
+    },
+    onError: (_error, _commentId, context) => {
+      if (context?.previous) queryClient.setQueryData(key, context.previous);
+    },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: key });
+      refreshCounts();
+    },
+  });
+  return { add, remove };
 }
