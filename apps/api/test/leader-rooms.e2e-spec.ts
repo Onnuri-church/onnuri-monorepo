@@ -375,6 +375,43 @@ describe('Leader rooms (e2e)', () => {
         .expect(400);
     });
 
+    it('공지로 등록하면 대화에 안내가 남고, 안내가 공지 메시지를 가리킨다 (SCRUM-252)', async () => {
+      const sent = await request(server())
+        .post(`/leader-rooms/${roomId}/messages`)
+        .set(auth(teamLeaderToken))
+        .send({ content: '이번 주 모임 장소가 바뀌었어요' })
+        .expect(201);
+      const messageId = (sent.body as { id: string }).id;
+      await request(server())
+        .put(`/leader-rooms/${roomId}/messages/${messageId}/notice`)
+        .set(auth(adminToken))
+        .send({ on: true })
+        .expect(200);
+      const res = await request(server())
+        .get(`/leader-rooms/${roomId}/messages`)
+        .set(auth(cellLeaderToken))
+        .expect(200);
+      const body = res.body as ChatRoomResponse;
+      expect(body.notice?.id).toBe(messageId);
+      const last = body.messages.at(-1);
+      expect(last?.isSystem).toBe(true);
+      expect(last?.content).toBe('공지가 등록되었습니다.');
+      expect(last?.replyTo?.id).toBe(messageId);
+      // 해제할 때는 안내를 남기지 않는다
+      await request(server())
+        .put(`/leader-rooms/${roomId}/messages/${messageId}/notice`)
+        .set(auth(adminToken))
+        .send({ on: false })
+        .expect(200);
+      const after = await request(server())
+        .get(`/leader-rooms/${roomId}/messages`)
+        .set(auth(cellLeaderToken))
+        .expect(200);
+      expect((after.body as ChatRoomResponse).messages).toHaveLength(
+        body.messages.length,
+      );
+    });
+
     it('투표 상세와 댓글은 방 멤버만, 댓글은 쓴 사람·관리자만 지운다 (SCRUM-247)', async () => {
       const sent = await request(server())
         .post(`/leader-rooms/${roomId}/messages`)
@@ -511,7 +548,8 @@ describe('Leader rooms (e2e)', () => {
         .set(auth(adminToken))
         .expect(200);
       const system = (room.body as ChatRoomResponse).messages.filter(
-        (m) => m.isSystem,
+        // 공지 등록 안내(SCRUM-252)도 시스템 메시지라 초대·추방 안내만 고른다
+        (m) => m.isSystem && m.replyTo === null,
       );
       expect(system.map((m) => m.content)).toEqual([
         expect.stringContaining('초대했어요'),

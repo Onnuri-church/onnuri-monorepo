@@ -138,6 +138,31 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   const [actionTarget, setActionTarget] = useState<ChatMessageInfo | null>(null);
   const [viewer, setViewer] = useState<{ urls: string[]; index: number } | null>(null);
 
+  // 답장 인용을 누르면 원래 메시지로 이동해 잠깐 흔들고, "답장으로 돌아가기"로 보던 자리에 돌아온다
+  // (SCRUM-254, 카카오톡처럼). 지금 불러온 대화(최근 100건) 안에 있는 메시지만 찾아갈 수 있다.
+  const scrollY = useRef(0);
+  const [shakeId, setShakeId] = useState<string | null>(null);
+  const [returnOffset, setReturnOffset] = useState<number | null>(null);
+  const jumpToMessage = (messageId: string) => {
+    const y = messageY.current.get(messageId);
+    if (y === undefined) {
+      Alert.alert(t("원래 메시지를 찾을 수 없어요"), t("오래된 메시지는 바로 이동할 수 없어요."));
+      return;
+    }
+    setReturnOffset(scrollY.current);
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - 120), animated: true });
+    // 이동이 끝날 즈음 흔든다 — 같은 메시지를 다시 눌러도 흔들리게 한 번 비웠다가 넣는다.
+    setShakeId(null);
+    setTimeout(() => setShakeId(messageId), 350);
+    setTimeout(() => setShakeId((current) => (current === messageId ? null : current)), 1200);
+  };
+  const returnToReply = () => {
+    if (returnOffset !== null) scrollRef.current?.scrollTo({ y: returnOffset, animated: true });
+    setReturnOffset(null);
+  };
+  const openNotice = (messageId: string) =>
+    navigation.navigate("ChatNoticeDetail", { kind, id, messageId });
+
   const scrollRef = useRef<ScrollView>(null);
   const lastCount = useRef(0);
   // 처음 열 때는 맨 아래로 순간 이동한 뒤에 보여준다 — 위에서 그렸다가 아래로 미끄러지는 게 보이지 않게 (SCRUM-232).
@@ -588,6 +613,9 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
             onLongPress={() => setActionTarget(message)}
             onImagePress={(index) => setViewer({ urls: message.imageUrls, index })}
             onReactionPress={(emoji) => react.mutate({ messageId: message.id, emoji })}
+            onReplyPress={jumpToMessage}
+            onNoticePress={openNotice}
+            shake={shakeId === message.id}
           />
         </AppearIn>
       </View>
@@ -596,8 +624,12 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   return (
     <View className="flex-1" style={{ backgroundColor: chatBackground }}>
       {/* 공지 — 가장 최근에 공지로 등록된 메시지를 상단에 고정해서 보여준다. */}
+      {/* 누르면 공지 상세 화면에서 글·사진을 크게 본다 (SCRUM-252). */}
       {room?.notice && (
-        <View className="flex-row items-center gap-2 border-b border-background-assistive bg-background-alternative px-5 py-2">
+        <Pressable
+          className="flex-row items-center gap-2 border-b border-background-assistive bg-background-alternative px-5 py-2 active:opacity-70"
+          onPress={() => room.notice && openNotice(room.notice.id)}
+        >
           <Icon name="announcement" size={18} color={colors.semantic.warning} />
           <View className="flex-1">
             {room.notice.content !== "" ? (
@@ -610,7 +642,7 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
               <Text className="text-body-small text-text-normal">{t("사진 공지")}</Text>
             )}
           </View>
-        </View>
+        </Pressable>
       )}
 
       {/* 대화 검색창 (SCRUM-231) */}
@@ -638,6 +670,10 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
         ref={scrollRef}
         contentContainerClassName="gap-4 px-5 py-4"
         keyboardShouldPersistTaps="handled"
+        onScroll={(event) => {
+          scrollY.current = event.nativeEvent.contentOffset.y;
+        }}
+        scrollEventThrottle={32}
         // 새 메시지가 생겼을 때만 맨 아래로 간다 — 같은 내용을 다시 받을 때는 위치를 건드리지 않는다.
         onContentSizeChange={() => {
           const count = messages.length + pending.length;
@@ -738,6 +774,18 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
           );
         })}
       </ScrollView>
+
+      {/* 답장에서 원래 메시지로 이동한 뒤 — 누르면 보던 자리로 돌아가고 사라진다 (SCRUM-254) */}
+      {returnOffset !== null && (
+        <View>
+          <Pressable
+            className="absolute -top-12 self-center rounded-full bg-background-normal px-4 py-2 shadow-card active:opacity-70"
+            onPress={returnToReply}
+          >
+            <Text className="text-body-small text-text-normal">{t("답장으로 돌아가기")}</Text>
+          </Pressable>
+        </View>
+      )}
 
       {/* 언급 후보 */}
       {!searchOpen && mentionCandidates.length > 0 && (
@@ -990,9 +1038,25 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
           closeActions();
         }}
         onToggleNotice={() => {
-          if (actionTarget)
-            setNotice.mutate({ messageId: actionTarget.id, on: !actionTarget.isNotice });
+          const target = actionTarget;
           closeActions();
+          if (!target) return;
+          if (target.isNotice) {
+            setNotice.mutate({ messageId: target.id, on: false });
+            return;
+          }
+          // 등록은 한 번 더 묻는다 — 상단 공지는 1건만 보여서 기존 공지를 밀어낸다 (SCRUM-252).
+          Alert.alert(
+            t("공지 등록"),
+            t("채팅방 상단 공지는 1건만 노출 가능합니다.\n공지를 등록하시겠습니까?"),
+            [
+              { text: t("아니오"), style: "cancel" },
+              {
+                text: t("예"),
+                onPress: () => setNotice.mutate({ messageId: target.id, on: true }),
+              },
+            ],
+          );
         }}
         onDelete={() => {
           const target = actionTarget;
