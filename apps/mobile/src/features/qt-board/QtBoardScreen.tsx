@@ -1,13 +1,13 @@
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { useAuthStore } from "../../shared/store/useAuthStore";
 
-import { deleteQtShare, fetchQtShares } from "./api";
+import { deleteQtShare, fetchQtShares, prefetchQtDetails } from "./api";
 import { PickerPill } from "../../shared/components/composed/PickerPill";
 import { QtPostCard } from "./components/QtPostCard";
 import { useToggleQtLike } from "./useToggleQtLike";
@@ -70,6 +70,15 @@ export function QtBoardScreen() {
   const isAdmin = useMe()?.isAdmin === true;
   const { width: windowWidth } = useWindowDimensions();
   const queryClient = useQueryClient();
+  // 맨 위 몇 개의 상세를 미리 받아 둔다 — 눌렀을 때 회색 로딩 박스 없이 바로 보이게 (SCRUM-268).
+  // 가장 많이 여는 건 최신 글이라 위 5개만 받는다 (전부 받으면 글 수만큼 요청이 나간다).
+  const topIds = (data?.items ?? [])
+    .slice(0, 5)
+    .map((item) => item.id)
+    .join(",");
+  useEffect(() => {
+    if (topIds) prefetchQtDetails(queryClient, topIds.split(","));
+  }, [topIds, queryClient]);
   const deleteDialogRef = useRef<AppDialogRef>(null);
   const [menu, setMenu] = useState<{ id: string; top: number; right: number } | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
