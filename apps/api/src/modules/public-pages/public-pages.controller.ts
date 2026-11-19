@@ -69,11 +69,11 @@ const ACCOUNT_DELETION = page(
 </ul>
 <h2>앱을 쓸 수 없는 경우</h2>
 <ul>
-  <li><a href="mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('계정 삭제 요청')}">${CONTACT_EMAIL}</a>로 가입하신 이름과 로그인 방식(카카오·구글)을 적어 보내 주시면, 본인 확인 후 지체 없이 삭제해 드립니다.</li>
+  <li><a href="mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('계정 삭제 요청')}">${CONTACT_EMAIL}</a>로 가입하신 이름과 로그인 방식(카카오·구글·Apple)을 적어 보내 주시면, 본인 확인 후 지체 없이 삭제해 드립니다.</li>
 </ul>
 <h2>삭제되는 정보와 보관 기간</h2>
 <ul>
-  <li>탈퇴하면 계정은 즉시 비활성화되고, 로그인 정보(카카오·구글 연결, 이메일)와 기기 알림 토큰은 즉시 삭제됩니다.</li>
+  <li>탈퇴하면 계정은 즉시 비활성화되고, 로그인 정보(카카오·구글·Apple 연결, 이메일)와 기기 알림 토큰은 즉시 삭제됩니다.</li>
   <li>생년월일·성별·연락처·프로필 사진·한 줄 소개는 탈퇴 후 30일이 지나면 파기합니다.</li>
   <li>출석 기록과 게시글·댓글은 청년부 운영 기록으로 탈퇴 후 1년간 보관하며, 이후 작성자를 알 수 없도록 처리합니다.</li>
 </ul>
