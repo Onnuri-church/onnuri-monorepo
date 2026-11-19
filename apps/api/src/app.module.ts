@@ -27,6 +27,8 @@ import { BulletinsModule } from './modules/bulletins/bulletins.module';
 import { CellsModule } from './modules/cells/cells.module';
 import { GroupMeetingsModule } from './modules/group-meetings/group-meetings.module';
 import { AttendanceModule } from './modules/attendance/attendance.module';
+import { MetricsInterceptor } from './modules/metrics/metrics.interceptor';
+import { MetricsModule } from './modules/metrics/metrics.module';
 import { NoticesModule } from './modules/notices/notices.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { PostsModule } from './modules/posts/posts.module';
@@ -68,12 +70,15 @@ import { UsersModule } from './modules/users/users.module';
     BulletinsModule,
     AppVersionModule,
     PublicPagesModule,
+    MetricsModule,
   ],
   controllers: [AppController],
   providers: [
     AppService,
     // 예외를 Sentry로 보낸 뒤 Nest 기본 예외 처리에 그대로 위임한다 (응답 모양 불변).
     { provide: APP_FILTER, useClass: SentryGlobalFilter },
+    // 운영 지표 (SCRUM-249·250) — 가장 바깥에서 요청 수·응답 시간과 오늘 쓴 사람을 센다.
+    { provide: APP_INTERCEPTOR, useClass: MetricsInterceptor },
     // 요청 횟수 제한 (SCRUM-165) — 중복 방지보다 먼저 돌아서 넘친 요청은 바로 429로 끝낸다.
     { provide: APP_INTERCEPTOR, useClass: RateLimitInterceptor },
     // 사진 링크 서명 (SCRUM-167) — 응답의 저장소 공개 주소 → 서명 링크, 요청의 서명 링크 → 공개 주소.

@@ -10,3 +10,6 @@ process.env.REVIEW_LOGIN_PASSWORD = REVIEW_LOGIN.password;
 
 // 요청 횟수 제한(SCRUM-165)은 끈다 — e2e는 한 IP에서 수백 번 요청한다. rate-limit 테스트만 다시 켠다.
 process.env.RATE_LIMIT_DISABLED = 'true';
+
+// 운영 지표 기록(SCRUM-249·250)도 끈다 — 테스트 요청이 개발 DB 지표에 쌓이지 않게. metrics 테스트만 다시 켠다.
+process.env.METRICS_DISABLED = 'true';

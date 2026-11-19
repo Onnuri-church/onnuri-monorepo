@@ -125,3 +125,61 @@ export interface AdminFollowerNoteOverview {
   cells: (CellSummary & FollowerNoteCounts)[];
   teams: (TeamSummary & FollowerNoteCounts)[];
 }
+
+/** GET /admin/metrics?days= 응답 (관리자 전용, SCRUM-249·250) — 운영 지표. 날짜는 모두 한국 날짜(YYYY-MM-DD) */
+export interface AdminMetricsResponse {
+  /** 조회한 기간(일) — 오늘 포함 */
+  days: number;
+  users: {
+    /** 지금 회원 수 (탈퇴·심사용 계정 제외) */
+    total: number;
+    /** 날짜별 가입 수 */
+    signups: { date: string; count: number }[];
+  };
+  activity: {
+    /** 기록을 시작한 날 — 그 전 날짜의 활성 사용자는 0으로 나온다 (기록이 없으면 null) */
+    trackingSince: string | null;
+    /** 날짜별 활성 사용자 수 */
+    daily: { date: string; count: number }[];
+    /** 최근 7일(오늘 포함) 동안 한 번이라도 쓴 사람 수 */
+    wau: number;
+    /** 최근 30일(오늘 포함) 동안 한 번이라도 쓴 사람 수 */
+    mau: number;
+  };
+  content: {
+    daily: {
+      date: string;
+      posts: number;
+      comments: number;
+      chatMessages: number;
+      hobbyGroups: number;
+      attendances: number;
+    }[];
+    /** 기간 합계 */
+    totals: {
+      posts: number;
+      comments: number;
+      chatMessages: number;
+      hobbyGroups: number;
+      attendances: number;
+    };
+  };
+  requests: {
+    trackingSince: string | null;
+    total: number;
+    /** 5xx 응답 수 */
+    errorCount: number;
+    /** 평균 응답 시간(ms) */
+    avgMs: number;
+    daily: { date: string; count: number; errorCount: number; avgMs: number }[];
+    /** 많이 불린 주소 20개 */
+    topRoutes: {
+      method: string;
+      route: string;
+      count: number;
+      errorCount: number;
+      avgMs: number;
+      maxMs: number;
+    }[];
+  };
+}
