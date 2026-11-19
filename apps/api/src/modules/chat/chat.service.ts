@@ -366,6 +366,8 @@ export class ChatService {
     const memberNames = new Map(
       access.members.map((member) => [member.id, member.name]),
     );
+    // 공지로 보낸 메시지면 대화에 "공지가 등록되었습니다." 안내를 남긴다 (SCRUM-252).
+    if (dto.asNotice) await this.postNoticeAnnouncement(room, userId, row.id);
     const unreadOf = await this.unreadCounter(room, access.members);
     const info = this.toInfo(row, userId, access, memberNames, unreadOf(row));
     await this.notifyRoom(
@@ -398,6 +400,7 @@ export class ChatService {
       data: { noticeAt: on ? new Date() : null },
       select: MESSAGE_SELECT,
     });
+    if (on) await this.postNoticeAnnouncement(room, userId, messageId);
     const memberNames = new Map(
       access.members.map((member) => [member.id, member.name]),
     );
@@ -704,6 +707,25 @@ export class ChatService {
     await this.prisma.chatMessage.update({
       where: { id: messageId },
       data: { deletedAt: new Date(), noticeAt: null },
+    });
+  }
+
+  // 공지 등록 안내 (SCRUM-252) — 카카오톡처럼 대화 가운데에 "공지가 등록되었습니다."가 남고,
+  // 앱이 그 아래 "상세보기"로 공지 메시지를 연다. 어느 메시지가 공지인지는 답장 대상(replyToId)에 담는다
+  // — 시스템 메시지는 답장을 쓰지 않아서 그 자리를 빌린다 (컬럼 추가 없이).
+  private async postNoticeAnnouncement(
+    room: ChatRoom,
+    actorId: string,
+    messageId: string,
+  ): Promise<void> {
+    await this.prisma.chatMessage.create({
+      data: {
+        ...room,
+        authorId: actorId,
+        isSystem: true,
+        content: '공지가 등록되었습니다.',
+        replyToId: messageId,
+      },
     });
   }
 

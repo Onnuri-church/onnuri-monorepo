@@ -125,19 +125,89 @@ export function useSendChatMessage(
   });
 }
 
+// 누르는 순간 화면을 먼저 바꾸고 저장은 뒤에서 한다 (SCRUM-253) — 예전엔 저장 + 방 다시 받기가 끝나야
+// 반응·공지가 보여서 느렸다. 실패하면 원래대로 돌리고, 끝나면 방을 다시 받아 서버 값에 맞춘다.
+function useOptimisticRoomMutation<TInput>(
+  kind: ChatKind,
+  id: string,
+  mutationFn: (input: TInput) => Promise<unknown>,
+  apply: (room: ChatRoomResponse, input: TInput) => ChatRoomResponse,
+) {
+  const queryClient = useQueryClient();
+  const queryKey = ["chat", kind, id];
+  return useMutation({
+    mutationFn,
+    onMutate: async (input: TInput) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ChatRoomResponse>(queryKey);
+      if (previous) queryClient.setQueryData<ChatRoomResponse>(queryKey, apply(previous, input));
+      return { previous };
+    },
+    onError: (_error, _input, context) => {
+      if (context?.previous) queryClient.setQueryData(queryKey, context.previous);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey }),
+  });
+}
+
 export function useSetChatNotice(kind: ChatKind, id: string) {
-  return useRoomMutation(kind, id, (input: { messageId: string; on: boolean }) =>
-    apiClient.put(`${roomPath(kind, id)}/${input.messageId}/notice`, {
-      on: input.on,
-    } satisfies SetChatNoticeRequest),
+  return useOptimisticRoomMutation(
+    kind,
+    id,
+    (input: { messageId: string; on: boolean }) =>
+      apiClient.put(`${roomPath(kind, id)}/${input.messageId}/notice`, {
+        on: input.on,
+      } satisfies SetChatNoticeRequest),
+    (room, input) => {
+      const target = room.messages.find((message) => message.id === input.messageId);
+      return {
+        ...room,
+        messages: room.messages.map((message) =>
+          message.id === input.messageId ? { ...message, isNotice: input.on } : message,
+        ),
+        // 상단 공지 줄 — 등록하면 바로 그 메시지로, 해제하면 일단 비운다 (이전 공지는 다시 받을 때 온다).
+        notice: input.on
+          ? target
+            ? { ...target, isNotice: true }
+            : room.notice
+          : room.notice?.id === input.messageId
+            ? null
+            : room.notice,
+      };
+    },
   );
 }
 
 export function useToggleChatReaction(kind: ChatKind, id: string) {
-  return useRoomMutation(kind, id, (input: { messageId: string; emoji: string }) =>
-    apiClient.put(`${roomPath(kind, id)}/${input.messageId}/reactions`, {
-      emoji: input.emoji,
-    } satisfies ToggleChatReactionRequest),
+  return useOptimisticRoomMutation(
+    kind,
+    id,
+    (input: { messageId: string; emoji: string }) =>
+      apiClient.put(`${roomPath(kind, id)}/${input.messageId}/reactions`, {
+        emoji: input.emoji,
+      } satisfies ToggleChatReactionRequest),
+    (room, input) => ({
+      ...room,
+      messages: room.messages.map((message) => {
+        if (message.id !== input.messageId) return message;
+        const existing = message.reactions.find((reaction) => reaction.emoji === input.emoji);
+        // 이미 누른 이모지면 취소, 아니면 추가 — 0이 되면 줄에서 뺀다.
+        const reactions = !existing
+          ? [...message.reactions, { emoji: input.emoji, count: 1, reactedByMe: true }]
+          : message.reactions
+              .map((reaction) =>
+                reaction.emoji !== input.emoji
+                  ? reaction
+                  : {
+                      ...reaction,
+                      reactedByMe: !reaction.reactedByMe,
+                      count: reaction.count + (reaction.reactedByMe ? -1 : 1),
+                    },
+              )
+              .filter((reaction) => reaction.count > 0);
+        return { ...message, reactions };
+      }),
+    }),
   );
 }
 
