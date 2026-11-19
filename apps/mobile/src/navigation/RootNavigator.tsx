@@ -79,6 +79,7 @@ import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
+import { ChatNoticeDetailScreen } from "../features/chat/ChatNoticeDetailScreen";
 import { ChatPollDetailScreen } from "../features/chat/ChatPollDetailScreen";
 import { ChatMediaScreen } from "../features/chat/ChatMediaScreen";
 import { ChatRoomInfoScreen } from "../features/chat/ChatRoomInfoScreen";
@@ -506,6 +507,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("투표 만들기")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="ChatNoticeDetail"
+            component={ChatNoticeDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("상세보기")} rightAction="none" />,
             }}
           />
           <Stack.Screen

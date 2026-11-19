@@ -284,5 +284,14 @@
   "첫 댓글을 남겨보세요": "Be the first to comment",
   "댓글을 남겨보세요": "Leave a comment",
   "투표를 불러오지 못했어요": "Couldn't load the poll",
-  "{{count}}명": "{{count}}"
+  "{{count}}명": "{{count}}",
+  "상세보기": "View details",
+  "답장으로 돌아가기": "Back to reply",
+  "원래 메시지를 찾을 수 없어요": "Can't find the original message",
+  "오래된 메시지는 바로 이동할 수 없어요.": "Older messages can't be jumped to.",
+  "공지 등록": "Register notice",
+  "채팅방 상단 공지는 1건만 노출 가능합니다.\n공지를 등록하시겠습니까?": "Only one notice can be shown at the top of the chat.\nRegister this notice?",
+  "아니오": "No",
+  "예": "Yes",
+  "공지를 찾을 수 없어요. 오래됐거나 삭제된 메시지예요.": "Can't find this notice. It may be old or deleted."
 }
