@@ -1,5 +1,5 @@
 import { type RouteProp, useRoute } from "@react-navigation/native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ActivityIndicator,
@@ -75,6 +75,19 @@ export function ChatPollDetailScreen() {
   const [votersOpen, setVotersOpen] = useState(false);
   const [commentDraft, setCommentDraft] = useState("");
 
+  // 댓글을 쓰려고 키보드를 올리면 마지막 댓글이 입력줄 바로 위에 보이게 맨 아래로 내린다 (SCRUM-247).
+  // 댓글을 남긴 직후에도 새 댓글이 보이게 내린다.
+  const scrollRef = useRef<ScrollView>(null);
+  const scrollToLast = () =>
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+  // 항목 추가 입력칸 때문에 올라온 키보드에는 내리지 않는다 — 그 칸이 화면 밖으로 밀려난다.
+  const commentFocused = useRef(false);
+  useEffect(() => {
+    if (keyboardHeight === 0 || !commentFocused.current) return;
+    const timer = scrollToLast();
+    return () => clearTimeout(timer);
+  }, [keyboardHeight]);
+
   if (!poll) {
     return (
       <View className="flex-1 items-center justify-center bg-background-normal">
@@ -135,7 +148,10 @@ export function ChatPollDetailScreen() {
     const content = commentDraft.trim();
     if (!content || addComment.isPending) return;
     addComment.mutate(content, {
-      onSuccess: () => setCommentDraft(""),
+      onSuccess: () => {
+        setCommentDraft("");
+        scrollToLast();
+      },
       onError: () => Alert.alert(t("댓글을 남기지 못했어요"), t("잠시 후 다시 시도해주세요.")),
     });
   };
@@ -155,7 +171,8 @@ export function ChatPollDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <ScrollView
-        contentContainerClassName="px-5 pb-8 pt-4"
+        ref={scrollRef}
+        contentContainerClassName="px-5 pb-4 pt-4"
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
@@ -338,6 +355,12 @@ export function ChatPollDetailScreen() {
           className="h-10 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
           value={commentDraft}
           onChangeText={setCommentDraft}
+          onFocus={() => {
+            commentFocused.current = true;
+          }}
+          onBlur={() => {
+            commentFocused.current = false;
+          }}
           placeholder={t("댓글을 남겨보세요")}
           placeholderTextColor={themeColors.text.alternative}
           maxLength={300}
