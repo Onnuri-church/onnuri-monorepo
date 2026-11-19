@@ -87,6 +87,13 @@ export class EnvironmentVariables {
   })
   REVIEW_LOGIN_PASSWORD?: string;
 
+  // 가입 코드 (SCRUM-263) — 처음 프로필을 등록할 때 이 값과 같은 코드를 내야 가입된다. 교회에서
+  // 광고로 알려주는 값. 비우면 확인하지 않는다 (로컬 개발용) — 운영에서는 꼭 넣는다.
+  @ValidateIf((e: EnvironmentVariables) => Boolean(e.JOIN_CODE))
+  @IsString()
+  @MinLength(6, { message: 'JOIN_CODE는 6자 이상이어야 합니다.' })
+  JOIN_CODE?: string;
+
   // 쉼표 구분 목록 (Android/iOS 클라이언트 ID가 다르다).
   // 비어 있으면 구글 ID 토큰의 aud 검증을 건너뛴다 (로컬 개발용).
   @IsOptional()

@@ -272,7 +272,7 @@ export class NotificationsService {
   private rememberReceipt(id: string, token: string, sentAt: number) {
     if (this.pendingReceipts.size >= PENDING_RECEIPT_LIMIT) {
       // Map은 넣은 순서를 지킨다 — 맨 앞이 가장 오래된 접수증이다.
-      const oldest = this.pendingReceipts.keys().next().value;
+      const [oldest] = this.pendingReceipts.keys();
       if (oldest !== undefined) this.pendingReceipts.delete(oldest);
     }
     this.pendingReceipts.set(id, { token, sentAt });

@@ -306,5 +306,6 @@
   "{{count}}개 삭제": "Delete {{count}}",
   "삭제할 방을 골라주세요": "Select rooms to delete",
   "아직 단톡방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No chat rooms yet. Create one from ☰ at the top right.",
-  "아직 리더 방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No leader rooms yet. Create one from ☰ at the top right."
+  "아직 리더 방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No leader rooms yet. Create one from ☰ at the top right.",
+  "로그인하면 팀원과 활동 사진을 볼 수 있어요.": "Sign in to see team members and activity photos."
 }

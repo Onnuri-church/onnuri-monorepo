@@ -15,7 +15,9 @@ import type {
   User,
 } from '@onnuri/shared';
 
+import { ConfigService } from '@nestjs/config';
 import { type Prisma, SocialProvider } from '../../../generated/prisma';
+import { type AppConfig } from '../../config/configuration';
 import { kstToday, toDateLabel, toKstDate } from '../../common/utils/date';
 import {
   INDEFINITE_SUSPENSION,
@@ -69,6 +71,7 @@ export class UsersService {
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
     private readonly appleSignIn: AppleSignInClient,
+    private readonly config: ConfigService<AppConfig, true>,
   ) {}
 
   // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
@@ -836,6 +839,7 @@ export class UsersService {
     if (ageOn(dto.birthDate, todayYmd) < MIN_SIGNUP_AGE) {
       throw new BadRequestException('만 14세 미만은 가입할 수 없어요.');
     }
+    await this.assertJoinCode(userId, dto.joinCode);
     await this.prisma.$transaction(async (tx) => {
       if (dto.cellId) {
         const cell = await tx.cell.findFirst({
@@ -863,6 +867,8 @@ export class UsersService {
           birthDate: new Date(dto.birthDate),
           gender: dto.gender,
           phone: dto.phone,
+          // 이름은 보낸 경우에만 바꾼다 — 이전 앱 버전은 보내지 않는다 (SCRUM-264).
+          ...(dto.name !== undefined && { name: dto.name }),
         },
       });
       await this.syncCellMembership(tx, userId, dto.cellId);
@@ -871,6 +877,36 @@ export class UsersService {
 
     // 방금 update가 성공했으므로 유저는 반드시 있다.
     return (await this.findMe(userId))!;
+  }
+
+  // 가입 코드 확인 (SCRUM-263). 스토어에 공개된 앱이라 누구나 소셜 로그인까지는 할 수 있는데,
+  // 프로필 등록에서 셀·팀을 스스로 고르면 바로 그 채팅방과 나눔 글을 보게 된다. 그래서 프로필을
+  // 처음 등록할 때 교회에서 안내한 코드를 내야만 통과시킨다. 이미 가입을 마친 사람의 수정에는
+  // 묻지 않고, 코드가 설정되지 않은 환경(로컬 개발)에서는 확인하지 않는다.
+  private async assertJoinCode(
+    userId: string,
+    joinCode: string | undefined,
+  ): Promise<void> {
+    const expected = this.config.get('auth.joinCode', { infer: true });
+    if (!expected) return;
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { birthDate: true, gender: true, phone: true },
+    });
+    // findById의 profileCompleted와 같은 기준 — 필수 3항목이 다 있으면 이미 가입한 사람이다.
+    const alreadyJoined =
+      user !== null &&
+      user.birthDate !== null &&
+      user.gender !== null &&
+      user.phone !== null;
+    if (alreadyJoined) return;
+    // 대소문자·앞뒤 공백 차이로 튕기지 않게 맞춰서 비교한다.
+    const given = joinCode?.trim().toLowerCase() ?? '';
+    if (given !== expected.toLowerCase()) {
+      throw new BadRequestException(
+        '가입 코드가 맞지 않아요. 청년부 임원에게 확인해주세요.',
+      );
+    }
   }
 
   // 소속 변경은 기존 행을 지우지 않고 endedAt을 찍고 새 행을 만든다 — 소속 이력 보존

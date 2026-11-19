@@ -90,5 +90,12 @@
   "이 기기는 알림이 꺼져 있어요": "Notifications are off on this device",
   "휴대폰 설정에서 알림을 허용해야 소식을 받을 수 있어요.": "Allow notifications in your phone settings to receive updates.",
   "알림을 켜야 공지·댓글·채팅 소식을 받을 수 있어요.": "Turn on notifications to receive announcements, comments, and chat messages.",
-  "휴대폰 설정 열기": "Open phone settings"
+  "휴대폰 설정 열기": "Open phone settings",
+  "가입 코드": "Join code",
+  "교회에서 안내받은 코드를 입력하세요": "Enter the code you received from the church",
+  "청년부 구성원 확인용이에요. 모르면 청년부 임원에게 물어보세요.": "This confirms you are part of the young adults ministry. Ask a ministry leader if you do not have it.",
+  "실명을 입력해주세요": "Enter your real name",
+  "가입 코드가 맞지 않아요. 청년부 임원에게 확인해주세요.": "That join code is not correct. Please check with a ministry leader.",
+  "이름을 입력해주세요.": "Please enter your name.",
+  "이름은 20자까지 쓸 수 있어요.": "Names can be up to 20 characters."
 }
