@@ -161,6 +161,7 @@ model User {
   chatPollOptionsAdded   ChatPollOption[]        @relation("ChatPollOptionCreator")
   chatPollVotes          ChatPollVote[]          @relation("ChatPollVoter")
   chatPollComments       ChatPollComment[]       @relation("ChatPollCommentAuthor")
+  activityDays           UserActivityDay[]       @relation("UserActivityDays")
   chatRoomsCreated       ChatRoom[]              @relation("ChatRoomCreator")
   chatRoomMemberships    ChatRoomMember[]
   leaderRoomsCreated     LeaderRoom[]            @relation("LeaderRoomCreator")
@@ -1066,4 +1067,33 @@ model Report {
   @@unique([reporterId, targetType, targetId]) // 같은 사람이 같은 글을 여러 번 신고해도 한 건
   @@index([status, createdAt])
   @@index([targetType, targetId])
+}
+
+// ---- 운영 지표 (SCRUM-249·250) ----
+// 하루에 한 번이라도 로그인한 채 서버를 부른 사람 — (사람, 한국 날짜)마다 한 줄. 일간·주간·월간 활성 사용자를 센다.
+// 심사용 계정은 기록하지 않는다.
+model UserActivityDay {
+  user      User     @relation("UserActivityDays", fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  date      DateTime @db.Date // 한국 날짜
+  createdAt DateTime @default(now())
+
+  @@id([userId, date])
+  @@index([date])
+}
+
+// 서버 요청 집계 — 요청마다 한 줄이 아니라 (시간대, 메서드, 주소 틀)마다 한 줄에 모은다.
+// route는 "/chat-polls/:pollId/comments" 같은 틀이라 사람·글 id가 들어가지 않는다.
+model ApiRequestStat {
+  id         String   @id @default(cuid())
+  hour       DateTime // 그 시간대의 시작 (UTC, 분·초 0)
+  method     String
+  route      String
+  count      Int      @default(0)
+  errorCount Int      @default(0) // 5xx 응답 수
+  totalMs    Int      @default(0) // 응답 시간 합 — 평균은 totalMs / count
+  maxMs      Int      @default(0)
+
+  @@unique([hour, method, route])
+  @@index([hour])
 }
