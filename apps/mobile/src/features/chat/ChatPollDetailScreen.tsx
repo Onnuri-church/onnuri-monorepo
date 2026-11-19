@@ -21,6 +21,8 @@ import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { useBlockedUserIds } from "../block/api";
+import { useMe } from "../profile/useMe";
+import { useReport } from "../report/useReport";
 import {
   useChatPoll,
   useChatPollActions,
@@ -52,6 +54,9 @@ export function ChatPollDetailScreen() {
   const { data: comments } = useChatPollComments(pollId);
   const { add: addComment, remove: removeComment } = useChatPollCommentActions(kind, id, pollId);
   const blockedIds = useBlockedUserIds();
+  // 남의 댓글에는 신고 버튼을 둔다 (SCRUM-248) — 사용자 글에는 어디든 신고 수단이 있어야 한다.
+  const myId = useMe()?.id;
+  const { openReport, sheet: reportSheet } = useReport();
 
   const myIds = useMemo(
     () => (poll?.options ?? []).filter((option) => option.votedByMe).map((option) => option.id),
@@ -299,15 +304,23 @@ export function ChatPollDetailScreen() {
                   <Text className="text-caption-main text-text-alternative">
                     {toTimeAgo(comment.createdAt)}
                   </Text>
-                  {comment.canDelete && (
-                    <Pressable
-                      className="ml-auto"
-                      hitSlop={8}
-                      onPress={() => handleDeleteComment(comment.id)}
-                    >
-                      <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
-                    </Pressable>
-                  )}
+                  <View className="ml-auto flex-row items-center gap-3">
+                    {comment.authorId !== myId && (
+                      <Pressable
+                        hitSlop={8}
+                        onPress={() =>
+                          openReport({ targetType: "CHAT_POLL_COMMENT", targetId: comment.id })
+                        }
+                      >
+                        <Text className="text-caption-main text-text-alternative">{t("신고")}</Text>
+                      </Pressable>
+                    )}
+                    {comment.canDelete && (
+                      <Pressable hitSlop={8} onPress={() => handleDeleteComment(comment.id)}>
+                        <Text className="text-caption-main text-text-alternative">{t("삭제")}</Text>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
                 <Text className="mt-1 text-body-medium text-text-normal">{comment.content}</Text>
               </View>
@@ -387,6 +400,8 @@ export function ChatPollDetailScreen() {
           </Pressable>
         </Pressable>
       </Modal>
+
+      {reportSheet}
     </View>
   );
 }

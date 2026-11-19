@@ -1,0 +1,2 @@
+-- 투표 댓글 신고 (SCRUM-248)
+ALTER TYPE "ReportTargetType" ADD VALUE 'CHAT_POLL_COMMENT';
