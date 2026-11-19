@@ -151,7 +151,9 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   // 패널이나 키보드가 올라와 채팅 칸이 줄면 마지막 메시지가 그 바로 위에 보이게 맨 아래로 맞춘다.
   useEffect(() => {
     if (!positioned || (!attachmentSheetOpen && keyboardHeight === 0)) return;
-    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
+    // 패널은 올라오는 움직임이 따로 있어서 채팅은 움직임 없이 바로 맞춘다 — 둘이 같이 움직이면 끊겨 보인다.
+    const animated = !attachmentSheetOpen;
+    const timer = setTimeout(() => scrollRef.current?.scrollToEnd({ animated }), animated ? 60 : 0);
     return () => clearTimeout(timer);
   }, [attachmentSheetOpen, keyboardHeight, positioned]);
   // + 패널의 최근 사진을 방에 들어온 뒤 한가할 때 미리 읽어 둔다 — 패널이 끊김 없이 올라오게.
