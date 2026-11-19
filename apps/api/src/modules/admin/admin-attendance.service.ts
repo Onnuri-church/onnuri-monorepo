@@ -162,6 +162,7 @@ export class AdminAttendanceService {
           role: member.role,
           roleLabel: member.roleLabel,
           weeks: toWeeks(member),
+          hasCell: member.cellId !== null,
         })),
       })),
     };
