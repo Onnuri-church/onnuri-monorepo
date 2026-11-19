@@ -271,5 +271,18 @@
   "다음 결과": "Next result",
   "최근 사진": "Recent photos",
   "전송 {{count}}": "Send {{count}}",
-  "첨부": "Attach"
+  "첨부": "Attach",
+  "투표하러 가기": "Go vote",
+  "투표 확인하기": "View my vote",
+  "결과 보기": "View results",
+  "마감된 투표예요": "This poll is closed",
+  "{{time}}에 마감돼요": "Closes at {{time}}",
+  "진행 중인 투표예요": "This poll is open",
+  "투표하기": "Vote",
+  "다시 투표하기": "Change vote",
+  "투표 취소하기": "Cancel vote",
+  "첫 댓글을 남겨보세요": "Be the first to comment",
+  "댓글을 남겨보세요": "Leave a comment",
+  "투표를 불러오지 못했어요": "Couldn't load the poll",
+  "{{count}}명": "{{count}}"
 }

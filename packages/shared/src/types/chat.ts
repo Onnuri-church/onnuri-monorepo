@@ -53,6 +53,26 @@ export interface ChatPollInfo {
   voterCount: number;
   /** 마감 버튼 노출 기준 — 만든 사람, 그 방의 팀장·셀장·소그룹장, 관리자 */
   canClose: boolean;
+  /** 투표 상세 화면의 댓글 수 (SCRUM-247) */
+  commentCount: number;
+}
+
+/** 투표 댓글 — GET /chat-polls/:pollId/comments */
+export interface ChatPollCommentInfo {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatarUrl: string | null;
+  content: string;
+  /** ISO */
+  createdAt: string;
+  /** 지울 수 있는지 — 내가 쓴 댓글이거나 관리자 */
+  canDelete: boolean;
+}
+
+/** POST /chat-polls/:pollId/comments 요청 본문 */
+export interface CreateChatPollCommentRequest {
+  content: string;
 }
 
 /** 투표 만들기 입력 — 메시지 보내기(SendChatMessageRequest.poll)에 담아 보낸다 */

@@ -374,6 +374,77 @@ describe('Leader rooms (e2e)', () => {
         .set(auth(cellLeaderToken))
         .expect(400);
     });
+
+    it('투표 상세와 댓글은 방 멤버만, 댓글은 쓴 사람·관리자만 지운다 (SCRUM-247)', async () => {
+      const sent = await request(server())
+        .post(`/leader-rooms/${roomId}/messages`)
+        .set(auth(teamLeaderToken))
+        .send({ content: '', poll: { title: '11/21', options: ['참', '불'] } })
+        .expect(201);
+      const pollId = (
+        sent.body as { poll: { id: string; commentCount: number } }
+      ).poll.id;
+      expect(
+        (sent.body as { poll: { commentCount: number } }).poll.commentCount,
+      ).toBe(0);
+
+      await request(server())
+        .get(`/chat-polls/${pollId}`)
+        .set(auth(otherLeaderToken))
+        .expect(403);
+      await request(server())
+        .post(`/chat-polls/${pollId}/comments`)
+        .set(auth(otherLeaderToken))
+        .send({ content: '밖에서' })
+        .expect(403);
+      await request(server())
+        .post(`/chat-polls/${pollId}/comments`)
+        .set(auth(cellLeaderToken))
+        .send({ content: '   ' })
+        .expect(400);
+
+      const added = await request(server())
+        .post(`/chat-polls/${pollId}/comments`)
+        .set(auth(cellLeaderToken))
+        .send({ content: ' 저는 참이요 ' })
+        .expect(201);
+      const comments = added.body as {
+        id: string;
+        content: string;
+        canDelete: boolean;
+      }[];
+      expect(comments).toHaveLength(1);
+      expect(comments[0].content).toBe('저는 참이요');
+      expect(comments[0].canDelete).toBe(true);
+
+      const detail = await request(server())
+        .get(`/chat-polls/${pollId}`)
+        .set(auth(teamLeaderToken))
+        .expect(200);
+      expect(
+        (detail.body as { poll: { commentCount: number } }).poll.commentCount,
+      ).toBe(1);
+
+      // 다른 멤버에게는 canDelete가 false이고 지울 수 없다
+      const seen = await request(server())
+        .get(`/chat-polls/${pollId}/comments`)
+        .set(auth(teamLeaderToken))
+        .expect(200);
+      expect((seen.body as { canDelete: boolean }[])[0].canDelete).toBe(false);
+      await request(server())
+        .delete(`/chat-polls/${pollId}/comments/${comments[0].id}`)
+        .set(auth(teamLeaderToken))
+        .expect(403);
+      await request(server())
+        .delete(`/chat-polls/${pollId}/comments/${comments[0].id}`)
+        .set(auth(adminToken))
+        .expect(204);
+      const after = await request(server())
+        .get(`/chat-polls/${pollId}/comments`)
+        .set(auth(cellLeaderToken))
+        .expect(200);
+      expect(after.body).toHaveLength(0);
+    });
   });
 
   describe('강등', () => {

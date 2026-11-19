@@ -73,6 +73,8 @@ export type RootStackParamList = {
   TeamSpace: { teamId: string };
   // 투표 만들기 — 단톡방(팀 room / 셀 cell / 소그룹 group / 리더 방 leader)의 + 메뉴에서 연다.
   ChatPollCreate: { kind: "room" | "cell" | "group" | "leader"; id: string };
+  // 투표 상세 (SCRUM-247) — 투표하기·결과·참여자·댓글
+  ChatPollDetail: { kind: "room" | "cell" | "group" | "leader"; id: string; pollId: string };
   // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
   GroupChat: { meetingId: string };
   TeamBoard: { teamId: string };
