@@ -8,6 +8,7 @@ export const REPORT_TARGET_TYPES = [
   'CHAT_MESSAGE',
   'TEAM_BOARD_POST',
   'TEAM_BOARD_COMMENT',
+  'CHAT_POLL_COMMENT',
 ] as const satisfies readonly ReportTargetType[];
 
 export const REPORT_REASONS = [

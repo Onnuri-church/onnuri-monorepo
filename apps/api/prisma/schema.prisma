@@ -1029,6 +1029,7 @@ enum ReportTargetType {
   CHAT_MESSAGE
   TEAM_BOARD_POST
   TEAM_BOARD_COMMENT
+  CHAT_POLL_COMMENT // 채팅 투표 댓글 (SCRUM-248)
 }
 
 enum ReportReason {

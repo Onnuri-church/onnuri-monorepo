@@ -19,6 +19,7 @@ const TARGET_LABELS: Record<AdminReportItem["targetType"], string> = {
   CHAT_MESSAGE: "채팅",
   TEAM_BOARD_POST: "팀 게시판 글",
   TEAM_BOARD_COMMENT: "팀 게시판 댓글",
+  CHAT_POLL_COMMENT: "투표 댓글",
 };
 
 const STATUS_LABELS: Record<AdminReportItem["status"], string> = {

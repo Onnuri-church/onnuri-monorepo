@@ -431,6 +431,16 @@ describe('Leader rooms (e2e)', () => {
         .set(auth(teamLeaderToken))
         .expect(200);
       expect((seen.body as { canDelete: boolean }[])[0].canDelete).toBe(false);
+      // 다른 멤버는 그 댓글을 신고할 수 있다 (SCRUM-248)
+      await request(server())
+        .post('/reports')
+        .set(auth(teamLeaderToken))
+        .send({
+          targetType: 'CHAT_POLL_COMMENT',
+          targetId: comments[0].id,
+          reason: 'SPAM',
+        })
+        .expect(204);
       await request(server())
         .delete(`/chat-polls/${pollId}/comments/${comments[0].id}`)
         .set(auth(teamLeaderToken))
