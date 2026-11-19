@@ -109,5 +109,8 @@
   "시작 날짜부터 골라주세요": "Pick a start date first",
   "시작 날짜": "Start date",
   "끝 날짜": "End date",
-  "{{date}} 선택": "Select {{date}}"
+  "{{date}} 선택": "Select {{date}}",
+  "소속 셀이 없어서 셀모임 출석을 기록할 수 없어요. 셀에 배정하면 고칠 수 있어요.": "This member isn't in a cell, so cell meeting attendance can't be recorded. Assign them to a cell to edit it.",
+  "셀 관리 열기": "Open cell management",
+  "셀모임이 없는 날이에요. 고치려면 먼저 모임 없는 날 지정을 바꿔주세요.": "There's no cell meeting on this day. Change the no-meeting day setting first."
 }

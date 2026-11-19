@@ -151,6 +151,12 @@ export function AdminAttendanceScreen() {
     navigation.navigate("AdminOffDays");
   };
 
+  // 소속 셀이 없어서 셀모임 칸이 막힌 회원 — 모임 없는 날이 아니라 셀 배정이 필요하다 (SCRUM-251).
+  const handleCellManagePress = () => {
+    editSheetRef.current?.close();
+    navigation.navigate("AdminCellManage");
+  };
+
   const handlePickerSelect = (optionId: string) => {
     if (filter === "team") {
       setSelectedTeamId(optionId);
@@ -388,7 +394,23 @@ export function AdminAttendanceScreen() {
           ).map(({ field, label, mark }) => (
             <View key={field} className="gap-2">
               <Text className="text-body-small text-text-alternative">{label}</Text>
-              {mark === "-" ? (
+              {mark === "-" && field === "meeting" && editRow?.hasCell === false ? (
+                // 모임은 있는 날인데 이 회원이 어느 셀에도 속해 있지 않다 — 셀모임 출석은 셀 단위로
+                // 기록해서 남길 곳이 없다. 모임 없는 날 지정이 아니라 셀 관리로 보낸다 (SCRUM-251).
+                <Pressable
+                  className="rounded-2.5 bg-background-muted px-4 py-3"
+                  onPress={handleCellManagePress}
+                >
+                  <Text className="text-body-regular text-text-alternative">
+                    {t(
+                      "소속 셀이 없어서 셀모임 출석을 기록할 수 없어요. 셀에 배정하면 고칠 수 있어요.",
+                    )}
+                  </Text>
+                  <Text className="mt-1 text-body-main text-primary-normal">
+                    {t("셀 관리 열기")}
+                  </Text>
+                </Pressable>
+              ) : mark === "-" ? (
                 <Pressable
                   className="rounded-2.5 bg-background-muted px-4 py-3"
                   onPress={handleOffDaysPress}
@@ -396,9 +418,7 @@ export function AdminAttendanceScreen() {
                   <Text className="text-body-regular text-text-alternative">
                     {field === "worship"
                       ? t("예배가 없는 날이에요. 고치려면 먼저 모임 없는 날 지정을 바꿔주세요.")
-                      : t(
-                          "셀모임이 없는 날이거나 소속 셀이 없어요. 모임 없는 날 지정을 확인해주세요.",
-                        )}
+                      : t("셀모임이 없는 날이에요. 고치려면 먼저 모임 없는 날 지정을 바꿔주세요.")}
                   </Text>
                   <Text className="mt-1 text-body-main text-primary-normal">
                     {t("모임 없는 날 지정 열기")}
