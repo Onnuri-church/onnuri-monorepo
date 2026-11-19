@@ -78,6 +78,7 @@ export function QtBoardScreen() {
     mutationFn: deleteQtShare,
     onSuccess: (_, postId) => {
       void queryClient.invalidateQueries({ queryKey: ["qt-shares"] });
+      void queryClient.invalidateQueries({ queryKey: ["home-posts"] });
       queryClient.removeQueries({ queryKey: ["qt-share", postId] });
     },
     onError: () => Alert.alert(t("삭제하지 못했어요"), t("잠시 후 다시 시도해주세요.")),

@@ -78,6 +78,7 @@ export function useToggleQtLike() {
 
     onSettled: (_data, _error, { postId }) => {
       void queryClient.invalidateQueries({ queryKey: ["qt-shares"] });
+      void queryClient.invalidateQueries({ queryKey: ["home-posts"] });
       void queryClient.invalidateQueries({ queryKey: ["qt-share", postId] });
     },
   });
