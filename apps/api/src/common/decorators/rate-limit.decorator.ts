@@ -22,6 +22,8 @@ export const RATE_LIMITS = {
   auth: { name: 'auth', limit: 60, windowMs: MINUTE },
   // 사진 업로드 — 한 번에 여러 장을 올려도 분당 30장이면 넉넉하다. 저장소 용량을 지키는 몫.
   upload: { name: 'upload', limit: 30, windowMs: MINUTE },
+  // 프로필 등록·수정 — 가입 코드를 여러 번 찍어 맞히지 못하게 사람 단위로 좁게 둔다 (SCRUM-263).
+  profile: { name: 'profile', limit: 10, windowMs: MINUTE },
 } satisfies Record<string, RateLimitRule>;
 
 /** 기본 규칙 대신 이 규칙을 쓴다 (컨트롤러 또는 핸들러에 붙인다). */

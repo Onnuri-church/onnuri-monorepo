@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { useCreateTeam, useTeamDetail, useUpdateTeam } from "./api";
+import { showRequestError } from "../../shared/api/requestErrorAlert";
 import { uploadImage } from "../../shared/api/upload";
 import { useDiscardGuard, useFormDirty } from "../../shared/hooks/useDiscardGuard";
 import { useSubmitLock } from "../../shared/hooks/useSubmitLock";
@@ -105,7 +106,6 @@ export function TeamFormScreen() {
   const handleSubmitPress = async () => {
     if (leaderIds.length === 0 || !iconName || !acquire()) return;
 
-    // 실패하면 다시 누를 수 있게 풀고, 오류는 기존처럼 그대로 던진다.
     try {
       const coverImageUrl = coverUri ? await uploadImage(coverUri) : null;
       const body = {
@@ -126,8 +126,10 @@ export function TeamFormScreen() {
       }
       navigation.goBack();
     } catch (error) {
+      // 실패하면 다시 누를 수 있게 풀고 이유를 알린다 (SCRUM-262). 사진 업로드는 mutation 밖이라
+      // 공통 안내가 못 잡는다 — 여기서 직접 띄운다 (등록 요청 실패는 알림창이 한 번만 뜬다).
       release();
-      throw error;
+      showRequestError(error);
     }
   };
 

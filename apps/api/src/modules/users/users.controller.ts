@@ -13,6 +13,10 @@ import {
 } from '@nestjs/common';
 
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  RATE_LIMITS,
+  RateLimit,
+} from '../../common/decorators/rate-limit.decorator';
 import { AdminGuard } from '../../common/guards/admin.guard';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
@@ -75,7 +79,9 @@ export class UsersController {
     return this.usersService.declineConsent(user.sub);
   }
 
+  // 가입 코드를 연달아 찍어 맞히지 못하게 횟수를 좁게 둔다 (SCRUM-263).
   @UseGuards(JwtAuthGuard)
+  @RateLimit(RATE_LIMITS.profile)
   @Patch('me')
   updateMe(@CurrentUser() user: JwtPayload, @Body() dto: UpdateMyProfileDto) {
     return this.usersService.updateMyProfile(user.sub, dto);

@@ -4,10 +4,14 @@ import {
   IsArray,
   IsEnum,
   IsISO8601,
+  IsOptional,
   IsString,
   Matches,
+  MaxLength,
+  MinLength,
   ValidateIf,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 import { Gender } from '../../../../generated/prisma';
 import { IsYmdDate } from '../../../common/validators/is-ymd-date';
@@ -39,4 +43,20 @@ export class UpdateMyProfileDto {
   @ArrayUnique()
   @IsString({ each: true })
   teamIds!: string[];
+
+  // 이름 (SCRUM-264) — 이전 앱 버전은 보내지 않는다. 오면 앞뒤 공백을 떼고 1~20자만 받는다.
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  @IsString()
+  @MinLength(1, { message: '이름을 입력해주세요.' })
+  @MaxLength(20, { message: '이름은 20자까지 쓸 수 있어요.' })
+  name?: string;
+
+  // 가입 코드 (SCRUM-263) — 처음 등록할 때만 서비스가 확인한다.
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  joinCode?: string;
 }

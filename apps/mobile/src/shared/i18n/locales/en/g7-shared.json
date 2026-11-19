@@ -91,5 +91,7 @@
   "업데이트하러 가기": "Update now",
   "스토어에서 앱을 업데이트해 주세요.": "Please update the app from the store.",
   "다시 보내기": "Resend",
-  "댓글을 등록하지 못했어요": "Couldn't post the comment"
+  "댓글을 등록하지 못했어요": "Couldn't post the comment",
+  "요청을 처리하지 못했어요": "We couldn't complete your request",
+  "연결이 불안정해요. 잠시 후 다시 시도해주세요.": "The connection is unstable. Please try again in a moment."
 }

@@ -221,4 +221,14 @@ export interface UpdateMyProfileRequest {
   cellId: string | null;
   /** 소속 팀 전부 — 빈 배열이 "소속 없음"이다 (여러 팀 소속 가능) */
   teamIds: string[];
+  /**
+   * 이름 (SCRUM-264) — 소셜 계정 이름은 닉네임이거나 비어 있을 수 있어 본인이 직접 정한다.
+   * 이전 앱 버전은 보내지 않는다 — 없으면 서버가 기존 이름을 그대로 둔다.
+   */
+  name?: string;
+  /**
+   * 가입 코드 (SCRUM-263) — 처음 프로필을 등록할 때만 확인한다. 교회에서 안내받은 코드와
+   * 같아야 가입된다. 이미 가입한 사람의 수정에는 필요 없다.
+   */
+  joinCode?: string;
 }

@@ -10,6 +10,7 @@ import { ActivityPhotos } from "./components/ActivityPhotos";
 import { TeamBoardLink } from "./components/TeamBoardLink";
 import { TeamProfile } from "./components/TeamProfile";
 import { Icon, isIconName } from "../../shared/components/base/Icon";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useMe } from "../profile/useMe";
 import type { RootStackParamList } from "../../shared/types/navigation";
 
@@ -42,6 +43,7 @@ export function TeamStoryDetailScreen() {
     (chatRooms ?? []).some((room) => room.unreadCount > 0) || (boardUnread ?? 0) > 0;
 
   const members = team?.members ?? [];
+  const isGuest = useAuthStore((state) => state.session.status === "guest");
 
   const allPhotos = (gallery ?? []).flatMap((month) => month.photos);
 
@@ -73,25 +75,35 @@ export function TeamStoryDetailScreen() {
         </View>
       ) : null}
 
-      <View className="mt-12">
-        <ActivityPhotos
-          photos={allPhotos.slice(0, PHOTO_PREVIEW_COUNT)}
-          totalCount={allPhotos.length}
-          onViewAllPress={handleViewAllPhotosPress}
-        />
-      </View>
-
-      {/* 팀원은 목록을 펼쳐 두지 않고, 줄 전체를 눌러 팀원 목록 페이지로 들어간다. */}
-      <Pressable
-        className="mt-12 h-7 flex-row items-center justify-between active:opacity-60"
-        onPress={handleMemberListPress}
-        hitSlop={8}
-      >
-        <Text className="text-heading-small text-text-normal">
-          {t("팀원 · {{count}}명", { count: members.length })}
+      {/* 활동 사진과 팀원 명단은 로그인한 사람에게만 보인다 (SCRUM-265) — 서버도 게스트에게는 비워서 준다.
+          빈 사진첩·"팀원 0명"으로 보이지 않게 자리 대신 안내 한 줄을 둔다. */}
+      {isGuest ? (
+        <Text className="mt-12 text-body-medium text-text-alternative">
+          {t("로그인하면 팀원과 활동 사진을 볼 수 있어요.")}
         </Text>
-        <Icon name="expand-right" size={28} />
-      </Pressable>
+      ) : (
+        <>
+          <View className="mt-12">
+            <ActivityPhotos
+              photos={allPhotos.slice(0, PHOTO_PREVIEW_COUNT)}
+              totalCount={allPhotos.length}
+              onViewAllPress={handleViewAllPhotosPress}
+            />
+          </View>
+
+          {/* 팀원은 목록을 펼쳐 두지 않고, 줄 전체를 눌러 팀원 목록 페이지로 들어간다. */}
+          <Pressable
+            className="mt-12 h-7 flex-row items-center justify-between active:opacity-60"
+            onPress={handleMemberListPress}
+            hitSlop={8}
+          >
+            <Text className="text-heading-small text-text-normal">
+              {t("팀원 · {{count}}명", { count: members.length })}
+            </Text>
+            <Icon name="expand-right" size={28} />
+          </Pressable>
+        </>
+      )}
 
       {/* 팀 팔로워 노트·팀 공간·팀 활동 게시판 — 같은 모양의 카드를 촘촘히(16) 쌓는다 (2026-11-10 피드백:
           48 간격은 너무 비어 보인다). 팔로워 노트는 그 팀 팀장에게만, 팀 공간은 팀원·관리자에게만 보인다. */}

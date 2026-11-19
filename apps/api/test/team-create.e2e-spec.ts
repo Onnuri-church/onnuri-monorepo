@@ -88,6 +88,35 @@ describe('Team create (e2e)', () => {
       coverImageUrl: null,
     }).expect(201));
 
+  // SCRUM-265 — 팀 소개는 게스트도 보지만 팀원 명단과 갤러리는 로그인해야 받는다.
+  it('게스트에게는 팀원 명단과 갤러리를 비워서 준다', async () => {
+    const res = await create({
+      name: `${TEAM_PREFIX}guest`,
+      leaderIds: [leaderId],
+      iconName: 'note',
+    }).expect(201);
+    const { id } = res.body as { id: string };
+    const server = app.getHttpServer();
+
+    const asGuest = await request(server).get(`/teams/${id}`).expect(200);
+    expect((asGuest.body as { name: string }).name).toBe(`${TEAM_PREFIX}guest`);
+    expect((asGuest.body as { members: unknown[] }).members).toEqual([]);
+    const galleryAsGuest = await request(server)
+      .get(`/teams/${id}/gallery`)
+      .expect(200);
+    expect(galleryAsGuest.body).toEqual([]);
+
+    const asMember = await request(server)
+      .get(`/teams/${id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+    expect(
+      (asMember.body as { members: { id: string }[] }).members.map(
+        (member) => member.id,
+      ),
+    ).toEqual([leaderId]);
+  });
+
   it('아이콘이 없으면 400', () =>
     create({ name: `${TEAM_PREFIX}3`, leaderIds: [leaderId] }).expect(400));
 

@@ -56,6 +56,7 @@ export function QtBoardDetailScreen() {
         onSuccess: () => {
             // 지운 글의 상세 캐시는 버린다 — 남겨두면 뒤로 간 화면에서 잠깐 다시 보인다.
             void queryClient.invalidateQueries({ queryKey: ["qt-shares"] });
+            void queryClient.invalidateQueries({ queryKey: ["home-posts"] });
             queryClient.removeQueries({ queryKey: ["qt-share", id] });
             navigation.goBack();
         },

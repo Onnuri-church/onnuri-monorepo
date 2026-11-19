@@ -1,12 +1,14 @@
 import type { NotificationSettings } from "@onnuri/shared";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, ScrollView, Text, View } from "react-native";
+import { Alert, AppState, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppToast, type AppToastRef } from "../../shared/components/base/AppToast";
+import { Button } from "../../shared/components/base/Button";
 import { Toggle } from "../../shared/components/base/Toggle";
 import { useAuthStore } from "../../shared/store/useAuthStore";
+import { enablePush, getPushStatus, type PushStatus } from "../notification/pushPermission";
 import { useMe } from "../profile/useMe";
 import { useNotificationSettings, useUpdateNotificationSettings } from "./api";
 import { SettingRow } from "./components/SettingRow";
@@ -78,6 +80,39 @@ export function NotificationSettingsScreen() {
   // 광고성 푸시가 생기면 그때 법정 고지 팝업을 별도로 단다).
   const toastRef = useRef<AppToastRef>(null);
 
+  // 이 기기의 알림 권한 (SCRUM-267). 아래 스위치들은 "어떤 종류를 받을지"를 서버에 저장할 뿐이라,
+  // 기기 권한이 꺼져 있으면 스위치가 켜져 있어도 푸시가 오지 않는다 — 그 상태를 위에 알리고 여기서 켠다.
+  // 홈 안내에서 "알림 보지 않기"를 누른 기기가 다시 켤 수 있는 유일한 곳이다.
+  // 휴대폰 설정에 다녀오면(앱이 다시 활성화되면) 상태를 다시 읽는다.
+  const isLoggedIn = useAuthStore((state) => state.session.status === "authenticated");
+  const [pushStatus, setPushStatus] = useState<PushStatus | null>(null);
+  const [enabling, setEnabling] = useState(false);
+  useEffect(() => {
+    const refresh = () => {
+      getPushStatus()
+        .then(setPushStatus)
+        .catch(() => undefined);
+    };
+    refresh();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refresh();
+    });
+    return () => subscription.remove();
+  }, []);
+  const deviceOff = isLoggedIn && (pushStatus === "askable" || pushStatus === "blocked");
+
+  const handleEnablePress = async () => {
+    if (enabling) return;
+    setEnabling(true);
+    try {
+      const next = await enablePush();
+      setPushStatus(next);
+      if (next === "granted") toastRef.current?.show(t("이 기기의 알림이 켜졌어요"));
+    } finally {
+      setEnabling(false);
+    }
+  };
+
   // 게스트도 들어올 수 있는데 저장은 계정이 필요하다 — 서버가 401로 거절하기 전에 로그인 안내부터.
   const requireLogin = () => {
     const { session } = useAuthStore.getState();
@@ -110,7 +145,26 @@ export function NotificationSettingsScreen() {
       contentContainerClassName="px-5 pt-8"
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
     >
-      <View className="gap-7.5">
+      {deviceOff && (
+        <View className="mb-7.5 gap-3 rounded-5 bg-background-muted px-4 py-5">
+          <View className="gap-1">
+            <Text className="text-body-main text-text-normal">{t("이 기기는 알림이 꺼져 있어요")}</Text>
+            <Text className="text-body-small text-text-alternative">
+              {pushStatus === "blocked"
+                ? t("휴대폰 설정에서 알림을 허용해야 소식을 받을 수 있어요.")
+                : t("알림을 켜야 공지·댓글·채팅 소식을 받을 수 있어요.")}
+            </Text>
+          </View>
+          <Button
+            label={pushStatus === "blocked" ? t("휴대폰 설정 열기") : t("알림 켜기")}
+            loading={enabling}
+            onPress={() => void handleEnablePress()}
+          />
+        </View>
+      )}
+
+      {/* 기기 알림이 꺼져 있으면 종류별 스위치는 흐리게 — 바꿀 수는 있지만 지금은 효과가 없다는 표시 */}
+      <View className="gap-7.5" style={deviceOff ? { opacity: 0.5 } : undefined}>
         {NOTIFICATION_GROUPS.filter((group) => !("leaderOnly" in group) || isLeader).map((group) => (
           <View key={group.label} className="gap-2">
             <SectionLabel>{t(group.label)}</SectionLabel>

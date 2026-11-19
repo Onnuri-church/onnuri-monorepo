@@ -33,6 +33,8 @@ const configuration = () => {
       // 스토어 심사용 로그인 (SCRUM-197) — 둘 다 있어야 열린다. 비우면 404로 꺼진다.
       reviewLoginId: e.REVIEW_LOGIN_ID || null,
       reviewLoginPassword: e.REVIEW_LOGIN_PASSWORD || null,
+      // 가입 코드 (SCRUM-263) — 비우면 확인하지 않는다.
+      joinCode: e.JOIN_CODE?.trim() || null,
     },
     storage: {
       url: e.SUPABASE_URL || deriveSupabaseUrl(e.DATABASE_URL),

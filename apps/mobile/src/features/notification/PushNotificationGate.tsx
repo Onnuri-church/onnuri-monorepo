@@ -1,19 +1,18 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import * as Sentry from "@sentry/react-native";
-import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import { Modal, Pressable, Platform, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 
-import { registerPushToken } from "../../shared/api/push";
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
 import { i18n } from "../../shared/i18n";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { PUSH_PROMPT_DISMISSED_KEY, isPushSupported, registerTokenSafely } from "./pushPermission";
 
 // 앱이 켜져 있을 때(포그라운드)도 배너·소리를 보여준다 — 기본값이 "숨김"이라 명시한다.
 Notifications.setNotificationHandler({
@@ -25,17 +24,8 @@ Notifications.setNotificationHandler({
   }),
 });
 
-// Expo Go는 SDK 53부터 원격 푸시를 지원하지 않는다 — 개발 빌드(EAS)에서만 등록을 시도한다.
-// 웹은 푸시 대상이 아니다.
-function isPushSupported(): boolean {
-  return Platform.OS !== "web" && Constants.executionEnvironment !== "storeClient";
-}
-
 // 한 번 띄웠으면 이번 실행에서는 다시 묻지 않는다 (홈이 다시 마운트돼도).
 let promptedThisRun = false;
-// "알림 보지 않기"를 누르면 이 기기에서는 다시 묻지 않는다 (SCRUM-184) — 나중에 켜고 싶으면
-// 설정 > 알림 설정에서. 테마 저장과 같은 이유로 SecureStore를 쓴다.
-const PROMPT_DISMISSED_KEY = "push-prompt-dismissed";
 // 푸시 탭 네비게이션은 응답당 한 번만 — 화면 리마운트로 훅이 같은 응답을 다시 줘도 무시한다.
 let handledResponseDate: number | null = null;
 
@@ -73,7 +63,7 @@ export function PushNotificationGate() {
         // 아직 안 물었거나(undetermined) 한 번 거절·닫았어도 다시 물을 수 있으면(denied +
         // canAskAgain) 안내한다 — undetermined만 보면 OS 창을 한 번 닫은 기기는 영영 못 켠다.
         if (permission.canAskAgain && !promptedThisRun) {
-          const dismissed = await SecureStore.getItemAsync(PROMPT_DISMISSED_KEY).catch(() => null);
+          const dismissed = await SecureStore.getItemAsync(PUSH_PROMPT_DISMISSED_KEY).catch(() => null);
           if (dismissed === "1") return;
           promptedThisRun = true;
           setPromptVisible(true);
@@ -106,7 +96,7 @@ export function PushNotificationGate() {
 
   const handleNeverPress = () => {
     setPromptVisible(false);
-    SecureStore.setItemAsync(PROMPT_DISMISSED_KEY, "1").catch(() => {});
+    SecureStore.setItemAsync(PUSH_PROMPT_DISMISSED_KEY, "1").catch(() => {});
   };
 
   return (
@@ -135,17 +125,4 @@ export function PushNotificationGate() {
       </View>
     </Modal>
   );
-}
-
-// 토큰 발급·등록 — 시뮬레이터처럼 푸시가 안 되는 환경에서는 발급이 throw하므로
-// 실패해도 앱 동작에는 영향을 주지 않는다.
-async function registerTokenSafely(): Promise<void> {
-  try {
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId as string | undefined;
-    const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId });
-    await registerPushToken(token);
-  } catch (error) {
-    // 토큰 미등록 = 이 기기로 푸시가 안 올 뿐, 알림센터는 그대로 동작한다. 원인은 Sentry로 남긴다.
-    Sentry.captureException(error);
-  }
 }
