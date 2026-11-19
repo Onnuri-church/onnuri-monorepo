@@ -1,7 +1,7 @@
-import { useNavigation } from "@react-navigation/native";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -27,7 +27,7 @@ import { useHomeNotices } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
 import { fetchTeams } from "../profile/api";
 import { useMe } from "../profile/useMe";
-import { fetchQtShares } from "../qt-board/api";
+import { prefetchQtBoard, prefetchQtDetails } from "../qt-board/api";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { PrayerCard } from "../prayer-board/components/PrayerCard";
 import { useHomeBanner, useHomePosts } from "./api";
@@ -99,13 +99,19 @@ export function HomeScreen() {
 
   // 큐티나눔 게시판 첫 화면도 미리 받아 둔다 — 들어가면 회색 블록 없이 바로 보이게 (SCRUM-237).
   const queryClient = useQueryClient();
+  // 홈에 돌아올 때마다 다시 확인한다 (SCRUM-268) — 처음 한 번만 받으면 홈에 오래 머문 뒤에는 캐시가
+  // 버려져 다시 회색 블록이 떴다. 최근에 받은 것은 다시 요청하지 않는다.
+  useFocusEffect(
+    useCallback(() => {
+      if (!isGuest) prefetchQtBoard(queryClient);
+    }, [isGuest, queryClient]),
+  );
+  // 홈에 보이는 큐티나눔 글의 상세도 미리 받는다 — 줄을 눌렀을 때 바로 보이게 (SCRUM-268).
+  const homeQtIds = (homePosts?.qtShares ?? []).map((item) => item.id).join(",");
   useEffect(() => {
-    if (isGuest) return;
-    void queryClient.prefetchQuery({
-      queryKey: ["qt-shares", false, undefined, undefined],
-      queryFn: () => fetchQtShares({ mine: false }),
-    });
-  }, [isGuest, queryClient]);
+    if (isGuest || !homeQtIds) return;
+    prefetchQtDetails(queryClient, homeQtIds.split(","));
+  }, [isGuest, homeQtIds, queryClient]);
 
   // 팀스토리 탭 목록도 미리 받아 둔다 — 탭을 누르면 바로 보이게 (SCRUM-242). 게스트도 보는 목록이다.
   useEffect(() => {

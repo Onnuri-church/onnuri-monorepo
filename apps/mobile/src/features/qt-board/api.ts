@@ -4,6 +4,7 @@ import type {
   QtShareListResponse,
   UpdateQtShareRequest,
 } from "@onnuri/shared";
+import type { QueryClient } from "@tanstack/react-query";
 
 import { apiClient } from "../../shared/api/client";
 
@@ -55,4 +56,30 @@ export async function updateQtShare(
 
 export async function deleteQtShare(postId: string): Promise<void> {
   await apiClient.delete(`/posts/qt-shares/${postId}`);
+}
+
+// ── 미리 받기 (SCRUM-237·268) ───────────────────────────────────────────
+// 홈·목록에서 다음에 열 화면을 미리 받아 두면 들어갈 때 회색 로딩 박스 없이 바로 보인다.
+// 보는 화면이 없는 캐시는 기본 5분 뒤 버려져서, 홈에 오래 머문 뒤 들어가면 다시 박스가 떴다 —
+// 미리 받은 것은 넉넉히 잡아 둔다. 최근(1분 이내)에 받은 것은 다시 요청하지 않는다(기본 staleTime).
+const PREFETCH_KEEP_MS = 30 * 60 * 1000;
+
+/** 큐티나눔 게시판 첫 화면(전체·이번 달) — 화면의 조회 키와 같아야 한다 (QtBoardScreen). */
+export function prefetchQtBoard(queryClient: QueryClient): void {
+  void queryClient.prefetchQuery({
+    queryKey: ["qt-shares", false, undefined, undefined],
+    queryFn: () => fetchQtShares({ mine: false }),
+    gcTime: PREFETCH_KEEP_MS,
+  });
+}
+
+/** 곧 열 만한 글의 상세 — 화면의 조회 키와 같아야 한다 (QtBoardDetailScreen). */
+export function prefetchQtDetails(queryClient: QueryClient, ids: string[]): void {
+  for (const id of ids) {
+    void queryClient.prefetchQuery({
+      queryKey: ["qt-share", id],
+      queryFn: () => fetchQtDetails(id),
+      gcTime: PREFETCH_KEEP_MS,
+    });
+  }
 }
