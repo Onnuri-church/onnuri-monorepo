@@ -33,6 +33,7 @@ interface AttachmentSheetProps {
 
 const TILE = 96;
 const MAX_PICK = 20;
+const FIRST_TILES = 4;
 
 interface AttachmentRow {
   icon: IconName;
@@ -57,7 +58,15 @@ export function AttachmentSheet({
 }: AttachmentSheetProps) {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
-  const recent = useRecentPhotos(true);
+  const allRecent = useRecentPhotos(true);
+  // 올라오는 동안에는 화면에 보이는 앞쪽 몇 장만 그린다 — 30장을 한꺼번에 그리면(원본 사진 디코딩)
+  // 올라오는 움직임과 바로 끌어 내리는 동작이 끊긴다 (SCRUM-243). 다 올라온 뒤 나머지를 채운다.
+  const [settled, setSettled] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(true), 350);
+    return () => clearTimeout(timer);
+  }, []);
+  const recent = settled ? allRecent : allRecent.slice(0, FIRST_TILES);
   // 고른 순서대로 번호를 붙인다 (카카오톡처럼)
   const [picked, setPicked] = useState<string[]>([]);
   const togglePick = (uri: string) =>
