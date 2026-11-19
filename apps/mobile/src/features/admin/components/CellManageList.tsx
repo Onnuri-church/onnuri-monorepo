@@ -13,6 +13,7 @@ import type { RootStackParamList } from "../../../shared/types/navigation";
 import { useCells } from "../../cell/api";
 import { useDeleteCell } from "../api";
 import { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
+import { useRetained } from "../../../shared/hooks/useRetained";
 
 interface CellManageListProps {
   /** 편집 모드 — 켜면 행마다 수정·삭제 아이콘이 나온다 (헤더 ⋮ > 편집하기로 부모가 켠다). */
@@ -42,6 +43,8 @@ export function CellManageList({
     query.trim() ? cell.name.includes(query.trim()) : true,
   );
   const [deleteTarget, setDeleteTarget] = useState<CellSummary | null>(null);
+  // 닫히는 동안에도 셀 이름이 빠지지 않게 마지막 대상을 기억한다 (SCRUM-261).
+  const shownDeleteTarget = useRetained(deleteTarget);
   // 셀이 적어 목록이 화면보다 짧으면 스크롤이 안 돼 탭바가 안 숨겨진다 —
   // 콘텐츠 최소 높이를 화면 높이 + 여유분으로 잡아 항상 살짝 스크롤되게 한다.
   const [viewportHeight, setViewportHeight] = useState(0);
@@ -124,7 +127,7 @@ export function CellManageList({
         <View className="flex-1 items-center justify-center bg-background-dark/40 px-10">
           <View className="w-full rounded-5 bg-background-normal px-6 py-7">
             <Text className="text-center text-body-main text-text-normal">
-              {t("{{name}}을 삭제하시겠습니까?", { name: deleteTarget?.name })}
+              {t("{{name}}을 삭제하시겠습니까?", { name: shownDeleteTarget?.name })}
             </Text>
             <Text className="mt-2 text-center text-body-regular text-text-alternative">
               {t("셀 페이지는 삭제되지만,\n출석 기록은 보존됩니다.")}
