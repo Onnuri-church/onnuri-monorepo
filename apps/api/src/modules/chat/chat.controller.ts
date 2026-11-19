@@ -18,7 +18,11 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import type { JwtPayload } from '../auth/strategies/jwt.strategy';
 import { type ChatRoom, ChatService } from './chat.service';
-import { AddChatPollOptionDto, VoteChatPollDto } from './dto/poll.dto';
+import {
+  AddChatPollOptionDto,
+  CreateChatPollCommentDto,
+  VoteChatPollDto,
+} from './dto/poll.dto';
 import { SendChatMessageDto } from './dto/send-chat-message.dto';
 import { SetChatMuteDto } from './dto/set-chat-mute.dto';
 import { SetChatNoticeDto } from './dto/set-chat-notice.dto';
@@ -313,6 +317,40 @@ export class ChatController {
   @Post('chat-polls/:pollId/close')
   closePoll(@CurrentUser() user: JwtPayload, @Param('pollId') pollId: string) {
     return this.chatService.closePoll(user.sub, pollId);
+  }
+
+  // 투표 상세 화면 (SCRUM-247) — 투표 메시지 하나와 댓글
+  @Get('chat-polls/:pollId')
+  findPoll(@CurrentUser() user: JwtPayload, @Param('pollId') pollId: string) {
+    return this.chatService.findPoll(user.sub, pollId);
+  }
+
+  @Get('chat-polls/:pollId/comments')
+  findPollComments(
+    @CurrentUser() user: JwtPayload,
+    @Param('pollId') pollId: string,
+  ) {
+    return this.chatService.findPollComments(user.sub, pollId);
+  }
+
+  @BlockSuspended()
+  @Post('chat-polls/:pollId/comments')
+  addPollComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('pollId') pollId: string,
+    @Body() dto: CreateChatPollCommentDto,
+  ) {
+    return this.chatService.addPollComment(user.sub, pollId, dto.content);
+  }
+
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete('chat-polls/:pollId/comments/:commentId')
+  removePollComment(
+    @CurrentUser() user: JwtPayload,
+    @Param('pollId') pollId: string,
+    @Param('commentId') commentId: string,
+  ) {
+    return this.chatService.removePollComment(user.sub, pollId, commentId);
   }
 
   // 서랍(☰) — 방 종류와 무관한 주소로 알림 끄기·사진 모아보기 (SCRUM-230)

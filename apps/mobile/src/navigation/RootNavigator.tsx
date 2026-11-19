@@ -79,6 +79,7 @@ import { BlockedUsersScreen } from "../features/block/BlockedUsersScreen";
 import { SettingsScreen } from "../features/settings/SettingsScreen";
 import { SplashScreen } from "../features/splash/SplashScreen";
 import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
+import { ChatPollDetailScreen } from "../features/chat/ChatPollDetailScreen";
 import { ChatMediaScreen } from "../features/chat/ChatMediaScreen";
 import { ChatRoomInfoScreen } from "../features/chat/ChatRoomInfoScreen";
 import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
@@ -505,6 +506,14 @@ export function RootNavigator() {
             options={{
               headerShown: true,
               header: () => <Header variant="sub" title={t("투표 만들기")} rightAction="none" />,
+            }}
+          />
+          <Stack.Screen
+            name="ChatPollDetail"
+            component={ChatPollDetailScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("투표")} rightAction="none" />,
             }}
           />
           {/* 헤더는 화면이 단독 등록한다 (타이틀이 소그룹 제목이라 화면 데이터에 의존). */}

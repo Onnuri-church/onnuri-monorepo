@@ -160,6 +160,7 @@ model User {
   chatPollsCreated       ChatPoll[]              @relation("ChatPollCreator")
   chatPollOptionsAdded   ChatPollOption[]        @relation("ChatPollOptionCreator")
   chatPollVotes          ChatPollVote[]          @relation("ChatPollVoter")
+  chatPollComments       ChatPollComment[]       @relation("ChatPollCommentAuthor")
   chatRoomsCreated       ChatRoom[]              @relation("ChatRoomCreator")
   chatRoomMemberships    ChatRoomMember[]
   leaderRoomsCreated     LeaderRoom[]            @relation("LeaderRoomCreator")
@@ -462,8 +463,22 @@ model ChatPoll {
   createdAt       DateTime         @default(now())
   options         ChatPollOption[]
   votes           ChatPollVote[]
+  comments        ChatPollComment[]
 
   @@index([closedAt, closesAt])
+}
+
+// 투표 상세 화면의 댓글 (SCRUM-247) — 그 투표가 올라온 방의 멤버만 읽고 쓴다.
+model ChatPollComment {
+  id        String   @id @default(cuid())
+  poll      ChatPoll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  pollId    String
+  author    User     @relation("ChatPollCommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  authorId  String
+  content   String
+  createdAt DateTime @default(now())
+
+  @@index([pollId, createdAt])
 }
 
 model ChatPollOption {
