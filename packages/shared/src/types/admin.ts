@@ -14,6 +14,11 @@ export interface AdminAttendanceRow {
   roleLabel: string | null;
   /** 주차별 [예배, 셀모임] — dates와 같은 길이 */
   weeks: [AdminAttendanceMark, AdminAttendanceMark][];
+  /**
+   * 지금 소속 셀이 있는지 (SCRUM-251) — 없으면 셀모임 칸이 전부 "-"다. 수정 창이 "모임 없는 날"과
+   * "소속 셀 없음"을 구분해 안내하는 데 쓴다. 예전 서버 응답에는 없을 수 있다.
+   */
+  hasCell?: boolean;
 }
 
 export interface AdminAttendanceGroup {
