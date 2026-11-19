@@ -293,5 +293,18 @@
   "채팅방 상단 공지는 1건만 노출 가능합니다.\n공지를 등록하시겠습니까?": "Only one notice can be shown at the top of the chat.\nRegister this notice?",
   "아니오": "No",
   "예": "Yes",
-  "공지를 찾을 수 없어요. 오래됐거나 삭제된 메시지예요.": "Can't find this notice. It may be old or deleted."
+  "공지를 찾을 수 없어요. 오래됐거나 삭제된 메시지예요.": "Can't find this notice. It may be old or deleted.",
+  "나가기": "Leave",
+  "채팅방 삭제": "Delete chat rooms",
+  "채팅방 만들기": "Create chat room",
+  "방에서 나갈까요?": "Leave this room?",
+  "{{name}} 방에서 나가면 다시 초대받아야 들어올 수 있어요.": "If you leave {{name}}, you'll need a new invite to rejoin.",
+  "{{count}}개 방을 삭제할까요?": "Delete {{count}} room(s)?",
+  "방과 대화 내용이 모든 멤버에게서 사라져요. 되돌릴 수 없어요.": "The rooms and their messages disappear for all members. This can't be undone.",
+  "일부 방을 삭제하지 못했어요": "Some rooms couldn't be deleted",
+  "{{count}}개 방은 그대로 남아 있어요. 다시 시도해주세요.": "{{count}} room(s) remain. Please try again.",
+  "{{count}}개 삭제": "Delete {{count}}",
+  "삭제할 방을 골라주세요": "Select rooms to delete",
+  "아직 단톡방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No chat rooms yet. Create one from ☰ at the top right.",
+  "아직 리더 방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No leader rooms yet. Create one from ☰ at the top right."
 }

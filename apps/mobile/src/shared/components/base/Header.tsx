@@ -253,9 +253,16 @@ export function Header(props: HeaderProps) {
                         <Icon name="search" size={28} color={colors.icon.strong} />
                       </PressableScale>
                     )}
-                    <PressableScale scaleTo={0.85} onPress={props.onPressMenu} hitSlop={8}>
-                      <Icon name="menu" size={28} color={colors.icon.strong} />
-                    </PressableScale>
+                    {props.menuItems?.length ? (
+                      // 단톡방 목록 (SCRUM-257) — ☰를 누르면 만들기·삭제 메뉴가 열린다
+                      <Pressable ref={moreButtonRef} onPress={openMenu} hitSlop={8}>
+                        <Icon name="menu" size={28} color={colors.icon.strong} />
+                      </Pressable>
+                    ) : (
+                      <PressableScale scaleTo={0.85} onPress={props.onPressMenu} hitSlop={8}>
+                        <Icon name="menu" size={28} color={colors.icon.strong} />
+                      </PressableScale>
+                    )}
                   </View>
               ) : props.rightAction === "bookmark-more" ? (
                   // 기도제목 남의 글 (SCRUM-201) — 자주 쓰는 저장은 밖에, 가끔 쓰는 신고·차단은 ⋮ 안에.

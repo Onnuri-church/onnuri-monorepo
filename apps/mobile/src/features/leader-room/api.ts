@@ -93,3 +93,12 @@ export function useLeaveLeaderRoom(roomId: string) {
     },
   });
 }
+
+// 목록 화면에서 방을 골라 나가거나 지운다 (SCRUM-256·257) — 방 id를 실행할 때 받는다.
+export function useLeaderRoomListActions() {
+  const leave = useRoomsMutation((roomId: string) =>
+    apiClient.post(`/leader-rooms/${roomId}/leave`),
+  );
+  const remove = useRoomsMutation((roomId: string) => apiClient.delete(`/leader-rooms/${roomId}`));
+  return { leave, remove };
+}
