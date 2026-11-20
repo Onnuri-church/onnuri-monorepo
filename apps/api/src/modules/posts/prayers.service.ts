@@ -14,6 +14,7 @@ import { toKstDate } from '../../common/utils/date';
 import { assertSensitiveConsent } from '../../common/utils/consent';
 import { visibleAuthorWhere } from '../../common/review/review-scope';
 import { PrismaService } from '../prisma/prisma.service';
+import { canRevealAnonymous } from './posts.service';
 import { CreatePrayerDto } from './dto/create-prayer.dto';
 import { UpdatePrayerDto } from './dto/update-prayer.dto';
 import type { FindPrayersDto } from './dto/find-prayers.dto';
@@ -24,7 +25,7 @@ const LIST_SELECT = {
   title: true,
   createdAt: true,
   authorId: true,
-  author: { select: { name: true, avatarUrl: true } },
+  author: { select: { name: true, avatarUrl: true, withdrawnAt: true } },
   prayerRequest: {
     select: {
       number: true,
@@ -40,7 +41,7 @@ type ListRow = {
   title: string | null;
   createdAt: Date;
   authorId: string;
-  author: { name: string; avatarUrl: string | null };
+  author: { name: string; avatarUrl: string | null; withdrawnAt: Date | null };
   prayerRequest: {
     number: number;
     category: PrayerListItem['category'];
@@ -89,8 +90,9 @@ export class PrayersService {
     return {
       id: row.id,
       number: prayer.number,
+      // 탈퇴한 사람의 익명 글은 관리자에게도 실명을 보여주지 않는다 (SCRUM-274)
       authorName: prayer.isAnonymous
-        ? admin || isMine
+        ? canRevealAnonymous(admin || isMine, row.author)
           ? `익명(${realName})`
           : '익명'
         : realName,
