@@ -88,6 +88,8 @@ interface ChatRoomViewProps {
 // 처리한다. 화면이 열려 있는 동안 몇 초마다 새 메시지를 받아오고, 새 메시지가 오면 맨 아래로 따라간다.
 // 아이폰 홈 막대 영역(insets.bottom, 보통 34pt)에서 입력줄 쪽으로 돌려받는 높이 (SCRUM-271).
 const IOS_HOME_BAR_TRIM = 14;
+// 한 묶음(같은 사람·같은 분)의 메시지 사이를 좁히는 값 — 목록 간격 16에서 12를 당겨 4로 만든다 (SCRUM-273).
+const GROUPED_MESSAGE_PULL = -12;
 
 export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: ChatRoomViewProps) {
   const { t } = useTranslation();
@@ -605,19 +607,24 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   const closeActions = () => setActionTarget(null);
 
   // 메시지 한 건 — 차단한 사람 글은 가리고, 검색 중에는 찾은 글자만 칠한다 (지금 결과는 진하게).
-  const renderMessage = (message: ChatMessageInfo, showTime: boolean) =>
+  const renderMessage = (message: ChatMessageInfo, showTime: boolean, continued: boolean) =>
     !message.isMine && !message.isSystem && blockedIds.has(message.authorId) ? (
       <Text className="text-body-small text-text-alternative">
         {t("차단한 사용자의 메시지예요")}
       </Text>
     ) : (
-      <View onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}>
+      <View
+        // 한 묶음의 둘째부터는 목록 간격(16)을 4로 좁힌다 (SCRUM-273)
+        style={continued ? { marginTop: GROUPED_MESSAGE_PULL } : undefined}
+        onLayout={(event) => messageY.current.set(message.id, event.nativeEvent.layout.y)}
+      >
         <AppearIn variant="pop" animate={isNew(message.id)}>
           <ChatBubble
             message={message}
             kind={kind}
             roomId={id}
             showTime={showTime}
+            continued={continued}
             highlight={searchQuery || undefined}
             highlightActive={message.id === currentMatchId}
             onLongPress={() => setActionTarget(message)}
@@ -734,10 +741,19 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
             next.isSystem ||
             !isSameMinute(next.createdAt, message.createdAt) ||
             !isSameDay(next.createdAt, message.createdAt);
+          // 바로 앞 메시지와 한 묶음인지 — 같은 사람이 같은 날 같은 분에 이어서 보낸 메시지 (SCRUM-273).
+          // 묶음은 간격을 좁히고, 둘째부터는 프로필 사진·이름을 다시 그리지 않는다.
+          const continued =
+            previous !== null &&
+            !previous.isSystem &&
+            !message.isSystem &&
+            previous.authorId === message.authorId &&
+            isSameDay(previous.createdAt, message.createdAt) &&
+            isSameMinute(previous.createdAt, message.createdAt);
           return (
             <Fragment key={message.id}>
               {dateDivider}
-              {renderMessage(message, showTime)}
+              {renderMessage(message, showTime, continued)}
             </Fragment>
           );
         })}
