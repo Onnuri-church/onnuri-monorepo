@@ -202,6 +202,7 @@ export function HomeScreen() {
             <QtShareRow
               key={qt.id}
               author={qt.authorName}
+              avatarUrl={qt.authorAvatarUrl}
               passage={qt.passage}
               title={qt.title}
               onPress={() => navigation.navigate("QtBoardDetail", { id: qt.id })}

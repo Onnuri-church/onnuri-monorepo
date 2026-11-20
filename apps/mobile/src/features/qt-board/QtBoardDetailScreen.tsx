@@ -10,7 +10,6 @@ import {Skeleton} from "../../shared/components/base/Skeleton";
 import type {RootStackParamList} from "../../shared/types/navigation";
 import {useSafeAreaInsets} from "react-native-safe-area-context";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {toTimeAgo} from "../../shared/utils/date";
 import {deleteQtShare, fetchQtDetails} from "./api";
 import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
@@ -153,7 +152,9 @@ export function QtBoardDetailScreen() {
                                 <View>
                                     <Text className="text-heading-small text-text-onImage">{data.authorName}</Text>
                                     <Text className="text-body-small text-text-onImage">
-                                        {`${data.dateLabel} · ${toTimeAgo(data.createdAt)}`}
+                                        {/* 큐티 날짜만 보여준다 (SCRUM-270) — "11월 20일 · 19분 전"처럼 큐티 날짜와
+                                            올린 시각이 나란히 있으면 어느 쪽이 무슨 날짜인지 헷갈렸다. 목록 카드도 큐티 날짜다. */}
+                                        {data.dateLabel}
                                     </Text>
                                 </View>
                             </View>

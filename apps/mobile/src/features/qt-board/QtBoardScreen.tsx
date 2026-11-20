@@ -183,6 +183,7 @@ export function QtBoardScreen() {
             post={{
               id: item.id,
               author: item.authorName,
+              avatarUrl: item.authorAvatarUrl,
               date: item.dateLabel,
               title: item.title,
               description: item.description,

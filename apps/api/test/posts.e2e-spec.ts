@@ -212,6 +212,8 @@ describe('Posts (e2e)', () => {
       expect(item?.dateLabel).toBe('2025.03.11');
       expect(item?.likeCount).toBe(1);
       expect(item?.authorName).toBeTruthy();
+      // 목록에도 작성자 사진 필드가 온다 (SCRUM-270) — 사진이 없으면 null
+      expect(item).toHaveProperty('authorAvatarUrl');
     });
 
     it('연도 선택지는 첫 글이 있는 해부터 올해까지 최신순이다', async () => {

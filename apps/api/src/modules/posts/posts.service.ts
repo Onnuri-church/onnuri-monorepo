@@ -180,7 +180,7 @@ export class PostsService {
               id: true,
               title: true,
               authorId: true,
-              author: { select: { name: true } },
+              author: { select: { name: true, avatarUrl: true } },
               qtShare: { select: { passage: true, isAnonymous: true } },
             },
             // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
@@ -219,6 +219,9 @@ export class PostsService {
           post.qtShare?.isAnonymous === true,
           admin || post.authorId === userId,
         ),
+        // 상세와 같은 규칙 — 익명 글은 사진도 숨긴다 (SCRUM-270: 홈이 늘 기본 이미지만 그렸다).
+        authorAvatarUrl:
+          post.qtShare?.isAnonymous === true ? null : post.author.avatarUrl,
         passage: post.qtShare?.passage ?? null,
         title: post.title ?? '',
       })),
@@ -308,7 +311,7 @@ export class PostsService {
         content: true,
         eventDate: true,
         authorId: true,
-        author: { select: { name: true } },
+        author: { select: { name: true, avatarUrl: true } },
         qtShare: { select: { isAnonymous: true } },
         _count: { select: { likes: true } },
         // 내 좋아요만 한 건 집어온다 — 행이 있으면 내가 누른 것 (전체를 받아서 세지 않는다).
@@ -324,6 +327,9 @@ export class PostsService {
         post.qtShare?.isAnonymous === true,
         admin || post.authorId === userId,
       ),
+      // 상세와 같은 규칙 — 익명 글은 사진도 숨긴다 (SCRUM-270).
+      authorAvatarUrl:
+        post.qtShare?.isAnonymous === true ? null : post.author.avatarUrl,
       // eventDate는 큐티나눔 작성 시 항상 채운다(글쓰기 API도 같은 계약).
       dateLabel: post.eventDate ? toDateLabel(post.eventDate) : '',
       title: post.title ?? '',
