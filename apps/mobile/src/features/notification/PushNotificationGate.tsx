@@ -12,6 +12,7 @@ import { Icon } from "../../shared/components/base/Icon";
 import { i18n } from "../../shared/i18n";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
 import type { RootStackParamList } from "../../shared/types/navigation";
+import { openNotificationLink } from "./openNotificationLink";
 import { PUSH_PROMPT_DISMISSED_KEY, isPushSupported, registerTokenSafely } from "./pushPermission";
 
 // 앱이 켜져 있을 때(포그라운드)도 배너·소리를 보여준다 — 기본값이 "숨김"이라 명시한다.
@@ -74,7 +75,10 @@ export function PushNotificationGate() {
     })();
   }, []);
 
-  // 잠금화면·배너의 푸시를 탭해 앱이 열리면 알림센터로 보낸다 (콜드 스타트 포함).
+  // 잠금화면·배너의 푸시를 탭해 앱이 열리면 그 알림이 가리키는 화면으로 보낸다 (SCRUM-269, 콜드 스타트 포함).
+  // 서버가 푸시에 실어 보낸 linkUrl을 알림센터 카드와 같은 규칙으로 연다. 갈 곳을 모르면
+  // (linkUrl 없음·모르는 종류) 예전처럼 알림센터로 보낸다 — 단톡방 일반 메시지는 알림센터에
+  // 쌓이지 않아서, 예전엔 채팅 푸시를 누르면 빈 알림센터에 도착했다.
   const response = Notifications.useLastNotificationResponse();
   useEffect(() => {
     if (!response || response.actionIdentifier !== Notifications.DEFAULT_ACTION_IDENTIFIER) {
@@ -83,7 +87,14 @@ export function PushNotificationGate() {
     const responseDate = response.notification.date;
     if (handledResponseDate === responseDate) return;
     handledResponseDate = responseDate;
-    navigation.navigate("Notifications");
+    const data = response.notification.request.content.data as
+      | { linkUrl?: unknown; commentId?: unknown }
+      | undefined;
+    const linkUrl = typeof data?.linkUrl === "string" ? data.linkUrl : null;
+    const commentId = typeof data?.commentId === "string" ? data.commentId : null;
+    if (!openNotificationLink(navigation, linkUrl, commentId)) {
+      navigation.navigate("Notifications");
+    }
   }, [response, navigation]);
 
   const handleAllowPress = () => {
