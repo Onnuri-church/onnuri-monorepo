@@ -20,6 +20,7 @@ import {
   useRemoveAllNotifications,
   useRemoveNotification,
 } from "./api";
+import { openNotificationLink } from "./openNotificationLink";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 
@@ -121,70 +122,9 @@ export function NotificationScreen() {
     return [...map.values()];
   }, [notifications]);
 
+  // 어디로 갈지는 푸시 탭과 같은 규칙을 쓴다 (SCRUM-269).
   const handleItemPress = (item: NotificationInfo) => {
-    if (!item.linkUrl) return;
-    const [kind, first, second] = item.linkUrl.split("/");
-    if (!first) return;
-    switch (kind) {
-      case "notice":
-        navigation.navigate("NoticeDetail", { id: first });
-        break;
-      case "bulletin":
-        navigation.navigate("BulletinDetail", { id: first });
-        break;
-      case "group-room":
-        navigation.navigate("GroupChat", { meetingId: first });
-        break;
-      case "team-room":
-        navigation.navigate("ChatRoom", { roomId: first });
-        break;
-      case "leader-room":
-        navigation.navigate("LeaderRoom", { roomId: first });
-        break;
-      case "cell-chat":
-        navigation.navigate("CellChat", { cellId: first });
-        break;
-      case "follower-note":
-        navigation.navigate("FollowerNoteBoard", { cellId: first, noteId: second });
-        break;
-      case "team-follower-note":
-        navigation.navigate("TeamFollowerNoteBoard", { teamId: first, noteId: second });
-        break;
-      case "group-meeting":
-        navigation.navigate("GroupMeetingDetail", {
-          id: first,
-          commentId: item.commentId ?? undefined,
-        });
-        break;
-      case "department-activity":
-        navigation.navigate("DepartmentActivityDetail", {
-          id: first,
-          commentId: item.commentId ?? undefined,
-        });
-        break;
-      case "qt":
-        navigation.navigate("QtBoardDetail", { id: first });
-        break;
-      case "sermon":
-        navigation.navigate("SermonDetail", { id: first });
-        break;
-      case "prayer":
-        navigation.navigate("PrayerBoardDetail", { id: first });
-        break;
-      case "cell-news":
-        if (second)
-          navigation.navigate("CellNewsDetail", {
-            cellId: first,
-            newsId: second,
-            // 댓글 알림이면 그 댓글로 스크롤해 잠깐 강조한다 (SCRUM-215)
-            commentId: item.commentId ?? undefined,
-          });
-        break;
-      // 새 신고 (SCRUM-199) — 관리자에게만 온다
-      case "admin":
-        if (first === "reports") navigation.navigate("AdminReports");
-        break;
-    }
+    openNotificationLink(navigation, item.linkUrl, item.commentId);
   };
 
   // 더보기 — 누를 때마다 EXPAND_STEP씩 더 펼치고, 다 펼친 상태에서 "접기"로 되돌린다.
