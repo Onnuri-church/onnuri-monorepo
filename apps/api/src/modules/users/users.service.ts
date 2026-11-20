@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import type {
@@ -29,6 +30,7 @@ import {
   visibleUserWhere,
 } from '../../common/review/review-scope';
 import { AppleSignInClient } from '../apple-sign-in/apple-sign-in.client';
+import { NotificationsService } from '../notifications/notifications.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { UploadsService } from '../uploads/uploads.service';
 import { UpdateAdminMemberDto } from './dto/update-admin-member.dto';
@@ -67,11 +69,14 @@ function ageOn(birthYmd: string, todayYmd: string): number {
 
 @Injectable()
 export class UsersService {
+  private readonly logger = new Logger(UsersService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly uploadsService: UploadsService,
     private readonly appleSignIn: AppleSignInClient,
     private readonly config: ConfigService<AppConfig, true>,
+    private readonly notifications: NotificationsService,
   ) {}
 
   // 응답 모양은 @onnuri/shared의 User 계약을 따른다 — 모바일이 이 타입 그대로 소비한다.
@@ -447,6 +452,8 @@ export class UsersService {
   // (SCRUM-205, App Store 5.1.1(v)). 철회 실패는 기록만 남긴다 — 탈퇴는 이미 끝났고, 애플 쪽
   // 연결은 사용자가 설정 > Apple ID에서도 끊을 수 있다.
   private async withdraw(userId: string) {
+    // 지우기 전에 읽어 둔다 — 탈퇴하면 소속이 끝나서 무엇을 맡고 있었는지 알 수 없다.
+    const leaving = await this.findLeavingLeader(userId);
     const appleAccounts = await this.prisma.socialAccount.findMany({
       where: {
         userId,
@@ -465,6 +472,145 @@ export class UsersService {
         ),
       ),
     );
+    await this.notifyAdminsOfLeaderWithdrawal(userId, leaving);
+  }
+
+  // 탈퇴하는 사람이 맡고 있던 자리 (SCRUM-274) — 셀장·부셀장, 팀장, 소그룹장, 관리자.
+  private async findLeavingLeader(userId: string) {
+    const [user, cells, teams, groups] = await Promise.all([
+      this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true, isAdmin: true },
+      }),
+      this.prisma.cellMembership.findMany({
+        where: {
+          userId,
+          endedAt: null,
+          role: { in: ['LEADER', 'SUB_LEADER'] },
+          cell: { deletedAt: null },
+        },
+        select: { role: true, cell: { select: { id: true, name: true } } },
+      }),
+      this.prisma.teamMembership.findMany({
+        where: {
+          userId,
+          endedAt: null,
+          role: 'LEADER',
+          team: { deletedAt: null },
+        },
+        select: { team: { select: { id: true, name: true } } },
+      }),
+      this.prisma.hobbyGroupMember.findMany({
+        where: {
+          userId,
+          role: 'LEADER',
+          status: 'APPROVED',
+          group: { post: { deletedAt: null } },
+        },
+        select: {
+          postId: true,
+          group: { select: { post: { select: { title: true } } } },
+        },
+      }),
+    ]);
+    return {
+      name: user?.name ?? '',
+      isAdmin: user?.isAdmin === true,
+      cells: cells.map((m) => ({ ...m.cell, role: m.role })),
+      teams: teams.map((m) => m.team),
+      groups: groups.map((m) => ({
+        postId: m.postId,
+        title: m.group.post.title ?? '소그룹',
+      })),
+    };
+  }
+
+  // 리더나 관리자가 탈퇴하면 남은 관리자 전원에게 한 번 알린다 (SCRUM-274). 탈퇴는 막지 않고
+  // (본인이 원하면 나갈 수 있어야 한다), 누구를 새로 세울지는 앱이 정하지 않는다 — 자리가 비었다는
+  // 사실과, 남아서 이어 맡을 사람이 있는지만 알려 관리자가 정하게 한다. 맡은 자리가 여럿이어도
+  // 알림은 하나로 묶는다. 알림 실패가 탈퇴를 되돌리면 안 되므로 notify처럼 절대 던지지 않는다.
+  private async notifyAdminsOfLeaderWithdrawal(
+    userId: string,
+    leaving: Awaited<ReturnType<UsersService['findLeavingLeader']>>,
+  ): Promise<void> {
+    const seatCount =
+      leaving.cells.length + leaving.teams.length + leaving.groups.length;
+    if (seatCount === 0 && !leaving.isAdmin) return;
+    try {
+      const seats: string[] = [];
+      for (const cell of leaving.cells) {
+        const rest = await this.prisma.cellMembership.findMany({
+          where: {
+            cellId: cell.id,
+            endedAt: null,
+            role: { in: ['LEADER', 'SUB_LEADER'] },
+          },
+          select: { role: true, user: { select: { name: true } } },
+        });
+        const left = cell.role === 'LEADER' ? '셀장' : '부셀장';
+        seats.push(
+          `${cell.name} ${left}(${
+            rest.length > 0
+              ? rest
+                  .map(
+                    (m) =>
+                      `${m.role === 'LEADER' ? '셀장' : '부셀장'} ${m.user.name} 님이 계세요`,
+                  )
+                  .join(', ')
+              : '남은 셀장·부셀장 없음'
+          })`,
+        );
+      }
+      for (const team of leaving.teams) {
+        const rest = await this.prisma.teamMembership.findMany({
+          where: { teamId: team.id, endedAt: null, role: 'LEADER' },
+          select: { user: { select: { name: true } } },
+        });
+        seats.push(
+          `${team.name} 팀장(${
+            rest.length > 0
+              ? `다른 팀장 ${rest.map((m) => m.user.name).join(', ')} 님이 계세요`
+              : '남은 팀장 없음'
+          })`,
+        );
+      }
+      for (const group of leaving.groups) {
+        const rest = await this.prisma.hobbyGroupMember.findMany({
+          where: { postId: group.postId, role: 'LEADER', status: 'APPROVED' },
+          select: { user: { select: { name: true } } },
+        });
+        seats.push(
+          `소그룹 '${group.title}' 소그룹장(${
+            rest.length > 0
+              ? `다른 소그룹장 ${rest.map((m) => m.user.name).join(', ')} 님이 계세요`
+              : '남은 소그룹장 없음'
+          })`,
+        );
+      }
+
+      const who = `${leaving.isAdmin ? '관리자 ' : ''}${leaving.name} 님이 탈퇴했어요.`;
+      const body =
+        seats.length > 0
+          ? `${who} 맡고 있던 자리: ${seats.join(' · ')}. 필요하면 새로 지정해 주세요.`
+          : who;
+
+      const admins = await this.prisma.user.findMany({
+        where: { isAdmin: true, withdrawnAt: null, id: { not: userId } },
+        select: { id: true },
+      });
+      await this.notifications.notify(
+        admins.map((admin) => admin.id),
+        {
+          type: 'MEMBER_LEFT',
+          title: '회원 탈퇴',
+          body,
+          // 셀장 자리가 비었으면 셀 관리로, 아니면 회원 관리로 보낸다.
+          linkUrl: leaving.cells.length > 0 ? 'admin/cells' : 'admin/members',
+        },
+      );
+    } catch (error) {
+      this.logger.warn(`leader withdrawal notice failed: ${String(error)}`);
+    }
   }
 
   private withdrawOps(userId: string, now: Date) {
@@ -482,6 +628,12 @@ export class UsersService {
         where: { userId, endedAt: null },
         data: { endedAt: now },
       }),
+      // 단톡방·리더방·소그룹에서도 뺀다 (SCRUM-274). 셀·팀 소속만 끝내면 방 멤버로 계속 남아서
+      // 메시지 옆 "안 읽은 사람 수"가 영영 줄지 않고, 소그룹 인원수·승인 대기 목록에도 남는다.
+      // 소속 이력을 보존하는 셀·팀과 달리 이 셋은 "지금 방에 있는 사람" 명단이라 행을 지운다.
+      this.prisma.chatRoomMember.deleteMany({ where: { userId } }),
+      this.prisma.leaderRoomMember.deleteMany({ where: { userId } }),
+      this.prisma.hobbyGroupMember.deleteMany({ where: { userId } }),
       this.prisma.refreshToken.deleteMany({ where: { userId } }),
       this.prisma.pushToken.deleteMany({ where: { userId } }),
     ];
@@ -680,8 +832,9 @@ export class UsersService {
     return (await this.findMe(userId))!;
   }
 
-  // 본인 탈퇴 — 처리 내용은 withdrawOps. 관리자 계정은 권한 양도 절차가 없어서 막는다
-  // (withdrawByAdmin과 같은 기준).
+  // 본인 탈퇴 — 처리 내용은 withdrawOps. 관리자도 다른 관리자가 남아 있으면 나갈 수 있다 (SCRUM-274) —
+  // 예전엔 전부 막았는데 권한을 내려놓는 기능이 없어서 관리자는 앱에서 계정을 지울 방법이 없었다.
+  // 마지막 한 명만 막는다 (관리자가 0명이면 회원·신고·셀 관리를 할 사람이 없다).
   async withdrawMe(userId: string): Promise<void> {
     const me = await this.prisma.user.findFirst({
       where: { id: userId, withdrawnAt: null },
@@ -689,9 +842,19 @@ export class UsersService {
     });
     if (!me) throw new NotFoundException('회원을 찾을 수 없습니다.');
     if (me.isAdmin) {
-      throw new BadRequestException(
-        '관리자 계정은 탈퇴할 수 없습니다. 먼저 다른 관리자에게 권한을 넘겨주세요.',
-      );
+      const otherAdmins = await this.prisma.user.count({
+        where: {
+          isAdmin: true,
+          withdrawnAt: null,
+          isReviewAccount: false,
+          id: { not: userId },
+        },
+      });
+      if (otherAdmins === 0) {
+        throw new BadRequestException(
+          '관리자가 한 명뿐이라 탈퇴할 수 없어요. 다른 사람을 관리자로 지정한 뒤 다시 시도해 주세요.',
+        );
+      }
     }
 
     await this.withdraw(userId);

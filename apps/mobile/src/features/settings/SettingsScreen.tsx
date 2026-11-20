@@ -22,6 +22,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { submitConsent } from "../consent/api";
 import { SettingRow } from "./components/SettingRow";
 import Constants from "expo-constants";
+import { useMe } from "../profile/useMe";
 
 // 섹션 제목 시안 스타일(14px/600)과 버전정보(14px/400 #555555)는 등록된 텍스트 스타일·토큰에
 // 없다 — caption-main(13/500)·body-small(13/400)+text.neutral로 근사했고, 등록 여부는
@@ -88,6 +89,28 @@ export function SettingsScreen() {
       Alert.alert(t("탈퇴하지 못했어요"), message ?? t("잠시 후 다시 시도해주세요."));
     },
   });
+
+  // 탈퇴 확인 문구 (SCRUM-274). 다시 가입해도 기록이 이어지지 않는다는 점을 미리 알리고,
+  // 셀장·팀장이면 맡은 자리가 비고 관리자에게 알림이 간다는 것도 알린다 (탈퇴를 막지는 않는다).
+  const me = useMe();
+  const leaderSeats = [
+    ...(me?.cell && me.cell.role !== "MEMBER"
+      ? [`${me.cell.name} ${me.cell.role === "LEADER" ? t("셀장") : t("부셀장")}`]
+      : []),
+    ...(me?.teams ?? [])
+      .filter((team) => team.role === "LEADER")
+      .map((team) => `${team.name} ${t("팀장")}`),
+  ];
+  const withdrawDescription = [
+    t("탈퇴하면 계정을 복구할 수 없어요. 같은 계정으로 다시 가입해도 글·출석 기록·소속은 돌아오지 않아요."),
+    ...(leaderSeats.length > 0
+      ? [
+          t("지금 {{seats}}을(를) 맡고 있어요. 탈퇴하면 자리가 비고 관리자에게 알림이 가요.", {
+            seats: leaderSeats.join(", "),
+          }),
+        ]
+      : []),
+  ].join("\n\n");
 
   const handleWithdrawConfirm = () => {
     withdrawDialogRef.current?.close();
@@ -285,7 +308,7 @@ export function SettingsScreen() {
       <AppDialog
         ref={withdrawDialogRef}
         title={t("정말 탈퇴하시겠어요?")}
-        description={t("탈퇴하면 계정을 복구할 수 없어요")}
+        description={withdrawDescription}
         confirmLabel={t("탈퇴하기")}
         cancelLabel={t("취소")}
         onConfirm={handleWithdrawConfirm}

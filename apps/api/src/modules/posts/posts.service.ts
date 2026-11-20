@@ -109,6 +109,16 @@ const DEPARTMENT_KEY_BY_TEAM_NAME: Record<string, string> = {
 // 홈 섹션별 장수 — 큐티나눔은 시안대로 3건, 부서활동은 가로 스크롤이라 5건.
 const HOME_QT_SHARE_COUNT = 3;
 
+// 탈퇴한 사람의 익명 글은 관리자에게도 실명을 보여주지 않는다 (SCRUM-274). 글은 남아서 함께
+// 읽고 기도할 수 있지만, 떠난 사람이 익명으로 남긴 나눔이 실명과 함께 보관되면 안 된다.
+// (기도제목도 같은 규칙 — prayers.service)
+export function canRevealAnonymous(
+  viewerMaySee: boolean,
+  author: { withdrawnAt: Date | null },
+): boolean {
+  return viewerMaySee && author.withdrawnAt === null;
+}
+
 // 큐티나눔 익명 글의 작성자 표기 — 일반 회원에겐 "익명", 관리자·작성자 본인에겐 "익명(실명)"
 // (기도제목과 같은 규칙: 본인은 자기 글을 알아볼 수 있어야 한다).
 function qtAuthorName(
@@ -180,7 +190,9 @@ export class PostsService {
               id: true,
               title: true,
               authorId: true,
-              author: { select: { name: true, avatarUrl: true } },
+              author: {
+                select: { name: true, avatarUrl: true, withdrawnAt: true },
+              },
               qtShare: { select: { passage: true, isAnonymous: true } },
             },
             // 큐티나눔 게시판과 같은 순서 — 큐티 날짜가 먼저, 같은 날이면 나중에 쓴 글.
@@ -217,7 +229,7 @@ export class PostsService {
         authorName: qtAuthorName(
           post.author.name,
           post.qtShare?.isAnonymous === true,
-          admin || post.authorId === userId,
+          canRevealAnonymous(admin || post.authorId === userId, post.author),
         ),
         // 상세와 같은 규칙 — 익명 글은 사진도 숨긴다 (SCRUM-270: 홈이 늘 기본 이미지만 그렸다).
         authorAvatarUrl:
@@ -311,7 +323,7 @@ export class PostsService {
         content: true,
         eventDate: true,
         authorId: true,
-        author: { select: { name: true, avatarUrl: true } },
+        author: { select: { name: true, avatarUrl: true, withdrawnAt: true } },
         qtShare: { select: { isAnonymous: true } },
         _count: { select: { likes: true } },
         // 내 좋아요만 한 건 집어온다 — 행이 있으면 내가 누른 것 (전체를 받아서 세지 않는다).
@@ -325,7 +337,7 @@ export class PostsService {
       authorName: qtAuthorName(
         post.author.name,
         post.qtShare?.isAnonymous === true,
-        admin || post.authorId === userId,
+        canRevealAnonymous(admin || post.authorId === userId, post.author),
       ),
       // 상세와 같은 규칙 — 익명 글은 사진도 숨긴다 (SCRUM-270).
       authorAvatarUrl:
@@ -357,7 +369,7 @@ export class PostsService {
         coverImageUrl: true,
         createdAt: true,
         authorId: true,
-        author: { select: { name: true, avatarUrl: true } },
+        author: { select: { name: true, avatarUrl: true, withdrawnAt: true } },
         qtShare: { select: { passage: true, isAnonymous: true } },
         // 본문사진. 배경사진(coverImageUrl)과 달리 Image 테이블에 쌓이고 순서가 있다.
         images: {
@@ -374,7 +386,10 @@ export class PostsService {
     const isAdmin = userId ? await this.isAdminUser(userId) : false;
 
     const isAnonymous = post.qtShare?.isAnonymous === true;
-    const canSeeRealName = isAdmin || post.authorId === userId;
+    const canSeeRealName = canRevealAnonymous(
+      isAdmin || post.authorId === userId,
+      post.author,
+    );
     return {
       id: post.id,
       authorId: isAnonymous ? null : post.authorId,

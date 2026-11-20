@@ -97,5 +97,8 @@
   "실명을 입력해주세요": "Enter your real name",
   "가입 코드가 맞지 않아요. 청년부 임원에게 확인해주세요.": "That join code is not correct. Please check with a ministry leader.",
   "이름을 입력해주세요.": "Please enter your name.",
-  "이름은 20자까지 쓸 수 있어요.": "Names can be up to 20 characters."
+  "이름은 20자까지 쓸 수 있어요.": "Names can be up to 20 characters.",
+  "탈퇴하면 계정을 복구할 수 없어요. 같은 계정으로 다시 가입해도 글·출석 기록·소속은 돌아오지 않아요.": "Your account cannot be restored after you leave. Even if you sign up again with the same account, your posts, attendance records, and groups will not come back.",
+  "지금 {{seats}}을(를) 맡고 있어요. 탈퇴하면 자리가 비고 관리자에게 알림이 가요.": "You currently serve as {{seats}}. If you leave, the role becomes vacant and the admins are notified.",
+  "관리자가 한 명뿐이라 탈퇴할 수 없어요. 다른 사람을 관리자로 지정한 뒤 다시 시도해 주세요.": "You are the only admin, so you cannot leave. Make someone else an admin and try again."
 }

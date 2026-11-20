@@ -14,7 +14,9 @@ export type NotificationType =
   | "GROUP_MEETING"
   | "CHAT"
   | "BULLETIN"
-  | "REPORT";
+  | "REPORT"
+  /** 관리자에게 — 리더(셀장·팀장·소그룹장)나 관리자가 탈퇴함 (SCRUM-274) */
+  | "MEMBER_LEFT";
 
 /** GET /notifications 응답 항목 — 최신순 */
 /** PATCH·DELETE /users/me/push-token 요청 본문 — 기기의 Expo 푸시 토큰 */

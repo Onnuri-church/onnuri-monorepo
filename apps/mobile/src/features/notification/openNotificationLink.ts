@@ -58,8 +58,11 @@ export function openNotificationLink(
       });
     // 새 신고 (SCRUM-199) — 관리자에게만 온다
     case "admin":
-      if (first !== "reports") return false;
-      return go(navigation, "AdminReports", undefined);
+      if (first === "reports") return go(navigation, "AdminReports", undefined);
+      // 리더·관리자 탈퇴 알림 (SCRUM-274) — 셀장 자리가 비었으면 셀 관리, 아니면 회원 관리
+      if (first === "cells") return go(navigation, "AdminCellManage", undefined);
+      if (first === "members") return go(navigation, "AdminMemberList", undefined);
+      return false;
     default:
       return false;
   }
