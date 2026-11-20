@@ -9,6 +9,8 @@ import { Avatar } from "../../../shared/components/base/Avatar";
 export interface QtPost {
   id: string;
   author: string;
+  /** 작성자 프로필 사진 — 익명 글이거나 사진이 없으면 기본 이미지 (SCRUM-270) */
+  avatarUrl?: string | null;
   date: string;
   title: string;
   description: string;
@@ -42,8 +44,7 @@ export function QtPostCard({ post, onPress, onFavoritePress, onMenuPress }: QtPo
       onPress={onPress}
     >
       <View className="flex-row items-center gap-3">
-        {/* 목록 응답에 작성자 사진이 없어서 기본 프로필 이미지로 둔다. */}
-        <Avatar size={40} />
+        <Avatar imageUrl={post.avatarUrl} size={40} />
         <View className="flex-1">
           <Text className="text-label-medium text-text-normal">{post.author}</Text>
           <Text className="text-body-small text-text-alternative">{post.date}</Text>

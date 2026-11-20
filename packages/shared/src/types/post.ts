@@ -30,6 +30,8 @@ export type HobbyGroupMemberStatus = "PENDING" | "APPROVED" | "REJECTED";
 export interface QtShareListItem {
   id: string;
   authorName: string;
+  /** 작성자 프로필 사진 — 익명 글이거나 사진이 없으면 null. 이전 서버 응답에는 없을 수 있다 (SCRUM-270) */
+  authorAvatarUrl?: string | null;
   /** 큐티 날짜 — "2026.05.07" */
   dateLabel: string;
   title: string;
@@ -194,6 +196,8 @@ export interface TeamActivityListResponse {
 export interface HomeQtShare {
   id: string;
   authorName: string;
+  /** 작성자 프로필 사진 — 익명 글이거나 사진이 없으면 null. 이전 서버 응답에는 없을 수 있다 (SCRUM-270) */
+  authorAvatarUrl?: string | null;
   /** "룻기 2:16-23" — 스키마상 선택값이라 없는 글은 null */
   passage: string | null;
   title: string;
