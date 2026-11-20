@@ -86,6 +86,9 @@ interface ChatRoomViewProps {
 
 // 팀·셀 단톡방 본체. 대화, 사진 보내기, 답장, 언급(@), 이모지 반응, 공지(상단 고정)를 한 화면에서
 // 처리한다. 화면이 열려 있는 동안 몇 초마다 새 메시지를 받아오고, 새 메시지가 오면 맨 아래로 따라간다.
+// 아이폰 홈 막대 영역(insets.bottom, 보통 34pt)에서 입력줄 쪽으로 돌려받는 높이 (SCRUM-271).
+const IOS_HOME_BAR_TRIM = 14;
+
 export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: ChatRoomViewProps) {
   const { t } = useTranslation();
   // 차단 (SCRUM-198) — 차단한 사람의 메시지는 내용 대신 한 줄 안내로 접는다. 대화 흐름(답장 등)이
@@ -97,6 +100,13 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
   const themeColors = useThemeColors();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
+  // 입력줄·검색줄 아래 여백 (SCRUM-271). 키보드가 떠 있으면 키보드 높이만큼 올린다.
+  // 내려가 있을 때 아이폰은 홈 막대 영역(34pt)을 통째로 비우면 카카오톡보다 훨씬 떠 보여서,
+  // 홈 막대(바닥에서 13pt 안)만 피하도록 줄인다. 안드로이드는 그 영역에 내비게이션 버튼이
+  // 있을 수 있어 그대로 다 비운다.
+  const restingBottom =
+    Platform.OS === "ios" ? Math.max(insets.bottom - IOS_HOME_BAR_TRIM, 8) : insets.bottom + 8;
+  const bottomBarPadding = keyboardHeight ? keyboardHeight + 8 : restingBottom;
   // 대화 검색 (SCRUM-231) — 불러온 최근 대화 안에서 글자가 들어간 메시지를 찾고, ∧∨로 오가며 강조한다.
   const [searchText, setSearchText] = useState("");
   const [matchCursor, setMatchCursor] = useState(0);
@@ -806,7 +816,7 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
       {searchOpen && (
         <View
           className="flex-row items-center justify-between border-t border-background-assistive bg-background-normal px-5 pt-2"
-          style={{ paddingBottom: (keyboardHeight || insets.bottom) + 8 }}
+          style={{ paddingBottom: bottomBarPadding }}
         >
           <Text className="text-body-small text-text-alternative">
             {searchQuery === ""
@@ -846,7 +856,7 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
           className="border-t border-background-assistive bg-background-normal px-5 pt-2"
           // + 패널이 열려 있으면 바닥 여백은 패널이 맡는다
           style={{
-            paddingBottom: attachmentSheetOpen ? 8 : (keyboardHeight || insets.bottom) + 8,
+            paddingBottom: attachmentSheetOpen ? 8 : bottomBarPadding,
           }}
         >
           {replyTo && (
