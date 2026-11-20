@@ -31,6 +31,11 @@ interface ChatBubbleProps {
   highlightActive?: boolean;
   /** 시각을 달지 — 같은 사람이 같은 분에 연달아 보낸 메시지는 마지막에만 단다 (기본 true) */
   showTime?: boolean;
+  /**
+   * 바로 앞 메시지와 한 묶음인지 — 같은 사람이 같은 분에 이어서 보낸 메시지 (SCRUM-273).
+   * 묶음의 둘째부터는 프로필 사진과 이름을 다시 그리지 않는다 (카카오톡처럼).
+   */
+  continued?: boolean;
   /** 답장 인용을 눌렀을 때 — 원래 메시지로 이동한다 (SCRUM-254) */
   onReplyPress?: (messageId: string) => void;
   /** "공지가 등록되었습니다" 안내의 상세보기를 눌렀을 때 (SCRUM-252) */
@@ -80,6 +85,7 @@ export function ChatBubble({
   onNoticePress,
   shake = false,
   showTime = true,
+  continued = false,
   highlight,
   highlightActive = false,
 }: ChatBubbleProps) {
@@ -306,12 +312,17 @@ export function ChatBubble({
             {body}
           </View>
           {reactions}
-          <View className="mt-1 flex-row items-center gap-1.5">
-            {unread}
-            <Text className="text-caption-main text-text-alternative">
-              {showTime && toChatTime(message.createdAt)}
-            </Text>
-          </View>
+          {/* 시각도 안 읽은 수도 없으면 줄 자체를 그리지 않는다 — 빈 줄이 묶음 사이를 벌린다 (SCRUM-273) */}
+          {(showTime || unread) && (
+            <View className="mt-1 flex-row items-center gap-1.5">
+              {unread}
+              {showTime && (
+                <Text className="text-caption-main text-text-alternative">
+                  {toChatTime(message.createdAt)}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
       </View>
     );
@@ -319,17 +330,28 @@ export function ChatBubble({
 
   return (
     <View className="flex-row items-start gap-2">
-      <Avatar imageUrl={message.authorAvatarUrl} size={36} />
+      {/* 묶음의 둘째부터는 사진 자리만 비워 말풍선 줄을 맞추고, 이름도 다시 쓰지 않는다 (SCRUM-273) */}
+      {continued ? (
+        <View style={{ width: 36 }} />
+      ) : (
+        <Avatar imageUrl={message.authorAvatarUrl} size={36} />
+      )}
       <View className="max-w-[78%] items-start">
-        <Text className="text-body-small text-text-neutral">{message.authorName}</Text>
-        <View className="mt-1">{body}</View>
+        {!continued && (
+          <Text className="text-body-small text-text-neutral">{message.authorName}</Text>
+        )}
+        <View className={continued ? undefined : "mt-1"}>{body}</View>
         {reactions}
-        <View className="mt-1 flex-row items-center gap-1.5">
-          <Text className="text-caption-main text-text-alternative">
-            {showTime && toChatTime(message.createdAt)}
-          </Text>
-          {unread}
-        </View>
+        {(showTime || unread) && (
+          <View className="mt-1 flex-row items-center gap-1.5">
+            {showTime && (
+              <Text className="text-caption-main text-text-alternative">
+                {toChatTime(message.createdAt)}
+              </Text>
+            )}
+            {unread}
+          </View>
+        )}
       </View>
     </View>
   );
