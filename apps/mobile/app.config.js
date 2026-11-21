@@ -21,6 +21,11 @@ const GOOGLE_IOS_URL_SCHEME = GOOGLE_IOS_CLIENT_ID
   ? `com.googleusercontent.apps.${GOOGLE_IOS_CLIENT_ID.replace(".apps.googleusercontent.com", "")}`
   : null;
 
+// 마이크 권한 문구 — 앱이 직접 녹음하지는 않지만 expo-camera·expo-image-picker가 마이크 API를
+// 품고 있어 Info.plist에 문구가 있어야 한다. 비워 두면 라이브러리 기본값
+// ("Allow $(PRODUCT_NAME) to access your microphone")이 들어가 심사에서 반려된다 (SCRUM-276).
+const MICROPHONE_PERMISSION = "동영상을 찍을 때 소리를 함께 담으려면 마이크 접근 권한이 필요해요.";
+
 module.exports = ({ config }) => ({
   ...config,
   ...(IS_DEV_VARIANT && {
@@ -47,6 +52,7 @@ module.exports = ({ config }) => ({
       {
         photosPermission: "게시글·프로필에 올릴 사진을 고르려면 사진 접근 권한이 필요해요.",
         cameraPermission: "게시글·프로필에 올릴 사진을 찍으려면 카메라 접근 권한이 필요해요.",
+        microphonePermission: MICROPHONE_PERMISSION,
       },
     ],
     // 채팅 + 시트의 "최근 사진" 줄 — 사진첩을 직접 읽는다 (SCRUM-241). 저장은 하지 않는다.
@@ -63,7 +69,10 @@ module.exports = ({ config }) => ({
     // QR 출석 스캔용 카메라 — iOS 권한 문구는 여기서 정한다 (없으면 심사 거절 사유).
     [
       "expo-camera",
-      { cameraPermission: "출석 QR을 스캔하려면 카메라 접근 권한이 필요해요." },
+      {
+        cameraPermission: "출석 QR을 스캔하려면 카메라 접근 권한이 필요해요.",
+        microphonePermission: MICROPHONE_PERMISSION,
+      },
     ],
     // 카카오 SDK의 네이티브 설정(매니페스트의 앱 키·리다이렉트 스킴)은 빌드 시점에 키가 필요하다.
     // 키가 없는 환경(웹 미리보기, 키를 아직 안 채운 팀원)에서도 동작해야 하므로 키가 있을 때만 얹는다.
