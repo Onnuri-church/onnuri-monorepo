@@ -14,7 +14,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "plugins": [
-      "expo-secure-store",
+      ["expo-secure-store", { "faceIDPermission": false }],
       "expo-apple-authentication",
       [
         "expo-build-properties",
