@@ -4,15 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Alert,
-  BackHandler,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, BackHandler, Pressable, ScrollView, Text, TextInput, View } from "react-native";
 
 import { PHONE_NUMBER_REGEX, type Gender } from "@onnuri/shared";
 
@@ -235,7 +227,7 @@ export function ProfileSetupScreen() {
                 maxLength={100}
               />
               <Text className="mt-2 text-body-small text-text-alternative">
-                {t("청년부 구성원 확인용이에요. 모르면 청년부 임원에게 물어보세요.")}
+                {t("교회 성도 확인용이에요. 모르면 담당 임원에게 물어보세요.")}
               </Text>
             </View>
           )}
@@ -266,6 +258,9 @@ export function ProfileSetupScreen() {
               keyboardType="number-pad"
               maxLength={6}
             />
+            <Text className="mt-2 text-body-small text-text-alternative">
+              {t("셀 편성과 수련회 준비에 사용돼요.")}
+            </Text>
           </View>
 
           <View className="py-4">
@@ -279,10 +274,16 @@ export function ProfileSetupScreen() {
               keyboardType="number-pad"
               maxLength={11}
             />
+            <Text className="mt-2 text-body-small text-text-alternative">
+              {t("교회 담당자가 연락드릴 때 사용돼요. 관리자만 볼 수 있어요.")}
+            </Text>
           </View>
 
           <View className="py-4">
             <Text className="text-body-main text-text-normal">{t("성별")}</Text>
+            <Text className="mt-2 text-body-small text-text-alternative">
+              {t("셀 편성과 수련회 숙소 배정에 사용돼요. 관리자만 볼 수 있어요.")}
+            </Text>
             {/* 시안에 둘 다 안 고른 상태가 없어서, 처음에는 둘 다 미선택(회색) 스타일이다.
                 테두리는 시안이 0.5px이지만 기본 스케일에 없어서 1px(border)로 넣었다. */}
             <View className="mt-5 flex-row gap-2">
@@ -335,10 +336,18 @@ export function ProfileSetupScreen() {
         </ScrollView>
 
         <View className="px-5 pb-12">
-          <Button label={t("등록하기")} disabled={!canSubmit} loading={submitting} onPress={() => void handleSubmitPress()} />
+          <Button
+            label={t("등록하기")}
+            disabled={!canSubmit}
+            loading={submitting}
+            onPress={() => void handleSubmitPress()}
+          />
         </View>
       </KeyboardAvoidingContainer>
-      <SignupCompleteModal visible={completeSession !== null} onConfirm={() => completeSession?.()} />
+      <SignupCompleteModal
+        visible={completeSession !== null}
+        onConfirm={() => completeSession?.()}
+      />
     </View>
   );
 }
