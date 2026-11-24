@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Skeleton } from "../../shared/components/base/Skeleton";
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
 import { PageIndicator } from "../../shared/components/base/PageIndicator";
 import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll";
@@ -86,10 +87,14 @@ export function HomeScreen() {
   // 기도제목 최신 3건 — 게시판 첫 화면("전체")과 같은 쿼리를 그대로 쓴다 (SCRUM-237).
   // 한 번 받으면 기도제목 게시판에 들어가자마자 목록이(없으면 "없어요"가) 바로 보인다.
   // 홈 카드는 작성일·D-day를 쓰지 않으므로 (그 자리에 페이지 인디케이터가 온다 — 시안) 라벨을 뗀다.
-  const isAdmin = useMe()?.isAdmin === true;
+  // 관리자에게는 익명 글의 실명이 붙어 와서 쿼리 키에 isAdmin이 들어간다. 내 정보가 오기 전에
+  // 요청하면 일반 회원 기준으로 한 번 받고, 관리자로 확인된 뒤 또 받는다 — 그 사이 카드가 비어 보인다.
+  // 내 정보를 받은 뒤 한 번만 요청한다 (SCRUM-289).
+  const me = useMe();
+  const isAdmin = me?.isAdmin === true;
   const { data: prayers, refetch: refetchPrayers } = useQuery({
     queryKey: ["prayers", "board", "all", isAdmin],
-    enabled: !isGuest,
+    enabled: !isGuest && me !== undefined,
     queryFn: () => fetchPrayers("all"),
     select: (data) =>
       data.items
@@ -224,7 +229,10 @@ export function HomeScreen() {
           >
             <Text className="text-body-medium text-text-alternative">{t("로그인 후 볼 수 있어요")}</Text>
           </Pressable>
-        ) : (prayers ?? []).length === 0 ? (
+        ) : prayers === undefined ? (
+          // 기도제목은 기기에 저장하지 않아 켤 때마다 새로 받는다 — 받는 동안 "없어요" 대신 자리를 잡아 둔다.
+          <Skeleton className="mt-4 h-28 rounded-5" />
+        ) : prayers.length === 0 ? (
           <View className="mt-4 items-center py-8">
             <Text className="text-body-medium text-text-alternative">
               {t("등록된 기도제목이 없어요")}
