@@ -1,7 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { useLayoutEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { Alert, FlatList, Pressable, Text, View } from "react-native";
 import ReanimatedSwipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,6 +11,7 @@ import { UnreadBadge } from "../../../shared/components/base/UnreadBadge";
 import type { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
 import { colors } from "../../../shared/theme/tokens";
 import { toTimeAgo } from "../../../shared/utils/date";
+import { ThemedRefreshControl } from "../../../shared/components/base/ThemedRefreshControl";
 
 export interface ChatRoomListItem {
   id: string;
@@ -203,7 +204,7 @@ export function ChatRoomList({
         data={rooms}
         keyExtractor={(room) => room.id}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
         renderItem={({ item: room }) => {
           const checked = selected.includes(room.id);
           return (

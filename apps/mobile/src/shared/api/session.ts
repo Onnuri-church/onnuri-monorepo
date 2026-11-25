@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
+import type { AuthTokens, DevLoginRole, LoginResponse, MeResponse } from "@onnuri/shared";
 
 import { useAuthStore } from "../store/useAuthStore";
 import {
@@ -75,7 +75,7 @@ export async function signInForReview(
 // 서버가 잠에서 깨는 중의 5xx)을 구분한다 (SCRUM-209). 로그아웃은 거절일 때만 한다 —
 // 닿지 못했다고 로그인 화면으로 보내면, 서버가 잠깐 느렸을 뿐인데 사용자는 로그아웃된 것처럼 느낀다.
 export type RestoreResult =
-  | { kind: "restored"; user: User; tokens: AuthTokens }
+  | { kind: "restored"; user: MeResponse; tokens: AuthTokens }
   | { kind: "signed-out" }
   | { kind: "unreachable" };
 

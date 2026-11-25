@@ -181,7 +181,7 @@ export function ChatBubble({
           onLongPress={onLongPress}
           className="h-20 w-40 flex-row items-center gap-2 rounded-xl bg-background-dark px-3"
         >
-          <Icon name="play" size={28} color="#FFFFFF" />
+          <Icon name="play" size={28} color="#FFFFFF" fixedColor />
           <Text className="text-body-small text-text-onImage">{t("동영상 보기")}</Text>
         </Pressable>
       ))}
@@ -238,7 +238,12 @@ export function ChatBubble({
           className="h-11 w-11 items-center justify-center rounded-full"
           style={{ backgroundColor: "rgba(0,0,0,0.55)" }}
         >
-          <Icon name={upload.failed ? "warning" : "image"} size={22} color="#FFFFFF" />
+          <Icon
+            name={upload.failed ? "warning" : "image"}
+            size={22}
+            color="#FFFFFF"
+            fixedColor
+          />
         </View>
         {!upload.failed && (upload.count > 1 || upload.total > 0) && (
           <Text className="text-caption-main text-text-onImage">

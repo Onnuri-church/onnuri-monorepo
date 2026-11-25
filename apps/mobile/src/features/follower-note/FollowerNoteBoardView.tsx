@@ -1,7 +1,7 @@
 import type { FollowerNoteCommentInfo } from "@onnuri/shared";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
@@ -18,6 +18,7 @@ import {
   type FollowerNoteCardContent,
   type MenuAnchor,
 } from "./FollowerNoteCard";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 /** 게시판이 다루는 노트의 공통 모양 — 셀 노트·팀 노트 모두 이 필드를 가진다. */
 export interface BoardNote {
@@ -315,7 +316,7 @@ export function FollowerNoteBoardView<N extends BoardNote>({
           onLayout={(event) => {
             viewportHeight.current = event.nativeEvent.layout.height;
           }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
+          refreshControl={<ThemedRefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
           // 안전영역은 바깥 틀이 띄우므로 여기는 FAB에 마지막 카드가 가리지 않을 만큼만 둔다.
           contentContainerStyle={{ paddingBottom: 96 }}
         >

@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ensureNotSuspended } from "../profile/ensureNotSuspended";
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Avatar } from "../../shared/components/base/Avatar";
@@ -15,6 +15,7 @@ import { colors } from "../../shared/theme/tokens";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useTeamBoard } from "./api";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // "2026-10-12T05:30:00Z" → "2026.10.12" (KST 기준 날짜)
 function toDateLabel(iso: string): string {
@@ -131,7 +132,7 @@ export function TeamBoardScreen() {
         keyExtractor={(post) => post.id}
         contentContainerClassName="gap-4 px-5 pt-3"
         contentContainerStyle={{ paddingBottom: 120 + insets.bottom }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
         onEndReached={() => {
           if (hasNextPage && !isFetchingNextPage) void fetchNextPage();
         }}

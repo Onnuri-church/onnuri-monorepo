@@ -461,7 +461,7 @@ export function TeamBoardDetailScreen() {
           style={{ bottom: (keyboardHeight || insets.bottom) + 84 }}
         >
           <View className="flex-row items-center gap-2 rounded-full bg-background-dark/70 px-4 py-2">
-            <Icon name="image" size={16} color="#FFFFFF" />
+            <Icon name="image" size={16} color="#FFFFFF" fixedColor />
             <Text className="text-body-small text-text-onImage">
               {currentImage + 1}/{post.imageUrls.length}
             </Text>

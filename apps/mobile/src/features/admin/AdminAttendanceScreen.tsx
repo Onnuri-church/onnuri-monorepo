@@ -4,7 +4,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AppSheet, type AppSheetRef } from "../../shared/components/base/AppSheet";
@@ -22,6 +22,7 @@ import {
 } from "./api";
 import { RadioOption } from "./components/RadioOption";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 type AttendanceFilter = "all" | "cell" | "team";
 
@@ -171,7 +172,7 @@ export function AdminAttendanceScreen() {
       <ScrollView
         contentContainerClassName="px-5 pt-4"
         contentContainerStyle={{ paddingBottom: 64 + insets.bottom }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {/* 필터 */}
         <View className="flex-row flex-wrap items-center gap-x-5 gap-y-3">

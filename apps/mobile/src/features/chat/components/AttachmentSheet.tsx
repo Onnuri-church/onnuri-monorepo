@@ -159,7 +159,7 @@ export function AttachmentSheet({
           style={{ width: TILE, height: TILE, backgroundColor: "#9A9A9A" }}
           accessibilityLabel={t("카메라")}
         >
-          <Icon name="camera" size={34} color="#FFFFFF" />
+          <Icon name="camera" size={34} color="#FFFFFF" fixedColor />
         </Pressable>
         {recent.map((photo) => {
           const order = picked.indexOf(photo.uri);
@@ -202,7 +202,7 @@ export function AttachmentSheet({
               className="h-8 w-8 items-center justify-center rounded-lg"
               style={{ backgroundColor: row.color }}
             >
-              <Icon name={row.icon} size={18} color="#FFFFFF" />
+              <Icon name={row.icon} size={18} color="#FFFFFF" fixedColor />
             </View>
             <Text className="text-body-medium text-text-normal">{row.label}</Text>
           </Pressable>

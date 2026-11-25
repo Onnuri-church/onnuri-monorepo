@@ -29,7 +29,7 @@ export function ChatImageViewer({ urls, startIndex, onClose }: ChatImageViewerPr
           hitSlop={8}
         >
           {/* 뷰어는 테마와 상관없이 검정 배경이라 아이콘은 항상 흰색 — 어두운 아이콘은 사진의 검은 여백 위에서 안 보인다. */}
-          <Icon name="back" size={28} color="#FFFFFF" />
+          <Icon name="back" size={28} color="#FFFFFF" fixedColor />
         </Pressable>
       </GestureHandlerRootView>
     </Modal>

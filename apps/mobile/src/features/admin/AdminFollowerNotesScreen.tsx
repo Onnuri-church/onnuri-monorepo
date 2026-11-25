@@ -2,7 +2,7 @@ import { useFocusEffect, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Icon, isIconName } from "../../shared/components/base/Icon";
@@ -12,6 +12,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { CellListRow } from "../cell/components/CellListRow";
 import { useAdminFollowerNoteOverview } from "./api";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 type TabKey = "cell" | "team";
 
@@ -58,7 +59,7 @@ export function AdminFollowerNotesScreen() {
       {isLoading ? t("목록을 불러오고 있어요.") : t("표시할 항목이 없어요.")}
     </Text>
   );
-  const refreshControl = <RefreshControl {...pullRefresh} />;
+  const refreshControl = <ThemedRefreshControl {...pullRefresh} />;
 
   return (
     <View className="flex-1 bg-background-normal">

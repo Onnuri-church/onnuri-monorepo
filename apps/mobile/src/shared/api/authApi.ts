@@ -1,6 +1,6 @@
 import axios from "axios";
 
-import type { AuthTokens, DevLoginRole, LoginResponse, User } from "@onnuri/shared";
+import type { AuthTokens, DevLoginRole, LoginResponse, MeResponse } from "@onnuri/shared";
 
 import { API_BASE_URL, API_TIMEOUT_MS } from "./config";
 
@@ -61,8 +61,8 @@ export function postLogout(refreshToken: string): Promise<void> {
 
 // 세션 복원 중에는 스토어가 아직 authenticated가 아니라 apiClient의 요청 인터셉터가
 // 토큰을 못 붙인다 — 토큰을 인자로 직접 받는다.
-export function getMe(accessToken: string): Promise<User> {
+export function getMe(accessToken: string): Promise<MeResponse> {
   return bareClient
-    .get<User>("/users/me", { headers: { Authorization: `Bearer ${accessToken}` } })
+    .get<MeResponse>("/users/me", { headers: { Authorization: `Bearer ${accessToken}` } })
     .then((res) => res.data);
 }

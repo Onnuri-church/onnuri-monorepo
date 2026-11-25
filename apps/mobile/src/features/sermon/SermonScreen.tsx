@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { RefreshControl, ScrollView, Text, View } from "react-native";
+import { ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
@@ -14,6 +14,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { fetchSermons } from "./api";
 import { SermonVideoCard } from "./components/SermonVideoCard";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 말씀 게시판. 월 필터 아래로 설교영상 카드가 쌓인다.
 export function SermonScreen() {
@@ -74,7 +75,7 @@ export function SermonScreen() {
         contentContainerStyle={{ paddingBottom: 24 + TAB_BAR_HEIGHT + insets.bottom }}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {items.map((video) => (
           <SermonVideoCard
