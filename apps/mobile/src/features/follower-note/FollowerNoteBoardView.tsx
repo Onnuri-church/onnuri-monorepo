@@ -162,14 +162,15 @@ export function FollowerNoteBoardView<N extends BoardNote>({
 
   // 카드 맨 아래 댓글 입력창을 누르면 키보드가 올라온 뒤 그 카드 바닥이 보이게 스크롤한다
   // (키보드가 열리면 바깥 틀이 줄어들어 ScrollView 높이가 바뀐다 — 그걸 기다린다).
-  const handleComposerFocus = (id: string) => {
+  const scrollCardBottomIntoView = (id: string, delayMs: number) => {
     setTimeout(() => {
       const layout = cardLayout.current.get(id);
       if (!layout) return;
       const target = listY.current + layout.y + layout.height + 16 - viewportHeight.current;
       if (target > scrollY.current) scrollRef.current?.scrollTo({ y: target, animated: true });
-    }, 350);
+    }, delayMs);
   };
+  const handleComposerFocus = (id: string) => scrollCardBottomIntoView(id, 350);
 
   const handleMenuPress = (id: string, anchor: MenuAnchor) =>
     setMenu({
@@ -210,6 +211,10 @@ export function FollowerNoteBoardView<N extends BoardNote>({
     const localId = `local-${Date.now()}`;
     setPending((prev) => [...prev, { localId, noteId, content, parentId }]);
     resetComposer();
+    // 방금 쓴 댓글만큼 카드가 길어진다 — 카드 바닥(입력창)이 계속 보이게 따라 내린다 (SCRUM-283).
+    // 흐린 댓글이 그려진 뒤, 그리고 서버 응답으로 진짜 댓글로 바뀐 뒤 한 번씩 맞춘다.
+    scrollCardBottomIntoView(noteId, 120);
+    scrollCardBottomIntoView(noteId, 450);
     const removePending = () =>
       setPending((prev) => prev.filter((item) => item.localId !== localId));
     addComment.mutate(

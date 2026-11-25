@@ -128,6 +128,7 @@ export function CellNewsDetailScreen() {
     const localId = pendingComments.add(content, parentId);
     setCommentDraft("");
     setReplyTo(null);
+    commentScroll.scrollToNew(parentId);
     try {
       const created = await addComment.mutateAsync({ content, parentId: parentId ?? undefined });
       markSeen(created.id);
@@ -155,7 +156,11 @@ export function CellNewsDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <View style={{ flex: 1 }}>
-        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          onLayout={commentScroll.onScrollLayout}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* 소식 사진 (시안 362x360 영역) — 여러 장이면 옆으로 넘겨 보고 아래 점으로 위치를 찍는다.
               없으면 회색 자리 유지 */}
           {news.imageUrls.length > 0 ? (

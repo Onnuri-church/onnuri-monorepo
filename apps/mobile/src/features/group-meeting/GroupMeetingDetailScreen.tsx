@@ -181,6 +181,7 @@ export function GroupMeetingDetailScreen() {
     const localId = pendingComments.add(content, parentId);
     setComment("");
     setReplyTo(null);
+    commentScroll.scrollToNew(parentId);
     try {
       // 서버는 게시판 공용 댓글 모양으로 돌려준다 — 소그룹 화면에 필요한 필드는 같다.
       const created = await addComment.mutateAsync({ content, parentId: parentId ?? undefined });
@@ -264,6 +265,7 @@ export function GroupMeetingDetailScreen() {
     <View className="flex-1 bg-background-normal">
       <ScrollView
         ref={scrollRef}
+        onLayout={commentScroll.onScrollLayout}
         contentContainerClassName="pb-6"
         refreshControl={
           <ThemedRefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />

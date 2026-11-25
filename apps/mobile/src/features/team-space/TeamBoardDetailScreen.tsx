@@ -22,6 +22,7 @@ import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDi
 import { AppearIn } from "../../shared/components/base/AppearIn";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { useNewItems } from "../../shared/hooks/useNewItems";
+import { useCommentScroll } from "../../shared/hooks/useCommentScroll";
 import { flattenCommentIds, usePendingComments } from "../../shared/hooks/usePendingComments";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { Header } from "../../shared/components/base/Header";
@@ -72,6 +73,9 @@ export function TeamBoardDetailScreen() {
   }, [loadedPostId, queryClient]);
   // 댓글 즉시 표시·등장 효과 (SCRUM-215)
   const pendingComments = usePendingComments();
+  // 방금 쓴 댓글이 입력줄 바로 위에 보이게 스크롤한다 (SCRUM-283).
+  const scrollRef = useRef<ScrollView>(null);
+  const commentScroll = useCommentScroll(scrollRef, undefined, post?.comments);
   const { isNew, markSeen } = useNewItems(post ? flattenCommentIds(post.comments) : undefined);
   const me = useAuthStore((state) =>
     state.session.status === "authenticated" ? state.session.user : null,
@@ -165,6 +169,7 @@ export function TeamBoardDetailScreen() {
     const localId = pendingComments.add(content, parentId);
     setDraft("");
     setReplyTo(null);
+    commentScroll.scrollToNew(parentId);
     addComment
       .mutateAsync({ content, ...(parentId && { parentId }) })
       .then(() => {
@@ -279,6 +284,8 @@ export function TeamBoardDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <ScrollView
+        ref={scrollRef}
+        onLayout={commentScroll.onScrollLayout}
         onScroll={handleScroll}
         scrollEventThrottle={32}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -433,7 +440,7 @@ export function TeamBoardDetailScreen() {
         </View>
 
         {/* 댓글 */}
-        <View className="px-5 pt-4">
+        <View className="px-5 pt-4" onLayout={commentScroll.onSectionLayout}>
           {post.comments.length + pendingComments.topLevel.length === 0 ? (
             <View className="items-center rounded-2xl bg-background-muted py-6">
               <Text className="text-body-small text-text-alternative">
@@ -442,7 +449,7 @@ export function TeamBoardDetailScreen() {
             </View>
           ) : (
             post.comments.map((comment) => (
-              <View key={comment.id}>
+              <View key={comment.id} onLayout={commentScroll.onThreadLayout(comment.id)}>
                 {renderComment(comment, false)}
                 {comment.replies.map((reply) => renderComment(reply, true))}
                 {pendingComments.repliesOf(comment.id).map((item) => renderPending(item, true))}
