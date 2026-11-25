@@ -1,5 +1,6 @@
 import AddRoundLight from "../../assets/icons/add-round-light.svg";
 import Announcement from "../../assets/icons/announcement.svg";
+import AnnouncementFill from "../../assets/icons/announcement-fill.svg";
 import ArrowDropDown from "../../assets/icons/arrow-drop-down.svg";
 import Back from "../../assets/icons/back.svg";
 import Bell from "../../assets/icons/bell.svg";
@@ -11,6 +12,7 @@ import Calendar from "../../assets/icons/calendar.svg";
 import Camera from "../../assets/icons/camera.svg";
 import Card from "../../assets/icons/card.svg";
 import Chat from "../../assets/icons/chat.svg";
+import ChatFill from "../../assets/icons/chat-fill.svg";
 import Check from "../../assets/icons/check.svg";
 import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
@@ -32,6 +34,7 @@ import Menu from "../../assets/icons/menu.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
+import NavHomeLine from "../../assets/icons/nav-home-line.svg";
 import Note from "../../assets/icons/note.svg";
 import Paperclip from "../../assets/icons/paperclip.svg";
 import Palette from "../../assets/icons/palette.svg";
@@ -48,6 +51,7 @@ import Soccer from "../../assets/icons/soccer.svg";
 import ThumbUp from "../../assets/icons/thumb-up.svg";
 import TrashCan from "../../assets/icons/trash-can.svg";
 import User from "../../assets/icons/user.svg";
+import UserFill from "../../assets/icons/user-fill.svg";
 import Video from "../../assets/icons/video.svg";
 import VideoOn from "../../assets/icons/video-on.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
@@ -63,6 +67,7 @@ import { themedColor } from "../../theme/useThemeColors";
 const ICONS = {
   "add-round-light": AddRoundLight,
   announcement: Announcement,
+  "announcement-fill": AnnouncementFill,
   "arrow-drop-down": ArrowDropDown,
   back: Back,
   bell: Bell,
@@ -73,6 +78,7 @@ const ICONS = {
   calendar: Calendar,
   card: Card,
   chat: Chat,
+  "chat-fill": ChatFill,
   check: Check,
   "close-square": CloseSquare,
   "comment-light": CommentLight,
@@ -97,6 +103,7 @@ const ICONS = {
   menu: Menu,
   more: More,
   "nav-home": NavHome,
+  "nav-home-line": NavHomeLine,
   note: Note,
   paperclip: Paperclip,
   palette: Palette,
@@ -113,6 +120,7 @@ const ICONS = {
   "thumb-up": ThumbUp,
   "trash-can": TrashCan,
   user: User,
+  "user-fill": UserFill,
   video: Video,
   "video-on": VideoOn,
   "view-light": ViewLight,
