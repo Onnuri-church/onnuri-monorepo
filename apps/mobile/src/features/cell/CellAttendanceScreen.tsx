@@ -6,6 +6,7 @@ import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from "react-nati
 
 import { Button } from "../../shared/components/base/Button";
 import { Icon } from "../../shared/components/base/Icon";
+import { CalendarYearMonthPicker } from "../../shared/components/composed/CalendarYearMonthPicker";
 import { toDateString } from "../../shared/components/composed/DateField";
 import { colors } from "../../shared/theme/tokens";
 import { useThemeColors } from "../../shared/theme/useThemeColors";
@@ -19,11 +20,12 @@ import {
 } from "./attendance";
 import { useCell, useCellAttendance, useSaveCellAttendance } from "./api";
 import { AttendanceMemberRow } from "./components/AttendanceMemberRow";
-import { MonthPicker } from "./components/MonthPicker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // 출석 관리 (관리 탭 > 출석 관리 — 셀장·관리자 전용 경로로만 진입한다).
-// 날짜 바를 누르면 주차별 보기(월 그리드 + 그 달의 일요일 목록)가 아래로 펼쳐진다 (시안).
+// 날짜 바를 누르면 주차별 보기(연도·월 토글 + 그 달의 일요일 목록)가 아래로 펼쳐진다.
+// 월 버튼 12개 그리드였을 때는 연도를 바꿀 수 없어 해가 넘어가면 지난해 출석을 볼 수 없었다 —
+// 관리자 출석부와 같은 연도·월 토글로 바꿨다 (SCRUM-308).
 export function CellAttendanceScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
@@ -39,6 +41,7 @@ export function CellAttendanceScreen() {
 
   const [selectedDate, setSelectedDate] = useState(() => getLatestSunday(new Date()));
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerYear, setPickerYear] = useState(selectedDate.getFullYear());
   const [pickerMonth, setPickerMonth] = useState(selectedDate.getMonth() + 1);
   // 명단·현재 출석 상태는 서버에서 온다 (예배 = QR 기록 + 수동 정정 결과, 셀모임 = 기본 결석).
   // 토글은 로컬로 고치고 등록하기가 일괄 저장한다 (시안 흐름).
@@ -111,9 +114,16 @@ export function CellAttendanceScreen() {
 
         {pickerOpen && (
           <View className="mt-4 gap-4">
-            <MonthPicker selectedMonth={pickerMonth} onSelectMonth={setPickerMonth} />
+            <CalendarYearMonthPicker
+              year={pickerYear}
+              month={pickerMonth}
+              onChange={(nextYear, nextMonth) => {
+                setPickerYear(nextYear);
+                setPickerMonth(nextMonth);
+              }}
+            />
             <View className="rounded-5 border border-background-assistive">
-              {getSundaysOfMonth(selectedDate.getFullYear(), pickerMonth).map(
+              {getSundaysOfMonth(pickerYear, pickerMonth).map(
                 (sunday, index, sundays) => (
                   <Pressable
                     key={sunday.toISOString()}
