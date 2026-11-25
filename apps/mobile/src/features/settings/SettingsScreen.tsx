@@ -131,9 +131,10 @@ export function SettingsScreen() {
           <SectionLabel>{t("디스플레이")}</SectionLabel>
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
             <SettingRow
-              title={t("다크모드")}
-              // 보조 문구는 "지금 누르면 어떻게 되는지"를 말한다 — 다크모드에서는 밝은 테마로 돌아간다는
-              // 안내여야 한다. 늘 같은 문구라 토글을 눌러도 문구가 안 바뀐다는 제보가 있었다 (SCRUM-296).
+              // 제목은 "지금 어떤 상태인지", 보조 문구는 "누르면 어떻게 되는지"를 말한다 (SCRUM-296).
+              // 둘 다 늘 같은 문구라 토글을 눌러도 안 바뀐다는 제보가 있었고, 지금 상태가 글자로
+              // 보이길 원해서 제목도 테마에 따라 바꾼다 (2026-11-26 지환님 결정).
+              title={themeMode === "dark" ? t("다크모드") : t("화이트모드")}
               subtitle={themeMode === "dark" ? t("밝은 테마로 전환") : t("어두운 테마로 전환")}
               right={
                 <Toggle
