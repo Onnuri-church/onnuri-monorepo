@@ -1,4 +1,4 @@
-import type { PostComment } from "@onnuri/shared";
+import type { PostComment, PostReactionSummary, TeamActivityDetail } from "@onnuri/shared";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -50,6 +50,30 @@ import { toTimeAgo } from "../../shared/utils/date";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
 import { usePostViewerMenu } from "../report/usePostViewerMenu";
+
+// 이모지를 눌렀을 때의 결과를 서버 응답 전에 미리 계산한다 — 내가 이미 단 이모지면 하나 줄이고
+// (0이 되면 칩을 없앤다), 아니면 하나 늘린다. 순서는 서버 응답이 오면 그쪽으로 맞춰진다.
+function toggleReactionLocally(
+  reactions: PostReactionSummary[],
+  emoji: string,
+): PostReactionSummary[] {
+  const target = reactions.find((reaction) => reaction.emoji === emoji);
+  if (!target) return [...reactions, { emoji, count: 1, reactedByMe: true }];
+  if (!target.reactedByMe) {
+    return reactions.map((reaction) =>
+      reaction.emoji === emoji
+        ? { ...reaction, count: reaction.count + 1, reactedByMe: true }
+        : reaction,
+    );
+  }
+  return reactions
+    .map((reaction) =>
+      reaction.emoji === emoji
+        ? { ...reaction, count: reaction.count - 1, reactedByMe: false }
+        : reaction,
+    )
+    .filter((reaction) => reaction.count > 0);
+}
 
 export function DepartmentActivityDetailScreen() {
   const { t } = useTranslation();
@@ -105,10 +129,47 @@ export function DepartmentActivityDetailScreen() {
     void queryClient.invalidateQueries({ queryKey: ["team-activities"] });
   };
 
+  // 이모지는 누르는 즉시 화면에 반영하고(SCRUM-282), 서버 응답이 오면 그 값으로 맞춘다 —
+  // 응답을 기다렸다가 상세를 다시 받으면 누른 뒤 한참 있다가 바뀌어 안 눌린 것처럼 보인다.
   const { mutate: react } = useMutation({
     mutationFn: (emoji: string) => toggleReaction(id, emoji),
-    onSuccess: refresh,
+    onMutate: async (emoji: string) => {
+      await queryClient.cancelQueries({ queryKey: ["team-activity", id] });
+      const previous = queryClient.getQueryData<TeamActivityDetail>(["team-activity", id]);
+      if (previous) {
+        queryClient.setQueryData<TeamActivityDetail>(["team-activity", id], {
+          ...previous,
+          reactions: toggleReactionLocally(previous.reactions, emoji),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _emoji, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["team-activity", id], context.previous);
+      }
+    },
+    onSuccess: (reactions) => {
+      queryClient.setQueryData<TeamActivityDetail>(["team-activity", id], (current) =>
+        current ? { ...current, reactions } : current,
+      );
+      void queryClient.invalidateQueries({ queryKey: ["team-activities"] });
+    },
   });
+
+  // 게스트는 이모지를 달 수 없다 — 눌러도 아무 일이 없으면 고장처럼 보여서 로그인 안내를 띄운다 (SCRUM-295).
+  const isGuest = useAuthStore((state) => state.session.status !== "authenticated");
+  const handleReact = (emoji: string) => {
+    if (isGuest) {
+      Alert.alert(t("로그인이 필요해요"), t("이모지는 로그인 후 남길 수 있어요."), [
+        { text: t("취소"), style: "cancel" },
+        // 게스트 세션을 끝내면 RootNavigator가 로그인 화면으로 전환한다 (뒤로가기로 게스트 복귀).
+        { text: t("로그인하기"), onPress: () => useAuthStore.getState().startLoginFromGuest() },
+      ]);
+      return;
+    }
+    react(emoji);
+  };
 
   const { mutate: removePost } = useMutation({
     mutationFn: () => deleteTeamActivity(id),
@@ -311,7 +372,7 @@ export function DepartmentActivityDetailScreen() {
           <Text className="mt-2 text-heading-medium text-text-normal">{data.title}</Text>
           <Text className="mt-2 text-body-medium text-text-neutral">{data.content}</Text>
           {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
-          <ReactionBar reactions={data.reactions} onReact={(emoji) => react(emoji)} />
+          <ReactionBar reactions={data.reactions} onReact={handleReact} />
         </View>
         <View
           className="mt-5 border-t border-t-text-assistive"
