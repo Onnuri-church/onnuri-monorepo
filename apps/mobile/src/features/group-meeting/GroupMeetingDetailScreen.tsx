@@ -53,6 +53,7 @@ import { useMe } from "../profile/useMe";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
 import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
+import { LinkifiedText } from "../team-space/components/LinkifiedText";
 
 // 시안 확정값은 402pt 프레임 기준이다. 콘텐츠 폭 362 = 402 - 20*2 이므로
 // 폭을 박지 않고 좌우 여백 20만 주면 402에서 362가 그대로 나오고 다른 기기에도 맞는다.
@@ -316,7 +317,10 @@ export function GroupMeetingDetailScreen() {
             )}
           </View>
           {meeting.description !== "" && (
-            <Text className="text-body-medium text-text-neutral">{meeting.description}</Text>
+            <LinkifiedText
+              text={meeting.description}
+              className="text-body-medium text-text-neutral"
+            />
           )}
         </View>
 

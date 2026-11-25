@@ -47,6 +47,8 @@ import {
 import { canManageCell } from "./cellDetail";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
+import { LinkifiedText } from "../team-space/components/LinkifiedText";
+import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 
 // 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
@@ -87,6 +89,8 @@ export function CellNewsDetailScreen() {
   const { width } = useWindowDimensions();
   const photoWidth = width - 40;
   const [photoIndex, setPhotoIndex] = useState(0);
+  // 누른 사진부터 크게 보기 — null이면 닫힘
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // ⋮는 권한이 있을 때만 보이고 항목이 화면 데이터에 의존하므로 화면이 헤더를 단독 등록한다
   // (QtBoardDetail과 같은 패턴 — 등록부에는 headerShown: true만 둔다).
@@ -175,13 +179,15 @@ export function CellNewsDetailScreen() {
                   setPhotoIndex(Math.round(event.nativeEvent.contentOffset.x / photoWidth))
                 }
               >
-                {news.imageUrls.map((url) => (
-                  <Image
-                    key={url}
-                    source={{ uri: url }}
-                    style={{ width: photoWidth, aspectRatio: 1 }}
-                    resizeMode="cover"
-                  />
+                {/* 목록에서는 정사각형으로 잘라 보여주고(시안), 누르면 원래 비율 그대로 크게 본다 (SCRUM-306). */}
+                {news.imageUrls.map((url, index) => (
+                  <Pressable key={url} onPress={() => setViewerIndex(index)}>
+                    <Image
+                      source={{ uri: url }}
+                      style={{ width: photoWidth, aspectRatio: 1 }}
+                      resizeMode="cover"
+                    />
+                  </Pressable>
                 ))}
               </ScrollView>
               {news.imageUrls.length > 1 && (
@@ -208,7 +214,7 @@ export function CellNewsDetailScreen() {
             </View>
 
             <Text className="mt-4 text-heading-medium text-text-normal">{news.title}</Text>
-            <Text className="mt-2 text-body-medium text-text-neutral">{news.content}</Text>
+            <LinkifiedText text={news.content} className="mt-2 text-body-medium text-text-neutral" />
 
             <FavoriteButton
               className="mt-6"
@@ -303,6 +309,11 @@ export function CellNewsDetailScreen() {
         confirmLabel={t("확인")}
         cancelLabel={t("취소")}
         onConfirm={confirmDelete}
+      />
+      <ChatImageViewer
+        urls={news.imageUrls}
+        startIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
       />
     </View>
   );

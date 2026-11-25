@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 import { Alert, Image, Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
 import { PressableScale } from "../../shared/components/base/PressableScale";
 import { colors } from "../../shared/theme/tokens";
@@ -16,8 +15,11 @@ import { useChatRoomDetail, useLeaveChatRoom } from "../team-space/api";
 import { useChatMedia, useChatRoom, useSetChatMute } from "./api";
 import { ChatBackgroundPicker } from "./components/ChatBackgroundPicker";
 import { ChatImageViewer } from "./components/ChatImageViewer";
+import { MemberRow, sortMeFirst } from "./ChatMembersScreen";
 
 const THUMB_SIZE = 96;
+// 서랍에 바로 보여주는 대화 상대 수 — 넘으면 "대화상대 전체보기"가 붙는다.
+const MEMBER_PREVIEW_COUNT = 10;
 
 // 단톡방 서랍(☰) — 카카오톡의 채팅방 서랍처럼 오른쪽 위 알림(🔔), 사진/동영상 모아보기,
 // 배경 바꾸기(내 폰에서만), 대화 상대를 보여준다. 팀 단톡방·리더 방은 관리/나가기도 여기서 한다 (SCRUM-230).
@@ -42,6 +44,8 @@ export function ChatRoomInfoScreen() {
   const isMember = (room?.members ?? []).some((member) => member.id === myId);
   const canLeave = (kind === "room" || kind === "leader") && isMember;
 
+  const members = sortMeFirst(room?.members ?? [], myId);
+  const previewMembers = members.slice(0, MEMBER_PREVIEW_COUNT);
   const muted = room?.muted ?? false;
   // 서랍에는 최근 30장만 가로로, 전체는 "사진/동영상"을 눌러 연다 (SCRUM-233)
   const mediaUrls = (media ?? []).slice(0, 30).map((item) => item.url);
@@ -174,17 +178,28 @@ export function ChatRoomInfoScreen() {
           <Text className="px-4 pb-2 text-body-medium text-text-normal">
             {t("대화 상대")} {(room?.members ?? []).length}
           </Text>
-          {(room?.members ?? []).map((member) => (
-            <View key={member.id} className="flex-row items-center gap-3 px-4 py-2">
-              <Avatar imageUrl={member.avatarUrl} size={40} />
-              {member.id === myId && (
-                <View className="h-5 w-5 items-center justify-center rounded-full bg-text-normal">
-                  <Text className="text-caption-main text-background-normal">{t("나")}</Text>
-                </View>
-              )}
-              <Text className="text-body-medium text-text-normal">{member.name}</Text>
+          {/* 인원이 많은 방은 앞의 몇 명만 보여주고 나머지는 전체보기로 넘긴다 (SCRUM-301) —
+              다 그리면 서랍이 끝없이 길어져 아래의 관리·나가기까지 한참 내려야 한다. */}
+          {previewMembers.map((member) => (
+            <View key={member.id} className="-mx-1">
+              <MemberRow
+                name={member.name}
+                avatarUrl={member.avatarUrl}
+                isMe={member.id === myId}
+              />
             </View>
           ))}
+          {members.length > MEMBER_PREVIEW_COUNT && (
+            <Pressable
+              className="mt-1 flex-row items-center justify-between border-t border-background-assistive px-4 pt-4 active:opacity-60"
+              onPress={() => navigation.navigate("ChatMembers", { kind, id })}
+            >
+              <Text className="text-body-medium text-text-normal">
+                {t("대화상대 전체보기")} {members.length}
+              </Text>
+              <Icon name="expand-right" size={20} />
+            </Pressable>
+          )}
         </View>
 
         {(canManage || canLeave) && (
