@@ -31,8 +31,6 @@ function SectionLabel({ children }: { children: string }) {
   return <Text className="text-caption-main text-text-alternative">{children}</Text>;
 }
 
-const THEME_TOGGLE_MIN_INTERVAL_MS = 400;
-
 export function SettingsScreen() {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
@@ -42,16 +40,6 @@ export function SettingsScreen() {
   const currentLanguageLabel = LANGUAGES.find((option) => option.code === language)?.label;
   const themeMode = useThemeStore((state) => state.mode);
   const setThemeMode = useThemeStore((state) => state.setMode);
-  // 테마를 아주 빠르게 연달아 바꾸면 색 변수 갱신이 화면 일부(보조 문구 등)에 덜 닿아, 글자가 이전
-  // 테마 색으로 남아 바탕에 묻혀 안 보인다는 제보가 있었다 (SCRUM-296). 전환 하나가 화면에 다 그려질
-  // 시간만큼은 다음 누름을 받지 않는다.
-  const lastThemeToggleAt = useRef(0);
-  const handleThemeToggle = (value: boolean) => {
-    const now = Date.now();
-    if (now - lastThemeToggleAt.current < THEME_TOGGLE_MIN_INTERVAL_MS) return;
-    lastThemeToggleAt.current = now;
-    setThemeMode(value ? "dark" : "light");
-  };
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -144,11 +132,13 @@ export function SettingsScreen() {
           <View className="gap-5 rounded-5 bg-background-normal px-4 py-5 shadow-card">
             <SettingRow
               title={t("다크모드")}
-              subtitle={t("어두운 테마로 전환")}
+              // 보조 문구는 "지금 누르면 어떻게 되는지"를 말한다 — 다크모드에서는 밝은 테마로 돌아간다는
+              // 안내여야 한다. 늘 같은 문구라 토글을 눌러도 문구가 안 바뀐다는 제보가 있었다 (SCRUM-296).
+              subtitle={themeMode === "dark" ? t("밝은 테마로 전환") : t("어두운 테마로 전환")}
               right={
                 <Toggle
                   value={themeMode === "dark"}
-                  onValueChange={handleThemeToggle}
+                  onValueChange={(value) => setThemeMode(value ? "dark" : "light")}
                 />
               }
             />
