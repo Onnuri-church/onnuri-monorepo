@@ -31,6 +31,8 @@ function SectionLabel({ children }: { children: string }) {
   return <Text className="text-caption-main text-text-alternative">{children}</Text>;
 }
 
+const THEME_TOGGLE_MIN_INTERVAL_MS = 400;
+
 export function SettingsScreen() {
   const { t } = useTranslation();
   const themeColors = useThemeColors();
@@ -40,6 +42,16 @@ export function SettingsScreen() {
   const currentLanguageLabel = LANGUAGES.find((option) => option.code === language)?.label;
   const themeMode = useThemeStore((state) => state.mode);
   const setThemeMode = useThemeStore((state) => state.setMode);
+  // 테마를 아주 빠르게 연달아 바꾸면 색 변수 갱신이 화면 일부(보조 문구 등)에 덜 닿아, 글자가 이전
+  // 테마 색으로 남아 바탕에 묻혀 안 보인다는 제보가 있었다 (SCRUM-296). 전환 하나가 화면에 다 그려질
+  // 시간만큼은 다음 누름을 받지 않는다.
+  const lastThemeToggleAt = useRef(0);
+  const handleThemeToggle = (value: boolean) => {
+    const now = Date.now();
+    if (now - lastThemeToggleAt.current < THEME_TOGGLE_MIN_INTERVAL_MS) return;
+    lastThemeToggleAt.current = now;
+    setThemeMode(value ? "dark" : "light");
+  };
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
@@ -136,7 +148,7 @@ export function SettingsScreen() {
               right={
                 <Toggle
                   value={themeMode === "dark"}
-                  onValueChange={(value) => setThemeMode(value ? "dark" : "light")}
+                  onValueChange={handleThemeToggle}
                 />
               }
             />
