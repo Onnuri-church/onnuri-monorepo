@@ -31,22 +31,33 @@ export function CellGalleryPhotoScreen() {
   const [index, setIndex] = useState(initialIndex);
 
   return (
-    <View className="flex-1 bg-background-dark" style={{ paddingTop: insets.top }}>
-      {/* 헤더 행: 뒤로가기 + 셀 이름(흰색), 아래에 카운터 */}
-      <View className="h-8 flex-row items-center justify-center">
-        <Pressable
-          className="absolute left-5 h-8 w-8 items-center justify-center"
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="back" size={28} color={themeColors.text.onImage} />
-        </Pressable>
-        <Text className="text-heading-small text-text-onImage">{cell?.name ?? t("갤러리")}</Text>
+    <View className="flex-1 bg-background-dark">
+      {/* 사진은 화면 전체를 쓰고 헤더는 그 위에 얹는다 (SCRUM-306) — 헤더 아래 남은 영역에 넣으면
+          사진이 화면 가운데가 아니라 헤더 높이의 절반만큼 아래로 내려가 보인다 (채팅 사진 뷰어와 같은 방식). */}
+      <PhotoPager
+        urls={photos.map((photo) => photo.url)}
+        initialIndex={initialIndex}
+        onIndexChange={setIndex}
+      />
+      {/* 헤더 행: 뒤로가기 + 셀 이름(흰색), 아래에 카운터. 사진을 미는 손짓은 헤더 빈 곳을 통과한다. */}
+      <View
+        pointerEvents="box-none"
+        className="absolute left-0 right-0 top-0"
+        style={{ paddingTop: insets.top }}
+      >
+        <View pointerEvents="box-none" className="h-8 flex-row items-center justify-center">
+          <Pressable
+            className="absolute left-5 h-8 w-8 items-center justify-center"
+            onPress={() => navigation.goBack()}
+          >
+            <Icon name="back" size={28} color={themeColors.text.onImage} />
+          </Pressable>
+          <Text className="text-heading-small text-text-onImage">{cell?.name ?? t("갤러리")}</Text>
+        </View>
+        <Text className="mt-2 text-center text-caption-main text-text-alternative">
+          {index + 1}/{totalCount}
+        </Text>
       </View>
-      <Text className="mt-2 text-center text-caption-main text-text-alternative">
-        {index + 1}/{totalCount}
-      </Text>
-
-      <PhotoPager urls={photos.map((photo) => photo.url)} initialIndex={initialIndex} onIndexChange={setIndex} />
     </View>
   );
 }
