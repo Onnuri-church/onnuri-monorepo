@@ -50,6 +50,7 @@ import { toTimeAgo } from "../../shared/utils/date";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
 import { usePostViewerMenu } from "../report/usePostViewerMenu";
+import { LinkifiedText } from "../team-space/components/LinkifiedText";
 
 // 이모지를 눌렀을 때의 결과를 서버 응답 전에 미리 계산한다 — 내가 이미 단 이모지면 하나 줄이고
 // (0이 되면 칩을 없앤다), 아니면 하나 늘린다. 순서는 서버 응답이 오면 그쪽으로 맞춰진다.
@@ -370,7 +371,8 @@ export function DepartmentActivityDetailScreen() {
         {/* 내용 */}
         <View className="flex justify-start">
           <Text className="mt-2 text-heading-medium text-text-normal">{data.title}</Text>
-          <Text className="mt-2 text-body-medium text-text-neutral">{data.content}</Text>
+          {/* 본문 속 주소는 눌러서 열 수 있다 (SCRUM-294) */}
+          <LinkifiedText text={data.content} className="mt-2 text-body-medium text-text-neutral" />
           {/* 이모지 반응 — 달린 이모지는 "👍 2" 칩으로, + 버튼으로 새 이모지를 고른다 */}
           <ReactionBar reactions={data.reactions} onReact={handleReact} />
         </View>
