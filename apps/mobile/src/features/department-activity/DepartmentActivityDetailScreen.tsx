@@ -193,6 +193,7 @@ export function DepartmentActivityDetailScreen() {
     const localId = pendingComments.add(content, parentId);
     setDraft("");
     setReplyTo(null);
+    commentScroll.scrollToNew(parentId);
     try {
       const created = await addComment(id, content, parentId ?? undefined);
       markSeen(created.id);
@@ -327,6 +328,7 @@ export function DepartmentActivityDetailScreen() {
           입력줄이 쓰고 남은 높이를 가져가서 키보드가 올라와도 같이 줄어든다. */}
       <ScrollView
         ref={scrollRef}
+        onLayout={commentScroll.onScrollLayout}
         className="flex-1"
         contentContainerClassName="justify-start py-5 px-5"
         keyboardShouldPersistTaps="handled"
