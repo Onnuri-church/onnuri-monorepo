@@ -100,6 +100,8 @@ export type RootStackParamList = {
   ChatRoomInfo: { kind: "room" | "cell" | "group" | "leader"; id: string; title: string };
   /** 단톡방 사진 전체 보기 (SCRUM-233) */
   ChatMedia: { kind: "room" | "cell" | "group" | "leader"; id: string };
+  /** 대화 상대 전체보기·이름 검색 (SCRUM-301) */
+  ChatMembers: { kind: "room" | "cell" | "group" | "leader"; id: string };
   CellChat: { cellId: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;

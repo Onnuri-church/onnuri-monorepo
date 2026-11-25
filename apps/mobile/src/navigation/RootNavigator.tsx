@@ -82,6 +82,7 @@ import { ChatPollCreateScreen } from "../features/chat/ChatPollCreateScreen";
 import { ChatNoticeDetailScreen } from "../features/chat/ChatNoticeDetailScreen";
 import { ChatPollDetailScreen } from "../features/chat/ChatPollDetailScreen";
 import { ChatMediaScreen } from "../features/chat/ChatMediaScreen";
+import { ChatMembersScreen } from "../features/chat/ChatMembersScreen";
 import { ChatRoomInfoScreen } from "../features/chat/ChatRoomInfoScreen";
 import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
 import { LeaderRoomFormScreen } from "../features/leader-room/LeaderRoomFormScreen";
@@ -500,6 +501,14 @@ export function RootNavigator() {
             name="ChatMedia"
             component={ChatMediaScreen}
             options={{ headerShown: true }}
+          />
+          <Stack.Screen
+            name="ChatMembers"
+            component={ChatMembersScreen}
+            options={{
+              headerShown: true,
+              header: () => <Header variant="sub" title={t("대화 상대")} rightAction="none" />,
+            }}
           />
           <Stack.Screen
             name="ChatPollCreate"
