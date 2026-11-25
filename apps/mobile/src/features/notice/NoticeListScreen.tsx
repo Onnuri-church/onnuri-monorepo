@@ -7,7 +7,6 @@ import {
   Alert,
   FlatList,
   Pressable,
-  RefreshControl,
   Text,
   View,
   useWindowDimensions,
@@ -25,6 +24,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import { toNoticeDateLabel, useDeleteNotice, useNoticeList } from "./api";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 마이페이지 > 공지사항 (자체 디자인 — 시안 없음, 홈 배너 관리 목록과 같은 결).
 // 열람은 누구나, 등록(헤더 오른쪽 버튼)·수정·삭제(⋮ 메뉴)는 관리자에게만 보인다.
@@ -100,7 +100,7 @@ export function NoticeListScreen() {
         contentContainerClassName="pt-2"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 공지가 가리지 않게.
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         renderItem={({ item: notice }) => (

@@ -142,12 +142,20 @@ interface IconProps {
   size?: number;
   /** SVG 안의 색이 전부 currentColor로 치환돼 있어서(svgr.config.js) 여기서 결정된다. */
   color?: string;
+  /**
+   * 테마와 무관하게 넘긴 색 그대로 그린다 — 사진 뷰어의 검정 배경처럼 다크모드에서도 바탕색이
+   * 바뀌지 않는 곳의 흰 아이콘에 쓴다. 안 주면 다크모드에서 흰색(#FFFFFF)이 icon.disable의
+   * 다크 값(거의 검정)으로 바뀌어 검은 바탕에서 안 보인다 (SCRUM-280).
+   */
+  fixedColor?: boolean;
 }
 
-export function Icon({ name, size = 24, color = colors.icon.normal }: IconProps) {
+export function Icon({ name, size = 24, color = colors.icon.normal, fixedColor = false }: IconProps) {
   const Source = ICONS[name];
   // 호출부는 `colors.icon.x`(라이트 값)를 넘기므로, 다크 테마면 여기서 대응하는 다크 값으로 바꾼다.
   const mode = useThemeStore((state) => state.mode);
 
-  return <Source width={size} height={size} color={themedColor(color, mode)} />;
+  return (
+    <Source width={size} height={size} color={fixedColor ? color : themedColor(color, mode)} />
+  );
 }

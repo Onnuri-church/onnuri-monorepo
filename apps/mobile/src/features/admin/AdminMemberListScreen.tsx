@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 
 import { Avatar } from "../../shared/components/base/Avatar";
 import { Icon } from "../../shared/components/base/Icon";
@@ -13,6 +13,7 @@ import { useAdminMembers } from "./api";
 import { MemberBadge } from "./components/MemberBadge";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 마이페이지 관리자 메뉴 > 회원 관리. 2026-09-09 시안 기준 — GET /users 실데이터.
 export function AdminMemberListScreen() {
@@ -44,7 +45,7 @@ export function AdminMemberListScreen() {
       // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       keyboardShouldPersistTaps="handled"
-      refreshControl={<RefreshControl {...pullRefresh} />}
+      refreshControl={<ThemedRefreshControl {...pullRefresh} />}
     >
       <SearchBar
         value={keyword}
