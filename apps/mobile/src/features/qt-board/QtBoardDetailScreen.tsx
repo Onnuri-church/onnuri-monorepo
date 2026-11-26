@@ -1,8 +1,8 @@
 import {RouteProp, useNavigation, useRoute} from "@react-navigation/native";
 import type {NativeStackNavigationProp} from "@react-navigation/native-stack";
-import {useLayoutEffect, useRef} from "react";
+import {useLayoutEffect, useRef, useState} from "react";
 import {useTranslation} from "react-i18next";
-import {Alert, ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
+import {Alert, Pressable, ScrollView, View, Text, Image, useWindowDimensions} from "react-native";
 import {AppDialog, type AppDialogRef} from "../../shared/components/base/AppDialog";
 import {FavoriteButton} from "../../shared/components/base/FavoriteButton";
 import {Header} from "../../shared/components/base/Header";
@@ -15,6 +15,8 @@ import {useToggleQtLike} from "./useToggleQtLike";
 import {Icon} from "../../shared/components/base/Icon";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { usePostViewerMenu } from "../report/usePostViewerMenu";
+import { usePhotoRatio } from "../../shared/hooks/usePhotoRatio";
+import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 
 // 본문사진 캐러셀의 좌우 여백. 아래 ScrollView의 mx-5(한 칸 4px × 5)와 같은 값이어야 한다 —
 // 사진 폭을 여기서 빼서 계산하므로 한쪽만 바꾸면 페이징이 어긋난다.
@@ -63,6 +65,9 @@ export function QtBoardDetailScreen() {
             Alert.alert(t("삭제하지 못했어요"), t("잠시 후 다시 시도해주세요."));
         },
     });
+    // 본문 사진 칸의 비율과 크게 보기 (SCRUM-312 — usePhotoRatio 주석 참고)
+    const photoRatio = usePhotoRatio(data?.imageUrls[0]);
+    const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
     // ⋮는 수정·삭제할 수 있을 때만 보이고 항목이 화면 데이터(작성자)에 의존하므로,
     // 등록부(RootNavigator)가 아니라 화면이 헤더를 단독 등록한다.
@@ -191,15 +196,18 @@ export function QtBoardDetailScreen() {
                         // 사진과 같은 높이를 직접 준다. 가로 스크롤뷰는 높이를 안 주면
                         // 내용에 맞춰지길 기대하게 되는데, 세로 스크롤뷰 안에서는 그 계산이
                         // 어긋나기 쉬워 정사각형이 깨진다.
-                        style={{height: imageSize}}
+                        style={{height: imageSize / photoRatio}}
                     >
-                        {data.imageUrls.map((url) => (
-                            <Image
-                                key={url}
-                                source={{uri: url}}
-                                resizeMode="cover"
-                                style={{width: imageSize, height: imageSize}}
-                            />
+                        {/* 사진은 자르지 않고 첫 사진의 비율에 맞춘 칸에 넣는다. 누르면 크게 본다 (SCRUM-312). */}
+                        {data.imageUrls.map((url, index) => (
+                            <Pressable key={url} onPress={() => setViewerIndex(index)}>
+                                <Image
+                                    source={{uri: url}}
+                                    resizeMode="contain"
+                                    className="bg-background-muted"
+                                    style={{width: imageSize, height: imageSize / photoRatio}}
+                                />
+                            </Pressable>
                         ))}
                     </ScrollView>
                 )}
@@ -212,6 +220,11 @@ export function QtBoardDetailScreen() {
                 confirmLabel={t("확인")}
                 cancelLabel={t("취소")}
                 onConfirm={confirmDelete}
+            />
+            <ChatImageViewer
+                urls={data?.imageUrls ?? []}
+                startIndex={viewerIndex}
+                onClose={() => setViewerIndex(null)}
             />
         </View>
     )
