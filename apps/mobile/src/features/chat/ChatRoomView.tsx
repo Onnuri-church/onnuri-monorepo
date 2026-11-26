@@ -951,7 +951,8 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
             </ScrollView>
           )}
 
-          <View className="flex-row items-center gap-2">
+          {/* 입력창이 여러 줄로 커져도 양옆 버튼은 아랫줄에 붙어 있게 아래로 맞춘다. */}
+          <View className="flex-row items-end gap-2">
             <Pressable
               className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"
               onPress={toggleAttachmentPanel}
@@ -978,16 +979,20 @@ export function ChatRoomView({ kind, id, searchOpen = false, onSearchClose }: Ch
                 />
               </Pressable>
             )}
+            {/* 여러 줄 입력 (SCRUM-300) — 엔터는 줄바꿈이고 보내기는 오른쪽 버튼으로만 한다 (메신저와 같다).
+                내용이 길어지면 입력창이 다섯 줄쯤까지 커지고 그 뒤로는 안에서 스크롤된다.
+                높이를 36으로 고정했을 때는 안드로이드 기본 안쪽 여백 때문에 글자 위쪽이 잘렸다 —
+                위아래 여백을 직접 주고 최소 높이만 둔다. */}
             <TextInput
-              className="h-9 flex-1 rounded-full bg-background-muted px-4 text-body-small text-text-normal"
+              className="max-h-28 min-h-9 flex-1 rounded-[18px] bg-background-muted px-4 text-body-small text-text-normal"
+              style={{ paddingTop: 8, paddingBottom: 8, textAlignVertical: "center" }}
               value={draft}
               onChangeText={setDraft}
+              multiline
               // 입력창을 누르면 패널이 내려가고 키보드로 바뀐다
               onFocus={() => setAttachmentSheetOpen(false)}
               placeholder={asNotice ? t("공지로 보낼 내용을 입력하세요") : t("메시지를 입력하세요")}
               placeholderTextColor={themeColors.text.alternative}
-              onSubmitEditing={canSend ? () => handleSend() : undefined}
-              returnKeyType="send"
             />
             <Pressable
               className="h-9 w-9 items-center justify-center rounded-full bg-background-alternative active:opacity-60"

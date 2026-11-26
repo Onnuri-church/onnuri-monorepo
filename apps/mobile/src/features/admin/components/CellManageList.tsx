@@ -3,7 +3,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import type { NativeScrollEvent, NativeSyntheticEvent } from "react-native";
 
 import { Icon } from "../../../shared/components/base/Icon";
@@ -14,6 +14,7 @@ import { useCells } from "../../cell/api";
 import { useDeleteCell } from "../api";
 import { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
 import { useRetained } from "../../../shared/hooks/useRetained";
+import { ThemedRefreshControl } from "../../../shared/components/base/ThemedRefreshControl";
 
 interface CellManageListProps {
   /** 편집 모드 — 켜면 행마다 수정·삭제 아이콘이 나온다 (헤더 ⋮ > 편집하기로 부모가 켠다). */
@@ -74,7 +75,7 @@ export function CellManageList({
       keyboardShouldPersistTaps="handled"
       onScroll={onScroll}
       scrollEventThrottle={16}
-      refreshControl={<RefreshControl {...pullRefresh} />}
+      refreshControl={<ThemedRefreshControl {...pullRefresh} />}
     >
       <View className="px-5 pb-2">
         <SearchBar value={query} onChangeText={setQuery} placeholder={t("셀 이름으로 검색")} />

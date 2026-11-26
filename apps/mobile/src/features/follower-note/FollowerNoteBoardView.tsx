@@ -1,7 +1,7 @@
 import type { FollowerNoteCommentInfo } from "@onnuri/shared";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
@@ -18,6 +18,7 @@ import {
   type FollowerNoteCardContent,
   type MenuAnchor,
 } from "./FollowerNoteCard";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 /** 게시판이 다루는 노트의 공통 모양 — 셀 노트·팀 노트 모두 이 필드를 가진다. */
 export interface BoardNote {
@@ -161,14 +162,15 @@ export function FollowerNoteBoardView<N extends BoardNote>({
 
   // 카드 맨 아래 댓글 입력창을 누르면 키보드가 올라온 뒤 그 카드 바닥이 보이게 스크롤한다
   // (키보드가 열리면 바깥 틀이 줄어들어 ScrollView 높이가 바뀐다 — 그걸 기다린다).
-  const handleComposerFocus = (id: string) => {
+  const scrollCardBottomIntoView = (id: string, delayMs: number) => {
     setTimeout(() => {
       const layout = cardLayout.current.get(id);
       if (!layout) return;
       const target = listY.current + layout.y + layout.height + 16 - viewportHeight.current;
       if (target > scrollY.current) scrollRef.current?.scrollTo({ y: target, animated: true });
-    }, 350);
+    }, delayMs);
   };
+  const handleComposerFocus = (id: string) => scrollCardBottomIntoView(id, 350);
 
   const handleMenuPress = (id: string, anchor: MenuAnchor) =>
     setMenu({
@@ -209,6 +211,10 @@ export function FollowerNoteBoardView<N extends BoardNote>({
     const localId = `local-${Date.now()}`;
     setPending((prev) => [...prev, { localId, noteId, content, parentId }]);
     resetComposer();
+    // 방금 쓴 댓글만큼 카드가 길어진다 — 카드 바닥(입력창)이 계속 보이게 따라 내린다 (SCRUM-283).
+    // 흐린 댓글이 그려진 뒤, 그리고 서버 응답으로 진짜 댓글로 바뀐 뒤 한 번씩 맞춘다.
+    scrollCardBottomIntoView(noteId, 120);
+    scrollCardBottomIntoView(noteId, 450);
     const removePending = () =>
       setPending((prev) => prev.filter((item) => item.localId !== localId));
     addComment.mutate(
@@ -315,7 +321,7 @@ export function FollowerNoteBoardView<N extends BoardNote>({
           onLayout={(event) => {
             viewportHeight.current = event.nativeEvent.layout.height;
           }}
-          refreshControl={<RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
+          refreshControl={<ThemedRefreshControl refreshing={isRefetching} onRefresh={onRefresh} />}
           // 안전영역은 바깥 틀이 띄우므로 여기는 FAB에 마지막 카드가 가리지 않을 만큼만 둔다.
           contentContainerStyle={{ paddingBottom: 96 }}
         >

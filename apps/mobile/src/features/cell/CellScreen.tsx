@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FlatList, RefreshControl, Text, View } from "react-native";
+import { FlatList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { TAB_BAR_HEIGHT } from "../../shared/components/base/BottomNav";
@@ -14,6 +14,7 @@ import { useMe } from "../profile/useMe";
 import { useCells } from "./api";
 import { CellListRow } from "./components/CellListRow";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 하단 탭 "셀 페이지"의 진입 화면. 일반 유저는 내 셀 하나만 보이고(2026-10-18 확정 — 다른 셀은
 // 서버도 열람을 막는다), 그 행을 누르면 셀의 페이지(소식/갤러리/구성원/관리 4탭)로 들어간다.
@@ -101,7 +102,7 @@ export function CellScreen() {
         onLayout={(event) => setListHeight(event.nativeEvent.layout.height)}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
         renderItem={({ item }) => (
           <CellListRow
             cell={item}

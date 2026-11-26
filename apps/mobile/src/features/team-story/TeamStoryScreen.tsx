@@ -2,7 +2,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useDeleteTeam, useTeams } from "./api";
@@ -16,6 +16,7 @@ import { useHideTabBarOnScroll } from "../../shared/hooks/useHideTabBarOnScroll"
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { useMe } from "../profile/useMe";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 관리자에게는 이 탭이 곧 팀 관리다 — 헤더 ⋮ > 편집하기로 행마다 수정·삭제, 목록 끝 점선 행으로 생성
 // (셀 탭이 관리자에게 셀 관리로 뜨는 것과 같은 방식). 일반 유저·게스트는 목록만 본다.
@@ -88,7 +89,7 @@ export function TeamStoryScreen() {
         onLayout={(event) => setViewportHeight(event.nativeEvent.layout.height)}
         onScroll={handleHideTabBarScroll}
         scrollEventThrottle={16}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {/* 로딩·실패·빈 목록도 스크롤 안에서 그린다 — 당겨서 새로고침과 관리자의 "팀 생성" 줄이
             그대로 남아야 첫 팀을 만들거나 다시 불러올 수 있다. */}

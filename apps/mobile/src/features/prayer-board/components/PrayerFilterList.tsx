@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Alert, ScrollView, Text, View } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../../shared/components/base/AppDialog";
 import { FilterBar } from "../../../shared/components/base/FilterBar";
@@ -14,6 +14,7 @@ import { useToggleBookmark } from "../useToggleBookmark";
 import { PrayerCard, type PrayerRequest } from "./PrayerCard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePullToRefresh } from "../../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../../shared/components/base/ThemedRefreshControl";
 
 interface PrayerFilterListProps {
   /** react-query 캐시 구분용 이름 (예: "bookmarked") */
@@ -88,7 +89,7 @@ export function PrayerFilterList({
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {isPending && (
           <>

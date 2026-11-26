@@ -18,18 +18,22 @@ import { colors } from "../../theme/tokens";
 import { useThemeColors } from "../../theme/useThemeColors";
 import type { RootTabParamList } from "../../types/navigation";
 import { i18n } from "../../i18n";
-import { Icon } from "./Icon";
+import { Icon, type IconName } from "./Icon";
 import { PressableScale } from "./PressableScale";
 
 // 탭 하나가 쓰는 아이콘. 라벨은 여기 적지 않고 BottomTabNavigator의 options.title에서 읽는다 —
 // 같은 문자열을 두 군데 두면 한쪽만 바뀐다. 말씀은 라벨 없이 원형 버튼으로 그려서 목록에 없다.
 // size가 제각각인 건 시안 값 그대로다 (원본 viewBox가 24/28로 섞여 있어 맞춰 보이는 크기가 다르다).
+// 지금 보고 있는 탭만 속을 채운 그림(active)으로, 나머지는 선 그림(name)으로 그린다 (SCRUM-310) —
+// 홈만 늘 채워져 있어 어느 탭에 있어도 홈이 선택된 것처럼 보인다는 제보가 있었다.
 const TAB_ICON = {
-  Home: { name: "nav-home", size: 24 },
-  TeamStory: { name: "announcement", size: 24 },
-  Cell: { name: "chat", size: 28 },
-  MyPage: { name: "user", size: 24 },
-} as const satisfies Partial<Record<keyof RootTabParamList, { name: string; size: number }>>;
+  Home: { name: "nav-home-line", active: "nav-home", size: 24 },
+  TeamStory: { name: "announcement", active: "announcement-fill", size: 24 },
+  Cell: { name: "chat", active: "chat-fill", size: 28 },
+  MyPage: { name: "user", active: "user-fill", size: 24 },
+} as const satisfies Partial<
+  Record<keyof RootTabParamList, { name: IconName; active: IconName; size: number }>
+>;
 
 // 가운데 말씀 버튼이 탭바 위로 튀어나온 높이. 시안: 지름 68 원의 중심이 탭바 중심보다 38 위 →
 // 80/2 - 68/2 - 38 = -32.
@@ -188,13 +192,12 @@ export function BottomNav({ state, descriptors, navigation }: BottomTabBarProps)
                 accessibilityState={{ selected: isFocused }}
                 className="min-w-0 flex-1 items-center justify-center gap-2 px-0.5"
               >
-                {/* 활성/비활성은 색만 바꾼다. 탭별 활성 전용 아이콘은 없다 — 홈이 채워 보이는 건
-                    nav-home 원본이 원래 채운 그림이기 때문이지 활성 상태 표현이 아니다. */}
+                {/* 활성 탭은 속을 채운 그림 + 진한 색, 나머지는 선 그림 + 옅은 색. */}
                 {/* 아이콘 크기가 24/28로 달라서 그대로 두면 라벨 높이가 탭마다 어긋난다 —
                     가장 큰 아이콘 높이(28)의 칸에 가운데로 넣어 라벨 줄을 맞춘다. */}
                 <View className="h-7 items-center justify-center">
                   <Icon
-                    name={icon.name}
+                    name={isFocused ? icon.active : icon.name}
                     size={icon.size}
                     color={isFocused ? themeColors.icon.strong : themeColors.icon.normal}
                   />

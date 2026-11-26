@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { AppDialog, type AppDialogRef } from "../../shared/components/base/AppDialog";
 import { ContextMenu } from "../../shared/components/base/ContextMenu";
@@ -24,6 +24,7 @@ import { PrayerCard, type PrayerRequest } from "./components/PrayerCard";
 import { PrayerMenu } from "./components/PrayerMenu";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 시안 확정값(402pt 프레임): 콘텐츠 폭 362 = 402 - 20*2.
 const CONTENT_PADDING = 20;
@@ -109,7 +110,7 @@ export function PrayerBoardScreen() {
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 24 + insets.bottom }}
         style={{ paddingHorizontal: CONTENT_PADDING }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {isAdmin ? (
           // 시안: Body/Small 13px, Semantic/Warning, 자물쇠 12·간격 3(기본 스케일에 없어 4로 넣었다).

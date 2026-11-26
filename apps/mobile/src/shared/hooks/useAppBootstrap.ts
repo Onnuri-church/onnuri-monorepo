@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
+import { queryClient } from "../api/queryClient";
 import { restoreSession } from "../api/session";
 import { useAuthStore } from "../store/useAuthStore";
 
@@ -64,6 +65,9 @@ export function useAppBootstrap(enabled = true): BootstrapState {
       if (cancelled) return;
 
       if (result.kind === "restored") {
+        // 세션 복원 때 받은 /users/me 응답을 내 정보 캐시에 그대로 넣어 둔다 (SCRUM-309) —
+        // 안 넣으면 마이페이지가 같은 주소를 다시 받는 동안 소속·권한 없이 일반 화면으로 먼저 그려진다.
+        queryClient.setQueryData(["me"], result.user);
         // 프로필 설정을 마치기 전에 앱을 껐다 켜도 온보딩으로 돌아온다 (로그인 분기와 같은 기준).
         if (result.user.profileCompleted) {
           setSession(result.user, result.tokens);

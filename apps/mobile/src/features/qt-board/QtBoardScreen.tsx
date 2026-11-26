@@ -3,7 +3,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Alert, RefreshControl, ScrollView, Text, View, useWindowDimensions } from "react-native";
+import { Alert, ScrollView, Text, View, useWindowDimensions } from "react-native";
 
 import { useAuthStore } from "../../shared/store/useAuthStore";
 
@@ -24,6 +24,7 @@ import { ensureSensitiveConsent } from "../consent/ensureSensitiveConsent";
 import { ensureNotSuspended } from "../profile/ensureNotSuspended";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 export function QtBoardScreen() {
   const insets = useSafeAreaInsets();
@@ -170,7 +171,7 @@ export function QtBoardScreen() {
         contentContainerClassName="gap-4 pt-4 px-5"
         // 바닥 여백에 안전영역을 더한다 — 안드로이드 내비 바에 마지막 항목이 가리지 않게.
         contentContainerStyle={{ paddingBottom: 16 + insets.bottom }}
-        refreshControl={<RefreshControl {...pullRefresh} />}
+        refreshControl={<ThemedRefreshControl {...pullRefresh} />}
       >
         {items.length === 0 && (
           <Text className="mt-16 text-center text-body-medium text-text-alternative">

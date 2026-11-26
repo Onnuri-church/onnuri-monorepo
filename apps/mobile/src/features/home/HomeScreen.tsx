@@ -7,7 +7,6 @@ import {
   Alert,
   Image,
   Pressable,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -37,6 +36,7 @@ import { NoticeBar } from "./components/NoticeBar";
 import { QtShareRow } from "./components/QtShareRow";
 import { SectionHeader } from "./components/SectionHeader";
 import { WeeklySermonBanner } from "./components/WeeklySermonBanner";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 // 화면 좌우 여백 (시안 확정값 20). 기도제목 캐러셀은 한 장 폭을 이 값에서 계산한다.
 const SCREEN_PADDING = 20;
@@ -158,7 +158,7 @@ export function HomeScreen() {
       contentContainerStyle={{ paddingBottom: 40 + TAB_BAR_HEIGHT + insets.bottom }}
       onScroll={handleHideTabBarScroll}
       scrollEventThrottle={16}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+      refreshControl={<ThemedRefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
     >
       {hasNotices && (
         <View className="px-5 pt-4">

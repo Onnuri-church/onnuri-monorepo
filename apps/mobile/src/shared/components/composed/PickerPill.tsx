@@ -110,7 +110,9 @@ export function PickerPill<T extends number | string>({
                   <Pressable
                     key={String(option.value)}
                     onPress={() => handleSelect(option.value)}
-                    className="items-center justify-center active:opacity-60"
+                    // 칩 글자와 같은 왼쪽 여백(pl-3)에 맞춘다 (SCRUM-308) — 가운데 정렬이면 칩의 글자(왼쪽
+                    // 정렬 + 화살표)와 세로 줄이 어긋나 보인다.
+                    className="justify-center pl-3 active:opacity-60"
                     style={{ height: ITEM_HEIGHT }}
                   >
                     <Text

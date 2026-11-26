@@ -1,5 +1,6 @@
 import AddRoundLight from "../../assets/icons/add-round-light.svg";
 import Announcement from "../../assets/icons/announcement.svg";
+import AnnouncementFill from "../../assets/icons/announcement-fill.svg";
 import ArrowDropDown from "../../assets/icons/arrow-drop-down.svg";
 import Back from "../../assets/icons/back.svg";
 import Bell from "../../assets/icons/bell.svg";
@@ -11,6 +12,7 @@ import Calendar from "../../assets/icons/calendar.svg";
 import Camera from "../../assets/icons/camera.svg";
 import Card from "../../assets/icons/card.svg";
 import Chat from "../../assets/icons/chat.svg";
+import ChatFill from "../../assets/icons/chat-fill.svg";
 import Check from "../../assets/icons/check.svg";
 import CloseSquare from "../../assets/icons/close-square.svg";
 import CommentLight from "../../assets/icons/comment-light.svg";
@@ -32,6 +34,7 @@ import Menu from "../../assets/icons/menu.svg";
 import MediaStrip from "../../assets/icons/media-strip.svg";
 import More from "../../assets/icons/more.svg";
 import NavHome from "../../assets/icons/nav-home.svg";
+import NavHomeLine from "../../assets/icons/nav-home-line.svg";
 import Note from "../../assets/icons/note.svg";
 import Paperclip from "../../assets/icons/paperclip.svg";
 import Palette from "../../assets/icons/palette.svg";
@@ -48,6 +51,7 @@ import Soccer from "../../assets/icons/soccer.svg";
 import ThumbUp from "../../assets/icons/thumb-up.svg";
 import TrashCan from "../../assets/icons/trash-can.svg";
 import User from "../../assets/icons/user.svg";
+import UserFill from "../../assets/icons/user-fill.svg";
 import Video from "../../assets/icons/video.svg";
 import VideoOn from "../../assets/icons/video-on.svg";
 import ViewLight from "../../assets/icons/view-light.svg";
@@ -63,6 +67,7 @@ import { themedColor } from "../../theme/useThemeColors";
 const ICONS = {
   "add-round-light": AddRoundLight,
   announcement: Announcement,
+  "announcement-fill": AnnouncementFill,
   "arrow-drop-down": ArrowDropDown,
   back: Back,
   bell: Bell,
@@ -73,6 +78,7 @@ const ICONS = {
   calendar: Calendar,
   card: Card,
   chat: Chat,
+  "chat-fill": ChatFill,
   check: Check,
   "close-square": CloseSquare,
   "comment-light": CommentLight,
@@ -97,6 +103,7 @@ const ICONS = {
   menu: Menu,
   more: More,
   "nav-home": NavHome,
+  "nav-home-line": NavHomeLine,
   note: Note,
   paperclip: Paperclip,
   palette: Palette,
@@ -113,6 +120,7 @@ const ICONS = {
   "thumb-up": ThumbUp,
   "trash-can": TrashCan,
   user: User,
+  "user-fill": UserFill,
   video: Video,
   "video-on": VideoOn,
   "view-light": ViewLight,
@@ -134,12 +142,20 @@ interface IconProps {
   size?: number;
   /** SVG 안의 색이 전부 currentColor로 치환돼 있어서(svgr.config.js) 여기서 결정된다. */
   color?: string;
+  /**
+   * 테마와 무관하게 넘긴 색 그대로 그린다 — 사진 뷰어의 검정 배경처럼 다크모드에서도 바탕색이
+   * 바뀌지 않는 곳의 흰 아이콘에 쓴다. 안 주면 다크모드에서 흰색(#FFFFFF)이 icon.disable의
+   * 다크 값(거의 검정)으로 바뀌어 검은 바탕에서 안 보인다 (SCRUM-280).
+   */
+  fixedColor?: boolean;
 }
 
-export function Icon({ name, size = 24, color = colors.icon.normal }: IconProps) {
+export function Icon({ name, size = 24, color = colors.icon.normal, fixedColor = false }: IconProps) {
   const Source = ICONS[name];
   // 호출부는 `colors.icon.x`(라이트 값)를 넘기므로, 다크 테마면 여기서 대응하는 다크 값으로 바꾼다.
   const mode = useThemeStore((state) => state.mode);
 
-  return <Source width={size} height={size} color={themedColor(color, mode)} />;
+  return (
+    <Source width={size} height={size} color={fixedColor ? color : themedColor(color, mode)} />
+  );
 }

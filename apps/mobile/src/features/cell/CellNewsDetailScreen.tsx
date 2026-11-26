@@ -3,7 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { PostComment } from "@onnuri/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -47,6 +47,8 @@ import {
 import { canManageCell } from "./cellDetail";
 import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
+import { LinkifiedText } from "../team-space/components/LinkifiedText";
+import { ChatImageViewer } from "../chat/components/ChatImageViewer";
 
 // 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
@@ -86,7 +88,30 @@ export function CellNewsDetailScreen() {
   // 사진 여러 장 넘겨보기 — 시안의 정사각 영역(좌우 20 여백) 안에서 가로 페이징한다.
   const { width } = useWindowDimensions();
   const photoWidth = width - 40;
+  // 사진 칸의 가로세로 비율 — 첫 사진의 실제 비율을 따른다 (SCRUM-306). 정사각형으로 잘라 넣으면
+  // 세로 사진은 위아래(인물의 머리·발)가, 가로 사진은 양옆이 잘린다. 너무 길쭉한 사진 때문에 본문이
+  // 화면 밖으로 밀리지 않게 3:4(세로)~16:9(가로) 사이로만 두고, 그 밖의 사진은 잘리지 않게 여백을 둔다.
+  // 여러 장이면 넘길 때 칸 높이가 바뀌지 않게 첫 사진 비율로 통일한다.
+  const firstPhotoUrl = news?.imageUrls[0];
+  const [photoRatio, setPhotoRatio] = useState(1);
+  useEffect(() => {
+    if (!firstPhotoUrl) return;
+    let alive = true;
+    Image.getSize(
+      firstPhotoUrl,
+      (imageWidth, imageHeight) => {
+        if (!alive || imageWidth <= 0 || imageHeight <= 0) return;
+        setPhotoRatio(Math.min(Math.max(imageWidth / imageHeight, 3 / 4), 16 / 9));
+      },
+      () => undefined,
+    );
+    return () => {
+      alive = false;
+    };
+  }, [firstPhotoUrl]);
   const [photoIndex, setPhotoIndex] = useState(0);
+  // 누른 사진부터 크게 보기 — null이면 닫힘
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   // ⋮는 권한이 있을 때만 보이고 항목이 화면 데이터에 의존하므로 화면이 헤더를 단독 등록한다
   // (QtBoardDetail과 같은 패턴 — 등록부에는 headerShown: true만 둔다).
@@ -128,6 +153,7 @@ export function CellNewsDetailScreen() {
     const localId = pendingComments.add(content, parentId);
     setCommentDraft("");
     setReplyTo(null);
+    commentScroll.scrollToNew(parentId);
     try {
       const created = await addComment.mutateAsync({ content, parentId: parentId ?? undefined });
       markSeen(created.id);
@@ -155,7 +181,11 @@ export function CellNewsDetailScreen() {
   return (
     <View className="flex-1 bg-background-normal">
       <View style={{ flex: 1 }}>
-        <ScrollView ref={scrollRef} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          ref={scrollRef}
+          onLayout={commentScroll.onScrollLayout}
+          keyboardShouldPersistTaps="handled"
+        >
           {/* 소식 사진 (시안 362x360 영역) — 여러 장이면 옆으로 넘겨 보고 아래 점으로 위치를 찍는다.
               없으면 회색 자리 유지 */}
           {news.imageUrls.length > 0 ? (
@@ -170,13 +200,16 @@ export function CellNewsDetailScreen() {
                   setPhotoIndex(Math.round(event.nativeEvent.contentOffset.x / photoWidth))
                 }
               >
-                {news.imageUrls.map((url) => (
-                  <Image
-                    key={url}
-                    source={{ uri: url }}
-                    style={{ width: photoWidth, aspectRatio: 1 }}
-                    resizeMode="cover"
-                  />
+                {/* 사진은 자르지 않고 전체를 보여준다(contain). 누르면 크게 본다 (SCRUM-306). */}
+                {news.imageUrls.map((url, index) => (
+                  <Pressable key={url} onPress={() => setViewerIndex(index)}>
+                    <Image
+                      source={{ uri: url }}
+                      className="bg-background-muted"
+                      style={{ width: photoWidth, aspectRatio: photoRatio }}
+                      resizeMode="contain"
+                    />
+                  </Pressable>
                 ))}
               </ScrollView>
               {news.imageUrls.length > 1 && (
@@ -203,7 +236,7 @@ export function CellNewsDetailScreen() {
             </View>
 
             <Text className="mt-4 text-heading-medium text-text-normal">{news.title}</Text>
-            <Text className="mt-2 text-body-medium text-text-neutral">{news.content}</Text>
+            <LinkifiedText text={news.content} className="mt-2 text-body-medium text-text-neutral" />
 
             <FavoriteButton
               className="mt-6"
@@ -298,6 +331,11 @@ export function CellNewsDetailScreen() {
         confirmLabel={t("확인")}
         cancelLabel={t("취소")}
         onConfirm={confirmDelete}
+      />
+      <ChatImageViewer
+        urls={news.imageUrls}
+        startIndex={viewerIndex}
+        onClose={() => setViewerIndex(null)}
       />
     </View>
   );

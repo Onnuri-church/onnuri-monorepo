@@ -1,7 +1,9 @@
 {
   "디스플레이": "Display",
   "다크모드": "Dark mode",
+  "화이트모드": "Light mode",
   "어두운 테마로 전환": "Switch to the dark theme",
+  "밝은 테마로 전환": "Switch to the light theme",
   "언어": "Language",
   "표시언어 선택": "Display language",
   "알림": "Notifications",

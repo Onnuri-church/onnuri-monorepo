@@ -1,7 +1,7 @@
 import { REPORT_REASON_LABELS, type AdminReportItem } from "@onnuri/shared";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { ActivityIndicator, Alert, RefreshControl, ScrollView, Text, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { FilterChip } from "../../shared/components/base/FilterChip";
@@ -12,6 +12,7 @@ import { useAdminReports, useHandleReport } from "../report/api";
 import { useSuspendMember } from "./api";
 import { openSuspendPicker } from "./openSuspendPicker";
 import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 const TARGET_LABELS: Record<AdminReportItem["targetType"], string> = {
   POST: "게시글",
@@ -66,7 +67,7 @@ export function AdminReportsScreen() {
       className="bg-background-normal"
       contentContainerClassName="gap-4 px-5 pt-5"
       contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
-      refreshControl={<RefreshControl {...pullRefresh} />}
+      refreshControl={<ThemedRefreshControl {...pullRefresh} />}
     >
       <View className="flex-row gap-2">
         <FilterChip

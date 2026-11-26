@@ -6,7 +6,6 @@ import { useLayoutEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  RefreshControl,
   ScrollView,
   Text,
   View,
@@ -32,6 +31,7 @@ import { CardImageFallback } from "./components/CardImageFallback";
 import { FilterChip } from "./components/FilterChip";
 import { Avatar } from "../../shared/components/base/Avatar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ThemedRefreshControl } from "../../shared/components/base/ThemedRefreshControl";
 
 type Filter = "open" | "closed";
 
@@ -195,7 +195,7 @@ export function GroupMeetingScreen() {
       <ScrollView
         onScroll={handleScroll}
         scrollEventThrottle={64}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
+        refreshControl={<ThemedRefreshControl refreshing={refreshing} onRefresh={() => void handleRefresh()} />}
         contentContainerClassName="flex-row flex-wrap"
         contentContainerStyle={{ gap: CARD_GAP, paddingHorizontal: LIST_PADDING, paddingBottom: (isAdmin ? 120 : 24) + insets.bottom }}
       >
