@@ -11,6 +11,7 @@ import { toChatDate, toChatTime } from "../../shared/utils/date";
 import { useChatRoom } from "./api";
 import { ChatImageViewer } from "./components/ChatImageViewer";
 import { MentionText } from "./components/MentionText";
+import { usePhotoRatio } from "../../shared/hooks/usePhotoRatio";
 
 // 공지 상세 (SCRUM-252) — 채팅방 상단 공지 줄이나 "공지가 등록되었습니다 · 상세보기"를 누르면 온다.
 // 공지로 올린 메시지 한 건을 크게 보여준다: 글이면 글, 사진이면 사진, 파일·동영상이면 여는 줄.
@@ -64,12 +65,7 @@ export function ChatNoticeDetailScreen() {
 
         {message.imageUrls.map((url, index) => (
           <Pressable key={url} onPress={() => setViewerIndex(index)} className="active:opacity-80">
-            <Image
-              source={{ uri: url }}
-              className="w-full rounded-2xl bg-background-muted"
-              style={{ aspectRatio: 1 }}
-              resizeMode="cover"
-            />
+            <NoticePhoto url={url} />
           </Pressable>
         ))}
 
@@ -104,5 +100,18 @@ export function ChatNoticeDetailScreen() {
         onClose={() => setViewerIndex(null)}
       />
     </View>
+  );
+}
+
+// 공지 사진 한 장 — 사진마다 자기 비율로 그리고 자르지 않는다 (SCRUM-312 — usePhotoRatio 주석 참고).
+function NoticePhoto({ url }: { url: string }) {
+  const ratio = usePhotoRatio(url);
+  return (
+    <Image
+      source={{ uri: url }}
+      className="w-full rounded-2xl bg-background-muted"
+      style={{ aspectRatio: ratio }}
+      resizeMode="contain"
+    />
   );
 }

@@ -51,6 +51,7 @@ import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
 import { usePostViewerMenu } from "../report/usePostViewerMenu";
 import { LinkifiedText } from "../team-space/components/LinkifiedText";
+import { usePhotoRatio } from "../../shared/hooks/usePhotoRatio";
 
 // 이모지를 눌렀을 때의 결과를 서버 응답 전에 미리 계산한다 — 내가 이미 단 이모지면 하나 줄이고
 // (0이 되면 칩을 없앤다), 아니면 하나 늘린다. 순서는 서버 응답이 오면 그쪽으로 맞춰진다.
@@ -117,6 +118,8 @@ export function DepartmentActivityDetailScreen() {
     queryKey: ["team-activity", id],
     queryFn: () => fetchTeamActivity(id),
   });
+  // 사진 칸은 첫 사진의 실제 비율을 따르고 사진은 자르지 않는다 (SCRUM-312 — usePhotoRatio 주석 참고).
+  const photoRatio = usePhotoRatio(data?.imageUrls[0] ?? data?.coverImageUrl);
   // 댓글 즉시 표시·등장 효과·알림 진입 강조 (SCRUM-215)
   const pendingComments = usePendingComments();
   const { isNew, markSeen } = useNewItems(data ? flattenCommentIds(data.comments) : undefined);
@@ -350,9 +353,9 @@ export function DepartmentActivityDetailScreen() {
                 <Pressable key={url} onPress={() => setViewerIndex(index)}>
                   <Image
                     source={{ uri: url }}
-                    style={{ width: photoWidth, aspectRatio: 1 }}
+                    style={{ width: photoWidth, aspectRatio: photoRatio }}
                     className="bg-background-assistive"
-                    resizeMode="cover"
+                    resizeMode="contain"
                   />
                 </Pressable>
               ))}

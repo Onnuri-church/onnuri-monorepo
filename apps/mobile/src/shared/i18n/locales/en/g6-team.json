@@ -57,7 +57,7 @@
   "이름": "Name",
   "소속 셀": "Cell",
   "소속 팀": "Team",
-  "취향 소그룹": "Interest group",
+  "취향 소그룹": "Interest groups",
   "공지사항": "Notices",
   "로그아웃": "Log out",
   "{{team}} 팀장": "{{team}} Team leader",
@@ -308,5 +308,11 @@
   "삭제할 방을 골라주세요": "Select rooms to delete",
   "아직 단톡방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No chat rooms yet. Create one from ☰ at the top right.",
   "아직 리더 방이 없어요. 오른쪽 위 ☰에서 만들어보세요.": "No leader rooms yet. Create one from ☰ at the top right.",
-  "로그인하면 팀원과 활동 사진을 볼 수 있어요.": "Sign in to see team members and activity photos."
+  "로그인하면 팀원과 활동 사진을 볼 수 있어요.": "Sign in to see team members and activity photos.",
+  "채팅": "Chats",
+  "우리 셀 단톡방": "Our cell chat",
+  "셀": "Cell",
+  "리더": "Leaders",
+  "아직 참여 중인 단톡방이 없어요.\n팀·셀·소그룹에 들어가면 여기에 나타나요.": "You're not in any chat rooms yet.\nJoin a team, cell, or group and they'll show up here.",
+  "채팅은 로그인 후 이용할 수 있어요.": "Sign in to use chat."
 }

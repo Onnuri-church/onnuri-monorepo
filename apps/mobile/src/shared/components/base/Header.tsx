@@ -1,6 +1,7 @@
 import { useNavigation } from "@react-navigation/native";
 import { useRef, useState } from "react";
-import { Pressable, Text, View, useWindowDimensions } from "react-native";
+import { useTranslation } from "react-i18next";
+import { Alert, Pressable, Text, View, useWindowDimensions } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useUnreadNotificationCount } from "../../api/notifications";
@@ -39,7 +40,7 @@ interface MainHeaderProps {
   variant: "main";
   onPressQr?: () => void;
   onPressNotification?: () => void;
-  onPressSettings?: () => void;
+  onPressChat?: () => void;
 }
 
 interface SubHeaderProps {
@@ -111,6 +112,8 @@ type HeaderProps = MainHeaderProps | SubHeaderProps | OverlayHeaderProps;
 
 export function Header(props: HeaderProps) {
   const themeColors = useThemeColors();
+  const { t } = useTranslation();
+  const signedIn = useAuthStore((state) => state.session.status === "authenticated");
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
   const { width: windowWidth } = useWindowDimensions();
@@ -176,16 +179,29 @@ export function Header(props: HeaderProps) {
                 >
                   <NotificationBell />
                 </PressableScale>
-                {/* 설정도 갈 곳이 정해져 있어 기본 동작을 준다 (마이페이지 액션 바와 같은 화면). */}
+                {/* 내 단톡방 모아보기 (SCRUM-311) — 설정은 마이페이지에 있어서 이 자리를 채팅에 준다.
+                    게스트는 들어갈 방이 없으니 로그인 안내를 띄운다. */}
                 <PressableScale
                   scaleTo={0.85}
                   onPress={
-                    props.onPressSettings ??
-                    (() => navigation.navigate("Settings" as never))
+                    props.onPressChat ??
+                    (() => {
+                      if (!signedIn) {
+                        Alert.alert(t("로그인이 필요해요"), t("채팅은 로그인 후 이용할 수 있어요."), [
+                          { text: t("취소"), style: "cancel" },
+                          {
+                            text: t("로그인하기"),
+                            onPress: () => useAuthStore.getState().startLoginFromGuest(),
+                          },
+                        ]);
+                        return;
+                      }
+                      navigation.navigate("MyChats" as never);
+                    })
                   }
                   hitSlop={8}
                 >
-                  <Icon name="setting" size={28} color={colors.icon.strong} />
+                  <Icon name="chat" size={26} color={colors.icon.strong} />
                 </PressableScale>
               </View>
             </>
