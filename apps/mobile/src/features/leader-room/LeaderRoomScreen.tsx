@@ -15,7 +15,7 @@ export function LeaderRoomScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "LeaderRoom">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: room } = useLeaderRoomDetail(params.roomId);
-  const title = room?.name ?? t("리더 방");
+  const title = room?.name ?? params.name ?? t("리더 방");
 
   // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
   const [searching, setSearching] = useState(false);

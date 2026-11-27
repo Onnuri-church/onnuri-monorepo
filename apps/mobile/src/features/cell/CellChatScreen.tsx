@@ -15,7 +15,7 @@ export function CellChatScreen() {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const cell = useCell(params.cellId);
 
-  const title = t("{{name}} 단톡방", { name: cell?.name ?? t("셀") });
+  const title = t("{{name}} 단톡방", { name: cell?.name ?? params.name ?? t("셀") });
 
   // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
   const [searching, setSearching] = useState(false);

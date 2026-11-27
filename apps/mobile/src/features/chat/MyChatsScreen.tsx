@@ -16,6 +16,7 @@ import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { fetchMyGroupMeetings } from "../group-meeting/api";
+import { usePrefetchChatRooms } from "./api";
 import type { LeaderRoomSummary } from "@onnuri/shared";
 import { useLeaderRooms } from "../leader-room/api";
 import { useMe } from "../profile/useMe";
@@ -137,6 +138,27 @@ export function MyChatsScreen() {
 
   const leaderRooms = useLeaderRooms(me?.canUseLeaderRooms === true);
 
+  // 목록이 보이는 동안 방의 대화를 미리 받아 둔다 — 방을 누르면 대화가 바로 보인다 (SCRUM-225와 같은 방식).
+  // 종류마다 최근에 대화가 오간 방 몇 개까지만 받는다. 읽음 처리는 하지 않는다.
+  usePrefetchChatRooms(
+    "room",
+    teamRoomQueries
+      .flatMap((query) => query.data ?? [])
+      .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+      .map((room) => room.id),
+  );
+  usePrefetchChatRooms("cell", cell ? [cell.id] : []);
+  usePrefetchChatRooms(
+    "group",
+    groups.map((meeting) => meeting.id),
+  );
+  usePrefetchChatRooms(
+    "leader",
+    [...(leaderRooms.data ?? [])]
+      .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+      .map((room) => room.id),
+  );
+
   const refetchAll = () =>
     Promise.all([
       ...teamRoomQueries.map((query) => query.refetch()),
@@ -165,7 +187,7 @@ export function MyChatsScreen() {
       unreadCount: room.unreadCount,
       subtitle: `${room.lastMessage ?? t("아직 대화가 없어요")} · ${t("{{count}}명", { count: room.memberCount })}`,
       lastActivityAt: room.lastActivityAt,
-      onOpen: () => navigation.navigate("ChatRoom", { roomId: room.id }),
+      onOpen: () => navigation.navigate("ChatRoom", { roomId: room.id, name: room.name }),
     })),
   );
 
@@ -176,7 +198,7 @@ export function MyChatsScreen() {
           name: cell.name,
           unreadCount: cellUnread.data ?? 0,
           subtitle: t("우리 셀 단톡방"),
-          onOpen: () => navigation.navigate("CellChat", { cellId: cell.id }),
+          onOpen: () => navigation.navigate("CellChat", { cellId: cell.id, name: cell.name }),
         },
       ]
     : [];
@@ -186,7 +208,7 @@ export function MyChatsScreen() {
     name: meeting.title,
     unreadCount: groupUnreadQueries[index]?.data ?? 0,
     subtitle: t("{{count}}명", { count: meeting.participantCount }),
-    onOpen: () => navigation.navigate("GroupChat", { meetingId: meeting.id }),
+    onOpen: () => navigation.navigate("GroupChat", { meetingId: meeting.id, name: meeting.title }),
   }));
 
   const leaderRows: ChatRow[] = [...(leaderRooms.data ?? [])].sort(byRecent).map((room) => ({
@@ -195,7 +217,7 @@ export function MyChatsScreen() {
     unreadCount: room.unreadCount,
     subtitle: `${room.lastMessage ?? t("아직 대화가 없어요")} · ${t("{{count}}명", { count: room.memberCount })}`,
     lastActivityAt: room.lastActivityAt,
-    onOpen: () => navigation.navigate("LeaderRoom", { roomId: room.id }),
+    onOpen: () => navigation.navigate("LeaderRoom", { roomId: room.id, name: room.name }),
   }));
 
   const allSections: { key: ChatCategory; title: string; data: ChatRow[] }[] = [

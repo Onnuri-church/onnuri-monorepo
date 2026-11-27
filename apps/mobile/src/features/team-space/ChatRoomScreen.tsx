@@ -15,7 +15,8 @@ export function ChatRoomScreen() {
   const { params } = useRoute<RouteProp<RootStackParamList, "ChatRoom">>();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { data: room } = useChatRoomDetail(params.roomId);
-  const title = room?.name ?? t("단톡방");
+  // 목록에서 넘겨받은 이름이 있으면 방 정보를 받기 전에도 그 이름을 보여준다.
+  const title = room?.name ?? params.name ?? t("단톡방");
 
   // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
   const [searching, setSearching] = useState(false);
