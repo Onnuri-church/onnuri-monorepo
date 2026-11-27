@@ -3,7 +3,7 @@ import type { RouteProp } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { PostComment } from "@onnuri/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   Alert,
@@ -49,6 +49,7 @@ import { useBlockConfirm } from "../block/useBlockConfirm";
 import { useReport } from "../report/useReport";
 import { LinkifiedText } from "../team-space/components/LinkifiedText";
 import { ChatImageViewer } from "../chat/components/ChatImageViewer";
+import { usePhotoRatio } from "../../shared/hooks/usePhotoRatio";
 
 // 셀 소식 상세 (시안: 사진 + 작성자 + 제목/본문 + 하트 + 댓글) — /posts/cell-news/:id 실데이터.
 export function CellNewsDetailScreen() {
@@ -88,27 +89,8 @@ export function CellNewsDetailScreen() {
   // 사진 여러 장 넘겨보기 — 시안의 정사각 영역(좌우 20 여백) 안에서 가로 페이징한다.
   const { width } = useWindowDimensions();
   const photoWidth = width - 40;
-  // 사진 칸의 가로세로 비율 — 첫 사진의 실제 비율을 따른다 (SCRUM-306). 정사각형으로 잘라 넣으면
-  // 세로 사진은 위아래(인물의 머리·발)가, 가로 사진은 양옆이 잘린다. 너무 길쭉한 사진 때문에 본문이
-  // 화면 밖으로 밀리지 않게 3:4(세로)~16:9(가로) 사이로만 두고, 그 밖의 사진은 잘리지 않게 여백을 둔다.
-  // 여러 장이면 넘길 때 칸 높이가 바뀌지 않게 첫 사진 비율로 통일한다.
-  const firstPhotoUrl = news?.imageUrls[0];
-  const [photoRatio, setPhotoRatio] = useState(1);
-  useEffect(() => {
-    if (!firstPhotoUrl) return;
-    let alive = true;
-    Image.getSize(
-      firstPhotoUrl,
-      (imageWidth, imageHeight) => {
-        if (!alive || imageWidth <= 0 || imageHeight <= 0) return;
-        setPhotoRatio(Math.min(Math.max(imageWidth / imageHeight, 3 / 4), 16 / 9));
-      },
-      () => undefined,
-    );
-    return () => {
-      alive = false;
-    };
-  }, [firstPhotoUrl]);
+  // 사진 칸은 첫 사진의 실제 비율을 따르고 사진은 자르지 않는다 (SCRUM-306 — usePhotoRatio 주석 참고).
+  const photoRatio = usePhotoRatio(news?.imageUrls[0]);
   const [photoIndex, setPhotoIndex] = useState(0);
   // 누른 사진부터 크게 보기 — null이면 닫힘
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
