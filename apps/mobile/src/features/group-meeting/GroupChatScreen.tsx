@@ -21,7 +21,7 @@ export function GroupChatScreen() {
     queryFn: () => fetchGroupMeetingDetail(params.meetingId),
   });
 
-  const title = t("{{name}} 단톡방", { name: meeting?.title ?? t("소그룹") });
+  const title = t("{{name}} 단톡방", { name: meeting?.title ?? params.name ?? t("소그룹") });
 
   // 돋보기 — 대화 검색창을 연다 (SCRUM-231)
   const [searching, setSearching] = useState(false);

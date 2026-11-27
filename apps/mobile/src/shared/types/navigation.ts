@@ -82,7 +82,8 @@ export type RootStackParamList = {
   // 투표 상세 (SCRUM-247) — 투표하기·결과·참여자·댓글
   ChatPollDetail: { kind: "room" | "cell" | "group" | "leader"; id: string; pollId: string };
   // 취향소그룹 단톡방 — 승인된 참여자·소그룹장·관리자만
-  GroupChat: { meetingId: string };
+  // name: 목록에서 이미 아는 방 이름 — 방 정보를 받기 전에도 헤더 제목을 바로 보여준다 (SCRUM-311)
+  GroupChat: { meetingId: string; name?: string };
   TeamBoard: { teamId: string };
   TeamBoardDetail: { teamId: string; postId: string };
   // postId가 있으면 수정 모드
@@ -92,19 +93,19 @@ export type RootStackParamList = {
   ChatRoomList: { teamId: string };
   // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기
   ChatRoomForm: { teamId: string; roomId?: string };
-  ChatRoom: { roomId: string };
+  ChatRoom: { roomId: string; name?: string };
   // 전체 리더 방 — 팀장·팔로워(셀장·부셀장)·관리자만. 마이페이지 "전체 리더 방"에서 들어온다.
   LeaderRoomList: undefined;
   // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기 — 관리자만
   LeaderRoomForm: { roomId?: string };
-  LeaderRoom: { roomId: string };
+  LeaderRoom: { roomId: string; name?: string };
   /** 단톡방 서랍(☰) — 알림·사진·배경·대화 상대 (SCRUM-230) */
   ChatRoomInfo: { kind: "room" | "cell" | "group" | "leader"; id: string; title: string };
   /** 단톡방 사진 전체 보기 (SCRUM-233) */
   ChatMedia: { kind: "room" | "cell" | "group" | "leader"; id: string };
   /** 대화 상대 전체보기·이름 검색 (SCRUM-301) */
   ChatMembers: { kind: "room" | "cell" | "group" | "leader"; id: string };
-  CellChat: { cellId: string };
+  CellChat: { cellId: string; name?: string };
   // teamId가 있으면 편집 모드 — 기존 팀 정보를 채운 채 열린다 (PrayerWrite와 같은 방식).
   TeamForm: { teamId: string } | undefined;
   TeamStoryGallery: { teamId: string };
