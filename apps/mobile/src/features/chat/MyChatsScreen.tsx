@@ -263,7 +263,7 @@ export function MyChatsScreen() {
             alwaysBounceHorizontal
             overScrollMode="always"
             decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 8 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12, gap: 12 }}
           >
             {chips.map((chip) => {
               const active = chip.key === selected;
@@ -277,20 +277,20 @@ export function MyChatsScreen() {
                   <View
                     className={
                       active
-                        ? "flex-row items-center rounded-full bg-primary-normal px-4 py-2"
-                        : "flex-row items-center rounded-full bg-background-alternative px-4 py-2"
+                        ? "flex-row items-center rounded-full bg-primary-normal px-6 py-3"
+                        : "flex-row items-center rounded-full bg-background-alternative px-6 py-3"
                     }
                   >
                     <Text
                       className={
                         active
-                          ? "text-body-small text-text-onImage"
-                          : "text-body-small text-text-alternative"
+                          ? "text-heading-small text-text-onImage"
+                          : "text-heading-small text-text-alternative"
                       }
                     >
                       {chip.label}
                     </Text>
-                    <UnreadBadge count={chip.unread} className="ml-1.5" />
+                    <UnreadBadge count={chip.unread} className="ml-2" />
                   </View>
                 </PressableScale>
               );
