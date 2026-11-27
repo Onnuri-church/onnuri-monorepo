@@ -84,6 +84,7 @@ import { ChatPollDetailScreen } from "../features/chat/ChatPollDetailScreen";
 import { ChatMediaScreen } from "../features/chat/ChatMediaScreen";
 import { ChatMembersScreen } from "../features/chat/ChatMembersScreen";
 import { ChatRoomInfoScreen } from "../features/chat/ChatRoomInfoScreen";
+import { MyChatsScreen } from "../features/chat/MyChatsScreen";
 import { GroupChatScreen } from "../features/group-meeting/GroupChatScreen";
 import { LeaderRoomFormScreen } from "../features/leader-room/LeaderRoomFormScreen";
 import { LeaderRoomListScreen } from "../features/leader-room/LeaderRoomListScreen";
@@ -481,6 +482,7 @@ export function RootNavigator() {
             options={{ headerShown: true }}
           />
           <Stack.Screen name="ChatRoom" component={ChatRoomScreen} options={{ headerShown: true }} />
+          <Stack.Screen name="MyChats" component={MyChatsScreen} options={{ headerShown: true }} />
           <Stack.Screen
             name="LeaderRoomList"
             component={LeaderRoomListScreen}

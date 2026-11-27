@@ -87,6 +87,8 @@ export type RootStackParamList = {
   TeamBoardDetail: { teamId: string; postId: string };
   // postId가 있으면 수정 모드
   TeamBoardWrite: { teamId: string; postId?: string };
+  // 내 단톡방 모아보기 — 홈 헤더의 채팅 아이콘 (SCRUM-311)
+  MyChats: undefined;
   ChatRoomList: { teamId: string };
   // roomId가 있으면 방 관리(이름 수정·멤버 추가/내보내기·삭제), 없으면 새 방 만들기
   ChatRoomForm: { teamId: string; roomId?: string };
