@@ -26,6 +26,7 @@ import type { RootStackParamList } from "../../shared/types/navigation";
 import { useHomeNotices } from "../notice/api";
 import { fetchPrayers } from "../prayer-board/api";
 import { fetchTeams } from "../profile/api";
+import { usePrefetchMyChats } from "../chat/MyChatsScreen";
 import { useMe } from "../profile/useMe";
 import { prefetchQtBoard, prefetchQtDetails } from "../qt-board/api";
 import { useAuthStore } from "../../shared/store/useAuthStore";
@@ -91,6 +92,8 @@ export function HomeScreen() {
   // 요청하면 일반 회원 기준으로 한 번 받고, 관리자로 확인된 뒤 또 받는다 — 그 사이 카드가 비어 보인다.
   // 내 정보를 받은 뒤 한 번만 요청한다 (SCRUM-289).
   const me = useMe();
+  // 헤더의 채팅 아이콘을 누르면 바로 보이게 내 단톡방 목록을 미리 받아 둔다 (SCRUM-311)
+  usePrefetchMyChats();
   const isAdmin = me?.isAdmin === true;
   const { data: prayers, refetch: refetchPrayers } = useQuery({
     queryKey: ["prayers", "board", "all", isAdmin],

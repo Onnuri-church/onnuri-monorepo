@@ -43,7 +43,12 @@ export function ChatRoomListScreen() {
           ? t("아직 단톡방이 없어요. 오른쪽 위 ☰에서 만들어보세요.")
           : t("들어가 있는 단톡방이 없어요. 팀장이 초대하면 여기에 나타나요.")
       }
-      onOpen={(roomId) => navigation.navigate("ChatRoom", { roomId })}
+      onOpen={(roomId) =>
+        navigation.navigate("ChatRoom", {
+          roomId,
+          name: rooms?.find((room) => room.id === roomId)?.name,
+        })
+      }
       onCreate={() => navigation.navigate("ChatRoomForm", { teamId: params.teamId })}
       onLeave={(roomId) => leave.mutateAsync(roomId)}
       onDelete={(roomId) => remove.mutateAsync(roomId)}

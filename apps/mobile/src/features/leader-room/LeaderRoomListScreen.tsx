@@ -40,7 +40,12 @@ export function LeaderRoomListScreen() {
           ? t("아직 리더 방이 없어요. 오른쪽 위 ☰에서 만들어보세요.")
           : t("들어가 있는 리더 방이 없어요. 관리자가 초대하면 여기에 나타나요.")
       }
-      onOpen={(roomId) => navigation.navigate("LeaderRoom", { roomId })}
+      onOpen={(roomId) =>
+        navigation.navigate("LeaderRoom", {
+          roomId,
+          name: rooms?.find((room) => room.id === roomId)?.name,
+        })
+      }
       onCreate={() => navigation.navigate("LeaderRoomForm", {})}
       onLeave={(roomId) => leave.mutateAsync(roomId)}
       onDelete={(roomId) => remove.mutateAsync(roomId)}

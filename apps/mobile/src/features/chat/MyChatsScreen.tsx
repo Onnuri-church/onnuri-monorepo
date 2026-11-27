@@ -1,8 +1,8 @@
 import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { ChatRoomSummary } from "@onnuri/shared";
-import { useQueries, useQuery } from "@tanstack/react-query";
-import { useLayoutEffect, useState } from "react";
+import { useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useLayoutEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Pressable, ScrollView, SectionList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -16,6 +16,8 @@ import { usePullToRefresh } from "../../shared/hooks/usePullToRefresh";
 import type { RootStackParamList } from "../../shared/types/navigation";
 import { toTimeAgo } from "../../shared/utils/date";
 import { fetchMyGroupMeetings } from "../group-meeting/api";
+import { usePrefetchChatRooms } from "./api";
+import type { LeaderRoomSummary } from "@onnuri/shared";
 import { useLeaderRooms } from "../leader-room/api";
 import { useMe } from "../profile/useMe";
 
@@ -39,6 +41,55 @@ type ChatCategory = "team" | "cell" | "group" | "leader";
 const fetchUnread = (path: string) =>
   apiClient.get<{ count: number }>(path).then((res) => res.data.count);
 
+const fetchTeamRooms = (teamId: string) =>
+  apiClient.get<ChatRoomSummary[]>(`/teams/${teamId}/chat-rooms`).then((res) => res.data);
+
+// 홈 화면이 뜰 때 채팅 목록에 필요한 것을 한 번 미리 받아 둔다 — 채팅 아이콘을 누르면 캐시로 바로
+// 그려서, 구역이 하나씩 나타나거나 칩 줄이 뒤늦게 생기며 화면이 바뀌는 일이 없다.
+// 쿼리 키는 아래 화면과 같다. 계속 다시 받지는 않는다 (홈에서는 한 번만).
+export function usePrefetchMyChats() {
+  const queryClient = useQueryClient();
+  const me = useMe();
+  const teamIds = (me?.teams ?? []).map((team) => team.id).join(",");
+  const cellId = me?.cell?.id ?? "";
+  const canUseLeaderRooms = me?.canUseLeaderRooms === true;
+  const signedIn = me !== undefined && me !== null;
+
+  useEffect(() => {
+    if (!signedIn) return;
+    for (const teamId of teamIds ? teamIds.split(",") : []) {
+      void queryClient.prefetchQuery({
+        queryKey: ["chat-rooms", teamId],
+        queryFn: () => fetchTeamRooms(teamId),
+      });
+    }
+    if (cellId) {
+      void queryClient.prefetchQuery({
+        queryKey: ["chat-unread", "cell", cellId],
+        queryFn: () => fetchUnread(`/cells/${cellId}/unread`),
+      });
+    }
+    if (canUseLeaderRooms) {
+      void queryClient.prefetchQuery({
+        queryKey: ["leader-rooms"],
+        queryFn: () =>
+          apiClient.get<LeaderRoomSummary[]>("/leader-rooms").then((res) => res.data),
+      });
+    }
+    void queryClient
+      .fetchQuery({ queryKey: ["group-meetings", "mine"], queryFn: fetchMyGroupMeetings })
+      .then((meetings) => {
+        for (const meeting of meetings.filter((item) => item.myStatus === "APPROVED")) {
+          void queryClient.prefetchQuery({
+            queryKey: ["chat-unread", "group", meeting.id],
+            queryFn: () => fetchUnread(`/group-meetings/${meeting.id}/unread`),
+          });
+        }
+      })
+      .catch(() => undefined);
+  }, [queryClient, signedIn, teamIds, cellId, canUseLeaderRooms]);
+}
+
 // 내 단톡방 모아보기 (SCRUM-311) — 홈 헤더의 채팅 아이콘으로 들어온다.
 // 팀 단톡방·셀 채팅·취향 소그룹 채팅·전체 리더 방이 화면마다 흩어져 있어서, 내가 들어가 있는 방을
 // 종류별 구역으로 한 화면에 모았다. 소속이 없는 종류는 구역째로 보이지 않는다.
@@ -58,8 +109,7 @@ export function MyChatsScreen() {
   const teamRoomQueries = useQueries({
     queries: teams.map((team) => ({
       queryKey: ["chat-rooms", team.id],
-      queryFn: () =>
-        apiClient.get<ChatRoomSummary[]>(`/teams/${team.id}/chat-rooms`).then((res) => res.data),
+      queryFn: () => fetchTeamRooms(team.id),
       refetchInterval: UNREAD_INTERVAL,
     })),
   });
@@ -87,6 +137,27 @@ export function MyChatsScreen() {
   });
 
   const leaderRooms = useLeaderRooms(me?.canUseLeaderRooms === true);
+
+  // 목록이 보이는 동안 방의 대화를 미리 받아 둔다 — 방을 누르면 대화가 바로 보인다 (SCRUM-225와 같은 방식).
+  // 종류마다 최근에 대화가 오간 방 몇 개까지만 받는다. 읽음 처리는 하지 않는다.
+  usePrefetchChatRooms(
+    "room",
+    teamRoomQueries
+      .flatMap((query) => query.data ?? [])
+      .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+      .map((room) => room.id),
+  );
+  usePrefetchChatRooms("cell", cell ? [cell.id] : []);
+  usePrefetchChatRooms(
+    "group",
+    groups.map((meeting) => meeting.id),
+  );
+  usePrefetchChatRooms(
+    "leader",
+    [...(leaderRooms.data ?? [])]
+      .sort((a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt))
+      .map((room) => room.id),
+  );
 
   const refetchAll = () =>
     Promise.all([
@@ -116,7 +187,7 @@ export function MyChatsScreen() {
       unreadCount: room.unreadCount,
       subtitle: `${room.lastMessage ?? t("아직 대화가 없어요")} · ${t("{{count}}명", { count: room.memberCount })}`,
       lastActivityAt: room.lastActivityAt,
-      onOpen: () => navigation.navigate("ChatRoom", { roomId: room.id }),
+      onOpen: () => navigation.navigate("ChatRoom", { roomId: room.id, name: room.name }),
     })),
   );
 
@@ -127,7 +198,7 @@ export function MyChatsScreen() {
           name: cell.name,
           unreadCount: cellUnread.data ?? 0,
           subtitle: t("우리 셀 단톡방"),
-          onOpen: () => navigation.navigate("CellChat", { cellId: cell.id }),
+          onOpen: () => navigation.navigate("CellChat", { cellId: cell.id, name: cell.name }),
         },
       ]
     : [];
@@ -137,7 +208,7 @@ export function MyChatsScreen() {
     name: meeting.title,
     unreadCount: groupUnreadQueries[index]?.data ?? 0,
     subtitle: t("{{count}}명", { count: meeting.participantCount }),
-    onOpen: () => navigation.navigate("GroupChat", { meetingId: meeting.id }),
+    onOpen: () => navigation.navigate("GroupChat", { meetingId: meeting.id, name: meeting.title }),
   }));
 
   const leaderRows: ChatRow[] = [...(leaderRooms.data ?? [])].sort(byRecent).map((room) => ({
@@ -146,7 +217,7 @@ export function MyChatsScreen() {
     unreadCount: room.unreadCount,
     subtitle: `${room.lastMessage ?? t("아직 대화가 없어요")} · ${t("{{count}}명", { count: room.memberCount })}`,
     lastActivityAt: room.lastActivityAt,
-    onOpen: () => navigation.navigate("LeaderRoom", { roomId: room.id }),
+    onOpen: () => navigation.navigate("LeaderRoom", { roomId: room.id, name: room.name }),
   }));
 
   const allSections: { key: ChatCategory; title: string; data: ChatRow[] }[] = [
@@ -169,11 +240,17 @@ export function MyChatsScreen() {
     })),
   ];
 
+  // 전부 받은 뒤에 한 번에 그린다 — 받은 것부터 그리면 구역과 칩 줄이 하나씩 생기며 화면이 출렁인다.
+  // 홈에서 미리 받아 두므로(usePrefetchMyChats) 보통은 들어오자마자 다 있다.
   const isLoading =
     me === undefined ||
     teamRoomQueries.some((query) => query.isLoading) ||
+    cellUnread.isLoading ||
     myGroups.isLoading ||
+    groupUnreadQueries.some((query) => query.isLoading) ||
     leaderRooms.isLoading;
+
+  if (isLoading) return <View className="flex-1 bg-background-normal" />;
 
   return (
     <View className="flex-1 bg-background-normal">
@@ -186,7 +263,7 @@ export function MyChatsScreen() {
             alwaysBounceHorizontal
             overScrollMode="always"
             decelerationRate="fast"
-            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 10, gap: 8 }}
+            contentContainerStyle={{ paddingHorizontal: 20, paddingVertical: 12, gap: 12 }}
           >
             {chips.map((chip) => {
               const active = chip.key === selected;
@@ -200,20 +277,20 @@ export function MyChatsScreen() {
                   <View
                     className={
                       active
-                        ? "flex-row items-center rounded-full bg-primary-normal px-4 py-2"
-                        : "flex-row items-center rounded-full bg-background-alternative px-4 py-2"
+                        ? "flex-row items-center rounded-full bg-primary-normal px-6 py-3"
+                        : "flex-row items-center rounded-full bg-background-alternative px-6 py-3"
                     }
                   >
                     <Text
                       className={
                         active
-                          ? "text-body-small text-text-onImage"
-                          : "text-body-small text-text-alternative"
+                          ? "text-heading-small text-text-onImage"
+                          : "text-heading-small text-text-alternative"
                       }
                     >
                       {chip.label}
                     </Text>
-                    <UnreadBadge count={chip.unread} className="ml-1.5" />
+                    <UnreadBadge count={chip.unread} className="ml-2" />
                   </View>
                 </PressableScale>
               );
