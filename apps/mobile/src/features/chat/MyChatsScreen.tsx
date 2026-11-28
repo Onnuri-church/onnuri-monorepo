@@ -179,11 +179,21 @@ export function MyChatsScreen() {
   const byRecent = (a: { lastActivityAt: string }, b: { lastActivityAt: string }) =>
     b.lastActivityAt.localeCompare(a.lastActivityAt);
 
+  // 같은 이름의 팀 방이 둘 이상이면 이름만으로는 구분이 안 된다.
+  const teamRoomNameCounts = new Map<string, number>();
+  for (const query of teamRoomQueries) {
+    for (const room of query.data ?? []) {
+      teamRoomNameCounts.set(room.name, (teamRoomNameCounts.get(room.name) ?? 0) + 1);
+    }
+  }
   const teamRows: ChatRow[] = teams.flatMap((team, index) =>
     [...(teamRoomQueries[index]?.data ?? [])].sort(byRecent).map((room) => ({
       key: `room:${room.id}`,
-      // 팀이 여러 개면 어느 팀 방인지 알 수 있게 팀 이름을 앞에 붙인다.
-      name: teams.length > 1 ? `${team.name} · ${room.name}` : room.name,
+      // 팀이 여러 개이거나 같은 이름의 방이 있으면 어느 팀 방인지 알 수 있게 팀 이름을 앞에 붙인다.
+      name:
+        teams.length > 1 || (teamRoomNameCounts.get(room.name) ?? 0) > 1
+          ? `${team.name} · ${room.name}`
+          : room.name,
       unreadCount: room.unreadCount,
       subtitle: `${room.lastMessage ?? t("아직 대화가 없어요")} · ${t("{{count}}명", { count: room.memberCount })}`,
       lastActivityAt: room.lastActivityAt,

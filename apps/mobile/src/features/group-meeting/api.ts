@@ -97,12 +97,36 @@ export function useCancelGroupMeetingJoin(meetingId: string) {
 export function useDecideGroupMeetingMember(meetingId: string) {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey: ["group-meeting-decide", meetingId],
     mutationFn: ({ userId, status }: { userId: string; status: "APPROVED" | "REJECTED" }) =>
       apiClient
         .patch<GroupMeetingDetail>(`/group-meetings/${meetingId}/members/${userId}`, { status })
         .then((res) => res.data),
+    // 누르는 즉시 신청 대기 목록에서 뺀다 — 서버 응답을 기다리면 버튼이 안 눌린 것처럼 보인다 (SCRUM-282).
+    // 실패하면 원래 목록으로 되돌린다.
+    onMutate: async ({ userId }) => {
+      const key = ["group-meetings", meetingId];
+      await queryClient.cancelQueries({ queryKey: key });
+      const previous = queryClient.getQueryData<GroupMeetingDetail>(key);
+      if (previous) {
+        queryClient.setQueryData<GroupMeetingDetail>(key, {
+          ...previous,
+          pendingMembers: previous.pendingMembers.filter((member) => member.id !== userId),
+        });
+      }
+      return { previous };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(["group-meetings", meetingId], context.previous);
+      }
+    },
     onSuccess: (detail) => {
-      queryClient.setQueryData(["group-meetings", meetingId], detail);
+      // 여러 명을 연달아 처리하면 먼저 보낸 요청의 응답에 아직 처리 중인 사람이 대기로 남아 있다 —
+      // 처리 중인 요청이 더 있으면 응답으로 덮지 않고, 마지막 응답만 반영한다.
+      if (queryClient.isMutating({ mutationKey: ["group-meeting-decide", meetingId] }) <= 1) {
+        queryClient.setQueryData(["group-meetings", meetingId], detail);
+      }
       void queryClient.invalidateQueries({ queryKey: ["group-meetings"], exact: true });
     },
   });
