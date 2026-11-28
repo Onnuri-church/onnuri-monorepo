@@ -31,7 +31,7 @@ export function GroupMeetingPendingScreen() {
   const [pendingReject, setPendingReject] = useState<GroupMeetingMember | null>(null);
 
   const handleDecide = (userId: string, status: "APPROVED" | "REJECTED") => {
-    if (decideMember.isPending) return;
+    // 목록에서 바로 빠지므로 같은 사람을 두 번 누를 수 없다 — 앞 요청을 기다리지 않고 다음 사람을 처리한다.
     decideMember.mutate(
       { userId, status },
       { onError: () => Alert.alert(t("처리 실패"), t("잠시 후 다시 시도해주세요.")) },
@@ -76,7 +76,6 @@ export function GroupMeetingPendingScreen() {
                   <Pressable
                     className="h-8 items-center justify-center rounded-lg bg-primary-normal px-3"
                     onPress={() => handleDecide(member.id, "APPROVED")}
-                    disabled={decideMember.isPending}
                     style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                   >
                     <Text className="text-body-small text-text-disable">{t("승인")}</Text>
@@ -84,7 +83,6 @@ export function GroupMeetingPendingScreen() {
                   <Pressable
                     className="h-8 items-center justify-center rounded-lg border border-semantic-danger px-3"
                     onPress={() => handleRejectPress(member)}
-                    disabled={decideMember.isPending}
                     style={({ pressed }) => (pressed ? { opacity: 0.6 } : null)}
                   >
                     <Text className="text-body-small text-semantic-danger">{t("거절")}</Text>
